@@ -24,10 +24,12 @@ formalizing law, two of its design choices matter in particular:
   Trealla Prolog, as well as on the Clausal engine, with small companion libraries for what ISO
   leaves open (dictionaries, dates). Plain ISO Prolog (`.pl`) versions are generated from the
   same source, and ISO Prolog has several independent open-source implementations.
-- **It restricts cut-like control flow.** The cut (`!`) and if-then-else (`->`) are refused, and
-  the remaining cut-like constructs, such as negation as failure, are being phased out. For legal
-  rules this helps: each clause can be read and checked on its own against the provision it
-  implements, and its meaning does not depend on the order in which clauses are tried.
+- **It has no cut.** The compiler rejects the cut (`!`) and if-then-else (`->`) in `.clausal`
+  files. At the time of writing (20 October 2026), work is in progress on replacing similar
+  problematic control-flow predicates, such as negation as failure and `once/1`, with pure
+  equivalents. For legal rules this helps: each clause can be read and checked on its own
+  against the provision it implements, and its meaning does not depend on the order in which
+  clauses are tried.
 
 More about the language and the engine: [clausal.pl](https://clausal.pl).
 
