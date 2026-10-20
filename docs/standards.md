@@ -14,7 +14,7 @@ open where none does.
 
 ## The language: a restricted subset of ISO Prolog
 
-The rules are written in **Clausal Prolog** (`.clausal` files). Clausal Prolog is built for
+The rules are written in **[Clausal Prolog](https://clausal.pl)** (`.clausal` files). Clausal Prolog is built for
 Python integration and neurosymbolic AI: logic programs that run inside a Python process, call
 Python and are called from it, and can be combined with machine-learning components. For
 formalizing law, two of its design choices matter in particular:
@@ -28,6 +28,8 @@ formalizing law, two of its design choices matter in particular:
   the remaining cut-like constructs, such as negation as failure, are being phased out. For legal
   rules this helps: each clause can be read and checked on its own against the provision it
   implements, and its meaning does not depend on the order in which clauses are tried.
+
+More about the language and the engine: [clausal.pl](https://clausal.pl).
 
 The domains in this preview are being converted from the engine's earlier Python-like syntax
 (`.seam`) to `.clausal`, with each domain's own tests required to pass unchanged on the Clausal
