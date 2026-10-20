@@ -96,6 +96,13 @@ Yes. Everything is published under the European Union Public Licence (EUPL-1.2),
 open source, and every check runs on an ordinary computer with two commands (see
 [Run it yourself](run.md)). A new domain follows the same method and is held to the same checks.
 
+## Is this tied to one vendor's engine?
+
+No, and that is by design. The rules are written in Clausal Prolog, a restricted subset of ISO
+Prolog, the international standard for Prolog. A Clausal Prolog program is therefore also an ISO
+Prolog program, meant to run on any ISO-conforming engine, several of which are independent and
+open source. See [Standards and openness](standards.md).
+
 ## Why logic programs rather than a general-purpose language or a language model?
 
 A logic program states each condition of a provision as a rule that can be read next to the
