@@ -33,6 +33,6 @@ Developers interested in the engine, the tooling, or integrating domains into ot
 
 ## Getting in touch
 
-Write to mikeamycoder@gmail.com, saying which of these interests you. Code contributions can be
+Write to mike.amy@neurosymbolic.solutions, saying which of these interests you. Code contributions can be
 merged once the contributor licence agreement is ready; until then, issues and discussion are
 welcome on the repository.
