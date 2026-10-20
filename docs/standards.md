@@ -14,25 +14,19 @@ open where none does.
 
 ## The language: a restricted subset of ISO Prolog
 
-The rules are written in **Clausal Prolog** (`.clausal` files), a deliberately **restricted
-subset of ISO Prolog** (ISO/IEC 13211-1). The restriction is the point:
+The rules are written in **Clausal Prolog** (`.clausal` files), a restricted subset of ISO
+Prolog (ISO/IEC 13211-1). Being a subset brings three things:
 
-- **Cut-free, so easier to reason about.** Clausal Prolog refuses the cut (`!`) and if-then-else
-  (`->`), the constructs that let a Prolog program silently discard answers depending on the
-  order in which its clauses are tried. Without them, each clause is a plain logical statement
-  that can be read and checked on its own, against the provision it implements: its meaning does
-  not depend on what comes before it in the file or on how it happens to be executed. The same
-  rule then answers every kind of question soundly, such as *is this lawful?*, *what is missing?*
-  and *which facts would change the answer?*, which is what makes the rules reviewable by a
-  lawyer and checkable by machine. The remaining cut-like constructs, such as negation as
-  failure, are being phased out in favour of their pure equivalents.
-- **It runs on standard engines.** Because every Clausal Prolog program is ISO Prolog, it is meant
-  to run on ordinary ISO-conforming engines, such as Scryer Prolog and Trealla Prolog, as well as
-  on the Clausal engine, with small companion libraries for what ISO leaves open (dictionaries,
-  dates). Plain ISO Prolog (`.pl`) versions are generated from the same source. No one engine,
-  and no one vendor, is needed to run the law.
-- **It is a standard others already know.** ISO Prolog is an international standard with several
-  independent open-source implementations and decades of use in legal and expert systems.
+- **It runs on standard engines.** A Clausal Prolog program is ISO Prolog, so it is meant to run
+  on ordinary ISO-conforming engines, such as Scryer Prolog and Trealla Prolog, as well as on the
+  Clausal engine, with small companion libraries for what ISO leaves open (dictionaries, dates).
+  Plain ISO Prolog (`.pl`) versions are generated from the same source.
+- **It is cut-free.** The cut (`!`) and if-then-else (`->`) are refused, which makes rules easier
+  to reason about: each clause can be read and checked on its own, and its meaning does not
+  depend on the order clauses are tried in. Remaining cut-like constructs, such as negation as
+  failure, are being phased out.
+- **It is a standard others already know**, with several independent open-source
+  implementations.
 
 The domains in this preview are being converted from the engine's earlier Python-like syntax
 (`.seam`) to `.clausal`, with each domain's own tests required to pass unchanged on the Clausal
