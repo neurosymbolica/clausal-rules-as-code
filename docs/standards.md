@@ -14,18 +14,23 @@ open where none does.
 
 ## The language: a restricted subset of ISO Prolog
 
-The rules are written in **Clausal Prolog** (`.clausal` files), and it is a deliberately
-**restricted subset of ISO Prolog** (ISO/IEC 13211-1). That restriction is the point:
+The rules are written in **Clausal Prolog** (`.clausal` files), a deliberately **restricted
+subset of ISO Prolog** (ISO/IEC 13211-1). The restriction is the point:
 
+- **Cut-free, so easier to reason about.** Clausal Prolog refuses the cut (`!`) and if-then-else
+  (`->`), the constructs that let a Prolog program silently discard answers depending on the
+  order in which its clauses are tried. Without them, each clause is a plain logical statement
+  that can be read and checked on its own, against the provision it implements: its meaning does
+  not depend on what comes before it in the file or on how it happens to be executed. The same
+  rule then answers every kind of question soundly, such as *is this lawful?*, *what is missing?*
+  and *which facts would change the answer?*, which is what makes the rules reviewable by a
+  lawyer and checkable by machine. The remaining cut-like constructs, such as negation as
+  failure, are being phased out in favour of their pure equivalents.
 - **It runs on standard engines.** Because every Clausal Prolog program is ISO Prolog, it is meant
   to run on ordinary ISO-conforming engines, such as Scryer Prolog and Trealla Prolog, as well as
   on the Clausal engine, with small companion libraries for what ISO leaves open (dictionaries,
   dates). Plain ISO Prolog (`.pl`) versions are generated from the same source. No one engine,
   and no one vendor, is needed to run the law.
-- **It keeps rules declarative.** The cut (`!`) and if-then-else (`->`) are refused, so no rule
-  silently discards answers because of the order its clauses are written in; the remaining
-  cut-like constructs, such as negation as failure, are being phased out in favour of their pure
-  equivalents. A rule can be read on its own, next to the provision it implements.
 - **It is a standard others already know.** ISO Prolog is an international standard with several
   independent open-source implementations and decades of use in legal and expert systems.
 
