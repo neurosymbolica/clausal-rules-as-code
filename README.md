@@ -15,6 +15,9 @@ ceiling?*). For each domain you get:
 
 The programs run on [Clausal Prolog](https://github.com/neurosymbolica/clausal-prolog).
 
+Documentation, with every domain, its checks and its side-by-side statute reports:
+<https://neurosymbolica.github.io/clausal-rules-as-code/>
+
 ## This is a preview
 
 This first release holds eight EU domains, chosen because they pass every check in this
