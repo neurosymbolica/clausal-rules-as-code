@@ -14,19 +14,20 @@ open where none does.
 
 ## The language: a restricted subset of ISO Prolog
 
-The rules are written in **Clausal Prolog** (`.clausal` files), a restricted subset of ISO
-Prolog (ISO/IEC 13211-1). Being a subset brings three things:
+The rules are written in **Clausal Prolog** (`.clausal` files). Clausal Prolog is built for
+Python integration and neurosymbolic AI: logic programs that run inside a Python process, call
+Python and are called from it, and can be combined with machine-learning components. For
+formalizing law, two of its design choices matter in particular:
 
-- **It runs on standard engines.** A Clausal Prolog program is ISO Prolog, so it is meant to run
-  on ordinary ISO-conforming engines, such as Scryer Prolog and Trealla Prolog, as well as on the
-  Clausal engine, with small companion libraries for what ISO leaves open (dictionaries, dates).
-  Plain ISO Prolog (`.pl`) versions are generated from the same source.
-- **It is cut-free.** The cut (`!`) and if-then-else (`->`) are refused, which makes rules easier
-  to reason about: each clause can be read and checked on its own, and its meaning does not
-  depend on the order clauses are tried in. Remaining cut-like constructs, such as negation as
-  failure, are being phased out.
-- **It is a standard others already know**, with several independent open-source
-  implementations.
+- **It is a restricted subset of ISO Prolog** (ISO/IEC 13211-1). A Clausal Prolog program is ISO
+  Prolog, so it is meant to run on ordinary ISO-conforming engines, such as Scryer Prolog and
+  Trealla Prolog, as well as on the Clausal engine, with small companion libraries for what ISO
+  leaves open (dictionaries, dates). Plain ISO Prolog (`.pl`) versions are generated from the
+  same source, and ISO Prolog has several independent open-source implementations.
+- **It restricts cut-like control flow.** The cut (`!`) and if-then-else (`->`) are refused, and
+  the remaining cut-like constructs, such as negation as failure, are being phased out. For legal
+  rules this helps: each clause can be read and checked on its own against the provision it
+  implements, and its meaning does not depend on the order in which clauses are tried.
 
 The domains in this preview are being converted from the engine's earlier Python-like syntax
 (`.seam`) to `.clausal`, with each domain's own tests required to pass unchanged on the Clausal
