@@ -1,0 +1,85 @@
+id: eu/aml/amlr_bo_chain
+shape_family: numeric
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel, Wave C 2026-08-07; single source of truth for the
+# module list). Formerly schema/constants/computation (Wave B horizontal
+# layers); collapsed into the single ownership_interest.clausal slice --
+# this domain's sole determination. kernel.clausal is EMPTY (one slice, and
+# no domain-owned compound result constructor; see its header) but kept as
+# the DAG root per the layout.
+modules:
+  - "kernel"              # shared floor: EMPTY (one slice; no domain-owned result constructor)
+  - "ownership_interest"  # the sole determination: AMLR Art 52(1) ownership-interest test
+  - "queries"             # query-taxonomy layer (top-layer consumer)
+  - "parameters"          # Part-B provenance sidecar (load-on-demand; imported by queries)
+public_interface:
+  - "bo_chain_direct_boundary/1"
+  - "bo_chain_direct_vs_effective/5"
+  - "bo_chain_edge_sensitivity/6"
+  - "bo_chain_gap_to_threshold/4"
+  - "bo_chain_justification/5"
+  - "bo_chain_qualifying_holders/3"
+  - "bo_chain_qualifying_holders_at/4"
+  - "bo_chain_set_holding/5"
+  - "bo_chain_what_if_holding/7"
+  - "effective_ownership/4"
+  - "ubo_status/4"
+  - "ubo_threshold_bps/1"
+scope: "AMLR Reg 2024/1624 Art 52(1): is a natural person a beneficial owner — effective ownership (direct + indirect; chains multiply per level, add across parallel chains) >= 25%. Inputs must be complete: holdings a ground list of [holder, entity, integer basis points 0..10000] edges with no cycle, person and entity names; any other input gives no verdict (bo_chain_input_problem/4 names the problem)."
+sources:
+  - "Regulation (EU) 2024/1624 (AMLR) Art 52(1)"
+query_interface:
+  23: "effective_ownership/4"
+  2: "ubo_status/4"
+  # query-taxonomy coverage layer (queries.clausal, additive 2026-07-21):
+  4: "bo_chain_qualifying_holders/3"
+  5: "bo_chain_direct_vs_effective/5"
+  6: "bo_chain_direct_boundary/1"   # + constant form: ubo_threshold_bps/1
+  7: "bo_chain_justification/5"
+  16: "bo_chain_what_if_holding/7"
+  24: "bo_chain_edge_sensitivity/6" # + margin form: bo_chain_gap_to_threshold/4
+
+# Deferral register (provision tracking, 2026-10-18). Each entry names the units of the
+# pinned AMLR Arts 51-52 extract this domain does not implement. control_based_ubo is the
+# order's own deferral; the other two are added here and are not in the order.
+deferred_set:
+  - what: control_based_ubo
+    reason: >-
+      Beneficial ownership through control via other means (Art 51, first paragraph,
+      point (b), its second paragraph, and Art 52(4) for entities whose ownership cannot be
+      calculated) is the separate Art 53 control test. This domain decides the Art 52(1)
+      ownership-interest test only.
+    consequence: >-
+      A natural person below the 25 % ownership line who controls the entity by other means
+      is reported as not a beneficial owner here. A caller must run the control test
+      separately and combine the two results.
+    units:
+      - 32024R1624#art_051/2
+      - 32024R1624#point_051_b
+      - 32024R1624#parag_052.004
+  - what: delegated_lower_thresholds
+    reason: >-
+      Art 52(2)-(3) empower the Commission to set lower thresholds (at most 15 %) for
+      higher-risk categories of corporate entities by delegated act, and to review that act.
+      No such delegated act is in force, so there is no lower threshold to apply.
+    consequence: >-
+      Every corporate entity is tested against 25 %. If a delegated act lowers the threshold
+      for a category, entities in that category are tested against the wrong line until this
+      domain is updated.
+    units:
+      - 32024R1624#parag_052.002
+      - 32024R1624#point_052.002_a
+      - 32024R1624#point_052.002_b
+      - 32024R1624#parag_052.003
+  - what: article_headings
+    reason: >-
+      The heading of Art 52 carries no obligation. Deferred so that every unit of the pinned
+      extract is accounted for.
+    consequence: >-
+      None. A heading states no rule.
+    units:
+      - 32024R1624#art_052
+
+# Provision tracking is enforced (2026-10-18): coverage problems now block the gate.
+provision_tracking: enforced

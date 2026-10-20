@@ -1,0 +1,75 @@
+# =====================================================================
+# kernel.clausal -- the RESULT-SHAPE vocabulary for eu/procurement/time_limits.
+#
+# Determination-slices layout (2026-08-07; was schema.clausal). This file
+# holds the ONE compound constructor that describes the SHAPE of this
+# domain's verdict, and nothing else. No rules, no facts, no imports: it is
+# vocabulary, so the shape of an answer does not live inside the slice that
+# happens to compute it today.
+#
+#   time_limits_verdict(STATUS, MINIMUM_DAYS, CONFORMITY, CITATIONS)
+#     STATUS in { minimum_days_prescribed, no_minimum_prescribed,
+#                 stage_not_applicable }
+#     MINIMUM_DAYS: integer day count when minimum_days_prescribed,
+#                   the atom n_a otherwise (IC-11 numeric n_a idiom).
+#     CONFORMITY in { meets_prescribed_minimum,
+#                     shorter_than_prescribed_minimum,
+#                     observed_days_not_supplied,
+#                     no_prescribed_minimum_to_meet }
+#
+# THE CONFORMITY SLOT (added 2026-08-23). Arts 27-31 fix a MINIMUM; a record
+# shows a limit the notice actually allowed. Comparing the two is arithmetic
+# over the statute's own figures with no view about what the record shows, so
+# it is the domain's work, not a reviewer's overlay (assess spec §3.1). The
+# slot is the answer to "and did they allow that long?", and it is a fourth
+# slot rather than a second STATUS vocabulary because the two questions are
+# independent: `minimum_days_prescribed` says the Directive fixes a figure,
+# CONFORMITY says whether the observed figure clears it.
+#
+# WHY IT IS NEVER SILENT. There is no value meaning "no comparison happened".
+# A prescribed minimum with the observed days unsupplied is
+# `observed_days_not_supplied` -- explicitly not a conformity claim -- and the
+# two statuses that prescribe no figure at all carry
+# `no_prescribed_minimum_to_meet`, the n_a of this slot. Every verdict says
+# what it knows about conformity, including that it knows nothing.
+#
+# WHY IT IS HERE despite this domain having exactly ONE determination slice
+# (time_limits.clausal). The recipe's "used by >= 2 slices" bar governs VALUE
+# ATOMS; RESULT-SHAPE CONSTRUCTORS are an unconditional kernel category
+# regardless of slice count -- see
+# `docs/superpowers/plans/recipe-determination-slices-agent-brief.md`,
+# "Kernel membership when there is only ONE slice", and the executed
+# precedents us/irc_s121 (s121_eligibility), eu/procurement/thresholds
+# (threshold_verdict), eu/peppol_einvoicing (peppol_result) and
+# eu/gpsr (gpsr_verdict).
+#
+# Measured here rather than inherited: time_limits_verdict is spelled OUTSIDE
+# time_limits.clausal -- in tests/test_load.clausal, tests/test_output_mode.clausal,
+# tests/test_properties.clausal and tests/test_public_interface.clausal, and it
+# is the term the Python oracle (eval/score_harness.py:126) builds and passes
+# as the second argument of decide_time_limits/2. Those consumers ask about the
+# SHAPE of the answer without needing the rules that produce it; that is the
+# coupling the kernel absorbs.
+#
+# WHAT LEFT THIS FILE, and why. The old schema.clausal also held the three
+# status atoms, the n_a day-slot marker, the overall checklist-row id, the
+# five profile-key atoms, the two stage atoms and the four reduction-condition
+# atoms. Those are VALUE atoms with exactly ONE slice-level reader
+# (time_limits.clausal), so they are now declared there and imported FROM it
+# by the top-layer consumers (queries/fixtures) and by the tests. Kernel is
+# for slice<->slice sharing only.
+#
+# The two OTHER shared vocabularies this domain uses are not kernel material
+# either: cite/1 + eu_dir_2014_24_art_27..31 are owned by citations.clausal
+# (a genuinely horizontal module this refactor does not touch), and item/3
+# is the kit's, from formalize_lib. The five procedure atoms
+# (open_procedure ...) are owned by eu.procurement.directive_2014_24.vocabulary, shared by six
+# domains, and are not this domain's to place.
+# =====================================================================
+
+-module(kernel, [
+    time_limits_verdict(STATUS, MINIMUM_DAYS, CONFORMITY, CITATIONS)
+])
+-double_quotes(chars)
+
+-strict_atoms

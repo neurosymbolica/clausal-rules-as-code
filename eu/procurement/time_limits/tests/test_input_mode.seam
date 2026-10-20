@@ -1,0 +1,47 @@
+-double_quotes(chars)
+# =====================================================================
+# test_input_mode.clausal -- INPUT MODE: public predicates called with the
+# result argument BOUND (verdict given, not read out).
+# Run: python -m clausal.testing eu/procurement/time_limits/tests/test_input_mode.clausal
+# =====================================================================
+-import_from(eu.procurement.time_limits.time_limits, [
+    decide_time_limits, time_limits_status, minimum_days,
+    minimum_days_prescribed, no_minimum_prescribed, stage_not_applicable])
+-import_from(eu.procurement.time_limits.fixtures, [
+    time_limits_profile_for])
+-strict_atoms
+
+test("input mode: open baseline holds with days bound to 35") <- (
+    time_limits_profile_for("open_tenders_baseline", PROFILE),
+    minimum_days(PROFILE, 35),
+    time_limits_status(PROFILE, minimum_days_prescribed)
+)
+
+test("input mode: open baseline rejects a wrong bound day count") <- (
+    time_limits_profile_for("open_tenders_baseline", PROFILE),
+    not minimum_days(PROFILE, 30),
+    not minimum_days(PROFILE, 15)
+)
+
+test("input mode: restricted urgency tenders hold with days bound to 10") <- (
+    time_limits_profile_for("restricted_tenders_urgency", PROFILE),
+    minimum_days(PROFILE, 10)
+)
+
+test("input mode: restricted urgency tenders reject the unreduced 30") <- (
+    time_limits_profile_for("restricted_tenders_urgency", PROFILE),
+    not minimum_days(PROFILE, 30)
+)
+
+test("input mode: dialogue tenders reject minimum_days_prescribed status") <- (
+    time_limits_profile_for("dialogue_tenders", PROFILE),
+    time_limits_status(PROFILE, no_minimum_prescribed),
+    not time_limits_status(PROFILE, minimum_days_prescribed)
+)
+
+test("input mode: open request-stage rejects both day-table statuses") <- (
+    time_limits_profile_for("open_participation_requests", PROFILE),
+    time_limits_status(PROFILE, stage_not_applicable),
+    not time_limits_status(PROFILE, minimum_days_prescribed),
+    not time_limits_status(PROFILE, no_minimum_prescribed)
+)

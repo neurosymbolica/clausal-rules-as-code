@@ -1,0 +1,103 @@
+# Statute pin for eu/procurement/shortlisting (stage 00a pin-statute).
+#
+# ARTICLE granularity, not division. The smallest document-native element that
+# covers this domain's determination is <ARTICLE IDENTIFIER="065">. The smallest
+# containing DIVISION, read off the document rather than guessed, is
+# "Subsection 2 - Reduction of numbers of candidates, tenders and solutions"
+# (TITLE II > CHAPTER III > Section 3 > Subsection 2), which holds Arts 65 AND
+# 66. Cut as a DIVISION it yields 5 units, of which 2 -- the subsection TITLE
+# itself and art_066 (reduction of the number of TENDERS and SOLUTIONS: a
+# different determination on a different object, and deliberately in this
+# domain's excluded_set) -- would be permanently RED in this domain's ledger.
+# Measured, not asserted: see `verified` (4) below. That is the failure the
+# contract_modifications pathfinder measured on CHAPTER IV (44 units, 19 out of
+# scope) and the reason article granularity was settled (pipeline f2780ea;
+# SUBTREE-MAP.md, 2026-08-19).
+doc_id: 02014L0024-20260101
+celex: 02014L0024
+consolidated: "2026-01-01"
+format: fmx4
+# TWO URLS BECAUSE THEY ANSWER DIFFERENT QUESTIONS. The celex form is the stable
+# entry point and is what to re-fetch from; the cellar form is what that redirect
+# actually resolved to on the date below, so a future re-fetch landing somewhere
+# else is visible rather than silent. Appending /DOC_1 to the CELEX url 404s --
+# the 303 must be followed first and /DOC_1 requested on the MANIFESTATION.
+url: "http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4"
+resolved_url: "http://publications.europa.eu/resource/cellar/385cb957-f086-11f0-8d3c-01aa75ed71a1.0007.01/DOC_1"
+fetched: 2026-08-20
+file: 02014L0024-20260101-art065.fmx4.xml
+sha256: "97407c001e90251b35cbbc7490119e0aaa5e373d6e6e4a0048ab2c0be3b3be6a"
+
+# THE EXTRACT IS DECLARED, NOT IMPLIED. The pin above covers the extract's bytes;
+# these fields make the CUT itself reproducible and falsifiable -- re-fetch the
+# source, check its hash, re-cut the same element, compare.
+#
+# THE CUT IS DECLARED BY `root`, AND `root` IS CHECKED. `units.extract_roots()`
+# reads which element the pinned BYTES actually start at and refuses a sidecar
+# claiming otherwise -- including a root naming an element INSIDE the cut -- so
+# this is falsifiable rather than merely asserted. `extract.division:` is REFUSED
+# outright and is not written here: it named a KIND of element, `root` names an
+# element. `element:` / `element_identifier:` / `identifier:` are read by nothing
+# and are not written either.
+extract:
+  root: art_065
+  heading: "Article 65 - Reduction of the number of otherwise qualified candidates to be invited to participate"
+  articles: ["065"]
+  units: 3           # art_065 title + parag_065.001 + parag_065.002
+  source_file: CL2014L0024EN0060010.0001.xml
+  source_sha256: "d732f7f9a547b315289cd7447c33f73ce63a3797ed299e4dad4ff3066e157772"
+  method: >
+    The single <ARTICLE IDENTIFIER="065"> of the consolidated act, cut whole. An
+    ARTICLE carries the document's own IDENTIFIER, so this is a boundary the
+    document draws itself, not an article range chosen by hand. THE CUT IS A RAW
+    BYTE SLICE of the source between `<ARTICLE IDENTIFIER="065">` and its closing
+    tag -- NOT an ElementTree re-serialisation. That distinction is load-bearing
+    here and not a stylistic one: this span CONTAINS A PROCESSING INSTRUCTION,
+    `<?PAGE NO='80'?>`, and Python's default ElementTree silently DROPS
+    processing instructions (`insert_pis=True` is needed to see them at all).
+    Measured on this very span: the default-ET re-serialisation is NOT equal to
+    the source bytes, while the byte slice is. Stripping PIs would destroy the
+    page and consolidation markers the repealed-text guard (spec 13.24) depends
+    on. Re-parented under
+    the original CONS.ACT > CONS.DOC > ENACTING.TERMS chain with INFO.CONSLEG and
+    BIB.INSTANCE kept, so the extract is a well-formed, self-identifying Formex
+    document rather than a detached fragment. The enclosing DIVISION shells are
+    NOT carried: their TITLEs would each become a unit of this domain's ledger
+    that no rule of this domain will ever cover.
+  verified: >
+    Checked 2026-08-20, four ways, not asserted. (1) The full source document was
+    fetched at the URL above; its 303 was followed to the cellar manifestation
+    and /DOC_1 requested on THAT resource (application/zip, 122991 bytes,
+    content-type application/zip;charset=UTF-8). The inner
+    CL2014L0024EN0060010.0001.xml (567433 bytes) hashes to source_sha256 above,
+    matching the hash independently recorded in the wave-2 Art 67 pin and in
+    clausify-domains-procurement-pins .../_pins/SUBTREE-MAP.md. (2) The extract's
+    <ARTICLE IDENTIFIER="065"> span is BYTE-IDENTICAL to the same span of the
+    full source -- 1943 bytes on both sides, equal sha256 -- which is the strong
+    form of the claim and is asserted on the RAW BYTES, not on an ElementTree
+    round-trip. The weaker ET-tostring test also passes but is NOT the evidence
+    relied on: ET drops processing instructions, and this span carries one
+    (`<?PAGE NO='80'?>`, preserved in the extract). The full source holds 218
+    PIs (205 <?PAGE, 6 <?CLG.MDFO, 6 <?CLG.MDFC, 1 <?xml); exactly one falls
+    inside this Article and it survived the cut. Normalised text (1673
+    characters) is identical. (3) Parsed with the real
+    reader (_tools/provisions/units.py, Formex profile, via
+    load_sources_with_provenance): 3 units -- art_065, parag_065.001,
+    parag_065.002 -- every unit in scope, zero out-of-scope units, zero problems.
+    extract_roots() on the pinned bytes returns exactly ['art_065'], which is
+    what extract.root above declares. (4) Cross-checked unit-for-unit against a
+    CONTROL cut of the enclosing DIVISION ("Subsection 2 - Reduction of numbers
+    of candidates, tenders and solutions"; extract_roots on the control returns
+    ['division_subsection_2']; 5 units). All 3 Article 65 units are present in
+    the control with identical run text, and the 2 units the control adds are
+    'division_subsection_2' and 'art_066'. (5) CROSS-REFERENCES GREPPED FROM
+    THESE BYTES, not taken from the commissioning brief: the extract contains
+    "Article 58(5)" and "paragraph 2" and NO other reference to any Article.
+    Arts 26, 31, 34, 59, 60 and 66 do not appear in Article 65's text. In the
+    other direction, walking every ARTICLE of the consolidated act for
+    "Article 65" finds SEVEN inbound references -- Arts 28, 29, 30, 31, 34, 56
+    and 59. Both directions are recorded in manifest.yaml excluded_set. The full act itself cannot be parsed end-to-end -- the reader
+    refuses it on a duplicate ANNEX I id
+    ('point_annex_i-central_government_authorities-belgium_1', from the bilingual
+    FR/NL two-column table listing Belgium's authorities twice) -- which is why
+    the control cut, not the whole document, is the comparison basis.

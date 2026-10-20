@@ -1,0 +1,48 @@
+# =====================================================================
+# date_guard -- must_be_date/1: a real date, or it RAISES.
+# =====================================================================
+#
+# The guard in front of every DATE ordering written in ISO standard order
+# (`'@=<'(A, B)`, `'@<'(A, B)`). Clausal's `<=` orders dates chronologically, but
+# it is not ISO: ISO's `=<` is arithmetic and raises type_error(evaluable, date/3)
+# on a date. Standard order IS chronological on date(Y, M, D) with integer
+# components -- and ONLY there, so each operand is checked first.
+#
+# RAISING, not failing, is load-bearing. Guarded comparisons sit under `not`
+# (e.g. `not framework_term_defect_fires(...)`): a guard that FAILED on a non-date
+# would make the negation SUCCEED -- a silent verdict where Clausal's typed `<=`
+# raised. Raising keeps today's behaviour in every polarity.
+#
+# ISO must_be/2 convention:
+#   not ground (unbound, or partial like date(2020, _, 1))  -> instantiation_error
+#   ground, but not date(Y, M, D) with integer components    -> type_error(date, X)
+# `ground` is tested FIRST: `date(_, _, _) is X` on an unbound X would BIND it,
+# not test it. Three disjoint, cut-free clauses; ISO throw/1, so it exports to
+# any engine.
+#
+# Kit-internal (MODULES.yaml `status: internal`): not rendered into prompts.
+
+
+-module(date_guard, [
+    must_be_date(DATE)
+])
+
+-private([date(Y, M, D), error(KIND, CONTEXT), type_error(TYPE, CULPRIT), instantiation_error])
+
+-double_quotes(chars)
+-strict_atoms
+
+must_be_date(X) <- (
+    not ground(X),
+    throw(error(instantiation_error, must_be_date(X)))
+)
+must_be_date(X) <- (
+    ground(X),
+    date(Y, M, D) is X,
+    integer(Y), integer(M), integer(D)
+)
+must_be_date(X) <- (
+    ground(X),
+    not (date(Y, M, D) is X, integer(Y), integer(M), integer(D)),
+    throw(error(type_error('date', X), must_be_date(X)))
+)

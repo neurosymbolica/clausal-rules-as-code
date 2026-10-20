@@ -1,0 +1,89 @@
+# Statute pin for eu/procurement/life_cycle_costing (stage 00a pin-statute).
+#
+# ARTICLE GRANULARITY, NOT DIVISION. The smallest document-native element that
+# covers this domain's determinations is <ARTICLE IDENTIFIER="068">. The
+# smallest containing DIVISION is "Subsection 3 - Award of the contract"
+# (Arts 067-069, 37 units), of which only 13 are Article 68: pinning the
+# division would leave 24 units -- the whole of Art 67 (contract award
+# criteria, eu/procurement/award_criteria_meat) and the whole of Art 69
+# (abnormally low tenders, eu/procurement/abnormally_low_tender), both
+# SEPARATE domains -- permanently RED in this domain's ledger. That is the
+# failure the contract_modifications pathfinder measured on CHAPTER IV
+# (44 units, 19 out of scope) and the reason article granularity was settled.
+#
+# THE FULL ACT CANNOT BE PINNED. `parse_units` refuses the whole consolidated
+# 2014/24 on a duplicate id ('point_annex_i-central_government_authorities-
+# belgium_1'): ANNEX I's entry for Belgium is a bilingual FR/NL two-column
+# TBL whose two CELLs compose to the same id. The refusal is correct and
+# stands (spec 13.22) -- composing the column into the id would manufacture
+# two provisions where the law has one -- so the cut, not the act, is what is
+# pinnable today.
+doc_id: 02014L0024-20260101
+celex: 02014L0024
+consolidated: "2026-01-01"
+format: fmx4
+# TWO URLS BECAUSE THEY ANSWER DIFFERENT QUESTIONS. The celex form is the
+# stable entry point and is what to re-fetch from; the cellar form is what
+# that entry point actually resolved to on the date below, so a future
+# re-fetch landing somewhere else is visible rather than silent. Note that
+# the 303 from the celex url points at .../rdf/object/full, NOT at the
+# manifestation: the payload is obtained by appending /DOC_1 to the CELLAR
+# id, and appending /DOC_1 to the celex url 404s.
+url: "http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4"
+resolved_url: "http://publications.europa.eu/resource/cellar/385cb957-f086-11f0-8d3c-01aa75ed71a1.0007.01/DOC_1"
+fetched: 2026-08-20
+file: 02014L0024-20260101-art068.fmx4.xml
+sha256: "c01729e7fd182ac1bd2f06306be94916ea98842f9a1783490ffd6d47a0b9c000"
+
+# THE EXTRACT IS DECLARED, NOT IMPLIED. The pin above covers the extract's
+# bytes; these fields make the CUT itself reproducible and falsifiable --
+# re-fetch the source, check its hash, re-cut the same element, compare.
+#
+# THE CUT IS DECLARED BY `root`, AND `root` IS CHECKED. `units.extract_roots()`
+# reads which element the pinned BYTES actually start at and refuses a sidecar
+# claiming otherwise -- including a root naming an element INSIDE the cut. The
+# old `extract.division:` key is REFUSED outright rather than read as a
+# synonym: it named a KIND of element, `root` names an element. `element:` /
+# `identifier:`, which Wave 2 invented as a forward guess before `root`
+# existed, are read by nothing and are not written here.
+extract:
+  root: art_068
+  heading: "Article 68 - Life-cycle costing"
+  articles: ["068"]
+  units: 13          # art_068 title + 3 PARAG + 9 NP points (068.001 a, a(i)-(iv), b; 068.002 a-c)
+  source_file: CL2014L0024EN0060010.0001.xml
+  source_sha256: "d732f7f9a547b315289cd7447c33f73ce63a3797ed299e4dad4ff3066e157772"
+  method: >
+    The single <ARTICLE IDENTIFIER="068"> of the consolidated act, cut whole.
+    An ARTICLE carries the document's own IDENTIFIER, so this is a boundary the
+    document draws itself, not an article range chosen by hand. Re-parented
+    under the original CONS.ACT > CONS.DOC > ENACTING.TERMS chain with
+    INFO.CONSLEG and BIB.INSTANCE kept, so the extract is a well-formed,
+    self-identifying Formex document rather than a detached fragment. The
+    enclosing DIVISION shells (TITLE II > CHAPTER III > Section 3 >
+    Subsection 3) are NOT carried: their TITLEs would each become a unit of
+    this domain's ledger that no rule of this domain will ever cover.
+    PROCESSING INSTRUCTIONS ARE PRESERVED. The article contains one
+    (<?PAGE NO='82'?>, inside PARAG 068.001's ALINEA, between the chapeau <P>
+    and the alpha <LIST>), and the cutter parses with
+    ET.TreeBuilder(insert_pis=True) so it survives. That is what makes the
+    byte-identity claim below TRUE rather than approximate: the Wave-2 Art 67
+    extract, cut without PI retention, differs from its source span by the 16
+    bytes of <?PAGE NO='81'?> while its sidecar claims byte-identity.
+  verified: >
+    Checked 2026-08-20, three ways, not asserted. (1) The full source document
+    was fetched via the URL above -- 303 to
+    .../cellar/385cb957-f086-11f0-8d3c-01aa75ed71a1.0007.01/, then /DOC_1 on
+    that cellar id (application/zip, 122991 bytes, itself sha256
+    37e13bbe2cb5481f6a946317397d5aba6ec64ac591f5da9bbbf4a1340a0d19dd) -- and
+    its inner CL2014L0024EN0060010.0001.xml hashes to source_sha256 above,
+    matching the hash independently recorded in the Wave-2 Art 67 pin and in
+    _pins/SUBTREE-MAP.md. (2) The extracted <ARTICLE IDENTIFIER="068"> subtree
+    serialises BYTE-IDENTICALLY to the same 3134-byte span of the full source
+    (compared as bytes, not as normalised text). (3) Parsed with the real
+    reader (_tools/provisions/units.py, Formex profile): 13 units, art_068
+    through parag_068.003, every unit in scope, zero out-of-scope units, every
+    unit single-run (no discontiguous own text anywhere in this article, so no
+    run selector is needed by any citation). extract_roots() on the pinned
+    bytes returns exactly ['art_068'], which is what extract.root above
+    declares.

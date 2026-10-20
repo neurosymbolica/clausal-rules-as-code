@@ -1,0 +1,221 @@
+# =====================================================================
+# kit.query_combinators  --  small reusable helpers for query layers
+#
+# Domain-agnostic Clausal predicates used by the domains' query layers.
+# Each is cut-free / relational, outputs bound in the body, and takes the
+# domain's own closure as a DIRECT argument, invoked via call_goal.  The
+# library adds no domain logic: no thresholds, no citations, no labels.
+#
+#  diff_checklists/3   compare two checklists: the rows that differ between
+#  changed_deltas/2      two profiles or options (comparison, what-if support)
+#  flip_scan/4         locate the integer value where a verdict changes
+#  bisect_flip/4         (linear sweep; binary search for a monotone verdict)
+#  override_key/4      replace one key of a dict profile (functional)
+#  what_if/5           override one key, then re-run the domain's decision
+#  override_where/4    replace the first matching element of a list profile
+#
+# diff_checklists reads checklist rows STRUCTURALLY (functor/3 + arg/3,
+# arity-only), so it accepts item/3 checklists built by any module.
+# =====================================================================
+
+-private([delta(REQ_ID, STATUS_A, STATUS_B)])
+
+-meta_predicate(what_if('?','?','?',2,'?'), flip_scan('?','?',2,'?'), scan_from('?','?','?',2,'?'), flip_step('?','?','?','?',2,'?'), bisect_flip('?','?',2,'?'), bisect_between('?','?','?',2,'?'), bisect_pick('?','?','?','?','?',2,'?'), override_where('?',1,'?','?'), matches_elem(1,'?'))
+
+-module(query_combinators, [
+    diff_checklists(CL_A, CL_B, DELTAS),
+    changed_deltas(DELTAS, CHANGED),
+    flip_scan(LO, HI, PROBE, BOUNDARY),
+    bisect_flip(LO, HI, PROBE, BOUNDARY),
+    override_key(DICT, KEY, VALUE, NEW_DICT),
+    what_if(PROFILE, KEY, VALUE, DECIDE, RESULT),
+    override_where(LIST, MATCH, VALUE, NEW_LIST),
+    # public delta vocabulary (shared functor identity for importers)
+    delta(REQ_ID, STATUS_A, STATUS_B)
+])
+-double_quotes(chars)
+
+
+# diff_checklists/3 -- zip two assessment checklists by req-id.
+# Keyed (not positional) join over the union of req-ids: robust to
+# differently-ordered or non-aligned checklists.  A req-id absent from one
+# side is reported with STATUS "absent".  Output is a sorted list of
+# delta(REQ_ID, STATUS_A, STATUS_B).
+
+diff_checklists(CL_A, CL_B, DELTAS) <- (
+    checklist_ids(CL_A, IDS_A),
+    checklist_ids(CL_B, IDS_B),
+    append(IDS_A, IDS_B, IDS_RAW),
+    sort(IDS_RAW, IDS),
+    deltas_for_ids(IDS, CL_A, CL_B, DELTAS)
+)
+
+checklist_ids([], []),
+checklist_ids([ITEM, *TAIL], [ID, *REST]) <- (
+    functor(ITEM, _, 3),
+    arg(1, ITEM, ID),
+    checklist_ids(TAIL, REST)
+)
+
+deltas_for_ids([], _, _, []),
+deltas_for_ids([ID, *IDS], CL_A, CL_B, [DELTA, *DELTAS]) <- (
+    status_in(CL_A, ID, STATUS_A),
+    status_in(CL_B, ID, STATUS_B),
+    DELTA is delta(ID, STATUS_A, STATUS_B),
+    deltas_for_ids(IDS, CL_A, CL_B, DELTAS)
+)
+
+# status_in/3: STATUS of ID in the checklist, or "absent" if not present.
+# Disjoint guards (membership vs its negation) keep it cut-free; the
+# positive arm is wrapped in once so a checklist is read deterministically.
+# Reads rows structurally (identity-robust).
+status_in(CL, ID, STATUS) <- (
+    row_status_first(CL, ID, S),
+    STATUS is S
+)
+status_in(CL, ID, STATUS) <- (
+    no_row_with_id(CL, ID),
+    STATUS is "absent"
+)
+
+# 2026-09-29: NEGATION-FREE row reads. row_status_first/3 is the FIRST arity-3
+# row with ID (no once/1: a later row is reached only past a row whose id or
+# arity differs); no_row_with_id/2 states "no such row" positively.
+row_status_first([ITEM, *_], ID, S) <- (
+    functor(ITEM, _, 3),
+    arg(1, ITEM, ID),
+    arg(2, ITEM, S)
+)
+row_status_first([ITEM, *TAIL], ID, S) <- (
+    row_id_differs(ITEM, ID),
+    row_status_first(TAIL, ID, S)
+)
+row_id_differs(ITEM, _) <- (functor(ITEM, _, N), dif(N, 3))
+row_id_differs(ITEM, ID) <- (
+    functor(ITEM, _, 3),
+    arg(1, ITEM, ROW_ID),
+    dif(ROW_ID, ID)
+)
+no_row_with_id([], _),
+no_row_with_id([ITEM, *TAIL], ID) <- (
+    row_id_differs(ITEM, ID),
+    no_row_with_id(TAIL, ID)
+)
+
+# changed_deltas/2: keep only the deltas whose two statuses differ.
+# Convenience for "what changed?" callers; include tests each
+# delta once (committed choice) which is correct here -- statuses are ground.
+# delta_changed/1 (private): the include/3 test, LIFTED out of the closure
+# it used to be spelled as (class-M step B-3, 2026-09-05). A `<-` lambda in
+# term position has no ISO form -- it is a clause arrow, not a closure -- so
+# every lambda-carrying file was untranslatable and the whole cascade of
+# domains importing this library was blocked at G1. The closure captured
+# nothing, so the lift is a rename and nothing else: `include/3` applies this
+# to each element exactly as it applied the lambda body.
+delta_changed(D) <- (
+    D is delta(_, SA, SB),
+    SA is not SB
+)
+
+changed_deltas(DELTAS, CHANGED) <- (
+    include(delta_changed, DELTAS, CHANGED)
+)
+
+
+# flip_scan/4 and bisect_flip/4 -- find the integer value where a verdict
+# changes.  PROBE is the domain's (X, VERDICT) closure.  Integer arithmetic
+# only (no float drift).
+
+flip_scan(LO, HI, PROBE, BOUNDARY) <- (
+    call_goal(PROBE, LO, V0),
+    scan_from(LO, HI, V0, PROBE, BOUNDARY)
+)
+
+scan_from(X, HI, V_PREV, PROBE, BOUNDARY) <- (
+    X < HI,
+    X1 == X + 1,
+    call_goal(PROBE, X1, V1),
+    flip_step(X1, V_PREV, V1, HI, PROBE, BOUNDARY)
+)
+
+# flip_step: at X1 the verdict either changed (-> BOUNDARY = X1) or held
+# (-> keep scanning). Disjoint guards (dif vs its negation), no cut.
+flip_step(X1, V_PREV, V1, _, _, X1) <- (V_PREV is not V1)
+flip_step(X1, V_PREV, V1, HI, PROBE, BOUNDARY) <- (
+    V_PREV is V1,                # the positive complement of the dif above
+    scan_from(X1, HI, V1, PROBE, BOUNDARY)
+)
+
+
+# =====================================================================
+# 4b. bisect_flip/4  --  O(log range) MONOTONE drop-in for flip_scan
+# =====================================================================
+# Same contract as flip_scan (PROBE is a (X, VERDICT) closure; BOUNDARY is
+# the least X in [LO, HI] whose verdict differs from the verdict at LO) but
+# ASSUMES the verdict is MONOTONE in X: constant on [LO, B-1], a different
+# constant on [B, HI] (a single flip).  Binary search -- ~log2(HI-LO) probes
+# vs flip_scan's linear O(HI-LO) sweep, which is intractable on monetary /
+# scaled-integer ranges (the query-coverage sweep found crr/clp/reach domains
+# reading closed-form boundaries by hand because flip_scan could not be run).
+# Fails when the verdict at HI equals the verdict at LO (no flip in range).
+# Cut-free (disjoint guards), integer arithmetic (no float drift).
+bisect_flip(LO, HI, PROBE, BOUNDARY) <- (
+    call_goal(PROBE, LO, V_LO),
+    call_goal(PROBE, HI, V_HI),
+    V_LO is not V_HI,
+    bisect_between(LO, HI, V_LO, PROBE, BOUNDARY)
+)
+
+# Invariant: verdict(LO) == V_LO and verdict(HI) is not V_LO.
+bisect_between(LO, HI, _, _, HI) <- (HI == LO + 1)
+bisect_between(LO, HI, V_LO, PROBE, BOUNDARY) <- (
+    HI > LO + 1,
+    MID == (LO + HI) // 2,
+    call_goal(PROBE, MID, V_MID),
+    bisect_pick(LO, MID, HI, V_LO, V_MID, PROBE, BOUNDARY)
+)
+# V_MID == V_LO -> flip is in [MID, HI]; else the flip is in [LO, MID].
+bisect_pick(_, MID, HI, V_LO, V_MID, PROBE, BOUNDARY) <- (
+    V_MID is V_LO,               # positive complement of dif (was not (... is not ...))
+    bisect_between(MID, HI, V_LO, PROBE, BOUNDARY)
+)
+bisect_pick(LO, MID, _, V_LO, V_MID, PROBE, BOUNDARY) <- (
+    V_MID is not V_LO,
+    bisect_between(LO, MID, V_LO, PROBE, BOUNDARY)
+)
+
+
+# override_key/4 -- replace one key of a dict profile.  The override is
+# FUNCTIONAL (a new dict; the input is untouched) and an absent KEY is
+# ADDED.  The kit does not guard KEY against a profile-key schema: domains
+# keep their own key check in front of the call.
+
+override_key(DICT, KEY, VALUE, NEW_DICT) <- (
+    NEW_DICT is {**DICT, KEY: VALUE}
+)
+
+
+# what_if(PROFILE, KEY, VALUE, DECIDE, RESULT): override KEY -> VALUE, then run
+# the domain's decision closure DECIDE (a (PROFILE, RESULT) closure, invoked
+# via call_goal) on the modified profile.
+what_if(PROFILE, KEY, VALUE, DECIDE, RESULT) <- (
+    override_key(PROFILE, KEY, VALUE, HYP),
+    call_goal(DECIDE, HYP, RESULT)
+)
+
+# override_where(LIST, MATCH, VALUE, NEW_LIST): NEW_LIST is LIST with the
+# FIRST element the MATCH closure selects replaced by VALUE.  Fails when no
+# element matches (fail-closed).  MATCH is made deterministic via
+# matches_elem/once.
+
+override_where([H, *T], MATCH, VALUE, [VALUE, *T]) <- (
+    matches_elem(MATCH, H)
+)
+override_where([H, *T], MATCH, VALUE, [H, *T2]) <- (
+    not matches_elem(MATCH, H),
+    override_where(T, MATCH, VALUE, T2)
+)
+
+# matches_elem/2 (private): one deterministic MATCH probe -- a call
+# boundary so the negation above ranges over a plain goal.
+matches_elem(MATCH, X) <- (once(call_goal(MATCH, X)))

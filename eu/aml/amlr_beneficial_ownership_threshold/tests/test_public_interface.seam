@@ -1,0 +1,77 @@
+-double_quotes(chars)
+-import_from(eu.aml.amlr_beneficial_ownership_threshold, [amlr_bo_threshold, amlr_bo_effective_holding, amlr_bo_status])
+
+# IC-22: the raw numeric surface is now exported under the amlr_bo_ prefix
+# (pure aliases over the unexported bo_* engine predicates); behaviour identical.
+# amlr_bo_status binds STATUS to a bare declared atom from the shared terminal
+# triple (eligible = a beneficial owner / ineligible = not a beneficial owner)
+# that is -private to the rulebase module. Atoms are global by spelling now, so the
+# status is compared with a QUOTED atom ('eligible' needs no declaration under
+# -strict_atoms). The earlier `++str(S) is "eligible"` stopped matching when this file
+# moved to -double_quotes(chars): "eligible" became a char list, never a Python str.
+
+# --- bo_threshold ---
+test("threshold value is 2500 basis points") <- (
+    amlr_bo_threshold(T), T == 2500
+)
+test("DET bo_threshold") <- (
+    findall(T, amlr_bo_threshold(T), L), length(L, 1)
+)
+
+# --- bo_effective_holding ---
+test("direct 25pct holding equals 2500 BP") <- (
+    amlr_bo_effective_holding([[2500]], TOTAL), TOTAL == 2500
+)
+test("direct 30pct holding equals 3000 BP") <- (
+    amlr_bo_effective_holding([[3000]], TOTAL), TOTAL == 3000
+)
+test("indirect chain 60pct times 50pct equals 3000 BP") <- (
+    amlr_bo_effective_holding([[6000, 5000]], TOTAL), TOTAL == 3000
+)
+test("parallel chains 10pct plus 20pct equals 3000 BP") <- (
+    amlr_bo_effective_holding([[1000], [2000]], TOTAL), TOTAL == 3000
+)
+test("three-level chain 80pct times 50pct times 80pct equals 3200 BP") <- (
+    amlr_bo_effective_holding([[8000, 5000, 8000]], TOTAL), TOTAL == 3200
+)
+test("indirect chain 30pct times 8pct equals 240 BP") <- (
+    amlr_bo_effective_holding([[3000, 800]], TOTAL), TOTAL == 240
+)
+test("DET bo_effective_holding single direct chain") <- (
+    findall(T, amlr_bo_effective_holding([[2500]], T), L), length(L, 1)
+)
+test("DET bo_effective_holding indirect chain") <- (
+    findall(T, amlr_bo_effective_holding([[6000, 5000]], T), L), length(L, 1)
+)
+test("DET bo_effective_holding parallel chains") <- (
+    findall(T, amlr_bo_effective_holding([[1000], [2000]], T), L), length(L, 1)
+)
+
+# --- bo_status ---
+test("direct holding above threshold is eligible") <- (
+    amlr_bo_status([[3000]], S), S is 'eligible'
+)
+test("direct holding at exact threshold is eligible") <- (
+    amlr_bo_status([[2500]], S), S is 'eligible'
+)
+test("direct holding below threshold is ineligible") <- (
+    amlr_bo_status([[2000]], S), S is 'ineligible'
+)
+test("parallel chains summing to 30pct is eligible") <- (
+    amlr_bo_status([[1000], [2000]], S), S is 'eligible'
+)
+test("indirect chain below threshold is ineligible") <- (
+    amlr_bo_status([[3000, 800]], S), S is 'ineligible'
+)
+test("indirect chain above threshold is eligible") <- (
+    amlr_bo_status([[6000, 5000]], S), S is 'eligible'
+)
+test("DET bo_status above threshold") <- (
+    findall(S, amlr_bo_status([[3000]], S), L), length(L, 1)
+)
+test("DET bo_status below threshold") <- (
+    findall(S, amlr_bo_status([[2000]], S), L), length(L, 1)
+)
+test("DET bo_status at threshold") <- (
+    findall(S, amlr_bo_status([[2500]], S), L), length(L, 1)
+)

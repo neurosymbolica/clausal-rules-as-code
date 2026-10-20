@@ -1,0 +1,108 @@
+id: eu/state_aid/de_minimis_cumulation
+shape_family: numeric
+kit_version: "0.1.0"
+# Determination-slices layout (design doc 2026-08-07 SS3.4.5): ONE source of truth for
+# the module file set, read by auto/layout.dag_order -> pkginit/phases/gates.
+modules:
+  - "cumulation"   # the sole determination: Reg (EU) 2023/2831 Art 3(2) rolling-window cumulation vs the EUR 300 000 ceiling
+  - "parameters"   # Part-B provenance sidecar (load-on-demand, never imported)
+  - "queries"      # #4/#5/#6/#8/#13/#16/#24 query-taxonomy layer (top-layer consumer)
+public_interface:
+  - "de_minimis_aid_in_window/3"
+  - "de_minimis_ceiling/1"
+  - "de_minimis_compare_refs/4"
+  - "de_minimis_gap_to_ineligible/3"
+  - "de_minimis_headroom/3"
+  - "de_minimis_qualifying_grants/3"
+  - "de_minimis_verdict/3"
+  - "de_minimis_what_if/4"
+  - "ref_comparison/4"
+scope: "Computes EU de minimis state-aid cumulation under Commission Regulation (EU) 2023/2831. For each reference date, sums the de minimis aid received by a single undertaking within the rolling three-year window ending on that date (grants whose date falls strictly after REF minus three calendar years and on or before REF; the window is counted in calendar years, not days, and a REF of 29 February starts it from 28 February three years earlier) and checks the total against the EUR 300,000 (30,000,000 euro-cent) ceiling. Inputs must be complete: a grants list or reference date that is unbound, a date that is not a date(Y, M, D), an amount that is not a non-negative integer of euro-cents, or a grant that is not a [DATE, AMOUNT] pair gives the verdict indeterminate and no window total (de_minimis_input_problem/3 names the first problem)."
+sources:
+  - "Commission Regulation (EU) 2023/2831 Art 3(2) — rolling three-year window, ceiling EUR 300,000 per single undertaking"
+  - "Reg (EU) 2023/2831 — ceiling EUR 300,000 = 30,000,000 euro-cents"
+query_interface:
+  23: "de_minimis_aid_in_window/3"
+  6: "de_minimis_ceiling/1"   # + margin form: de_minimis_headroom/3
+  2: "de_minimis_verdict/3"
+  4: "de_minimis_qualifying_grants/3"
+  5: "de_minimis_compare_refs/4"
+  13: "de_minimis_what_if/4"
+  16: "de_minimis_what_if/4"
+  24: "de_minimis_gap_to_ineligible/3"
+raw_input_contract:
+  entrypoint: de_minimis_aid_in_window
+  raw_list_arg: 0
+  item_shape: grant(date, amount)     # date is a real date(YEAR, MONTH, DAY), amount int cents
+  item_encoding: date_term            # CANONICAL since the 2026-08-31 date migration: the grant
+                                       # date IS a datetime.date. Was `ymd_triple`, stale from
+                                       # the moment the rulebase migrated. The `fixed_args` REF
+                                       # date stays [Y, M, D] here because YAML cannot spell a
+                                       # date; interval_dedup lifts it at the engine boundary.
+  fixed_args: [[1, [2025, 6, 1]]]      # REF date companion
+  forbid_preaggregated: true
+
+# Deferral register (provision tracking, 2026-10-18). Each entry names the units of the
+# pinned Regulation (EU) 2023/2831 Art 3 extract this domain does not implement.
+# single_undertaking_grouping and sector_ceilings are the order's own deferrals; both concern
+# provisions outside this extract, so they name the instrument instead of units.
+deferred_set:
+  - what: single_undertaking_grouping
+    units: []
+    instrument: >-
+      Regulation (EU) 2023/2831 Art 2(2) (the "single undertaking": undertakings linked by
+      control are one undertaking) -- same instrument, outside this domain's pinned Art 3
+      extract
+    reason: >-
+      Which legal entities form one single undertaking is supplied by the caller as a
+      pre-grouped grant list; it is not derived here.
+    consequence: >-
+      If the caller passes the grants of only one entity of a group, the aid of the other
+      linked entities is not counted, and the ceiling test can pass when it should fail.
+  - what: sector_ceilings
+    units: []
+    instrument: >-
+      Commission Regulations (EU) No 1408/2013 (agriculture) and No 717/2014 (fishery and
+      aquaculture), which set their own de minimis ceilings -- other instruments, not pinned
+    reason: >-
+      Only the general EUR 300 000 ceiling of Regulation 2023/2831 is applied.
+    consequence: >-
+      Aid to an undertaking in a sector with its own de minimis regulation is tested against
+      the general ceiling, which can be the wrong line for that sector.
+  - what: merger_and_split_allocation
+    reason: >-
+      Art 3(8)-(9) say how prior de minimis aid is attributed when undertakings merge,
+      are acquired or split. This domain takes the grant list as already attributed to the
+      undertaking being assessed.
+    consequence: >-
+      After a merger, acquisition or split, the caller must build the grant list per
+      Art 3(8)-(9). A list built otherwise gives a cumulation total for the wrong set of
+      grants.
+    units:
+      - 32023R2831#parag_003.008
+      - 32023R2831#parag_003.009
+  - what: aid_amount_and_grant_date_inputs
+    reason: >-
+      Art 3(3), 3(5) and 3(6) fix how an aid amount and its date are established: the
+      moment the legal right is conferred, the gross grant equivalent, and the discounted
+      value of instalments. Each grant arrives here as a date and an amount already
+      established that way.
+    consequence: >-
+      The caller must supply, for each grant, the date the legal right was conferred and the
+      gross grant equivalent discounted to that date. Payment dates, net amounts or
+      undiscounted instalments give a wrong total.
+    units:
+      - 32023R2831#parag_003.003
+      - 32023R2831#parag_003.005
+      - 32023R2831#parag_003.006
+  - what: article_headings
+    reason: >-
+      The heading of Art 3 carries no obligation. Deferred so that every unit of the pinned
+      extract is accounted for.
+    consequence: >-
+      None. A heading states no rule.
+    units:
+      - 32023R2831#art_003
+
+# Provision tracking is enforced (2026-10-18): coverage problems now block the gate.
+provision_tracking: enforced

@@ -1,0 +1,60 @@
+# Parameter sourcing manifest for eu/procurement/life_cycle_costing.
+#
+# EMPTY AT THE BASELINE, AND THAT IS THE FINDING, NOT AN OMISSION.
+#
+# `parameters.clausal` is the TRANSPOSITION / IMPLEMENTATION SEAM -- the place a
+# Member State's or an implementing act's choices land. Article 68 has NO such
+# seam. It carries no figure of any kind: no threshold, no percentage, no
+# period, no cap, no discount rate, no residual-value rule. And unlike its
+# neighbour Art 67(2) final sentence ("Member States may provide that
+# contracting authorities may not use price only ..."), Article 68 delegates
+# nothing to the Member States: every one of its three paragraphs is addressed
+# to the contracting authority directly. `check_parameters.py`'s numeric-
+# parameter signal therefore has nothing to fire on, because there is no
+# statutory number in this domain at all.
+#
+# EVERY NUMBER THIS DOMAIN HANDLES IS CALLER DATA. AMOUNT_EUR_CENTS in a cost
+# component, and the integer total that is their sum, are supplied by whoever
+# builds the profile. They are facts about one procurement, not constants of
+# the Directive, so sourcing them here would be a category error.
+#
+# Convention chosen, and it is a choice: this domain ships an EMPTY
+# `-module(parameters, [])` plus this sidecar, which is what all six existing
+# eu/procurement domains do. The alternative -- `parameters: none  # <reason>`
+# in manifest.yaml -- satisfies the same gate and has zero users corpus-wide.
+# Do not do both.
+#
+# ============================================================================
+# THE ONE REAL MOVING PART, AND WHY IT IS NOT A PARAMETER.
+#
+# Art 68(3) second alinea: "A list of such legislative acts, and where necessary
+# the delegated acts supplementing them, is set out in Annex XIII. The
+# Commission shall be empowered to adopt delegated acts in accordance with
+# Article 87 concerning the update of that list ..."
+#
+# So the Annex XIII list DOES change over time -- but by a delegated act
+# amending the Directive's own annex, which produces a NEW CONSOLIDATION of
+# 2014/24. The membership table `annex_xiii_act/1` is therefore sourced from
+# this domain's own STATUTE PIN (sources/02014L0024-20260101-annex13.fmx4.xml,
+# sha256 8db7c50b...e010ce, the consolidation in force on 2026-01-01), and the
+# way to update it is to re-pin the annex at the new consolidation and let the
+# sha256 mismatch make the change loud. A copy of the list here would be a
+# second, unpinned home for a fact the pin already holds, and the two would
+# drift silently -- which is the exact failure `parameters-sources.yaml` exists
+# to prevent, arrived at from the other direction.
+#
+# If a future transposition pack is built for a Member State, THIS is where its
+# choices would land, and it would look like the guarded-false stub idiom (the
+# engine needs at least one compiled clause per exported predicate):
+#
+#   national_lcc_method_override(_SUBJECT_MATTER_ATOM) <- (False),
+#
+# with its entry below carrying status, ref, label and (if verified) verbatim.
+# The key set of this file must equal the `parameter_source/2` key set in
+# parameters.clausal EXACTLY, and every key must be a real fact functor that
+# appears as `<name>(` in a NON-parameters.clausal file of this domain.
+# ============================================================================
+#
+# status: verified (ref + verbatim + label all non-empty; the verbatim is an
+#         exact substring of the source at ref and states the value in source
+#         units) | unverified (verbatim MUST be empty)

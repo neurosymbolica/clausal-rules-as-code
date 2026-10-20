@@ -1,0 +1,214 @@
+-double_quotes(chars)
+# =====================================================================
+# test_public_interface.clausal -- the package's PUBLIC surface, exercised
+# through the __init__ re-export (what an external caller sees).
+#
+# Run: python -m clausal.testing eu/procurement/utilities_negotiated_without_prior_call/tests/test_public_interface.clausal
+# =====================================================================
+
+-import_from(eu.procurement.utilities_negotiated_without_prior_call, [decide_utilities_negotiated_without_prior_call, utilities_negotiated_without_prior_call_status, utilities_negotiated_without_prior_call_checklist, art_50_a_no_suitable_tenders, art_50_b_research_contract, art_50_c_sole_operator, art_50_d_extreme_urgency, art_50_e_additional_deliveries, art_50_f_repetition, art_50_g_commodity_market, art_50_h_bargain_purchase, art_50_i_advantageous_winding_up, art_50_j_design_contest, pleaded_ground_key, contract_type_key, sole_operator_reason_key])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.fixtures, [
+    utilities_negotiated_without_prior_call_subject,
+    utilities_negotiated_without_prior_call_profile_for,
+    utilities_negotiated_without_prior_call_assess
+])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.kernel, [utilities_negotiated_verdict, use_lawful, use_unlawful, n_a])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.utilities_negotiated_without_prior_call, [competition_absent_for_technical_reasons])
+-import_from(eu.procurement.directive_2014_24.vocabulary, [supplies])
+
+# --- Positive routes: use_lawful --------------------------------------
+
+test("a_lawful: no suitable tenders, conditions not altered -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("a_lawful", utilities_negotiated_verdict(use_lawful, art_50_a_no_suitable_tenders, _CITATIONS))
+)
+
+test("b_lawful: research contract, all three conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("b_lawful", utilities_negotiated_verdict(use_lawful, art_50_b_research_contract, _CITATIONS))
+)
+
+test("c_art_lawful: sole operator unique art -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_art_lawful", utilities_negotiated_verdict(use_lawful, art_50_c_sole_operator, _CITATIONS))
+)
+
+test("c_tech_lawful: sole operator technical reasons with proviso -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_tech_lawful", utilities_negotiated_verdict(use_lawful, art_50_c_sole_operator, _CITATIONS))
+)
+
+test("c_rights_lawful: sole operator exclusive rights with proviso -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_rights_lawful", utilities_negotiated_verdict(use_lawful, art_50_c_sole_operator, _CITATIONS))
+)
+
+test("d_lawful: extreme urgency, all three conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("d_lawful", utilities_negotiated_verdict(use_lawful, art_50_d_extreme_urgency, _CITATIONS))
+)
+
+test("e_lawful: additional deliveries, supplies type, both conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("e_lawful", utilities_negotiated_verdict(use_lawful, art_50_e_additional_deliveries, _CITATIONS))
+)
+
+test("f_lawful: repetition, services type, all four conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("f_lawful", utilities_negotiated_verdict(use_lawful, art_50_f_repetition, _CITATIONS))
+)
+
+test("g_lawful: commodity market, supplies type -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("g_lawful", utilities_negotiated_verdict(use_lawful, art_50_g_commodity_market, _CITATIONS))
+)
+
+test("h_lawful: bargain purchase, supplies type, both conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("h_lawful", utilities_negotiated_verdict(use_lawful, art_50_h_bargain_purchase, _CITATIONS))
+)
+
+test("i_lawful: advantageous winding up, services type, both conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("i_lawful", utilities_negotiated_verdict(use_lawful, art_50_i_advantageous_winding_up, _CITATIONS))
+)
+
+test("j_lawful: design contest, services type, both conditions met -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_assess("j_lawful", utilities_negotiated_verdict(use_lawful, art_50_j_design_contest, _CITATIONS))
+)
+
+# --- Near-miss routes: use_unlawful -----------------------------------
+
+test("a_near_miss: initial conditions substantially altered -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("a_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("b_near_miss: award prejudices subsequent competitive award -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("b_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("c_art_near_miss: only_particular_operator false -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_art_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("c_tech_near_miss: absence_of_competition artificially narrowed -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_tech_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("c_rights_near_miss: no_reasonable_alternative false -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("c_rights_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("d_near_miss: urgency attributable to entity -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("d_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("e_near_miss: works type, type gate fails -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("e_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("f_near_miss: supplies type, type gate fails -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("f_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("g_near_miss: services type, type gate fails -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("g_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("h_near_miss: price not considerably lower -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("h_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("i_near_miss: works type, type gate fails -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("i_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+test("j_near_miss: supplies type, type gate fails -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_assess("j_near_miss", utilities_negotiated_verdict(use_unlawful, n_a, _CITATIONS))
+)
+
+# --- Checklist non-empty on every subject -----------------------------
+
+test("checklist non-empty: a_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: b_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("b_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: c_tech_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("c_tech_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: d_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("d_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: e_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: f_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("f_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: g_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("g_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: h_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("h_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: i_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("i_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+test("checklist non-empty: j_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("j_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    not (CHECKLIST is [])
+)
+
+# --- Status projection matches the assess verdict ---------------------
+
+test("status projection: a_lawful -> use_lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_status(PROFILE, use_lawful)
+)
+
+test("status projection: e_near_miss -> use_unlawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_near_miss", PROFILE),
+    utilities_negotiated_without_prior_call_status(PROFILE, use_unlawful)
+)
+
+# --- Profile key atoms are distinct and resolvable --------------------
+
+test("pleaded_ground_key, contract_type_key, sole_operator_reason_key are distinct profile key atoms") <- (
+    pleaded_ground_key is not contract_type_key,
+    contract_type_key is not sole_operator_reason_key,
+    pleaded_ground_key is not sole_operator_reason_key
+)
+
+test("pleaded_ground_key appears in a lawful profile") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    get(PROFILE, pleaded_ground_key, art_50_a_no_suitable_tenders)
+)
+
+test("contract_type_key appears in a lawful profile") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_lawful", PROFILE),
+    get(PROFILE, contract_type_key, supplies)
+)
+
+test("sole_operator_reason_key appears in a sole-operator profile") <- (
+    utilities_negotiated_without_prior_call_profile_for("c_tech_lawful", PROFILE),
+    get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons)
+)
