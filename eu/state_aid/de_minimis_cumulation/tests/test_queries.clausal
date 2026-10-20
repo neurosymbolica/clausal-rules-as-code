@@ -1,0 +1,214 @@
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer
+% (Q1 wave: #4/#5/#6/#8/#13/#16/#24 over the Reg (EU) 2023/2831 Art 3(2)
+% EUR 300 000 rolling three-year de minimis cumulation ceiling).
+%
+%   qualifying:  window membership matches the rulebase (start-exclusive,
+%                REF-inclusive); guard fails loudly on unresolvable REF.
+%   compare:     postponing the reference date rolls old aid out of the
+%                window and can flip ineligible -> eligible.
+%   headroom:    exact integer margin; counts only in-window aid; 0 at and
+%                above the ceiling.
+%   gap:         analytic minimal flipping grant (headroom+1 / 0), with the
+%                flip location verified EMPIRICALLY against the rulebase by
+%                kit flip_scan (narrow window around the analytic answer --
+%                the pilot's "rulebase, not constant, defines the boundary"
+%                guarantee) and MINIMALITY witnessed (gap flips, gap-1
+%                does not).
+%   what-if:     inclusive ceiling (headroom-sized grant keeps eligibility,
+%                +1 breaches); inherits IC-11 indeterminate.
+%
+% Run (from the repository root):
+%   PYTHONPATH=kit:. python -m clausal.testing eu/state_aid/de_minimis_cumulation/tests/test_queries.clausal
+% =====================================================================
+
+% (Clausal Prolog: the seam imports of the value atoms eligible, ineligible and
+% indeterminate, of the result constructor ref_comparison/4, and of date from
+% date_time, have no counterpart: atoms and compound terms need no import.
+% flip_scan/4's probe is the partial goal de_minimis_what_if(Gs, Ref), called
+% with the two extra arguments (X, V) -- the seam's lambda
+% ((X, V) <- de_minimis_what_if(GS, REF, X, V)).)
+:- module(test_queries, []).
+:- use_module(library(clpz)).
+:- use_module(eu/state_aid/de_minimis_cumulation, [
+    de_minimis_qualifying_grants/3, de_minimis_compare_refs/4,
+    de_minimis_headroom/3, de_minimis_gap_to_ineligible/3, de_minimis_what_if/4,
+    de_minimis_ceiling/1, de_minimis_aid_in_window/3, de_minimis_verdict/3]).
+:- use_module(kit/query_combinators, [flip_scan/4]).
+
+% ---------------------------------------------------------------------
+% fixtures (grants are [date(Y,M,D), AMOUNT_CENTS]; REF dates date(Y,M,D))
+% ---------------------------------------------------------------------
+q_ref(date(2025, 6, 1)).
+
+% mixed in/out-of-window vs q_ref: 2022-06-01 sits exactly ON the exclusive
+% window start (3y before REF) -> out; 2020-01-01 long out; the rest in.
+q_mixed_grants([
+    [date(2024, 1, 1), 15000000],
+    [date(2022, 6, 2), 5000000],
+    [date(2022, 6, 1), 4000000],
+    [date(2020, 1, 1), 20000000]
+]).                                       % in-window total: 20 000 000
+
+q_at_ceiling_grants([[date(2024, 1, 1), 30000000]]).      % exactly EUR 300k
+q_over_grants([[date(2024, 1, 1), 20000000], [date(2023, 6, 1), 15000000]]).
+q_small_headroom_grants([[date(2024, 1, 1), 29999950]]).  % headroom 50 cents
+
+% =====================================================================
+% #4 enumeration -- de_minimis_qualifying_grants/3
+% =====================================================================
+test('qualifying: keeps exactly the in-window grants, in order') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_qualifying_grants(Gs, Ref, Q),
+    Q = [[date(2024, 1, 1), 15000000], [date(2022, 6, 2), 5000000]].
+
+test('qualifying: grant ON the reference date is included (inclusive upper bound)') :-
+    de_minimis_qualifying_grants([[date(2025, 6, 1), 100]], date(2025, 6, 1), Q),
+    Q = [[date(2025, 6, 1), 100]].
+
+test('qualifying: empty grants stay empty') :-
+    q_ref(Ref),
+    de_minimis_qualifying_grants([], Ref, Q),
+    Q = [].
+
+test('DET qualifying') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    findall(Q, de_minimis_qualifying_grants(Gs, Ref, Q), L),
+    length(L, 1).
+
+% qualifying total == rulebase total (the probe never drifts from the oracle)
+test('qualifying: sum over the returned grants equals the rulebase total') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_qualifying_grants(Gs, Ref, Q),
+    de_minimis_aid_in_window(Q, Ref, TQ),
+    de_minimis_aid_in_window(Gs, Ref, TAll),
+    TQ #= TAll.
+
+% =====================================================================
+% #5 comparison -- de_minimis_compare_refs/4
+% =====================================================================
+test('compare: postponing the grant date rolls old aid out and flips the verdict') :-
+    Gs = [[date(2022, 3, 1), 20000000], [date(2024, 1, 1), 15000000]],
+    de_minimis_compare_refs(Gs, date(2025, 1, 1), date(2025, 6, 1), R),
+    R = ref_comparison(35000000, ineligible, 15000000, eligible).
+
+test('compare: same date on both sides agrees with itself') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_compare_refs(Gs, Ref, Ref, R),
+    R = ref_comparison(20000000, eligible, 20000000, eligible).
+
+test('DET compare') :-
+    Gs = [[date(2022, 3, 1), 20000000], [date(2024, 1, 1), 15000000]],
+    findall(R, de_minimis_compare_refs(Gs, date(2025, 1, 1), date(2025, 6, 1), R), L),
+    length(L, 1).
+
+% =====================================================================
+% #6 threshold / #24 -- de_minimis_headroom/3
+% =====================================================================
+test('headroom: ceiling minus the in-window total (out-of-window aid ignored)') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_headroom(Gs, Ref, H),
+    H #= 10000000.
+
+test('headroom: empty history has the full EUR 300k ceiling free') :-
+    q_ref(Ref),
+    de_minimis_headroom([], Ref, H),
+    de_minimis_ceiling(C),
+    H #= C.
+
+test('headroom: exactly at the ceiling -> 0 (inclusive boundary)') :-
+    q_ref(Ref), q_at_ceiling_grants(Gs),
+    de_minimis_headroom(Gs, Ref, H),
+    H #= 0.
+
+test('headroom: already over the ceiling -> 0') :-
+    q_ref(Ref), q_over_grants(Gs),
+    de_minimis_headroom(Gs, Ref, H),
+    H #= 0.
+
+test('DET headroom (at-ceiling boundary point)') :-
+    q_ref(Ref), q_at_ceiling_grants(Gs),
+    findall(H, de_minimis_headroom(Gs, Ref, H), L),
+    length(L, 1).
+
+% =====================================================================
+% #8 counterfactual -- de_minimis_gap_to_ineligible/3
+% =====================================================================
+test('gap: eligible undertaking flips at headroom + 1') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    Gap #= 10000001.
+
+test('gap: exactly at the ceiling, a single cent breaches') :-
+    q_ref(Ref), q_at_ceiling_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    Gap #= 1.
+
+test('gap: already ineligible -> 0 (amlr pilot convention)') :-
+    q_ref(Ref), q_over_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    Gap #= 0.
+
+test('gap MINIMALITY: gap flips the verdict, gap-1 does not') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    de_minimis_what_if(Gs, Ref, Gap, ineligible),
+    Short #= Gap - 1,
+    de_minimis_what_if(Gs, Ref, Short, eligible).
+
+test('gap EMPIRICAL: kit flip_scan locates the rulebase flip exactly at gap (small range)') :-
+    q_ref(Ref), q_small_headroom_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    Gap #= 51,
+    flip_scan(0, 80,
+        de_minimis_what_if(Gs, Ref),
+        Boundary),
+    Boundary #= Gap.
+
+test('gap EMPIRICAL: flip_scan window around a large analytic gap confirms the flip point') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_gap_to_ineligible(Gs, Ref, Gap),
+    Lo #= Gap - 4,
+    Hi #= Gap + 4,
+    flip_scan(Lo, Hi,
+        de_minimis_what_if(Gs, Ref),
+        Boundary),
+    Boundary #= Gap.
+
+test('DET gap (eligible base)') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    findall(G, de_minimis_gap_to_ineligible(Gs, Ref, G), L),
+    length(L, 1).
+
+test('DET gap (ineligible base)') :-
+    q_ref(Ref), q_over_grants(Gs),
+    findall(G, de_minimis_gap_to_ineligible(Gs, Ref, G), L),
+    length(L, 1).
+
+% =====================================================================
+% #16 what-if / #13 compliance -- de_minimis_what_if/4
+% =====================================================================
+test('what-if: a headroom-sized grant keeps eligibility (inclusive ceiling)') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_headroom(Gs, Ref, H),
+    de_minimis_what_if(Gs, Ref, H, V),
+    V = eligible.
+
+test('what-if: one cent beyond headroom breaches') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_headroom(Gs, Ref, H),
+    Over #= H + 1,
+    de_minimis_what_if(Gs, Ref, Over, V),
+    V = ineligible.
+
+test('what-if: zero-amount grant never changes an eligible position') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    de_minimis_what_if(Gs, Ref, 0, V),
+    V = eligible.
+
+test('DET what-if') :-
+    q_ref(Ref), q_mixed_grants(Gs),
+    findall(V, de_minimis_what_if(Gs, Ref, 100, V), L),
+    length(L, 1).
+
+:- end_module(test_queries).

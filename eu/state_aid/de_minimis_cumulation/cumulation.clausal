@@ -1,0 +1,386 @@
+% =====================================================================
+% cumulation.clausal -- eu/state_aid/de_minimis_cumulation's SOLE
+% DETERMINATION SLICE: the Commission Regulation (EU) 2023/2831 Art 3(2)
+% de minimis CUMULATION test, top to bottom in one file -- its statutory
+% VALUE facts (the EUR 300 000 ceiling, the 3-year lookback, the 29-Feb
+% clamp), its rolling-window aggregation, and its verdict assembly.
+%
+% Determination-slices re-slice (Wave C, 2026-08-07). Formerly four
+% horizontal layers -- schema + constants + computation + decision --
+% merged here UNCHANGED: every clause body is byte-identical to its
+% pre-merge text (this is a relocation, not a rewrite), and the multiset
+% of (functor, arity) clause heads across the package is equal on both
+% sides.
+%
+% ONE SLICE, not two, and the reason is the law rather than the old file
+% count. de_minimis_aid_in_window/3 is public and de_minimis_verdict/3 is
+% public, but they are ONE determination: Art 3(2) is a single norm whose
+% aggregate ("the total amount of de minimis aid granted ... over any
+% period of three years") is the input to its own ceiling test. Splitting
+% them would put a slice->slice edge back into the DAG for no legal
+% object -- the same finding as eu/banking/crr_lcr (one slice absorbing
+% its numeric projection) and eu/banking/crr_own_funds_min_ratios ("three
+% ratios that are ONE determination").
+%
+% NO kernel.clausal, and the reason is measured rather than assumed
+% (recipe "Kernel membership", decision procedure):
+%   * step 1 -- this domain declares NO compound result constructor for
+%     its determination. The verdict shape is the BARE ATOM TRIPLE
+%     eligible/ineligible/indeterminate, carried in argument 3 of
+%     de_minimis_verdict/3; there is no <domain>_verdict/N term, no
+%     factor/2, no obligation/2. The one compound the domain does mint --
+%     ref_comparison/4 -- is the QUERY layer's own #5 comparison result
+%     and is declared in queries.clausal, the file that both builds and
+%     is the sole in-package reader of it; a top-layer constructor is not
+%     a shared floor.
+%   * step 2 -- VALUE ATOMS face the strict ">= 2 SLICES" bar, and with
+%     exactly one determination that bar is unreachable by construction.
+%     All three of the old schema.clausal atoms therefore live HERE, in
+%     the only slice that spells them; queries.clausal imports the two it
+%     actually uses FROM this file (`indeterminate` it never spells --
+%     it inherits the IC-11 channel through de_minimis_verdict/3 -- so it
+%     no longer imports it either).
+% Same shape and same reasoning as eu/banking/crr_lcr and
+% eu/crypto_assets/mica_casp_authorisation_conditions, which also carry
+% no kernel file.
+%
+% IMPORTS ARE LEXICAL CLOSURE ONLY (design doc SS0.1-0.2): the three
+% names below are exactly the ones this file's clause bodies SPELL. The
+% refuted Wave-B rule ("bare atoms are module-scoped; they resolve
+% against the CALLING module at solve time", quoted verbatim in the old
+% schema.clausal header) is NOT reproduced -- bare-atom resolution is
+% compile-time and lexical, per file (clausal/logic/compiler_v2.py:
+% 647-729). Rule 3 (input-constructor closure) has NO instance here:
+% every argument the tests and eval/score_harness.py pass to this file's
+% public predicates is a plain integer, a [Y, M, D] list or a list of
+% [DATE, AMOUNT] pairs -- no domain-minted compound term reaches a query
+% argument, so nothing has to be in scope beyond the lexical closure.
+%
+% CLAUSAL PROLOG CONVERSION (2026-10-20). The seam export list also named the
+% value atoms eligible, ineligible, indeterminate and the input-check problem
+% vocabulary -- the data constructors not_ground/1, wrong_type/2,
+% not_a_list/1, malformed_grant/1, negative_amount/1 and the atoms grants,
+% reference_date, grant_date, grant_amount, expected_date, expected_integer.
+% Atoms and data constructors are not exported or imported in a .clausal
+% module, so the list below carries the predicates only.
+:- module(cumulation, [
+    de_minimis_ceiling/1,
+    de_minimis_ceiling_amount/1,
+    sum_cents/2,
+    is_feb_29/2,
+    lookback_years/1,
+    de_minimis_aid_in_window/3,
+    de_minimis_verdict/3,
+    % the input check (ruling D80, 2026-10-20); its problem terms are listed above
+    de_minimis_input_problem/3
+]).
+
+:- use_module(library(clpz)).
+% The seam imported euro and eur_cent from european_union (units), sum_list
+% from formalize_lib, date and days_between from date_time, and must_be_date
+% from kit.date_guard. In Clausal Prolog: date(Y, M, D) is a plain compound
+% (no import); days_between/3 comes from library(datetime); sum_list/2 is the
+% library(lists) builtin; the euro amounts are plain integers (see the ceiling
+% below); is_date/1 states the date guard's test itself (below).
+:- use_module(library(datetime), [days_between/3]).
+% The four citation keys are atoms and need no import.
+:- use_module(eu/state_aid/de_minimis_cumulation/citations, [implements/1]).
+
+% ---------------------------------------------------------------------
+% Statutory VALUE facts (formerly constants.clausal). de_minimis_ceiling/1
+% and lookback_years/1 are the domain's two parameter sources; both carry
+% their Art 3(2) provenance in parameters.clausal, and queries.clausal
+% reads the SAME de_minimis_ceiling/1 fact so the decision and the query
+% layer cannot drift.
+% ---------------------------------------------------------------------
+
+% Clausal Prolog: the seam declared -constant_number_currency(de_minimis_ceiling_eur,
+% 300_000, euro), a value united in euro. Clausal Prolog has no united values
+% and an ISO constant cannot carry a unit, so the declaration is the FACT
+% de_minimis_ceiling(300000, euro): the figure in the statute's own unit, with
+% that unit beside it. It is written once; every use below reads it and
+% converts it to euro-cents with the factor 100 (the seam's eur_cent minor
+% unit). The fact carries the functor name de_minimis_ceiling because that is
+% the key of its parameter_source/2 record in parameters.clausal, and in a
+% Prolog-syntax domain check_parameters accepts a record key only where the
+% value lives -- a fact or a declared constant, never a rule head -- while
+% de_minimis_ceiling/1 below is a rule. (A constant of that name is refused by
+% the engine: it would overwrite the predicate de_minimis_ceiling/1.)
+de_minimis_ceiling(300000, euro).
+
+% The public interface still answers in euro-cents, but the value is now
+% DERIVED from the declaration above rather than written a second time:
+% dividing by the minor unit yields a bare integer. One source of truth.
+% (Clausal Prolog: multiplying the euro figure of the fact above by 100 cents
+% to the euro.)
+de_minimis_ceiling(Cents) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_ceiling(Euro, euro),
+    Cents #= Euro * 100.
+
+% The same ceiling as a UNITED value, for callers that compute with it.
+% `constant/1` is file-local by construction (an imported constant is not
+% re-registered on the importer -- clausal/logic/constants.py:387), so a
+% sibling that needs the value gets it through this predicate, not through
+% a second declaration. Exported, because queries.clausal computes with it.
+% (Clausal Prolog: there are no united values, so this is the declared
+% figure as a plain number of EURO, 300000, read from de_minimis_ceiling/2;
+% queries.clausal now computes with de_minimis_ceiling/1 in euro-cents.)
+de_minimis_ceiling_amount(Amount) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_ceiling(Amount, euro).
+
+sum_cents(List, Sum) :- sum_list(List, Sum).
+
+is_feb_29(2, 29).
+
+lookback_years(3).
+
+% ---------------------------------------------------------------------
+% Rolling three-year window + cumulation (formerly computation.clausal).
+% window_start_3y/6 and the helpers of the input check below
+% (input_problem_candidate/3, grant_problem/2, is_integer_amount/1,
+% is_date/1) are slice-private: they have clauses here and no consumer
+% outside this file, so they stay off the -module list. The check itself,
+% de_minimis_input_problem/3, is exported so a caller can ask WHY an input
+% was refused.
+% ---------------------------------------------------------------------
+
+% ---------------------------------------------------------------------
+% THE INPUT CHECK (ruling D80, 2026-10-20). Complete, well-typed input
+% is part of this domain's contract: GRANTS is a ground list of
+% [date(Y, M, D), AMOUNT_CENTS] pairs with AMOUNT_CENTS a non-negative
+% integer (NOTES.md section 2: "Amounts are integer euro-cents"; Art 3(5):
+% "All figures used shall be gross"), and REFERENCE_DATE is a date(Y, M, D).
+% de_minimis_input_problem/3 gives the FIRST problem, or fails when the
+% input is well formed. It is total and negation-safe: groundness is tested
+% first (so `in_` never runs over an open list -- the cause of the former
+% non-termination on an unbound or partial grants list), then the list
+% shape, then each grant's shape, date type and amount type, and only then
+% the sign of an amount already known to be an integer.
+%
+% Every public entry point runs it before deciding:
+%   de_minimis_aid_in_window/3 fails on a problem (no total), so every query
+%   predicate built on it fails too; de_minimis_verdict/3 answers
+%   `indeterminate` (its third clause); de_minimis_what_if/4 inherits that.
+%
+% Clausal Prolog (ruling 2026-10-20): no negation as failure. The problems are
+% collected with findall/3: the first problem is the head of that list, and an
+% input is acceptable when the list is []. Each negated test of the seam is
+% now its positive complement, for a term already known to be ground:
+%   not ground(X)                         -> term_variables(X, [_|_])
+%   not is_list(X)                        -> not_a_proper_list/1
+%   not (is_list(G), length(G, 2))        -> not_a_proper_list(G), or a list
+%                                            whose length is dif/2 from 2
+%   not is_date(X)                        -> not_a_date/1
+%   not is_integer_amount(X)              -> not_an_integer/1
+% ---------------------------------------------------------------------
+
+de_minimis_input_problem(Grants, ReferenceDate, Problem) :-
+    findall(Candidate, input_problem_candidate(Grants, ReferenceDate, Candidate), [Problem|_]).
+
+input_problem_candidate(Grants, _, not_ground(grants)) :-
+    term_variables(Grants, [_|_]).
+
+input_problem_candidate(_, ReferenceDate, not_ground(reference_date)) :-
+    term_variables(ReferenceDate, [_|_]).
+
+input_problem_candidate(Grants, ReferenceDate, wrong_type(reference_date, expected_date)) :-
+    ground(Grants),
+    ground(ReferenceDate),
+    not_a_date(ReferenceDate).
+
+input_problem_candidate(Grants, ReferenceDate, not_a_list(grants)) :-
+    ground(Grants),
+    ground(ReferenceDate),
+    not_a_proper_list(Grants).
+
+input_problem_candidate(Grants, ReferenceDate, Problem) :-
+    ground(Grants),
+    ground(ReferenceDate),
+    is_list(Grants),
+    member(Grant, Grants),
+    grant_problem(Grant, Problem).
+
+% One grant, ground by now. Clause order is the reporting order.
+% (Clausal Prolog: the seam's one malformed_grant clause is two disjoint
+% clauses -- the grant is not a proper list, or it is a list of another
+% length than 2.)
+grant_problem(Grant, malformed_grant(Grant)) :-
+    not_a_proper_list(Grant).
+
+grant_problem(Grant, malformed_grant(Grant)) :-
+    is_list(Grant),
+    length(Grant, Length),
+    dif(Length, 2).
+
+grant_problem([GrantDate, _], wrong_type(grant_date, expected_date)) :-
+    not_a_date(GrantDate).
+
+grant_problem([_, Amount], wrong_type(grant_amount, expected_integer)) :-
+    not_an_integer(Amount).
+
+grant_problem([_, Amount], negative_amount(grant_amount)) :-
+    is_integer_amount(Amount),
+    Amount #< 0.
+
+% An integer that is not a boolean (True/False are integers to the host).
+% (Clausal Prolog: true and false are atoms, never integers, so the seam's two
+% boolean exclusions have nothing left to exclude.)
+is_integer_amount(Amount) :-
+    integer(Amount).
+
+% not_an_integer/1: the positive complement of integer/1 (and so of
+% is_integer_amount/1) for a GROUND value, the only kind the input check
+% reaches: an atom, a float, a compound (lists and strings included), or an
+% engine dict, which is neither atomic nor compound. Disjoint on the engine;
+% in the ISO export a dict IS a list, so there the last two clauses can both
+% hold for one value (same problem term, no effect on the first problem or on
+% acceptability).
+not_an_integer(Value) :- atom(Value).
+not_an_integer(Value) :- float(Value).
+not_an_integer(Value) :- compound(Value).
+not_an_integer(Value) :- dict_keys(Value, _).
+
+% A date in the sense of the kit date guard, as a test that fails instead
+% of raising. Only called on a ground term, so the guard cannot raise its
+% instantiation error here.
+% (Clausal Prolog: the kit guard must_be_date/1 accepts date(Y, M, D) with
+% integer components; that test is stated here directly instead of catching
+% the guard's type error.)
+is_date(Value) :-
+    Value = date(Year, Month, Day),
+    integer(Year),
+    integer(Month),
+    integer(Day).
+
+% not_a_date/1: the positive complement of is_date/1 for a GROUND value:
+% its principal functor is not date/3, or it is date(Y, M, D) with a
+% component that is not an integer. The second clause asks "some component"
+% with findall/3, so a date with several bad components is ONE answer.
+not_a_date(Value) :-
+    functor(Value, Name, Arity),
+    dif(Name/Arity, date/3).
+not_a_date(Value) :-
+    Value = date(Year, Month, Day),
+    findall(Component, (member(Component, [Year, Month, Day]), not_an_integer(Component)), [_|_]).
+
+% not_a_proper_list/1: the positive complement of is_list/1 for a GROUND
+% term: following the list cells, the last tail is neither a list cell nor [].
+% A proper list has no such tail, an improper one exactly one. Written by
+% recursion rather than with append(_, Tail, Term): the published engine
+% (clausal 1.0.0) fails append([], foo, foo), so an atom passed as a list. The list-cell
+% functor is read from a list rather than spelled, so the test holds whatever
+% an engine names it.
+not_a_proper_list(Term) :-
+    functor([cell], CellName, CellArity),
+    functor(Term, Name, Arity),
+    dif(Name/Arity, CellName/CellArity),
+    dif(Term, []).
+not_a_proper_list([_|Tail]) :-
+    not_a_proper_list(Tail).
+
+de_minimis_aid_in_window(Grants, ReferenceDate, TotalCents) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    implements(eu_reg_2023_2831_art_3_4),
+    findall(Problem, input_problem_candidate(Grants, ReferenceDate, Problem), []),
+    is_date(ReferenceDate),
+    ReferenceDate = date(RefYear, RefMonth, RefDay),
+    window_start_3y(RefYear, RefMonth, RefDay, StartYear, StartMonth, StartDay),
+    WindowStartObject = date(StartYear, StartMonth, StartDay),
+    findall(Amount, (
+        member([GrantDate, Amount], Grants),
+        days_between(ReferenceDate, GrantDate, DaysBeforeRef),
+        DaysBeforeRef #>= 0,
+        days_between(GrantDate, WindowStartObject, DaysAfterStart),
+        DaysAfterStart #> 0
+    ), Amounts),
+    sum_cents(Amounts, TotalCents).
+
+window_start_3y(RefYear, 2, 29, StartYear, 2, 28) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    lookback_years(N),
+    StartYear #= RefYear - N.
+
+% (Clausal Prolog: the seam's `not is_feb_29(REF_MONTH, REF_DAY)` is dif/2
+% against the is_feb_29/2 fact, so 29 February is still written once.)
+window_start_3y(RefYear, RefMonth, RefDay, StartYear, RefMonth, RefDay) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    is_feb_29(FebruaryMonth, FebruaryDay),
+    dif(RefMonth-RefDay, FebruaryMonth-FebruaryDay),
+    lookback_years(N),
+    StartYear #= RefYear - N.
+
+% ---------------------------------------------------------------------
+% Verdict assembly (formerly decision.clausal). Art 3(2)/(7): "shall not
+% exceed" is inclusive, so exactly EUR 300 000 stays eligible; the third
+% clause is the IC-11 unknown channel for any input problem that
+% de_minimis_input_problem/3 reports (incomplete input, a reference or
+% grant date that is not a date, a non-integer or negative amount, a
+% grants list or grant of the wrong shape).
+%
+% The Art 3(2) ceiling test itself, stated ONCE per polarity. Art 3(2)
+% reads "the total amount of de minimis aid granted ... to a single
+% undertaking shall NOT EXCEED EUR 300 000 over any period of three
+% years", and Art 3(7) turns the same words round for the negative case
+% ("aid EXCEEDING the ceiling ... shall not benefit"). "Shall not exceed"
+% is inclusive, hence <= for the within-ceiling limb and the strict
+% complement > for the exceeding limb -- the two guards are disjoint and
+% jointly exhaustive over an integer TOTAL_CENTS, which is what keeps
+% de_minimis_verdict/3 deterministic.
+%
+% Both are GUARDS: they take an already-bound TOTAL_CENTS and bind
+% nothing (CEILING is local to each body), so the verdict atoms stay
+% ground in the clause heads and C17 is not undone. Module-local -- NOT
+% added to the -module list above, per the guide's default, so the names
+% cannot collide with an imported atom and the domain's declared
+% interface (and its generated INTERFACE-SPEC.md) is unchanged.
+% (Clausal Prolog: the seam compared TOTAL_CENTS(eur_cent) with the united
+% constant; here TOTAL_CENTS is compared with de_minimis_ceiling/1, the same
+% ceiling in euro-cents.)
+% ---------------------------------------------------------------------
+
+cumulated_aid_within_ceiling(TotalCents) :-
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_ceiling(Ceiling),
+    TotalCents #=< Ceiling.
+
+cumulated_aid_exceeds_ceiling(TotalCents) :-
+    implements(eu_reg_2023_2831_art_3_7),
+    de_minimis_ceiling(Ceiling),
+    TotalCents #> Ceiling.
+
+de_minimis_verdict(Grants, ReferenceDate, eligible) :-
+    implements(eu_reg_2023_2831_art_3_1),
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_aid_in_window(Grants, ReferenceDate, TotalCents),
+    cumulated_aid_within_ceiling(TotalCents).
+
+de_minimis_verdict(Grants, ReferenceDate, ineligible) :-
+    implements(eu_reg_2023_2831_art_3_1),
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_aid_in_window(Grants, ReferenceDate, TotalCents),
+    cumulated_aid_exceeds_ceiling(TotalCents).
+
+de_minimis_verdict(Grants, ReferenceDate, indeterminate) :-
+    de_minimis_input_problem(Grants, ReferenceDate, _).
+
+% =====================================================================
+% no_statute -- predicates with no statutory basis of their own (provision tracking,
+% 2026-10-18; input check 2026-10-20): summing a list of amounts, and refusing input that is
+% incomplete, of the wrong type or a negative amount.
+% =====================================================================
+
+no_statute("sum_cents", 2, "computation_helper").
+no_statute("de_minimis_input_problem", 3, "computation_helper").
+no_statute("input_problem_candidate", 3, "computation_helper").
+no_statute("grant_problem", 2, "computation_helper").
+no_statute("is_integer_amount", 1, "computation_helper").
+no_statute("is_date", 1, "computation_helper").
+% (Clausal Prolog, 2026-10-20: the positive complements that replace negation
+% as failure in the input check.)
+no_statute("not_an_integer", 1, "computation_helper").
+no_statute("not_a_date", 1, "computation_helper").
+no_statute("not_a_proper_list", 1, "computation_helper").
+
+:- end_module(cumulation).

@@ -1,0 +1,138 @@
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set
+% and the published day table.
+% P1 totality: every registered subject yields >= 1 verdict.
+% P2 determinism: every registered subject yields exactly 1 verdict.
+% P3 status validity: every verdict status is in the closed vocabulary.
+% P4 citation completeness: every verdict carries >= 1 citation.
+% P5 table sanity: every published figure is within [10, 35] (the
+%    Directive's least and greatest published minimums).
+% P6 reduction monotonicity: no reduced row exceeds its (procedure,
+%    stage) baseline row.
+% P7 conformity validity: every verdict's CONFORMITY slot is in the closed
+%    conformity vocabulary -- no verdict leaves it unset or off-vocabulary.
+% P8 conformity soundness: no verdict claims a minimum was met unless the
+%    observed day count was actually supplied AND a minimum was prescribed.
+% Falsifiers for P2/P3/P4 live in test_negative_controls.clausal (wrong
+% statuses / wrong figures rejected), keeping these properties non-vacuous.
+% Run: python -m clausal.testing eu/procurement/time_limits/tests/test_properties.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% status, conformity, stage, reduction-condition and profile-key atoms, the
+% procedure atoms, time_limits_verdict/4, cite/1, item/3 -- have no counterpart:
+% atoms and compound terms need no import. Only predicates are imported.)
+:- module(test_properties, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/time_limits/time_limits, [
+    decide_time_limits/2,
+    time_limits_status_values/1,
+    time_limits_conformity_values/1,
+    minimum_time_limit_days/5]).
+:- use_module(eu/procurement/time_limits/fixtures, [time_limits_subject/1, time_limits_profile_for/2]).
+:- use_module(formalize_lib, [profile_lacks/2]).
+
+has_verdict(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    findall(Verdict, decide_time_limits(Profile, Verdict), [_|_]).
+
+test('P1 totality: every subject classifies') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, has_verdict(Subject), ClassifiedSubjectList),
+    length(ClassifiedSubjectList, SubjectCount).
+
+deterministic_subject(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    findall(Verdict, decide_time_limits(Profile, Verdict), VerdictList),
+    length(VerdictList, 1).
+
+test('P2 determinism: every subject yields exactly one verdict') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, deterministic_subject(Subject), DeterministicSubjectList),
+    length(DeterministicSubjectList, SubjectCount).
+
+status_valid_subject(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, time_limits_verdict(Status, _, _, _)),
+    time_limits_status_values(StatusValues),
+    member(Status, StatusValues).
+
+test('P3 status validity: every verdict status is in the closed vocabulary') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, status_valid_subject(Subject), ValidSubjectList),
+    length(ValidSubjectList, SubjectCount).
+
+cited_subject(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, time_limits_verdict(_, _, _, Citations)),
+    dif(Citations, []).
+
+test('P4 citation completeness: every verdict carries at least one citation') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, cited_subject(Subject), CitedSubjectList),
+    length(CitedSubjectList, SubjectCount).
+
+conformity_valid_subject(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, time_limits_verdict(_, _, Conformity, _)),
+    time_limits_conformity_values(ConformityValues),
+    member(Conformity, ConformityValues).
+
+test('P7 conformity validity: every verdict''s conformity slot is in the closed vocabulary') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, conformity_valid_subject(Subject), ValidSubjectList),
+    length(ValidSubjectList, SubjectCount).
+
+% A `meets_prescribed_minimum` reached without the day count in the profile, or
+% without a prescribed minimum, would be a conformity claim resting on nothing.
+% This is the direction that fails silently, so it is asserted as a property
+% rather than only on the fixtures that happen to exercise it.
+unsupported_conformity_claim(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, time_limits_verdict(_, _, Conformity, _)),
+    Conformity = meets_prescribed_minimum,
+    profile_lacks(Profile, observed_time_limit_days).
+
+unsupported_conformity_claim(Subject) :-
+    time_limits_subject(Subject),
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, time_limits_verdict(Status, _, Conformity, _)),
+    Conformity = meets_prescribed_minimum,
+    dif(Status, minimum_days_prescribed).
+
+test('P8 conformity soundness: nothing meets a minimum without supplied days and a prescribed minimum') :-
+    findall(Subject, unsupported_conformity_claim(Subject), []).
+
+out_of_range_row(ProcedureType, Stage, ReductionCondition) :-
+    minimum_time_limit_days(ProcedureType, Stage, ReductionCondition, Days, _),
+    Days #< 10.
+
+out_of_range_row(ProcedureType, Stage, ReductionCondition) :-
+    minimum_time_limit_days(ProcedureType, Stage, ReductionCondition, Days, _),
+    Days #> 35.
+
+test('P5 table sanity: every published figure is within 10..35 days') :-
+    findall(row(ProcedureType, Stage, ReductionCondition),
+        out_of_range_row(ProcedureType, Stage, ReductionCondition), []).
+
+reduction_exceeds_baseline(ProcedureType, Stage, ReductionCondition) :-
+    minimum_time_limit_days(ProcedureType, Stage, ReductionCondition, ReducedDays, _),
+    dif(ReductionCondition, baseline_minimum),
+    minimum_time_limit_days(ProcedureType, Stage, baseline_minimum, BaselineDays, _),
+    ReducedDays #> BaselineDays.
+
+test('P6 reduction monotonicity: no reduced row exceeds its baseline row') :-
+    findall(row(ProcedureType, Stage, ReductionCondition),
+        reduction_exceeds_baseline(ProcedureType, Stage, ReductionCondition), []).
+
+:- end_module(test_properties).

@@ -10,7 +10,7 @@ SOURCING/COVERAGE plane (report-only): verified ratios + translation coverage,
 written to _index/provenance-report.yaml (the catalog-only conformance checker
 cannot read sourcing status; this is its home).
 """
-from _tools.source_files import is_source, source_stem, resolve_source, prolog_registry_path, PRIVATE_OVERLAY_ROOT
+from _tools.source_files import is_source, is_prolog, source_stem, resolve_source, prolog_registry_path, PRIVATE_OVERLAY_ROOT
 import argparse, os, re, sys
 try:
     import yaml
@@ -53,11 +53,12 @@ def translation_signal(domain_dir):
 
 
 def translation_langs(domain_dir):
-    """Language codes with a translation/<lang>.clausal layer present (sorted)."""
+    """Language codes with a translation/<lang> layer present, seam or Prolog (sorted)."""
     tdir = os.path.join(domain_dir, "translation")
     if not os.path.isdir(tdir):
         return []
-    return sorted(source_stem(f) for f in os.listdir(tdir) if is_source(f))
+    return sorted({source_stem(f) if is_source(f) else os.path.splitext(f)[0]
+                   for f in os.listdir(tdir) if is_source(f) or is_prolog(f)})
 
 def _cited_atoms(domain_dir):
     atoms = set()
@@ -156,9 +157,11 @@ def domain_metrics(domain_dir):
             recs, _ = check_parameters._records(open(ppath, encoding="utf-8").read())
             m["parameters"] = _verified_counts(recs, _load_yaml(os.path.join(domain_dir, "parameters-sources.yaml")))
     for lang in translation_langs(domain_dir):
-        recs, _ = check_translation._records(
-            open(resolve_source(os.path.join(domain_dir, "translation", lang + ".clausal")),
-                 encoding="utf-8").read())
+        try:
+            recs, _ = check_translation.records(domain_dir, lang)
+        except check_translation.LayerProblem as e:
+            m["translations"][lang] = {"unreadable": str(e)}
+            continue
         m["translations"][lang] = _verified_counts(
             recs, _load_yaml(os.path.join(domain_dir, "translation", lang + "-sources.yaml")))
     return m

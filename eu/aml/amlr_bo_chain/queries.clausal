@@ -1,0 +1,295 @@
+% =====================================================================
+% eu.aml.amlr_bo_chain/queries.clausal -- QUERY-TAXONOMY layer
+% (#4 enumeration, #5 comparison, #6 threshold, #7 justification,
+% #8 counterfactual, #9 minimal-cause, #10 contradiction, #16 what_if,
+% #19 rule_impact, #24 sensitivity).
+% PURELY ADDITIVE (query-type coverage sweep 2026-07-21); no rulebase
+% sibling changed (then computation/constants/schema; since the Wave C
+% re-slice of 2026-08-07, ownership_interest.clausal). The rulebase
+% (effective_ownership/4 + ubo_status/4 + ubo_threshold_bps/1) stays the
+% single source of truth: every statutory-threshold query below goes
+% THROUGH ubo_status/4; the one deliberate exception is
+% bo_chain_qualifying_holders_at/4, which re-states the Art 52(1)
+% inclusive `>=` against a CALLER-SUPPLIED hypothetical threshold (that
+% is the point of #19 rule_impact -- e.g. the Art 52(2) delegated-act
+% lower threshold, floor 15% = 1500 bp); a test pins its statutory
+% instantiation to the ubo_status-derived enumeration.
+%
+% GRAPH-SHAPED PROFILE NOTE (the datum this domain adds to the sweep):
+% HOLDINGS is a LIST of [HOLDER, HELD, PCT_BPS] edges (an ownership
+% multigraph), not a dict profile -- the kit's dict-native what_if/5 /
+% override_key/4 do NOT apply. The single-edge functional override
+% bo_chain_set_holding/5 (replace the FIRST matching edge, fail-closed
+% when the edge is absent) rides the kit's LIST-override dual
+% override_where/4 (kit-gap wave 2 closed the G1 gap this domain flagged).
+%
+% BOUNDARY SEARCHES ride the kit's O(log range) bisect_flip/4: effective
+% ownership is MONOTONE NON-DECREASING in any single edge weight (every
+% chain product has non-negative factors), so the single-flip assumption
+% holds. Integer-bp probes over an EXACT-RATIONAL aggregate give ceil
+% semantics for free (e.g. a 2499.5-bp aggregate needs +1 bp, which
+% integer "threshold minus holding" arithmetic gets wrong).
+%
+% ACYCLICITY: the rulebase assumes an acyclic holdings graph (NOTES);
+% every predicate here inherits that assumption.
+% bo_chain_holdings_consistent/1 spot-checks self-loops but does NOT
+% perform full cycle detection.
+%
+% D67 (public/private split): bo_chain_edge_flip_bps/6 (#8) and
+% bo_chain_minimal_support/4 (#9, kit shrink_while) live in the private
+% overlay private.eu.aml.amlr_bo_chain.queries, and (private by query
+% type) so do bo_chain_holdings_consistent/1 (#10) and
+% bo_chain_rule_impact/5 (#19). The #16 what-if and #24 sensitivity forms
+% (bo_chain_set_holding/5, bo_chain_what_if_holding/7,
+% bo_chain_edge_sensitivity/6, bo_chain_gap_to_threshold/4) are public
+% (moved back 2026-10-17).
+%
+% CLAUSAL PROLOG (converted from queries.seam, 2026-10-20). The seam's inline
+% lambdas, `(E <- E is [HOLDER, HELD, _])` and `((X, V) <- ubo_status(...))`,
+% are named closures here (holding_edge/3, direct_probe_verdict/2,
+% gap_probe_verdict/5), which every engine calls the same way. The verdict
+% atoms eligible / ineligible are atoms and need no import. Effective
+% ownership is an integer or an exact integer fraction N/D (the spelling of
+% eu/aml/amlr_beneficial_ownership_threshold), so its comparison with a line
+% reads its whole basis points (holding_whole_basis_points/2, exact against
+% an integer line) and its difference is holding_difference/3; all the
+% arithmetic stays integer CLP(Z).
+% =====================================================================
+
+:- module(queries, [
+    bo_chain_direct_boundary/1,
+    bo_chain_direct_vs_effective/5,
+    bo_chain_edge_sensitivity/6,
+    bo_chain_gap_to_threshold/4,
+    bo_chain_justification/5,
+    bo_chain_qualifying_holders/3,
+    bo_chain_qualifying_holders_at/4,
+    bo_chain_set_holding/5,
+    bo_chain_what_if_holding/7,
+    bad_link/1,
+    over_issued/1
+]).
+
+:- use_module(library(clpz)).
+
+:- use_module(eu/aml/amlr_bo_chain/ownership_interest, [
+    effective_ownership/4, ubo_status/4,
+    ubo_threshold_bps/1, bo_chain_input_complete/3,
+    holding_whole_basis_points/2, holding_difference/3]).
+:- use_module(eu/aml/amlr_bo_chain/parameters, [
+    parameter_source/2]).
+:- use_module(kit/query_combinators, [
+    bisect_flip/4, override_where/4]).
+:- use_module(formalize_lib, [sum_list/2]).
+
+
+% =====================================================================
+% bo_chain_set_holding/5 -- single-edge functional override (the #16 core)
+% =====================================================================
+% NEW_HOLDINGS is HOLDINGS with the FIRST [HOLDER, HELD, _] edge's
+% percentage replaced by NEW_BPS (duplicate parallel edges: only the
+% first occurrence is touched; the rest keep contributing). FAIL-CLOSED:
+% fails when no such edge exists -- a hypothetical about a non-existent
+% holding must not silently no-op (the list-shaped analogue of the
+% dict-mode key-typo guard). The input list is never mutated. The
+% first-match/functional/fail-closed core is the kit's override_where/4;
+% this wrapper keeps the domain vocabulary (HOLDER/HELD edge naming and
+% the rebuilt [HOLDER, HELD, NEW_BPS] edge term).
+% Input check (D80): both the stored graph and the hypothetical one must
+% pass bo_chain_input_complete/3 (HOLDER and HELD stand in for the person
+% and entity names), so an ill-typed or out-of-range NEW_BPS gives no answer.
+bo_chain_set_holding(Holdings, Holder, Held, NewBps, NewHoldings) :-
+    bo_chain_input_complete(Holdings, Holder, Held),
+    override_where(Holdings, holding_edge(Holder, Held),
+                   [Holder, Held, NewBps], NewHoldings),
+    bo_chain_input_complete(NewHoldings, Holder, Held).
+
+% holding_edge(HOLDER, HELD, EDGE) (private): the override_where/4 match
+% closure -- EDGE is a HOLDER -> HELD edge (was the seam lambda
+% `(E <- (E is [HOLDER, HELD, _]))`).
+holding_edge(Holder, Held, Edge) :-
+    Edge = [Holder, Held, _].
+
+
+% =====================================================================
+% bo_chain_what_if_holding/7 -- #16 what_if (hypothetical edge change)
+% =====================================================================
+% Re-run the Art 52(1) determination under the hypothesis that the
+% HOLDER->HELD stake becomes NEW_BPS. Deterministic; fails (fail-closed)
+% when the named edge does not exist. Kit what_if/5 is dict-native and
+% does not fit this list-of-edges profile; the override core rides the
+% kit's list dual override_where/4 (see bo_chain_set_holding).
+bo_chain_what_if_holding(Holdings, Holder, Held, NewBps, Person, Entity, Verdict) :-
+    bo_chain_set_holding(Holdings, Holder, Held, NewBps, Hyp),
+    ubo_status(Hyp, Person, Entity, Verdict).
+
+
+% =====================================================================
+% bo_chain_direct_boundary/1 -- #6 threshold (the cliff, located empirically)
+% =====================================================================
+% The direct-holding level at which a sole direct holder FLIPS to
+% beneficial owner, located by kit bisect_flip over a synthetic one-edge
+% graph -- ~14 probes, no prior knowledge of the constant, and it
+% verifies the RULEBASE (not the constant) defines the boundary.
+% = 2500 bp (Art 52(1) "25 % or more" is INCLUSIVE: the flip lands ON
+% the threshold). The test suite pins located == declared.
+bo_chain_direct_boundary(BoundaryBps) :-
+    bisect_flip(0, 10000, direct_probe_verdict, BoundaryBps).
+
+% direct_probe_verdict(X, V) (private): the bisect_flip/4 probe -- the
+% verdict for a sole direct holder of X bp (was the seam lambda
+% `((X, V) <- ubo_status([["probe_holder", "probe_entity", X]], ...))`).
+direct_probe_verdict(X, V) :-
+    ubo_status([["probe_holder", "probe_entity", X]],
+               "probe_holder", "probe_entity", V).
+
+
+% =====================================================================
+% bo_chain_gap_to_threshold/4 -- #8 counterfactual / #24 margin-to-flip
+% =====================================================================
+% The smallest additional DIRECT stake (integer bp, one new
+% [PERSON, ENTITY, GAP_BPS] edge) that makes PERSON a beneficial owner
+% of ENTITY; 0 when the current graph already qualifies. Mirrors the
+% sibling amlr_beneficial_ownership_threshold's amlr_bo_gap_to_threshold/2
+% (the paired direct-vs-chained domain), but O(log) via bisect_flip
+% instead of a two-stage linear scan. Ceil-correct under exact-rational
+% aggregates (50% x 49.99% = 2499.5 bp needs +1 bp). Disjoint verdict
+% guards keep it deterministic.
+bo_chain_gap_to_threshold(Holdings, Person, Entity, 0) :-
+    ubo_status(Holdings, Person, Entity, eligible).
+bo_chain_gap_to_threshold(Holdings, Person, Entity, GapBps) :-
+    ubo_status(Holdings, Person, Entity, ineligible),
+    bisect_flip(0, 10000,
+        gap_probe_verdict(Holdings, Person, Entity),
+        GapBps).
+
+% gap_probe_verdict(HOLDINGS, PERSON, ENTITY, X, V) (private): the
+% bisect_flip/4 probe -- the verdict with one extra direct PERSON -> ENTITY
+% edge of X bp (was the seam lambda
+% `((X, V) <- ubo_status([[PERSON, ENTITY, X], *HOLDINGS], ...))`).
+gap_probe_verdict(Holdings, Person, Entity, X, V) :-
+    ubo_status([[Person, Entity, X]|Holdings],
+               Person, Entity, V).
+
+
+% =====================================================================
+% bo_chain_edge_sensitivity/6 -- #24 sensitivity (edge leverage)
+% =====================================================================
+% How much of PERSON's effective ownership in ENTITY the HOLDER->HELD
+% edge CONTROLS: effective ownership with the edge at 100% minus with
+% the edge at 0% (exact: an integer or a reduced fraction N/D, bp). The aggregate is affine in any
+% single edge weight, so the per-bp marginal effect is SWING_BPS/10000.
+% 0 for an edge on no PERSON->ENTITY path (e.g. another holder's stake).
+% Fails (fail-closed) when the edge does not exist.
+bo_chain_edge_sensitivity(Holdings, Holder, Held, Person, Entity, SwingBps) :-
+    bo_chain_set_holding(Holdings, Holder, Held, 0, HZero),
+    effective_ownership(HZero, Person, Entity, EffZero),
+    bo_chain_set_holding(Holdings, Holder, Held, 10000, HFull),
+    effective_ownership(HFull, Person, Entity, EffFull),
+    holding_difference(EffFull, EffZero, SwingBps).
+
+
+% =====================================================================
+% bo_chain_direct_vs_effective/5 -- #5 comparison (direct vs chained)
+% =====================================================================
+% The direct-vs-chained discrepancy in one row: DIRECT_BPS = the sum of
+% PERSON's DIRECT stakes in ENTITY only (what a direct-only reading --
+% the naive register view -- would see); EFF_BPS = the full Art 52(1)
+% aggregate through all chains (what the sibling
+% eu/aml/amlr_beneficial_ownership_threshold computes over pre-flattened
+% chains). A wholly-indirect UBO shows DIRECT 0 vs EFF >= 2500.
+bo_chain_direct_vs_effective(Holdings, Person, Entity, DirectBps, EffBps) :-
+    bo_chain_input_complete(Holdings, Person, Entity),
+    findall(P, member([Person, Entity, P], Holdings), DirectStakes),
+    sum_list(DirectStakes, DirectBps),
+    effective_ownership(Holdings, Person, Entity, EffBps).
+
+
+% =====================================================================
+% bo_chain_qualifying_holders/3 (+ _at/4) -- #4 enumeration / #19 base
+% =====================================================================
+% All holders in the graph whose effective ownership in ENTITY meets the
+% Art 52(1) ownership-interest test (>= 25%), sorted + deduplicated.
+% NB: the data does not distinguish natural persons from intermediate
+% corporate entities, so this enumerates QUALIFYING HOLDERS (the
+% ownership-interest test result), not "the UBO register" -- Art 51
+% limits beneficial OWNERS to natural persons; the caller filters.
+% Goes through ubo_status/4 (single source of truth for the statutory
+% threshold). ENTITY itself is excluded defensively. Input check (D80):
+% there is no person argument, so ENTITY stands in for both names.
+bo_chain_qualifying_holders(Holdings, Entity, Qualifying) :-
+    bo_chain_input_complete(Holdings, Entity, Entity),
+    graph_holders(Holdings, Holders),
+    findall(P,
+            ( member(P, Holders),
+              dif(P, Entity),
+              ubo_status(Holdings, P, Entity, eligible) ),
+            Qs),
+    sort(Qs, Qualifying).
+
+% bo_chain_qualifying_holders_at/4: the same enumeration under a
+% CALLER-SUPPLIED hypothetical threshold (bp). Deliberately re-states
+% the Art 52(1) INCLUSIVE `>=` (the rulebase hard-wires the statutory
+% constant); a test pins _at(2500) == the ubo_status-derived form so
+% the two cannot drift silently.
+bo_chain_qualifying_holders_at(Holdings, Entity, ThresholdBps, Qualifying) :-
+    bo_chain_input_complete(Holdings, Entity, Entity),
+    integer(ThresholdBps),
+    graph_holders(Holdings, Holders),
+    findall(P,
+            ( member(P, Holders),
+              dif(P, Entity),
+              effective_ownership(Holdings, P, Entity, Eff),
+              holding_whole_basis_points(Eff, WholeEff),
+              WholeEff #>= ThresholdBps ),
+            Qs),
+    sort(Qs, Qualifying).
+
+% graph_holders/2 (private): every node that appears as a HOLDER,
+% sorted + deduplicated (sort/2 dedups; the multigraph may repeat).
+graph_holders(Holdings, Holders) :-
+    findall(H, member([H, _, _], Holdings), Hs),
+    sort(Hs, Holders).
+
+
+% bad_link/1 and over_issued/1 (#10 cap-table sanity helpers, called by
+% the private bo_chain_holdings_consistent/1; exported for the overlay, D67).
+% bad_link/1 (private): some edge is malformed.
+bad_link(Holdings) :-
+    member([_, _, Pct], Holdings),
+    Pct #< 0.
+bad_link(Holdings) :-
+    member([_, _, Pct], Holdings),
+    Pct #> 10000.
+bad_link(Holdings) :-
+    member([X, X, _], Holdings).
+
+% over_issued/1 (private): some held entity's direct stakes sum > 100%.
+over_issued(Holdings) :-
+    member([_, Held, _], Holdings),
+    findall(Pct, member([_, Held, Pct], Holdings), Stakes),
+    sum_list(Stakes, Total),
+    Total #> 10000.
+
+
+% =====================================================================
+% bo_chain_justification/5 -- #7 justification (verdict + cited basis)
+% =====================================================================
+% The determination WITH its numeric and legal basis: VERDICT is the
+% unchanged ubo_status/4 answer; BASIS is [EFF_BPS, THRESHOLD_BPS, META]
+% -- the computed aggregate, the statutory line it was compared against,
+% and the Part-B provenance record for that line (parameter_source/2:
+% label + EUR-Lex ref + verbatim Art 52(1) text; no citation text is
+% duplicated here). Deterministic.
+% (Clausal Prolog: parameter_source/2 holds the record as a Key-Value pair
+% list; META is built from it with dict_pairs/2, so it stays the dict the
+% seam answered.)
+bo_chain_justification(Holdings, Person, Entity, Verdict, Basis) :-
+    effective_ownership(Holdings, Person, Entity, EffBps),
+    ubo_threshold_bps(ThresholdBps),
+    ubo_status(Holdings, Person, Entity, Verdict),
+    parameter_source(ubo_threshold, Pairs),
+    dict_pairs(Meta, Pairs),
+    Basis = [EffBps, ThresholdBps, Meta].
+
+:- end_module(queries).

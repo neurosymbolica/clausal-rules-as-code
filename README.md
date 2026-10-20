@@ -5,8 +5,9 @@ later others) is one **domain**: one legal question (for example, *is this perso
 beneficial owner under AMLR Art 52?*, or *does this aid stay under the de minimis
 ceiling?*). For each domain you get:
 
-- the **rulebase** (`*.seam`, plus `*.pl` ISO Prolog versions where they exist), where
-  every rule carries the provision it implements;
+- the **rulebase** (`*.clausal`, Clausal Prolog), where every rule carries the provision it
+  implements, and under `iso/` the same rules and tests as plain ISO Prolog (`*.pl`),
+  generated from it;
 - the **tests** (`tests/`);
 - the **statute text it was written against** (`sources/`), pinned by URL and SHA-256;
 - a **manifest** (`manifest.yaml`) stating the domain's scope, its public interface, and
@@ -47,6 +48,14 @@ versions of the law; see `NOTICE`.
 pip install clausal pyyaml            # the engine (Clausal Prolog), and YAML for the tools
 python run_tests.py                   # every domain's tests
 python run_tests.py eu/aml            # one jurisdiction or area
+```
+
+The same tests, through the generated ISO Prolog in each domain's `iso/` folder, on
+[Scryer Prolog](https://www.scryer.pl) or [Trealla Prolog](https://github.com/trealla-prolog/trealla):
+
+```sh
+python run_iso_tests.py scryer /path/to/scryer-prolog
+python run_iso_tests.py trealla /path/to/tpl
 ```
 
 ## How the formalizations are checked
@@ -97,10 +106,12 @@ is exactly what the check scored.
 
 ### Interface and conventions
 
-- **Interface conformance** (`_tools/check_interface_conformance.py`): each domain's
-  public interface, read from the code, follows the corpus's naming and verdict
-  conventions. The generated catalogue is in `_index/interface-catalog/`, and each
-  domain's `INTERFACE-SPEC.md` is generated from it.
+- **Public interface**: each domain's public predicates are listed in `manifest.yaml`
+  (`public_interface`) and exported by its `__init__.clausal`; `tests/test_public_interface.*`
+  exercises them. At the time of writing (20 October 2026) the corpus's interface catalogue,
+  the per-domain `INTERFACE-SPEC.md` generated from it and the conformance check read only the
+  engine's earlier syntax, so they are not in this release; they return when they read
+  `.clausal`.
 
 ### Hidden tests
 

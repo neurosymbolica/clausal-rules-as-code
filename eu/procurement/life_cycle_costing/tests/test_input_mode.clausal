@@ -1,0 +1,66 @@
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing eu/procurement/life_cycle_costing/tests/test_input_mode.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% verdict, status, limb-id, profile-key, cost-category, Union-act and problem
+% atoms, the citation keys, the kernel verdict constructors, cite/1, item/3 --
+% have no counterpart: atoms and compound terms need no import. Only predicates
+% are imported.)
+:- module(test_input_mode, []).
+:- use_module(eu/procurement/life_cycle_costing/life_cycle_costing, [
+    lcc_component_admissibility/3,
+    lcc_mandatory_method_status/3,
+    lcc_union_act_listing/2,
+    lcc_externality_assessment/2,
+    lcc_method_validity_limb_status/4]).
+:- use_module(eu/procurement/life_cycle_costing/fixtures, [life_cycle_costing_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complements (ruling 2026-10-20) of the seam's `not Goal`: the given
+% value is not among Goal's answers -- findall/3 plus the kit's dif-based
+% not_member/2, so a broken rule that gave BOTH answers still fails the test.
+component_admissibility_never(CostCategory, Determinable, Status) :-
+    findall(Found, lcc_component_admissibility(CostCategory, Determinable, Found), FoundStatuses),
+    not_member(Status, FoundStatuses).
+limb_status_never(LimbId, Profile, Status) :-
+    findall(Found, lcc_method_validity_limb_status(LimbId, Profile, Found, _Citation), FoundStatuses),
+    not_member(Status, FoundStatuses).
+
+test('input mode: component_admissibility bound to included succeeds for acquisition_cost') :-
+    lcc_component_admissibility(acquisition_cost, 1, component_included).
+
+test('input mode: component_admissibility bound to excluded fails for acquisition_cost') :-
+    component_admissibility_never(acquisition_cost, 1, component_excluded).
+
+test('input mode: component_admissibility bound to excluded succeeds for externality with 0') :-
+    lcc_component_admissibility(environmental_externality_cost, 0, component_excluded).
+
+test('input mode: mandatory_method_status bound to no_union succeeds') :-
+    lcc_mandatory_method_status(no_union_common_method, 0, no_union_common_method_mandatory).
+
+test('input mode: mandatory_method_status bound to applied succeeds for directive') :-
+    lcc_mandatory_method_status(directive_2009_33_ec, 1, union_common_method_mandatory_and_applied).
+
+test('input mode: union_act_listing bound to no_union_act succeeds') :-
+    lcc_union_act_listing(no_union_common_method, no_union_act).
+
+test('input mode: union_act_listing bound to listed succeeds for directive') :-
+    lcc_union_act_listing(directive_2009_33_ec, listed_in_annex_xiii).
+
+test('input mode: externality_assessment bound to not_assessed succeeds for empty list') :-
+    lcc_externality_assessment([], externality_costs_not_assessed).
+
+test('input mode: externality_assessment bound to assessed succeeds for externality present') :-
+    lcc_externality_assessment([[environmental_externality_cost, 100, 1]], externality_costs_assessed).
+
+test('input mode: limb_status bound to satisfied succeeds for compliant profile') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    lcc_method_validity_limb_status(tenderer_data_not_indicated, Profile, satisfied, _Citation).
+
+test('input mode: limb_status bound to not_satisfied fails for compliant profile') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    limb_status_never(tenderer_data_not_indicated, Profile, not_satisfied).
+
+:- end_module(test_input_mode).

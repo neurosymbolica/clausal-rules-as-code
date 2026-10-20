@@ -1,0 +1,214 @@
+% =====================================================================
+% test_conformity.clausal -- the CONFORMITY slot: the observed day count
+% against the minimum Arts 27-31 prescribe.
+%
+% The rule this file exists to hold: an unhandled case is never compliance.
+% Every test below is paired -- the positive claim, and the negation of the
+% claim that would be wrong -- because the failure that costs something here
+% is silent. A comparison that stopped firing altogether would leave every
+% case `observed_days_not_supplied`, which reads like an honest gap in the
+% record rather than like a checker that has gone inert, and nothing but a
+% `not ...` on the other branch would notice.
+%
+% Run: python -m clausal.testing eu/procurement/time_limits/tests/test_conformity.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% status, conformity, stage, reduction-condition and profile-key atoms, the
+% procedure atoms, time_limits_verdict/4, cite/1, item/3 -- have no counterpart:
+% atoms and compound terms need no import. Only predicates are imported.)
+:- module(test_conformity, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/time_limits/time_limits, [
+    decide_time_limits/2,
+    time_limits_conformity/2,
+    time_limits_status/2,
+    minimum_days/2,
+    time_limits_conformity_values/1]).
+:- use_module(eu/procurement/time_limits/fixtures, [time_limits_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complements (ruling 2026-10-20) of the seam's `not Goal`: the given
+% value is not among Goal's answers -- findall/3 plus the kit's dif-based
+% not_member/2, so a broken rule that gave BOTH answers still fails the test.
+time_limits_conformity_never(Profile, Conformity) :-
+    findall(Found, time_limits_conformity(Profile, Found), FoundConformities),
+    not_member(Conformity, FoundConformities).
+
+% ---- the breach direction --------------------------------------------
+% Art 27(1) fixes 35 days; the notice allowed 20. That is a breach, and the
+% verdict must say so rather than reporting the figure and stopping.
+test('a notice 15 days short of the Art 27(1) minimum is a breach') :-
+    time_limits_profile_for("open_tenders_baseline_allowing_20", Profile),
+    minimum_days(Profile, 35),
+    time_limits_conformity(Profile, shorter_than_prescribed_minimum),
+    time_limits_conformity_never(Profile, meets_prescribed_minimum),
+    time_limits_conformity_never(Profile, observed_days_not_supplied),
+    time_limits_conformity_never(Profile, no_prescribed_minimum_to_meet).
+
+% ---- the boundary, both sides ----------------------------------------
+% Art 27(1) reads "the minimum time limit ... shall be 35 days": allowing
+% exactly 35 complies, allowing 34 does not. Off-by-one here is the whole
+% difference between a lawful notice and an accusation.
+test('exactly the published figure complies; one day fewer does not') :-
+    time_limits_profile_for("open_tenders_baseline_allowing_35", AtMinimum),
+    time_limits_conformity(AtMinimum, meets_prescribed_minimum),
+    time_limits_conformity_never(AtMinimum, shorter_than_prescribed_minimum),
+    time_limits_profile_for("open_tenders_baseline_allowing_34", OneShort),
+    time_limits_conformity(OneShort, shorter_than_prescribed_minimum),
+    time_limits_conformity_never(OneShort, meets_prescribed_minimum).
+
+% ---- the reduction is load-bearing for CONFORMITY, not just the figure
+% The same 20 days: a breach against the Art 27(1) base, lawful once the
+% Art 27(2) prior-information-notice reduction applies. If the reductions
+% stopped feeding the comparison, this pair would collapse to one answer.
+test('the same 20 days breach at the base and comply under Art 27(2)') :-
+    time_limits_profile_for("open_tenders_baseline_allowing_20", AtBase),
+    time_limits_conformity(AtBase, shorter_than_prescribed_minimum),
+    time_limits_profile_for("open_tenders_prior_notice_allowing_20", Reduced),
+    minimum_days(Reduced, 15),
+    time_limits_conformity(Reduced, meets_prescribed_minimum),
+    time_limits_conformity_never(Reduced, shorter_than_prescribed_minimum).
+
+% ---- absence is never compliance -------------------------------------
+% Nineteen of the fixture subjects carry no day count at all, which is the
+% state of every real case until an adapter extracts one. Not one of them
+% may read as compliant, and none may read as a breach either.
+test('a subject with no observed day count is neither compliant nor in breach') :-
+    time_limits_profile_for("open_tenders_baseline", Profile),
+    time_limits_status(Profile, minimum_days_prescribed),
+    time_limits_conformity(Profile, observed_days_not_supplied),
+    time_limits_conformity_never(Profile, meets_prescribed_minimum),
+    time_limits_conformity_never(Profile, shorter_than_prescribed_minimum).
+
+no_days_supplied_subject(Subject) :-
+    member(Subject, [
+        "open_tenders_baseline",
+        "open_tenders_prior_information_notice",
+        "open_tenders_electronic_submission",
+        "open_tenders_urgency",
+        "open_tenders_prior_notice_and_electronic",
+        "restricted_requests_baseline",
+        "restricted_requests_urgency",
+        "restricted_tenders_baseline",
+        "restricted_tenders_prior_information_notice",
+        "restricted_tenders_electronic_submission",
+        "restricted_tenders_urgency",
+        "negotiation_requests_urgency",
+        "negotiation_tenders_electronic_submission",
+        "dialogue_requests_baseline",
+        "dialogue_requests_urgency_claimed",
+        "partnership_requests_baseline"]).
+
+test('EVERY prescribed-minimum subject without a day count says so, and claims nothing') :-
+    findall(S, no_days_supplied_subject(S), Subjects),
+    length(Subjects, 16),
+    findall(
+        S,
+        (
+            no_days_supplied_subject(S),
+            time_limits_profile_for(S, Profile),
+            time_limits_conformity(Profile, observed_days_not_supplied)
+        ),
+        Unsupplied),
+    length(Unsupplied, 16),
+    findall(
+        S,
+        (
+            no_days_supplied_subject(S),
+            time_limits_profile_for(S, Profile),
+            time_limits_conformity(Profile, meets_prescribed_minimum)
+        ),
+        ClaimedCompliant),
+    ClaimedCompliant = [].
+
+% ---- no minimum to meet is not a clean bill of health -----------------
+% Art 30 prescribes no tender-stage day table. Supplying the day count must
+% not turn that into a finding either way: there is no figure to clear.
+test('no prescribed minimum stays no prescribed minimum, day count or not') :-
+    time_limits_profile_for("dialogue_tenders_allowing_20", WithDays),
+    time_limits_status(WithDays, no_minimum_prescribed),
+    time_limits_conformity(WithDays, no_prescribed_minimum_to_meet),
+    time_limits_conformity_never(WithDays, meets_prescribed_minimum),
+    time_limits_conformity_never(WithDays, shorter_than_prescribed_minimum),
+    time_limits_profile_for("dialogue_tenders", WithoutDays),
+    time_limits_conformity(WithoutDays, no_prescribed_minimum_to_meet),
+    time_limits_conformity_never(WithoutDays, meets_prescribed_minimum).
+
+test('a stage the Directive does not provide for claims no conformity either') :-
+    time_limits_profile_for("open_participation_requests", Profile),
+    time_limits_status(Profile, stage_not_applicable),
+    time_limits_conformity(Profile, no_prescribed_minimum_to_meet),
+    time_limits_conformity_never(Profile, meets_prescribed_minimum),
+    time_limits_conformity_never(Profile, shorter_than_prescribed_minimum).
+
+% ---- determinism ------------------------------------------------------
+% One conformity answer per profile, so no caller can pick the convenient
+% one and no `findall` over the verdict can quietly contain both.
+test('every fixture yields exactly one conformity answer') :-
+    findall(
+        S,
+        (
+            time_limits_profile_for(S, Profile),
+            findall(C, time_limits_conformity(Profile, C), Conformities),
+            length(Conformities, ConformityCount),
+            dif(ConformityCount, 1)
+        ),
+        Ambiguous),
+    Ambiguous = [].
+
+% ---- a value the comparison cannot read is not an answer --------------
+% A day count that is not a number matches none of check_gte's three clauses,
+% so route 1 fails closed and the profile yields NO verdict at all -- rather
+% than a verdict built on a value nobody can compare. Loud, not silent.
+test('a non-numeric day count yields no verdict rather than a wrong one') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-open_procedure
+    ]),
+    findall(Verdict, decide_time_limits(Profile, Verdict), []),
+    time_limits_conformity_never(Profile, meets_prescribed_minimum),
+    time_limits_conformity_never(Profile, observed_days_not_supplied).
+
+% ---- the comparison reaches the reduced stages too ---------------------
+% Not only Art 27. Art 28(6)(b) reduces the restricted tender minimum to 10
+% under substantiated urgency, and a 12-day notice complies there while the
+% same 12 days would breach the unreduced 30-day base.
+test('Art 28: 12 days breach the 30-day base and comply under Art 28(6)(b)') :-
+    dict_pairs(Base, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-12
+    ]),
+    minimum_days(Base, 30),
+    time_limits_conformity(Base, shorter_than_prescribed_minimum),
+    dict_pairs(Urgent, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true,
+        observed_time_limit_days-12
+    ]),
+    minimum_days(Urgent, 10),
+    time_limits_conformity(Urgent, meets_prescribed_minimum).
+
+% ---- the verdict carries it, not just the projection -------------------
+test('the CONFORMITY slot travels on the verdict term itself') :-
+    time_limits_profile_for("open_tenders_baseline_allowing_20", Profile),
+    decide_time_limits(Profile, Verdict),
+    Verdict = time_limits_verdict(Status, MinimumDays, Conformity, Citations),
+    Status = minimum_days_prescribed,
+    MinimumDays #= 35,
+    Conformity = shorter_than_prescribed_minimum,
+    dif(Citations, []),
+    time_limits_conformity_values(ConformityValues),
+    member(Conformity, ConformityValues).
+
+:- end_module(test_conformity).

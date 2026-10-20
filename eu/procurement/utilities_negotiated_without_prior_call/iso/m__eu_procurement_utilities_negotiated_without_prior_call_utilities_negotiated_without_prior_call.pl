@@ -1,0 +1,385 @@
+:- module(m__eu_procurement_utilities_negotiated_without_prior_call_utilities_negotiated_without_prior_call, [decide_utilities_negotiated_without_prior_call/2, utilities_negotiated_without_prior_call_status/2, utilities_negotiated_without_prior_call_checklist/2, utilities_negotiated_without_prior_call_unmet_count/2, utilities_negotiated_without_prior_call_input_problem/2, utilities_negotiated_without_prior_call_input_acceptable/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_dicts, [dict_keys/2, get/3]).
+:- use_module(m__eu_procurement_utilities_negotiated_without_prior_call_citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, and_status/2]).
+
+utilities_negotiated_without_prior_call_input_problem(Profile, Problem) :-
+    findall(Found, input_problem_in_order(Profile, Found), [Problem|_]).
+
+utilities_negotiated_without_prior_call_input_acceptable(Profile) :-
+    findall(Found, input_problem_in_order(Profile, Found), []).
+
+input_problem_in_order(Profile, not_ground) :-
+    term_variables(Profile, [_|_]).
+input_problem_in_order(Profile, not_a_dict) :-
+    ground(Profile),
+    \+ dict_keys(Profile, _).
+input_problem_in_order(Profile, missing_key(pleaded_ground_key)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_lacks(Profile, pleaded_ground_key).
+input_problem_in_order(Profile, wrong_type(pleaded_ground_key, expected_atom)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_get(Profile, pleaded_ground_key, Ground),
+    non_atom(Ground).
+input_problem_in_order(Profile, wrong_type(contract_type_key, expected_atom)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_get(Profile, contract_type_key, ContractType),
+    non_atom(ContractType).
+input_problem_in_order(Profile, wrong_value(contract_type_key, expected_contract_type)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_get(Profile, contract_type_key, ContractType),
+    atom(ContractType),
+    unrecognised_contract_type(ContractType).
+input_problem_in_order(Profile, wrong_type(sole_operator_reason_key, expected_atom)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_get(Profile, sole_operator_reason_key, Reason),
+    non_atom(Reason).
+input_problem_in_order(Profile, wrong_type(FlagKey, expected_boolean)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    condition_flag_key(FlagKey),
+    profile_get(Profile, FlagKey, FlagValue),
+    dif(FlagValue, true),
+    dif(FlagValue, false).
+
+non_atom(Term) :-
+    number(Term).
+non_atom(Term) :-
+    compound(Term).
+non_atom(Term) :-
+    dict_keys(Term, [_|_]).
+
+differs_from_every(_, []).
+differs_from_every(Value, [Head|Tail]) :-
+    dif(Value, Head),
+    differs_from_every(Value, Tail).
+
+recognised_contract_type(works).
+recognised_contract_type(supplies).
+recognised_contract_type(services).
+
+unrecognised_contract_type(ContractType) :-
+    differs_from_every(ContractType, [works, supplies, services]).
+
+condition_flag_key(no_suitable_tenders_or_requests_received).
+condition_flag_key(initial_conditions_not_substantially_altered).
+condition_flag_key(contract_purely_for_research_experiment_study_or_development).
+condition_flag_key(not_for_securing_profit_or_recovering_research_costs).
+condition_flag_key(award_does_not_prejudice_competitive_award_of_subsequent_contracts).
+condition_flag_key(only_particular_operator_can_perform).
+condition_flag_key(no_reasonable_alternative_or_substitute).
+condition_flag_key(absence_of_competition_not_artificially_narrowed).
+condition_flag_key(extreme_urgency_time_limits_cannot_be_met).
+condition_flag_key(urgency_events_unforeseeable_by_contracting_entity).
+condition_flag_key(urgency_not_attributable_to_contracting_entity).
+condition_flag_key(additional_deliveries_by_original_supplier).
+condition_flag_key(change_of_supplier_would_cause_technical_incompatibility).
+condition_flag_key(repetition_conforms_to_basic_project).
+condition_flag_key(original_contract_followed_article_44_1_procedure).
+condition_flag_key(basic_project_indicated_extent_and_conditions).
+condition_flag_key(possible_use_of_this_procedure_disclosed_at_first_tender).
+condition_flag_key(supplies_quoted_and_purchased_on_commodity_market).
+condition_flag_key(bargain_opportunity_available_for_very_short_time).
+condition_flag_key(price_considerably_lower_than_normal_market_prices).
+condition_flag_key(particularly_advantageous_conditions_from_winding_up_or_liquidator).
+condition_flag_key(supplier_winding_up_or_in_insolvency_procedure).
+condition_flag_key(contract_follows_directive_design_contest).
+condition_flag_key(awarded_to_contest_winner_or_all_winners_invited).
+
+condition_status(Profile, Key, met) :-
+    profile_get(Profile, Key, true).
+condition_status(Profile, Key, unmet(false)) :-
+    profile_lacks(Profile, Key).
+condition_status(Profile, Key, unmet(false)) :-
+    profile_get(Profile, Key, Value),
+    dif(Value, true).
+
+type_status(art_50_a_no_suitable_tenders, _Profile, met).
+type_status(art_50_b_research_contract, _Profile, met).
+type_status(art_50_c_sole_operator, _Profile, met).
+type_status(art_50_d_extreme_urgency, _Profile, met).
+type_status(art_50_e_additional_deliveries, Profile, met) :-
+    profile_get(Profile, contract_type_key, supplies).
+type_status(art_50_e_additional_deliveries, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [supplies]).
+type_status(art_50_f_repetition, Profile, met) :-
+    profile_get(Profile, contract_type_key, works).
+type_status(art_50_f_repetition, Profile, met) :-
+    profile_get(Profile, contract_type_key, services).
+type_status(art_50_f_repetition, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [works, services]).
+type_status(art_50_g_commodity_market, Profile, met) :-
+    profile_get(Profile, contract_type_key, supplies).
+type_status(art_50_g_commodity_market, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [supplies]).
+type_status(art_50_h_bargain_purchase, Profile, met) :-
+    profile_get(Profile, contract_type_key, supplies).
+type_status(art_50_h_bargain_purchase, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [supplies]).
+type_status(art_50_i_advantageous_winding_up, Profile, met) :-
+    profile_get(Profile, contract_type_key, supplies).
+type_status(art_50_i_advantageous_winding_up, Profile, met) :-
+    profile_get(Profile, contract_type_key, services).
+type_status(art_50_i_advantageous_winding_up, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [supplies, services]).
+type_status(art_50_j_design_contest, Profile, met) :-
+    profile_get(Profile, contract_type_key, services).
+type_status(art_50_j_design_contest, Profile, unmet(false)) :-
+    contract_type_outside(Profile, [services]).
+
+contract_type_outside(Profile, _Allowed) :-
+    profile_lacks(Profile, contract_type_key).
+contract_type_outside(Profile, Allowed) :-
+    profile_get(Profile, contract_type_key, ContractType),
+    differs_from_every(ContractType, Allowed).
+
+sole_operator_reason_outside(Profile) :-
+    profile_lacks(Profile, sole_operator_reason_key).
+sole_operator_reason_outside(Profile) :-
+    profile_get(Profile, sole_operator_reason_key, Reason),
+    differs_from_every(Reason, [unique_artistic_work_or_performance, competition_absent_for_technical_reasons, protection_of_exclusive_rights]).
+
+ground_status(art_50_a_no_suitable_tenders, Profile, Status) :-
+    condition_status(Profile, no_suitable_tenders_or_requests_received, S1),
+    condition_status(Profile, initial_conditions_not_substantially_altered, S2),
+    and_status([S1, S2], Status).
+ground_status(art_50_b_research_contract, Profile, Status) :-
+    condition_status(Profile, contract_purely_for_research_experiment_study_or_development, S1),
+    condition_status(Profile, not_for_securing_profit_or_recovering_research_costs, S2),
+    condition_status(Profile, award_does_not_prejudice_competitive_award_of_subsequent_contracts, S3),
+    and_status([S1, S2, S3], Status).
+ground_status(art_50_c_sole_operator, Profile, Status) :-
+    profile_get(Profile, sole_operator_reason_key, unique_artistic_work_or_performance),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_i),
+    condition_status(Profile, only_particular_operator_can_perform, S1),
+    and_status([S1], Status).
+ground_status(art_50_c_sole_operator, Profile, Status) :-
+    profile_get(Profile, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_ii),
+    implements(eu_dir_2014_25_art_50_c_proviso),
+    condition_status(Profile, only_particular_operator_can_perform, S1),
+    condition_status(Profile, no_reasonable_alternative_or_substitute, S2),
+    condition_status(Profile, absence_of_competition_not_artificially_narrowed, S3),
+    and_status([S1, S2, S3], Status).
+ground_status(art_50_c_sole_operator, Profile, Status) :-
+    profile_get(Profile, sole_operator_reason_key, protection_of_exclusive_rights),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_iii),
+    implements(eu_dir_2014_25_art_50_c_proviso),
+    condition_status(Profile, only_particular_operator_can_perform, S1),
+    condition_status(Profile, no_reasonable_alternative_or_substitute, S2),
+    condition_status(Profile, absence_of_competition_not_artificially_narrowed, S3),
+    and_status([S1, S2, S3], Status).
+ground_status(art_50_c_sole_operator, Profile, unmet(false)) :-
+    sole_operator_reason_outside(Profile).
+ground_status(art_50_d_extreme_urgency, Profile, Status) :-
+    condition_status(Profile, extreme_urgency_time_limits_cannot_be_met, S1),
+    condition_status(Profile, urgency_events_unforeseeable_by_contracting_entity, S2),
+    condition_status(Profile, urgency_not_attributable_to_contracting_entity, S3),
+    and_status([S1, S2, S3], Status).
+ground_status(art_50_e_additional_deliveries, Profile, Status) :-
+    type_status(art_50_e_additional_deliveries, Profile, T),
+    condition_status(Profile, additional_deliveries_by_original_supplier, S1),
+    condition_status(Profile, change_of_supplier_would_cause_technical_incompatibility, S2),
+    and_status([T, S1, S2], Status).
+ground_status(art_50_f_repetition, Profile, Status) :-
+    type_status(art_50_f_repetition, Profile, T),
+    condition_status(Profile, repetition_conforms_to_basic_project, S1),
+    condition_status(Profile, original_contract_followed_article_44_1_procedure, S2),
+    condition_status(Profile, basic_project_indicated_extent_and_conditions, S3),
+    condition_status(Profile, possible_use_of_this_procedure_disclosed_at_first_tender, S4),
+    and_status([T, S1, S2, S3, S4], Status).
+ground_status(art_50_g_commodity_market, Profile, Status) :-
+    type_status(art_50_g_commodity_market, Profile, T),
+    condition_status(Profile, supplies_quoted_and_purchased_on_commodity_market, S1),
+    and_status([T, S1], Status).
+ground_status(art_50_h_bargain_purchase, Profile, Status) :-
+    type_status(art_50_h_bargain_purchase, Profile, T),
+    condition_status(Profile, bargain_opportunity_available_for_very_short_time, S1),
+    condition_status(Profile, price_considerably_lower_than_normal_market_prices, S2),
+    and_status([T, S1, S2], Status).
+ground_status(art_50_i_advantageous_winding_up, Profile, Status) :-
+    type_status(art_50_i_advantageous_winding_up, Profile, T),
+    condition_status(Profile, particularly_advantageous_conditions_from_winding_up_or_liquidator, S1),
+    condition_status(Profile, supplier_winding_up_or_in_insolvency_procedure, S2),
+    and_status([T, S1, S2], Status).
+ground_status(art_50_j_design_contest, Profile, Status) :-
+    type_status(art_50_j_design_contest, Profile, T),
+    condition_status(Profile, contract_follows_directive_design_contest, S1),
+    condition_status(Profile, awarded_to_contest_winner_or_all_winners_invited, S2),
+    and_status([T, S1, S2], Status).
+
+c_citations(Profile, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_i)]) :-
+    profile_get(Profile, sole_operator_reason_key, unique_artistic_work_or_performance).
+c_citations(Profile, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_ii), cite(eu_dir_2014_25_art_50_c_proviso)]) :-
+    profile_get(Profile, sole_operator_reason_key, competition_absent_for_technical_reasons).
+c_citations(Profile, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_iii), cite(eu_dir_2014_25_art_50_c_proviso)]) :-
+    profile_get(Profile, sole_operator_reason_key, protection_of_exclusive_rights).
+
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_a_no_suitable_tenders, [cite(eu_dir_2014_25_art_50_a)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_a),
+    get(Profile, pleaded_ground_key, art_50_a_no_suitable_tenders),
+    ground_status(art_50_a_no_suitable_tenders, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_b_research_contract, [cite(eu_dir_2014_25_art_50_b)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_b),
+    get(Profile, pleaded_ground_key, art_50_b_research_contract),
+    ground_status(art_50_b_research_contract, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_c_sole_operator, Citations)) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_c),
+    get(Profile, pleaded_ground_key, art_50_c_sole_operator),
+    ground_status(art_50_c_sole_operator, Profile, met),
+    c_citations(Profile, Citations).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_d_extreme_urgency, [cite(eu_dir_2014_25_art_50_d)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_d),
+    get(Profile, pleaded_ground_key, art_50_d_extreme_urgency),
+    ground_status(art_50_d_extreme_urgency, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_e_additional_deliveries, [cite(eu_dir_2014_25_art_50_e)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_e),
+    get(Profile, pleaded_ground_key, art_50_e_additional_deliveries),
+    ground_status(art_50_e_additional_deliveries, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_f_repetition, [cite(eu_dir_2014_25_art_50_f)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_f),
+    get(Profile, pleaded_ground_key, art_50_f_repetition),
+    ground_status(art_50_f_repetition, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_g_commodity_market, [cite(eu_dir_2014_25_art_50_g)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_g),
+    get(Profile, pleaded_ground_key, art_50_g_commodity_market),
+    ground_status(art_50_g_commodity_market, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_h_bargain_purchase, [cite(eu_dir_2014_25_art_50_h)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_h),
+    get(Profile, pleaded_ground_key, art_50_h_bargain_purchase),
+    ground_status(art_50_h_bargain_purchase, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_i_advantageous_winding_up, [cite(eu_dir_2014_25_art_50_i)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_i),
+    get(Profile, pleaded_ground_key, art_50_i_advantageous_winding_up),
+    ground_status(art_50_i_advantageous_winding_up, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, art_50_j_design_contest, [cite(eu_dir_2014_25_art_50_j)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_j),
+    get(Profile, pleaded_ground_key, art_50_j_design_contest),
+    ground_status(art_50_j_design_contest, Profile, met).
+decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_unlawful, n_a, [cite(eu_dir_2014_25_art_50_chapeau)])) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    implements(eu_dir_2014_25_art_50_chapeau),
+    get(Profile, pleaded_ground_key, Ground),
+    pleaded_ground_not_met(Ground, Profile).
+
+pleaded_ground_not_met(Ground, Profile) :-
+    ground_status(Ground, Profile, Status),
+    dif(Status, met).
+pleaded_ground_not_met(Ground, _Profile) :-
+    differs_from_every(Ground, [art_50_a_no_suitable_tenders, art_50_b_research_contract, art_50_c_sole_operator, art_50_d_extreme_urgency, art_50_e_additional_deliveries, art_50_f_repetition, art_50_g_commodity_market, art_50_h_bargain_purchase, art_50_i_advantageous_winding_up, art_50_j_design_contest]).
+
+utilities_negotiated_without_prior_call_status(Profile, Status) :-
+    decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(Status, _Ground, _Citations)).
+
+condition_item(Key, Profile, Citation, Item) :-
+    condition_status(Profile, Key, Status),
+    Item = item(Key, Status, Citation).
+
+type_item(Ground, Profile, Citation, Item) :-
+    type_status(Ground, Profile, Status),
+    Item = item(contract_type_key, Status, Citation).
+
+ground_checklist(art_50_a_no_suitable_tenders, Profile, Checklist) :-
+    condition_item(no_suitable_tenders_or_requests_received, Profile, cite(eu_dir_2014_25_art_50_a), Item1),
+    condition_item(initial_conditions_not_substantially_altered, Profile, cite(eu_dir_2014_25_art_50_a), Item2),
+    Checklist = [Item1, Item2].
+ground_checklist(art_50_b_research_contract, Profile, Checklist) :-
+    condition_item(contract_purely_for_research_experiment_study_or_development, Profile, cite(eu_dir_2014_25_art_50_b), Item1),
+    condition_item(not_for_securing_profit_or_recovering_research_costs, Profile, cite(eu_dir_2014_25_art_50_b), Item2),
+    condition_item(award_does_not_prejudice_competitive_award_of_subsequent_contracts, Profile, cite(eu_dir_2014_25_art_50_b), Item3),
+    Checklist = [Item1, Item2, Item3].
+ground_checklist(art_50_c_sole_operator, Profile, Checklist) :-
+    profile_get(Profile, sole_operator_reason_key, unique_artistic_work_or_performance),
+    condition_item(only_particular_operator_can_perform, Profile, cite(eu_dir_2014_25_art_50_c), Item1),
+    Checklist = [Item1].
+ground_checklist(art_50_c_sole_operator, Profile, Checklist) :-
+    profile_get(Profile, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    condition_item(only_particular_operator_can_perform, Profile, cite(eu_dir_2014_25_art_50_c), Item1),
+    condition_item(no_reasonable_alternative_or_substitute, Profile, cite(eu_dir_2014_25_art_50_c_proviso), Item2),
+    condition_item(absence_of_competition_not_artificially_narrowed, Profile, cite(eu_dir_2014_25_art_50_c_proviso), Item3),
+    Checklist = [Item1, Item2, Item3].
+ground_checklist(art_50_c_sole_operator, Profile, Checklist) :-
+    profile_get(Profile, sole_operator_reason_key, protection_of_exclusive_rights),
+    condition_item(only_particular_operator_can_perform, Profile, cite(eu_dir_2014_25_art_50_c), Item1),
+    condition_item(no_reasonable_alternative_or_substitute, Profile, cite(eu_dir_2014_25_art_50_c_proviso), Item2),
+    condition_item(absence_of_competition_not_artificially_narrowed, Profile, cite(eu_dir_2014_25_art_50_c_proviso), Item3),
+    Checklist = [Item1, Item2, Item3].
+ground_checklist(art_50_c_sole_operator, Profile, [item(sole_operator_reason_key, unmet(false), cite(eu_dir_2014_25_art_50_c))]) :-
+    sole_operator_reason_outside(Profile).
+ground_checklist(art_50_d_extreme_urgency, Profile, Checklist) :-
+    condition_item(extreme_urgency_time_limits_cannot_be_met, Profile, cite(eu_dir_2014_25_art_50_d), Item1),
+    condition_item(urgency_events_unforeseeable_by_contracting_entity, Profile, cite(eu_dir_2014_25_art_50_d), Item2),
+    condition_item(urgency_not_attributable_to_contracting_entity, Profile, cite(eu_dir_2014_25_art_50_d), Item3),
+    Checklist = [Item1, Item2, Item3].
+ground_checklist(art_50_e_additional_deliveries, Profile, Checklist) :-
+    type_item(art_50_e_additional_deliveries, Profile, cite(eu_dir_2014_25_art_50_e), Item0),
+    condition_item(additional_deliveries_by_original_supplier, Profile, cite(eu_dir_2014_25_art_50_e), Item1),
+    condition_item(change_of_supplier_would_cause_technical_incompatibility, Profile, cite(eu_dir_2014_25_art_50_e), Item2),
+    Checklist = [Item0, Item1, Item2].
+ground_checklist(art_50_f_repetition, Profile, Checklist) :-
+    type_item(art_50_f_repetition, Profile, cite(eu_dir_2014_25_art_50_f), Item0),
+    condition_item(repetition_conforms_to_basic_project, Profile, cite(eu_dir_2014_25_art_50_f), Item1),
+    condition_item(original_contract_followed_article_44_1_procedure, Profile, cite(eu_dir_2014_25_art_50_f), Item2),
+    condition_item(basic_project_indicated_extent_and_conditions, Profile, cite(eu_dir_2014_25_art_50_f), Item3),
+    condition_item(possible_use_of_this_procedure_disclosed_at_first_tender, Profile, cite(eu_dir_2014_25_art_50_f), Item4),
+    Checklist = [Item0, Item1, Item2, Item3, Item4].
+ground_checklist(art_50_g_commodity_market, Profile, Checklist) :-
+    type_item(art_50_g_commodity_market, Profile, cite(eu_dir_2014_25_art_50_g), Item0),
+    condition_item(supplies_quoted_and_purchased_on_commodity_market, Profile, cite(eu_dir_2014_25_art_50_g), Item1),
+    Checklist = [Item0, Item1].
+ground_checklist(art_50_h_bargain_purchase, Profile, Checklist) :-
+    type_item(art_50_h_bargain_purchase, Profile, cite(eu_dir_2014_25_art_50_h), Item0),
+    condition_item(bargain_opportunity_available_for_very_short_time, Profile, cite(eu_dir_2014_25_art_50_h), Item1),
+    condition_item(price_considerably_lower_than_normal_market_prices, Profile, cite(eu_dir_2014_25_art_50_h), Item2),
+    Checklist = [Item0, Item1, Item2].
+ground_checklist(art_50_i_advantageous_winding_up, Profile, Checklist) :-
+    type_item(art_50_i_advantageous_winding_up, Profile, cite(eu_dir_2014_25_art_50_i), Item0),
+    condition_item(particularly_advantageous_conditions_from_winding_up_or_liquidator, Profile, cite(eu_dir_2014_25_art_50_i), Item1),
+    condition_item(supplier_winding_up_or_in_insolvency_procedure, Profile, cite(eu_dir_2014_25_art_50_i), Item2),
+    Checklist = [Item0, Item1, Item2].
+ground_checklist(art_50_j_design_contest, Profile, Checklist) :-
+    type_item(art_50_j_design_contest, Profile, cite(eu_dir_2014_25_art_50_j), Item0),
+    condition_item(contract_follows_directive_design_contest, Profile, cite(eu_dir_2014_25_art_50_j), Item1),
+    condition_item(awarded_to_contest_winner_or_all_winners_invited, Profile, cite(eu_dir_2014_25_art_50_j), Item2),
+    Checklist = [Item0, Item1, Item2].
+
+utilities_negotiated_without_prior_call_checklist(Profile, Checklist) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    get(Profile, pleaded_ground_key, Ground),
+    ground_checklist(Ground, Profile, Checklist).
+
+utilities_negotiated_without_prior_call_unmet_count(Profile, Count) :-
+    utilities_negotiated_without_prior_call_input_acceptable(Profile),
+    get(Profile, pleaded_ground_key, Ground),
+    ground_checklist(Ground, Profile, Checklist),
+    findall(Item, (member(Item, Checklist), Item = item(_, unmet(_), _)), UnmetItems),
+    length(UnmetItems, Count).
+
+no_statute("non_atom", 1, "computation_helper").
+no_statute("differs_from_every", 2, "computation_helper").
+no_statute("unrecognised_contract_type", 1, "computation_helper").
+no_statute("contract_type_outside", 2, "computation_helper").
+no_statute("sole_operator_reason_outside", 1, "computation_helper").
+no_statute("pleaded_ground_not_met", 2, "computation_helper").

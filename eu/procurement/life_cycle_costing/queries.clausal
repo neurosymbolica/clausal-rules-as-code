@@ -1,0 +1,72 @@
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/procurement/life_cycle_costing.
+% A TOP-LAYER consumer: imports the determination slice's PUBLICS and
+% the kernel names it spells, and nothing else.
+%
+% Query types covered:
+%   #2 eligibility:         life_cycle_costing_eligibility/2
+%   #3 status_determination: life_cycle_costing_status/2
+%   #4 enumeration:         life_cycle_costing_defect_enumeration/2
+%   #7 justification:       life_cycle_costing_checklist/2
+%   #23 calculation:        life_cycle_costing_calculation/2
+%   what-if:                life_cycle_costing_what_if/4
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% profile-key, limb-id and verdict atoms, the citation keys, the kernel verdict
+% constructors, cite/1, item/3 -- have no counterpart: atoms and compound terms
+% need no import. Only predicates are imported.)
+:- module(queries, [
+    life_cycle_costing_profile_keys/1,
+    life_cycle_costing_what_if/4,
+    life_cycle_costing_eligibility/2,
+    life_cycle_costing_status/2,
+    life_cycle_costing_defect_enumeration/2,
+    life_cycle_costing_checklist/2,
+    life_cycle_costing_calculation/2
+]).
+
+:- use_module(eu/procurement/life_cycle_costing/life_cycle_costing, [
+    decide_lcc_method_validity/2,
+    decide_lcc_mandatory_method/2,
+    decide_lcc_computation/2,
+    lcc_method_validity_limb_status/4,
+    lcc_total/2,
+    life_cycle_costing_input_problem/3]).
+:- use_module(kit/query_combinators, [override_key/4]).
+
+% #4 enumeration: the 12 profile keys in fixed order
+life_cycle_costing_profile_keys([cost_components, tenderer_data_indicated_in_procurement_documents, costing_method_indicated_in_procurement_documents, externality_method_criteria_objectively_verifiable, externality_method_criteria_non_discriminatory, externality_method_established_for_repeated_or_continuous_application, externality_method_unduly_favours_or_disadvantages_operators, externality_method_accessible_to_all_interested_parties, externality_data_obtainable_with_reasonable_effort, externality_data_obtainable_by_third_country_gpa_operators, union_common_method_act_key, union_common_method_applied]).
+
+% #2 eligibility: method validity verdict (valid_lcc_method / invalid_lcc_method)
+life_cycle_costing_eligibility(Profile, Verdict) :-
+    decide_lcc_method_validity(Profile, Verdict).
+
+% #3 status_determination: mandatory method classification
+life_cycle_costing_status(Profile, Status) :-
+    decide_lcc_mandatory_method(Profile, lcc_mandatory_method_verdict(Status, _, _)).
+
+% #4 enumeration: all qualifying defect IDs for the method validity determination
+life_cycle_costing_defect_enumeration(Profile, DefectIds) :-
+    decide_lcc_method_validity(Profile, lcc_method_validity_verdict(_, DefectIds, _)).
+
+% #7 justification: per-limb checklist with cite(...) provenance for every limb
+life_cycle_costing_checklist(Profile, Checklist) :-
+    findall(Item, (member(LimbId, [externality_cost_monetary_value_not_determinable, tenderer_data_not_indicated, costing_method_not_indicated, externality_method_criteria_not_objectively_verifiable, externality_method_criteria_discriminatory, undue_favour_or_disadvantage_of_economic_operators, externality_method_not_accessible, externality_data_not_obtainable_with_reasonable_effort, externality_data_not_obtainable_by_gpa_operators]), lcc_method_validity_limb_status(LimbId, Profile, Status, Citation), Item = item(LimbId, Status, Citation)), Checklist).
+
+% #23 calculation: the exact integer sum of admissible components
+% Refused (no solution) for a profile the domain input check rejects.
+% (Pure form, ruling 2026-10-20: the seam's `not life_cycle_costing_input_problem(...)`
+% is "the list of problems is []".)
+life_cycle_costing_calculation(Profile, TotalEurCents) :-
+    findall(Problem, life_cycle_costing_input_problem(computation, Profile, Problem), []),
+    get(Profile, cost_components, CostComponents),
+    lcc_total(CostComponents, TotalEurCents).
+
+% what-if: override one profile key and re-decide method validity
+% (Clausal Prolog: the seam's what_if/5 closure call is spelled out as its two
+% steps, the kit's override_key/4 ({**PROFILE, KEY: VALUE}) and the decision.)
+life_cycle_costing_what_if(Profile, OverriddenKey, NewValue, NewVerdict) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_lcc_method_validity(Hypothesis, NewVerdict).
+
+:- end_module(queries).

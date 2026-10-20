@@ -1,0 +1,973 @@
+% =====================================================================
+% framework_agreements.clausal -- the "framework_agreements" DETERMINATION for eu/procurement/framework_agreements,
+% self-contained top to bottom: its statutory VALUE facts, its derived
+% arithmetic, its per-rule tests, its checklist and its verdict assembly.
+%
+% Two separable determinations over one profile:
+%   (A) Framework term lawfulness (Art 33(1)): four-year limit + exceptional case.
+%   (B) Call-off lawfulness and route (Art 33(2)-(5)): seventeen limbs, five routes.
+% Neither gates the other.
+%
+% Source: Directive 2014/24/EU Art 33 (OJ L 94, 28.3.2014).
+% =====================================================================
+% Clausal Prolog: a .clausal module exports PREDICATES only. The seam export
+% list also named, and this file still spells, these atoms and data
+% constructors, which need no export and no import:
+%   the input check's problem terms: not_ground(Argument), not_a_dict(Argument),
+%     missing_key(Key), wrong_type(Key, Expected), out_of_range(Key, Expected),
+%     profile, expected_date, expected_integer, expected_boolean,
+%     expected_call_off_method, expected_at_least_one
+%   re-exported constructors from kernel: framework_term_verdict(Status,
+%     DefectIds, Citations), call_off_verdict(Status, Route, DefectIds,
+%     Citations), framework_agreements_verdict(Status, Citations)
+%   profile key atoms (21), call-off method atoms (2), route atoms (5),
+%   framework term status atoms (2) -- decide_framework_term/2 STATUS,
+%   facade status atoms (2) -- decide_framework_agreements/2 STATUS,
+%   call-off status atoms (2), date-surface status atoms (4),
+%   framework term limb IDs (2), call-off limb IDs (17).
+:- module(framework_agreements, [
+    % required public predicates
+    decide_framework_term/2,
+    framework_term_limit_date/2,
+    framework_term_within_limit/3,
+    decide_call_off/2,
+    call_off_route/2,
+    call_off_award_window_status/4,
+
+    % the input check (ruling D80, 2026-10-20)
+    framework_agreements_input_problem/2,
+
+    % facade predicates
+    decide_framework_agreements/2,
+    framework_agreements_status/2,
+    framework_agreements_checklist/2,
+    framework_agreements_decision_resolvable/1,
+    framework_agreements_status_values/1,
+
+    % the statutory figure, re-exported by parameters.clausal
+    framework_term_limit_years/1,
+
+    % membership fact tables
+    call_off_method/1,
+    call_off_route_id/1,
+    call_off_defect_id/1,
+    framework_term_defect_id/1
+]).
+
+% Every predicate not in the export list above is private (the seam's
+% -private list: framework_term_limb_ids/1, call_off_limb_ids/1,
+% framework_term_defect_fires/2, call_off_defect_fires/3,
+% framework_term_citation/2, call_off_citation/2, framework_term_checklist/2,
+% call_off_checklist/3, call_off_status/2, framework_term_limb_status/3,
+% call_off_limb_in_scope/3, call_off_limb_status/4, input_problem_in_scope/3,
+% framework_agreements_profile_key_list/1, input_problem_candidate/3,
+% checkable_profile/1, profile_key_type/2, value_has_type/2,
+% expected_type_name/2, boolean_value/1, is_integer_value/1, is_date_value/1,
+% key_required/3, term_exceeds_limit/1, operator_count_value/2,
+% route_is_reopened_competition/1, framework_term_decision/2,
+% route_for_profile/2; and the atoms framework_term, call_off, whole_profile,
+% date_value, integer_value, boolean_flag, call_off_method_value). So are the
+% pure-form helpers this conversion adds (ruling 2026-10-20), each listed in a
+% no_statute/3 fact at the end of this file.
+
+:- use_module(library(clpz)).
+
+% (Clausal Prolog: the kernel constructors, cite/1 and the five citation key
+% atoms the seam imported need no import; nor do item/3, met and unmet from
+% formalize_lib, which are data constructors, nor date/3 from date_time, which
+% in Clausal Prolog is a plain term built and taken apart by unification.)
+:- use_module(eu/procurement/framework_agreements/citations, [implements/1]).
+:- use_module(kit/deadline_lib, [date_before/2, date_after/2, date_on_or_before/2, date_on_or_after/2]).
+:- use_module(kit/date_guard, [must_be_date/1]).
+% profile_lacks/2 and not_member/2 are the kit's dif-based positive
+% complements of `not get(PROFILE, KEY, _)` and `not (X in LIST)`.
+:- use_module(formalize_lib, [profile_lacks/2, not_member/2]).
+
+% =====================================================================
+% STATUTORY VALUE: the four-year maximum term of Art 33(1)
+% =====================================================================
+% Clausal Prolog: moved here from parameters.clausal, which sources it in its
+% parameter_source/2 record and re-exports it under its old module path (the
+% Prolog parameter checker requires the value fact in a logic module).
+framework_term_limit_years(4).
+
+% =====================================================================
+% MEMBERSHIP FACT TABLES
+% =====================================================================
+call_off_method(without_reopening_competition).
+call_off_method(with_reopening_competition).
+
+call_off_route_id(single_operator_direct_award).
+call_off_route_id(multi_operator_direct_award_all_terms_set_out).
+call_off_route_id(multi_operator_direct_award_under_split_framework).
+call_off_route_id(multi_operator_reopened_competition).
+call_off_route_id(no_lawful_route).
+
+call_off_defect_id(call_off_awarded_outside_framework_term).
+call_off_defect_id(contracting_authority_not_identified_in_call_for_competition).
+call_off_defect_id(economic_operator_not_party_to_framework).
+call_off_defect_id(substantial_modification_of_framework_terms).
+call_off_defect_id(call_off_outside_limits_of_framework_terms).
+call_off_defect_id(reopening_competition_in_single_operator_framework).
+call_off_defect_id(direct_award_without_all_terms_set_out).
+call_off_defect_id(objective_conditions_for_determining_performer_not_indicated).
+call_off_defect_id(objective_criteria_for_choice_of_route_not_stated).
+call_off_defect_id(terms_subject_to_reopening_not_specified).
+call_off_defect_id(reopening_not_available_where_framework_sets_out_all_terms).
+call_off_defect_id(reopened_competition_not_based_on_framework_terms).
+call_off_defect_id(capable_operators_not_all_consulted_in_writing).
+call_off_defect_id(time_limit_not_sufficiently_long).
+call_off_defect_id(tenders_not_submitted_in_writing).
+call_off_defect_id(tender_contents_opened_before_time_limit_expired).
+call_off_defect_id(award_not_made_on_framework_award_criteria).
+
+framework_term_defect_id(framework_end_date_precedes_start_date).
+framework_term_defect_id(framework_term_exceeds_four_years).
+
+% =====================================================================
+% HELPER: LEAP YEAR
+% =====================================================================
+% =====================================================================
+% HELPER: LIMB ID LISTS (ordered)
+% =====================================================================
+framework_term_limb_ids([framework_end_date_precedes_start_date, framework_term_exceeds_four_years]).
+
+call_off_limb_ids([call_off_awarded_outside_framework_term, contracting_authority_not_identified_in_call_for_competition, economic_operator_not_party_to_framework, substantial_modification_of_framework_terms, call_off_outside_limits_of_framework_terms, reopening_competition_in_single_operator_framework, direct_award_without_all_terms_set_out, objective_conditions_for_determining_performer_not_indicated, objective_criteria_for_choice_of_route_not_stated, terms_subject_to_reopening_not_specified, reopening_not_available_where_framework_sets_out_all_terms, reopened_competition_not_based_on_framework_terms, capable_operators_not_all_consulted_in_writing, time_limit_not_sufficiently_long, tenders_not_submitted_in_writing, tender_contents_opened_before_time_limit_expired, award_not_made_on_framework_award_criteria]).
+
+% =====================================================================
+% HELPER: CITATION MAPPINGS
+% =====================================================================
+framework_term_citation(framework_end_date_precedes_start_date, cite(eu_dir_2014_24_art_33_1)).
+framework_term_citation(framework_term_exceeds_four_years, cite(eu_dir_2014_24_art_33_1)).
+
+call_off_citation(call_off_awarded_outside_framework_term, cite(eu_dir_2014_24_art_33_2)).
+call_off_citation(contracting_authority_not_identified_in_call_for_competition, cite(eu_dir_2014_24_art_33_2)).
+call_off_citation(economic_operator_not_party_to_framework, cite(eu_dir_2014_24_art_33_2)).
+call_off_citation(substantial_modification_of_framework_terms, cite(eu_dir_2014_24_art_33_2)).
+call_off_citation(call_off_outside_limits_of_framework_terms, cite(eu_dir_2014_24_art_33_3)).
+call_off_citation(reopening_competition_in_single_operator_framework, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(direct_award_without_all_terms_set_out, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(objective_conditions_for_determining_performer_not_indicated, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(objective_criteria_for_choice_of_route_not_stated, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(terms_subject_to_reopening_not_specified, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(reopening_not_available_where_framework_sets_out_all_terms, cite(eu_dir_2014_24_art_33_4)).
+call_off_citation(reopened_competition_not_based_on_framework_terms, cite(eu_dir_2014_24_art_33_5)).
+call_off_citation(capable_operators_not_all_consulted_in_writing, cite(eu_dir_2014_24_art_33_5)).
+call_off_citation(time_limit_not_sufficiently_long, cite(eu_dir_2014_24_art_33_5)).
+call_off_citation(tenders_not_submitted_in_writing, cite(eu_dir_2014_24_art_33_5)).
+call_off_citation(tender_contents_opened_before_time_limit_expired, cite(eu_dir_2014_24_art_33_5)).
+call_off_citation(award_not_made_on_framework_award_criteria, cite(eu_dir_2014_24_art_33_5)).
+
+% =====================================================================
+% DATE SURFACE: framework_term_limit_date/2
+% Computes the fourth-anniversary limit date with 29-February clamp.
+% One date/3 term in, one date/3 term out. LIMIT_YEAR is computed in the
+% body before the output date is constructed (never as a head pattern with
+% an unbound component) -- a `date(Y, M, D)` head pattern whose components
+% are bound later never resolves into a real datetime.date, only a
+% transitional match-pattern object; see py/datetime.py's _DatePattern.
+% =====================================================================
+% ONE clause, was two plus a hand-rolled is_leap_year/1 (2026-09-01). The only
+% start date whose anniversary can fail to exist is 29 February, so the leap
+% question does not need asking: CONSTRUCT the anniversary and let the type
+% answer. `date/3` RAISES `domain_error` on 29 Feb of a non-leap year, and the
+% recovery clamps to 28 February — the same result the second clause computed,
+% reached without restating the Gregorian leap rule in `%` arithmetic.
+%
+% The catcher does NOT name the offending type. It used to read
+% `domain_error("date", _)`, which matched only while `-double_quotes(atom)`
+% made that literal an atom; under `-double_quotes(chars)` (step (3),
+% bb669be6) it became a string, stopped unifying with the atom the engine
+% raises, and the error escaped as an uncaught LogicException — silently, on
+% the oracle axis only, because every suite passes without ever building an
+% impossible anniversary. A BARE `date` is not available -- it is bound to the
+% imported CONSTRUCTOR in this file -- but a QUOTED `'date'` is the atom in
+% every mode and needs no declaration (engine ruling 2026-09-08), so the
+% catcher names the type exactly without depending on the file's
+% `-double_quotes` setting.
+%
+% Clausal Prolog (2026-10-20): the catcher above has nothing left to catch. In
+% Clausal Prolog `date(Y, M, D)` is a plain term built by unification, which
+% never validates the calendar, so `date(2100, 2, 29)` is built without a
+% domain_error and the recovery could never run (the ISO export is the same:
+% a bare compound). The clamp is therefore stated again, as three disjoint
+% clauses of term_anniversary/4 over the Gregorian leap rule: any day but
+% 29 February keeps its day; 29 February stays in a leap year and becomes
+% 28 February in a common year. Cut-free, no catch, one answer.
+framework_term_limit_date(StartDate, LimitDate) :-
+    date(StartYear, StartMonth, StartDay) = StartDate,
+    framework_term_limit_years(Years),
+    LimitYear #= StartYear + Years,
+    term_anniversary(LimitYear, StartMonth, StartDay, LimitDate).
+
+term_anniversary(LimitYear, Month, Day, date(LimitYear, Month, Day)) :-
+    dif(Month-Day, 2-29).
+term_anniversary(LimitYear, 2, 29, date(LimitYear, 2, 29)) :-
+    leap_year(LimitYear).
+term_anniversary(LimitYear, 2, 29, date(LimitYear, 2, 28)) :-
+    common_year(LimitYear).
+
+% Gregorian: divisible by 4, except centuries, except every 400 years.
+% leap_year/1 and common_year/1 are complements with disjoint clauses.
+leap_year(Year) :-
+    Year mod 4 #= 0,
+    Year mod 100 #\= 0.
+leap_year(Year) :-
+    Year mod 400 #= 0.
+
+common_year(Year) :-
+    Year mod 4 #\= 0.
+common_year(Year) :-
+    Year mod 100 #= 0,
+    Year mod 400 #\= 0.
+
+% =====================================================================
+% DATE SURFACE: framework_term_within_limit/3
+% Applies the four-year rule with NO exceptional-case escape.
+% =====================================================================
+framework_term_within_limit(StartDate, EndDate, within_four_year_limit) :-
+    framework_term_limit_date(StartDate, LimitDate),
+    date_on_or_before(EndDate, LimitDate).
+
+framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit) :-
+    framework_term_limit_date(StartDate, LimitDate),
+    date_after(EndDate, LimitDate).
+
+% =====================================================================
+% DATE SURFACE: call_off_award_window_status/4
+% Closed interval [START, END], both endpoints inclusive.
+% =====================================================================
+% Clausal Prolog: the third clause also requires the award to be on or after
+% the start date, so the two "outside" clauses are disjoint. Without it, a
+% window whose end precedes its start answered `award_date_outside_framework_term`
+% TWICE for an award between the two (before the start AND after the end),
+% and limb 1 of the call-off then fired twice.
+call_off_award_window_status(StartDate, EndDate, AwardDate, award_date_within_framework_term) :-
+    date_on_or_before(StartDate, AwardDate),
+    date_on_or_before(AwardDate, EndDate).
+
+call_off_award_window_status(StartDate, _EndDate, AwardDate, award_date_outside_framework_term) :-
+    date_before(AwardDate, StartDate).
+
+call_off_award_window_status(StartDate, EndDate, AwardDate, award_date_outside_framework_term) :-
+    date_on_or_after(AwardDate, StartDate),
+    date_after(AwardDate, EndDate).
+
+% =====================================================================
+% THE INPUT CHECK (ruling D80, 2026-10-20)
+% A complete, well-typed profile is part of this domain's contract
+% (profile_keys.yaml key_contract). framework_agreements_input_problem/2
+% gives the FIRST problem of a profile, or fails when it is well formed:
+%   not_ground(profile)              the profile contains an unbound variable
+%   not_a_dict(profile)              the profile is not a dict
+%   wrong_type(KEY, EXPECTED)        a PRESENT key of the wrong type: a date
+%                                    that is not date(Y, M, D) (kit date
+%                                    guard), a count that is not an integer,
+%                                    a boolean that is not exactly True or
+%                                    False, a method outside the vocabulary
+%   out_of_range(framework_operator_count, expected_at_least_one)
+%   missing_key(KEY)                 a key the law reads on this profile is
+%                                    absent
+% Total and negation-safe: groundness first, then the dict shape, then the
+% types of present keys, and only then arithmetic on values whose type is
+% known.
+%
+% WHICH KEYS ARE REQUIRED is scoped by the law, so documented "not read
+% here" cases stay decidable (profile_keys.yaml key_contract; Art 33(1)
+% third subparagraph, 33(3), 33(4), 33(5)):
+%   framework term: start and end dates; exceptional_case_duly_justified
+%     only for a term that exceeds four years.
+%   call-off: the three dates, operator count, method and the three
+%     Art 33(2) judgements always; within-limits only for a single
+%     operator; the all-terms and split flags for two or more operators;
+%     objective conditions for a multi-operator direct award; objective
+%     criteria and terms subject to reopening under a split framework; the
+%     six Art 33(5) keys only on a reopened competition.
+% The term scope is checked on its own so that, as the manifest records,
+% neither determination gates the other: a call-off key missing does not
+% stop decide_framework_term/2. The type checks apply in every scope.
+%
+% ENTRY POINTS: decide_framework_term/2 (term scope); call_off_route/2 and
+% decide_call_off/2 (call-off scope); framework_agreements_checklist/2
+% (whole profile). decide_framework_agreements/2, framework_agreements_status/2,
+% framework_agreements_decision_resolvable/1 and every queries.clausal
+% predicate reach the check through those. The domain has no
+% indeterminate verdict, so a refused profile gets NO answer.
+%
+% Pure form (ruling 2026-10-20: no once/1, no negation as failure where a
+% positive complement exists). The candidate problems are COLLECTED in check
+% order with findall/3 (input_problems_in_scope/3): the first problem is the
+% head of that list, and a profile is acceptable in a scope exactly when the
+% list is [] (input_acceptable_in_scope/2, which replaces every
+% `not input_problem_in_scope(...)` / `not framework_agreements_input_problem(...)`
+% guard). Each negated test of the seam source is now its positive complement:
+%   not ground(P)                    -> term_variables(P, [_|_])
+%   not value_has_type(T, V)         -> value_lacks_type(T, V)
+%   not get(P, KEY, _)               -> profile_lacks(P, KEY)        (kit, dif-based)
+%   not boolean_value(V)             -> (gone: true/false are atoms, so integer/1
+%                                        alone already refuses a boolean)
+% ONE negation is left: `\+ dict_keys(Profile, _)` for not_a_dict. The engine's
+% dict is neither atomic nor compound, while the ISO export's dict is an
+% attribute(Key, Value) list, which IS compound, so no positive type test
+% names "not a dict" on both; it needs a reified dict test from the engine
+% and the dict shim.
+% =====================================================================
+framework_agreements_input_problem(Profile, Problem) :-
+    input_problem_in_scope(whole_profile, Profile, Problem).
+
+input_problems_in_scope(Scope, Profile, Problems) :-
+    findall(Candidate, input_problem_candidate(Scope, Profile, Candidate), Problems).
+
+input_problem_in_scope(Scope, Profile, Problem) :-
+    input_problems_in_scope(Scope, Profile, [Problem|_]).
+
+input_acceptable_in_scope(Scope, Profile) :-
+    input_problems_in_scope(Scope, Profile, []).
+
+input_problem_candidate(_, Profile, not_ground(profile)) :-
+    term_variables(Profile, [_|_]).
+
+input_problem_candidate(_, Profile, not_a_dict(profile)) :-
+    ground(Profile),
+    \+ dict_keys(Profile, _).
+
+input_problem_candidate(_, Profile, wrong_type(Key, Expected)) :-
+    checkable_profile(Profile),
+    framework_agreements_profile_key_list(Keys),
+    member(Key, Keys),
+    get(Profile, Key, Value),
+    profile_key_type(Key, Type),
+    value_lacks_type(Type, Value),
+    expected_type_name(Type, Expected).
+
+input_problem_candidate(_, Profile, out_of_range(framework_operator_count, expected_at_least_one)) :-
+    checkable_profile(Profile),
+    get(Profile, framework_operator_count, OperatorCount),
+    is_integer_value(OperatorCount),
+    OperatorCount #< 1.
+
+input_problem_candidate(Scope, Profile, missing_key(Key)) :-
+    checkable_profile(Profile),
+    framework_agreements_profile_key_list(Keys),
+    member(Key, Keys),
+    key_required(Scope, Profile, Key),
+    profile_lacks(Profile, Key).
+
+checkable_profile(Profile) :-
+    ground(Profile),
+    dict_keys(Profile, _).
+
+% The 21 keys in reporting order, with their key_contract types.
+framework_agreements_profile_key_list([framework_start_date, framework_end_date, call_off_award_date, framework_operator_count, call_off_method_key, exceptional_case_duly_justified, contracting_authority_identified_in_call_for_competition, economic_operator_party_to_framework, call_off_entails_substantial_modification, call_off_within_limits_of_framework_terms, framework_sets_out_all_terms, objective_conditions_for_determining_performer_indicated, partly_with_partly_without_reopening_stipulated, objective_criteria_for_choice_of_route_stated, terms_subject_to_reopening_specified, reopened_competition_based_on_framework_terms, capable_operators_consulted_in_writing, time_limit_sufficiently_long, tenders_submitted_in_writing, tender_contents_confidential_until_time_limit_expired, award_made_on_framework_award_criteria]).
+
+profile_key_type(framework_start_date, date_value).
+profile_key_type(framework_end_date, date_value).
+profile_key_type(call_off_award_date, date_value).
+profile_key_type(framework_operator_count, integer_value).
+profile_key_type(call_off_method_key, call_off_method_value).
+profile_key_type(exceptional_case_duly_justified, boolean_flag).
+profile_key_type(contracting_authority_identified_in_call_for_competition, boolean_flag).
+profile_key_type(economic_operator_party_to_framework, boolean_flag).
+profile_key_type(call_off_entails_substantial_modification, boolean_flag).
+profile_key_type(call_off_within_limits_of_framework_terms, boolean_flag).
+profile_key_type(framework_sets_out_all_terms, boolean_flag).
+profile_key_type(objective_conditions_for_determining_performer_indicated, boolean_flag).
+profile_key_type(partly_with_partly_without_reopening_stipulated, boolean_flag).
+profile_key_type(objective_criteria_for_choice_of_route_stated, boolean_flag).
+profile_key_type(terms_subject_to_reopening_specified, boolean_flag).
+profile_key_type(reopened_competition_based_on_framework_terms, boolean_flag).
+profile_key_type(capable_operators_consulted_in_writing, boolean_flag).
+profile_key_type(time_limit_sufficiently_long, boolean_flag).
+profile_key_type(tenders_submitted_in_writing, boolean_flag).
+profile_key_type(tender_contents_confidential_until_time_limit_expired, boolean_flag).
+profile_key_type(award_made_on_framework_award_criteria, boolean_flag).
+
+expected_type_name(date_value, expected_date).
+expected_type_name(integer_value, expected_integer).
+expected_type_name(boolean_flag, expected_boolean).
+expected_type_name(call_off_method_value, expected_call_off_method).
+
+value_has_type(date_value, Value) :- is_date_value(Value).
+value_has_type(integer_value, Value) :- is_integer_value(Value).
+value_has_type(boolean_flag, Value) :- boolean_value(Value).
+value_has_type(call_off_method_value, Value) :- call_off_method(Value).
+
+% value_lacks_type/2: the positive complement of value_has_type/2 for a GROUND
+% value (the only kind the input check reaches), one clause per type.
+value_lacks_type(date_value, Value) :- date_value_check(Value, not_a_date).
+value_lacks_type(integer_value, Value) :- not_an_integer(Value).
+value_lacks_type(boolean_flag, Value) :- dif(Value, true), dif(Value, false).
+value_lacks_type(call_off_method_value, Value) :-
+    findall(Method, call_off_method(Method), Methods),
+    not_member(Value, Methods).
+
+boolean_value(true).
+boolean_value(false).
+
+% An integer that is not a boolean (True/False are integers to the host).
+% Clausal Prolog: true and false are atoms, never integers, so integer/1 alone
+% is this test; the seam's `not boolean_value(VALUE)` had nothing left to do.
+is_integer_value(Value) :-
+    integer(Value).
+
+% not_an_integer/1: the positive complement of integer/1 for a GROUND value
+% (the only kind the input check reaches): an atom, a float, a compound (lists
+% and character lists included), or an engine dict, which is neither atomic
+% nor compound. Disjoint on the engine; in the ISO export a dict IS a list, so
+% there the last two clauses can both hold for one value (same problem term,
+% no effect on the first problem or on acceptability).
+not_an_integer(Value) :- atom(Value).
+not_an_integer(Value) :- float(Value).
+not_an_integer(Value) :- compound(Value).
+not_an_integer(Value) :- dict_keys(Value, _).
+
+% A date in the sense of the kit date guard, as a test that fails instead of
+% raising. Only called on a ground value.
+% Clausal Prolog: date_value_check/2 REIFIES the guard -- `date_value` when
+% must_be_date/1 accepts the value, `not_a_date` when it raises its type_error
+% -- so "is a date" and "is not a date" are two disjoint positive answers of
+% one deterministic predicate, with no negation.
+is_date_value(Value) :-
+    date_value_check(Value, date_value).
+
+date_value_check(Value, Class) :-
+    catch((must_be_date(Value), Class = date_value),
+          error(type_error(_, _), _),
+          Class = not_a_date).
+
+% -- required keys, by scope --
+key_required(framework_term, _, framework_start_date).
+key_required(framework_term, _, framework_end_date).
+key_required(framework_term, Profile, exceptional_case_duly_justified) :-
+    term_exceeds_limit(Profile).
+
+key_required(call_off, _, framework_start_date).
+key_required(call_off, _, framework_end_date).
+key_required(call_off, _, call_off_award_date).
+key_required(call_off, _, framework_operator_count).
+key_required(call_off, _, call_off_method_key).
+key_required(call_off, _, contracting_authority_identified_in_call_for_competition).
+key_required(call_off, _, economic_operator_party_to_framework).
+key_required(call_off, _, call_off_entails_substantial_modification).
+key_required(call_off, Profile, call_off_within_limits_of_framework_terms) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #< 2.
+key_required(call_off, Profile, framework_sets_out_all_terms) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2.
+key_required(call_off, Profile, partly_with_partly_without_reopening_stipulated) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2.
+key_required(call_off, Profile, objective_conditions_for_determining_performer_indicated) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, without_reopening_competition).
+key_required(call_off, Profile, objective_criteria_for_choice_of_route_stated) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+key_required(call_off, Profile, terms_subject_to_reopening_specified) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+key_required(call_off, Profile, Key) :-
+    member(Key, [reopened_competition_based_on_framework_terms, capable_operators_consulted_in_writing, time_limit_sufficiently_long, tenders_submitted_in_writing, tender_contents_confidential_until_time_limit_expired, award_made_on_framework_award_criteria]),
+    route_is_reopened_competition(Profile).
+
+key_required(whole_profile, Profile, Key) :-
+    key_required(framework_term, Profile, Key).
+key_required(whole_profile, Profile, Key) :-
+    key_required(call_off, Profile, Key).
+
+operator_count_value(Profile, OperatorCount) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    is_integer_value(OperatorCount).
+
+% Art 33(4)(c) and the reopening limb of 33(4)(b): the route on which the
+% six Art 33(5) conditions are read.
+route_is_reopened_competition(Profile) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, with_reopening_competition),
+    get(Profile, framework_sets_out_all_terms, false).
+route_is_reopened_competition(Profile) :-
+    operator_count_value(Profile, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, with_reopening_competition),
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+
+term_exceeds_limit(Profile) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    is_date_value(StartDate),
+    is_date_value(EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit).
+
+% =====================================================================
+% ROUTE RULE: call_off_route/2
+% Reads exactly four inputs: operator count, method, all-terms flag, split stipulation.
+% Seven disjoint clauses covering all combinations, behind the input check.
+% =====================================================================
+call_off_route(Profile, Route) :-
+    input_acceptable_in_scope(call_off, Profile),
+    route_for_profile(Profile, Route).
+
+route_for_profile(Profile, single_operator_direct_award) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_method_key, without_reopening_competition).
+
+route_for_profile(Profile, no_lawful_route) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_method_key, with_reopening_competition).
+
+route_for_profile(Profile, multi_operator_direct_award_under_split_framework) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, without_reopening_competition),
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+
+route_for_profile(Profile, multi_operator_direct_award_all_terms_set_out) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, without_reopening_competition),
+    get(Profile, partly_with_partly_without_reopening_stipulated, false).
+
+route_for_profile(Profile, multi_operator_reopened_competition) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, with_reopening_competition),
+    get(Profile, framework_sets_out_all_terms, false).
+
+route_for_profile(Profile, multi_operator_reopened_competition) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, with_reopening_competition),
+    get(Profile, framework_sets_out_all_terms, true),
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+
+route_for_profile(Profile, no_lawful_route) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, call_off_method_key, with_reopening_competition),
+    get(Profile, framework_sets_out_all_terms, true),
+    get(Profile, partly_with_partly_without_reopening_stipulated, false).
+
+% =====================================================================
+% FRAMEWORK TERM DEFECT FIRING
+% =====================================================================
+framework_term_defect_fires(framework_end_date_precedes_start_date, Profile) :-
+    implements(eu_dir_2014_24_art_33_1),
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_before(EndDate, StartDate).
+
+framework_term_defect_fires(framework_term_exceeds_four_years, Profile) :-
+    implements(eu_dir_2014_24_art_33_1),
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    get(Profile, exceptional_case_duly_justified, false),
+    framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit).
+
+% =====================================================================
+% CALL-OFF DEFECT FIRING (17 limbs, scoped)
+% =====================================================================
+
+% Limb 1: scope ALWAYS
+call_off_defect_fires(call_off_awarded_outside_framework_term, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_2),
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    get(Profile, call_off_award_date, AwardDate),
+    call_off_award_window_status(StartDate, EndDate, AwardDate, award_date_outside_framework_term).
+
+% Limb 2: scope ALWAYS
+call_off_defect_fires(contracting_authority_not_identified_in_call_for_competition, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_2),
+    get(Profile, contracting_authority_identified_in_call_for_competition, false).
+
+% Limb 3: scope ALWAYS
+call_off_defect_fires(economic_operator_not_party_to_framework, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_2),
+    get(Profile, economic_operator_party_to_framework, false).
+
+% Limb 4: scope ALWAYS (NOT restricted to single-operator; the "in particular" tail is emphasis)
+call_off_defect_fires(substantial_modification_of_framework_terms, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_2),
+    get(Profile, call_off_entails_substantial_modification, true).
+
+% Limb 5: scope OPERATOR_COUNT < 2 ONLY (Art 33(3))
+call_off_defect_fires(call_off_outside_limits_of_framework_terms, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_3),
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_within_limits_of_framework_terms, false).
+
+% Limb 6: scope OPERATOR_COUNT < 2 ONLY
+call_off_defect_fires(reopening_competition_in_single_operator_framework, Profile, _) :-
+    implements(eu_dir_2014_24_art_33_4),
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_method_key, with_reopening_competition).
+
+% Limb 7: scope TWO MULTI-OPERATOR DIRECT routes only
+call_off_defect_fires(direct_award_without_all_terms_set_out, Profile, Route) :-
+    implements(eu_dir_2014_24_art_33_4),
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]),
+    get(Profile, framework_sets_out_all_terms, false).
+
+% Limb 8: scope TWO MULTI-OPERATOR DIRECT routes only
+call_off_defect_fires(objective_conditions_for_determining_performer_not_indicated, Profile, Route) :-
+    implements(eu_dir_2014_24_art_33_4),
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]),
+    get(Profile, objective_conditions_for_determining_performer_indicated, false).
+
+% Limb 9: scope OPERATOR_COUNT >= 2 AND split stipulated
+call_off_defect_fires(objective_criteria_for_choice_of_route_not_stated, Profile, Route) :-
+    implements(eu_dir_2014_24_art_33_4),
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true),
+    get(Profile, objective_criteria_for_choice_of_route_stated, false).
+
+% Limb 10: same scope as limb 9
+call_off_defect_fires(terms_subject_to_reopening_not_specified, Profile, Route) :-
+    implements(eu_dir_2014_24_art_33_4),
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true),
+    get(Profile, terms_subject_to_reopening_specified, false).
+
+% Limb 11: scope OPERATOR_COUNT >= 2; fires where ROUTE is no_lawful_route
+call_off_defect_fires(reopening_not_available_where_framework_sets_out_all_terms, Profile, no_lawful_route) :-
+    implements(eu_dir_2014_24_art_33_4),
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2.
+
+% Limb 12: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(reopened_competition_not_based_on_framework_terms, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, reopened_competition_based_on_framework_terms, false).
+
+% Limb 13: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(capable_operators_not_all_consulted_in_writing, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, capable_operators_consulted_in_writing, false).
+
+% Limb 14: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(time_limit_not_sufficiently_long, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, time_limit_sufficiently_long, false).
+
+% Limb 15: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(tenders_not_submitted_in_writing, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, tenders_submitted_in_writing, false).
+
+% Limb 16: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(tender_contents_opened_before_time_limit_expired, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, tender_contents_confidential_until_time_limit_expired, false).
+
+% Limb 17: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(award_not_made_on_framework_award_criteria, Profile, multi_operator_reopened_competition) :-
+    implements(eu_dir_2014_24_art_33_5),
+    get(Profile, award_made_on_framework_award_criteria, false).
+
+% =====================================================================
+% LIMB CLEAR (Clausal Prolog, ruling 2026-10-20): the positive complements of
+% framework_term_defect_fires/2 and call_off_defect_fires/3, read by the
+% checklist's `met` rows in place of the seam's `not ..._defect_fires(...)`.
+% One clause per limb, each the exact negation of that limb's firing clause
+% over a profile the input check has accepted (every read key present and
+% well typed), so for a limb in scope exactly one of fires / clear holds.
+% They state no condition the firing clauses do not already cite.
+% =====================================================================
+framework_term_defect_clear(framework_end_date_precedes_start_date, Profile) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate).
+
+framework_term_defect_clear(framework_term_exceeds_four_years, Profile) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_before(EndDate, StartDate).
+framework_term_defect_clear(framework_term_exceeds_four_years, Profile) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, within_four_year_limit).
+framework_term_defect_clear(framework_term_exceeds_four_years, Profile) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit),
+    get(Profile, exceptional_case_duly_justified, true).
+
+% Limb 1
+call_off_defect_clear(call_off_awarded_outside_framework_term, Profile, _) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    get(Profile, call_off_award_date, AwardDate),
+    call_off_award_window_status(StartDate, EndDate, AwardDate, award_date_within_framework_term).
+
+% Limb 2
+call_off_defect_clear(contracting_authority_not_identified_in_call_for_competition, Profile, _) :-
+    get(Profile, contracting_authority_identified_in_call_for_competition, true).
+
+% Limb 3
+call_off_defect_clear(economic_operator_not_party_to_framework, Profile, _) :-
+    get(Profile, economic_operator_party_to_framework, true).
+
+% Limb 4
+call_off_defect_clear(substantial_modification_of_framework_terms, Profile, _) :-
+    get(Profile, call_off_entails_substantial_modification, false).
+
+% Limb 5
+call_off_defect_clear(call_off_outside_limits_of_framework_terms, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_within_limits_of_framework_terms, true).
+
+% Limb 6
+call_off_defect_clear(reopening_competition_in_single_operator_framework, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2,
+    get(Profile, call_off_method_key, without_reopening_competition).
+
+% Limb 7
+call_off_defect_clear(direct_award_without_all_terms_set_out, Profile, Route) :-
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]),
+    get(Profile, framework_sets_out_all_terms, true).
+
+% Limb 8
+call_off_defect_clear(objective_conditions_for_determining_performer_not_indicated, Profile, Route) :-
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]),
+    get(Profile, objective_conditions_for_determining_performer_indicated, true).
+
+% Limb 9
+call_off_defect_clear(objective_criteria_for_choice_of_route_not_stated, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true),
+    get(Profile, objective_criteria_for_choice_of_route_stated, true).
+
+% Limb 10
+call_off_defect_clear(terms_subject_to_reopening_not_specified, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true),
+    get(Profile, terms_subject_to_reopening_specified, true).
+
+% Limb 11: in scope with two or more operators; clear on every route but
+% no_lawful_route.
+call_off_defect_clear(reopening_not_available_where_framework_sets_out_all_terms, Profile, Route) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    dif(Route, no_lawful_route).
+
+% Limbs 12-17
+call_off_defect_clear(reopened_competition_not_based_on_framework_terms, Profile, multi_operator_reopened_competition) :-
+    get(Profile, reopened_competition_based_on_framework_terms, true).
+
+call_off_defect_clear(capable_operators_not_all_consulted_in_writing, Profile, multi_operator_reopened_competition) :-
+    get(Profile, capable_operators_consulted_in_writing, true).
+
+call_off_defect_clear(time_limit_not_sufficiently_long, Profile, multi_operator_reopened_competition) :-
+    get(Profile, time_limit_sufficiently_long, true).
+
+call_off_defect_clear(tenders_not_submitted_in_writing, Profile, multi_operator_reopened_competition) :-
+    get(Profile, tenders_submitted_in_writing, true).
+
+call_off_defect_clear(tender_contents_opened_before_time_limit_expired, Profile, multi_operator_reopened_competition) :-
+    get(Profile, tender_contents_confidential_until_time_limit_expired, true).
+
+call_off_defect_clear(award_not_made_on_framework_award_criteria, Profile, multi_operator_reopened_competition) :-
+    get(Profile, award_made_on_framework_award_criteria, true).
+
+% =====================================================================
+% DETERMINATION A: decide_framework_term/2
+% Four disjoint clauses covering all cases.
+% STATUS: lawful_framework_term | unlawful_framework_term
+% =====================================================================
+decide_framework_term(Profile, Verdict) :-
+    input_acceptable_in_scope(framework_term, Profile),
+    framework_term_decision(Profile, Verdict).
+
+framework_term_decision(Profile, framework_term_verdict(lawful_framework_term, [], [])) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, within_four_year_limit).
+
+framework_term_decision(Profile, framework_term_verdict(lawful_framework_term, [], [])) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit),
+    get(Profile, exceptional_case_duly_justified, true).
+
+framework_term_decision(Profile, framework_term_verdict(unlawful_framework_term, [framework_end_date_precedes_start_date], [cite(eu_dir_2014_24_art_33_1)])) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_before(EndDate, StartDate).
+
+framework_term_decision(Profile, framework_term_verdict(unlawful_framework_term, [framework_term_exceeds_four_years], [cite(eu_dir_2014_24_art_33_1)])) :-
+    get(Profile, framework_start_date, StartDate),
+    get(Profile, framework_end_date, EndDate),
+    date_on_or_after(EndDate, StartDate),
+    framework_term_within_limit(StartDate, EndDate, exceeds_four_year_limit),
+    get(Profile, exceptional_case_duly_justified, false).
+
+% =====================================================================
+% DETERMINATION B: decide_call_off/2
+% Determines route, collects defects in order, assembles verdict.
+% =====================================================================
+decide_call_off(Profile, call_off_verdict(Status, Route, DefectIds, Citations)) :-
+    input_acceptable_in_scope(call_off, Profile),
+    route_for_profile(Profile, Route),
+    call_off_limb_ids(LimbIds),
+    findall(LimbId, (member(LimbId, LimbIds), call_off_defect_fires(LimbId, Profile, Route)), DefectIds),
+    findall(Citation, (member(LimbId, DefectIds), call_off_citation(LimbId, Citation)), Citations),
+    call_off_status(DefectIds, Status).
+
+% =====================================================================
+% HELPER: call_off_status/2
+% =====================================================================
+call_off_status([], call_off_lawful).
+
+% Clausal Prolog: `DEFECT_IDS != []` is the non-empty list pattern, so this
+% clause is a fact, disjoint from the one above by its first argument.
+call_off_status([_|_], call_off_unlawful).
+
+% =====================================================================
+% FACADE: decide_framework_agreements/2
+% Combined verdict over both determinations. Neither gates the other.
+% =====================================================================
+decide_framework_agreements(Profile, framework_agreements_verdict(framework_term_unlawful, [cite(eu_dir_2014_24_art_33_1)])) :-
+    decide_framework_term(Profile, framework_term_verdict(unlawful_framework_term, _, _)).
+
+decide_framework_agreements(Profile, framework_agreements_verdict(call_off_unlawful, Citations)) :-
+    decide_framework_term(Profile, framework_term_verdict(lawful_framework_term, _, _)),
+    decide_call_off(Profile, call_off_verdict(call_off_unlawful, _, _, Citations)).
+
+decide_framework_agreements(Profile, framework_agreements_verdict(framework_term_lawful, [])) :-
+    decide_framework_term(Profile, framework_term_verdict(lawful_framework_term, _, _)),
+    decide_call_off(Profile, call_off_verdict(call_off_lawful, _, _, _)).
+
+% =====================================================================
+% FACADE: framework_agreements_status/2 (route classification)
+% =====================================================================
+framework_agreements_status(Profile, Route) :-
+    call_off_route(Profile, Route).
+
+% =====================================================================
+% FACADE: framework_agreements_checklist/2
+% One item/3 row per in-scope limb (2 term + 17 call-off = up to 19 rows).
+% =====================================================================
+framework_agreements_checklist(Profile, Checklist) :-
+    input_acceptable_in_scope(whole_profile, Profile),
+    route_for_profile(Profile, Route),
+    framework_term_checklist(Profile, TermChecklist),
+    call_off_checklist(Profile, Route, CallOffChecklist),
+    append(TermChecklist, CallOffChecklist, Checklist).
+
+framework_term_checklist(Profile, Checklist) :-
+    framework_term_limb_ids(LimbIds),
+    findall(item(LimbId, Status, Citation), (member(LimbId, LimbIds), framework_term_citation(LimbId, Citation), framework_term_limb_status(LimbId, Profile, Status)), Checklist).
+
+framework_term_limb_status(LimbId, Profile, unmet(LimbId)) :-
+    framework_term_defect_fires(LimbId, Profile).
+
+framework_term_limb_status(LimbId, Profile, met) :-
+    framework_term_defect_clear(LimbId, Profile).
+
+call_off_checklist(Profile, Route, Checklist) :-
+    call_off_limb_ids(LimbIds),
+    findall(item(LimbId, Status, Citation), (member(LimbId, LimbIds), call_off_citation(LimbId, Citation), call_off_limb_in_scope(LimbId, Profile, Route), call_off_limb_status(LimbId, Profile, Route, Status)), Checklist).
+
+% In-scope check: a limb is in scope if it can fire on this profile.
+% (Clausal Prolog: the seam's four `<- (True)` rules are facts.)
+call_off_limb_in_scope(call_off_awarded_outside_framework_term, _, _).
+
+call_off_limb_in_scope(contracting_authority_not_identified_in_call_for_competition, _, _).
+
+call_off_limb_in_scope(economic_operator_not_party_to_framework, _, _).
+
+call_off_limb_in_scope(substantial_modification_of_framework_terms, _, _).
+
+call_off_limb_in_scope(call_off_outside_limits_of_framework_terms, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2.
+
+call_off_limb_in_scope(reopening_competition_in_single_operator_framework, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #< 2.
+
+call_off_limb_in_scope(direct_award_without_all_terms_set_out, _, Route) :-
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]).
+
+call_off_limb_in_scope(objective_conditions_for_determining_performer_not_indicated, _, Route) :-
+    member(Route, [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]).
+
+call_off_limb_in_scope(objective_criteria_for_choice_of_route_not_stated, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+
+call_off_limb_in_scope(terms_subject_to_reopening_not_specified, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2,
+    get(Profile, partly_with_partly_without_reopening_stipulated, true).
+
+call_off_limb_in_scope(reopening_not_available_where_framework_sets_out_all_terms, Profile, _) :-
+    get(Profile, framework_operator_count, OperatorCount),
+    OperatorCount #>= 2.
+
+call_off_limb_in_scope(reopened_competition_not_based_on_framework_terms, _, multi_operator_reopened_competition).
+call_off_limb_in_scope(capable_operators_not_all_consulted_in_writing, _, multi_operator_reopened_competition).
+call_off_limb_in_scope(time_limit_not_sufficiently_long, _, multi_operator_reopened_competition).
+call_off_limb_in_scope(tenders_not_submitted_in_writing, _, multi_operator_reopened_competition).
+call_off_limb_in_scope(tender_contents_opened_before_time_limit_expired, _, multi_operator_reopened_competition).
+call_off_limb_in_scope(award_not_made_on_framework_award_criteria, _, multi_operator_reopened_competition).
+
+call_off_limb_status(LimbId, Profile, Route, unmet(LimbId)) :-
+    call_off_defect_fires(LimbId, Profile, Route).
+
+call_off_limb_status(LimbId, Profile, Route, met) :-
+    call_off_defect_clear(LimbId, Profile, Route).
+
+% =====================================================================
+% FACADE: framework_agreements_decision_resolvable/1
+% =====================================================================
+framework_agreements_decision_resolvable(Profile) :-
+    decide_framework_agreements(Profile, _).
+
+% =====================================================================
+% FACADE: framework_agreements_status_values/1
+% =====================================================================
+framework_agreements_status_values([framework_term_lawful, framework_term_unlawful, call_off_lawful, call_off_unlawful]).
+
+% =====================================================================
+% PURE-FORM HELPERS WITH NO STATUTE OF THEIR OWN (Clausal Prolog, 2026-10-20)
+% The predicates this conversion added decide no statutory condition of their
+% own: term_anniversary/4, leap_year/1 and common_year/1 are the calendar
+% arithmetic of Art 33(1)'s "four years"; the input-check helpers restate its
+% negated tests positively; the two limb-clear predicates are the exact
+% complements of the cited firing clauses.
+% =====================================================================
+no_statute("term_anniversary", 4, "computation_helper").
+no_statute("leap_year", 1, "computation_helper").
+no_statute("common_year", 1, "computation_helper").
+no_statute("input_problems_in_scope", 3, "computation_helper").
+no_statute("input_acceptable_in_scope", 2, "computation_helper").
+no_statute("value_lacks_type", 2, "computation_helper").
+no_statute("not_an_integer", 1, "computation_helper").
+no_statute("date_value_check", 2, "computation_helper").
+no_statute("framework_term_defect_clear", 2, "computation_helper").
+no_statute("call_off_defect_clear", 3, "computation_helper").
+
+:- end_module(framework_agreements).

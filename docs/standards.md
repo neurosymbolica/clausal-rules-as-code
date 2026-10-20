@@ -33,9 +33,12 @@ formalizing law, two of its design choices matter in particular:
 
 More about the language and the engine: [clausal.pl](https://clausal.pl).
 
-The domains in this preview are being converted from the engine's earlier Python-like syntax
-(`.seam`) to `.clausal`, with each domain's own tests required to pass unchanged on the Clausal
-engine and on independent ISO engines.
+Every domain in this preview is written in `.clausal`. Each domain folder also holds, under
+`iso/`, plain ISO Prolog (`.pl`) generated from that source, and the same tests run on three
+engines with the same results: Clausal Prolog, [Scryer Prolog](https://www.scryer.pl) and
+[Trealla Prolog](https://github.com/trealla-prolog/trealla). For the eight domains that is
+1,187 tests on each engine, plus 31 for the shared procurement vocabulary. `run_tests.py` runs
+them on Clausal Prolog and `run_iso_tests.py` on either ISO engine.
 
 ## Interoperability by design
 
@@ -44,8 +47,8 @@ engine and on independent ISO engines.
 - **Determinism.** The same input always gives the same answer; nothing depends on a network
   service or a statistical model at run time.
 - **Shared interfaces.** Domains follow common conventions for their inputs, their verdicts and
-  their citations, catalogued in `_index/interface-catalog/` and checked by
-  `_tools/check_interface_conformance.py`, so that one domain can be combined with another.
+  their citations, so that one domain can be combined with another. Each domain lists its
+  public predicates in `manifest.yaml` and exports them from its `__init__.clausal`.
 - **Legal document standards.** The Publications Office is moving EU legislation towards Akoma
   Ntoso (AKN4EU). The citation records already refer to official structural units, which is
   what a mapping to AKN4EU identifiers would build on.

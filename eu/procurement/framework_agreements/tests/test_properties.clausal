@@ -1,0 +1,62 @@
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% P1 totality: every registered subject yields exactly 1 verdict.
+% P2 determinism: the verdict is unique (no duplicates in findall).
+% P3 route uniqueness: call_off_route yields exactly one route per profile.
+% Run: python -m clausal.testing eu/procurement/framework_agreements/tests/test_properties.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS (routes, statuses, limb ids,
+% profile keys, method atoms, citation keys), of the data constructors
+% framework_term_verdict/3, call_off_verdict/4, framework_agreements_verdict/2
+% and cite/1, and of date/3 have no counterpart: atoms and compound terms need
+% no import. Only predicates are imported.)
+:- module(test_properties, []).
+:- use_module(eu/procurement/framework_agreements/framework_agreements, [
+    decide_framework_agreements/2,
+    decide_call_off/2,
+    call_off_route/2]).
+:- use_module(eu/procurement/framework_agreements/fixtures, [
+    framework_agreements_subject/1,
+    framework_agreements_profile_for/2]).
+
+% P1: every subject yields at least one decide_framework_agreements verdict
+has_verdict(Subject) :-
+    framework_agreements_subject(Subject),
+    framework_agreements_profile_for(Subject, Profile),
+    % (Clausal Prolog: the seam's once/1 asked for AT LEAST ONE verdict; that is
+    % findall/3 with a non-empty list, which leaves no choice point behind.)
+    findall(Verdict, decide_framework_agreements(Profile, Verdict), [_|_]).
+
+% P2: decide_call_off yields exactly one verdict per subject
+unique_call_off_verdict(Subject) :-
+    framework_agreements_subject(Subject),
+    framework_agreements_profile_for(Subject, Profile),
+    findall(V, decide_call_off(Profile, V), Verdicts),
+    length(Verdicts, 1).
+
+% P3: call_off_route yields exactly one route per subject
+unique_route(Subject) :-
+    framework_agreements_subject(Subject),
+    framework_agreements_profile_for(Subject, Profile),
+    findall(R, call_off_route(Profile, R), Routes),
+    length(Routes, 1).
+
+test('P1 totality: every subject classifies') :-
+    findall(Subject, framework_agreements_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, has_verdict(Subject), ClassifiedList),
+    length(ClassifiedList, SubjectCount).
+
+test('P2 determinism: decide_call_off yields exactly one verdict per subject') :-
+    findall(Subject, framework_agreements_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, unique_call_off_verdict(Subject), DeterministicList),
+    length(DeterministicList, SubjectCount).
+
+test('P3 route uniqueness: call_off_route yields exactly one route per subject') :-
+    findall(Subject, framework_agreements_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    findall(Subject, unique_route(Subject), UniqueList),
+    length(UniqueList, SubjectCount).
+
+:- end_module(test_properties).

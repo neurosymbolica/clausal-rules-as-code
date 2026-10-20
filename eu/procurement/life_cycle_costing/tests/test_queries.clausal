@@ -1,0 +1,89 @@
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer.
+% One test per query-taxonomy predicate registered in manifest.yaml.
+% Run: python -m clausal.testing eu/procurement/life_cycle_costing/tests/test_queries.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% verdict, status, limb-id, profile-key, cost-category, Union-act and problem
+% atoms, the citation keys, the kernel verdict constructors, cite/1, item/3 --
+% have no counterpart: atoms and compound terms need no import. Only predicates
+% are imported.)
+:- module(test_queries, []).
+:- use_module(eu/procurement/life_cycle_costing/queries, [
+    life_cycle_costing_profile_keys/1,
+    life_cycle_costing_what_if/4,
+    life_cycle_costing_eligibility/2,
+    life_cycle_costing_status/2,
+    life_cycle_costing_defect_enumeration/2,
+    life_cycle_costing_checklist/2,
+    life_cycle_costing_calculation/2]).
+:- use_module(eu/procurement/life_cycle_costing/fixtures, [life_cycle_costing_profile_for/2]).
+
+% #4 enumeration: profile_keys returns exactly 12 keys
+test('query: profile_keys returns 12 keys') :-
+    life_cycle_costing_profile_keys(ProfileKeys),
+    length(ProfileKeys, 12).
+
+% #2 eligibility: compliant profile yields valid_lcc_method
+test('query: eligibility returns valid for compliant profile') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_eligibility(Profile, lcc_method_validity_verdict(valid_lcc_method, [], [])).
+
+% #2 eligibility: non-compliant profile yields invalid_lcc_method
+test('query: eligibility returns invalid for non-compliant profile') :-
+    life_cycle_costing_profile_for("basic_tenderer_missing", Profile),
+    life_cycle_costing_eligibility(Profile, lcc_method_validity_verdict(invalid_lcc_method, [tenderer_data_not_indicated], [cite(eu_dir_2014_24_art_68_2)])).
+
+% #3 status_determination: no union act
+test('query: status returns no_union_common_method_mandatory') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_status(Profile, no_union_common_method_mandatory).
+
+% #3 status_determination: directive applied
+test('query: status returns mandatory_and_applied for directive') :-
+    life_cycle_costing_profile_for("mandatory_applied", Profile),
+    life_cycle_costing_status(Profile, union_common_method_mandatory_and_applied).
+
+% #4 enumeration: defect list for non-compliant profile
+test('query: defect_enumeration returns the defect for tenderer missing') :-
+    life_cycle_costing_profile_for("basic_tenderer_missing", Profile),
+    life_cycle_costing_defect_enumeration(Profile, [tenderer_data_not_indicated]).
+
+% #4 enumeration: empty defect list for compliant profile
+test('query: defect_enumeration returns empty list for compliant profile') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_defect_enumeration(Profile, []).
+
+% #7 justification: checklist has 9 items for any profile with components
+test('query: checklist returns 9 items for basic_compliant') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_checklist(Profile, Checklist),
+    length(Checklist, 9).
+
+% #7 justification: each checklist item carries a cite(...) term
+test('query: checklist items carry cite terms') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_checklist(Profile, Checklist),
+    member(item(tenderer_data_not_indicated, satisfied, cite(eu_dir_2014_24_art_68_2)), Checklist).
+
+% #23 calculation: total for basic_compliant is 10000
+test('query: calculation returns 10000 for basic_compliant') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_calculation(Profile, 10000).
+
+% #23 calculation: total for externality_compliant is 15000
+test('query: calculation returns 15000 for externality_compliant') :-
+    life_cycle_costing_profile_for("externality_compliant", Profile),
+    life_cycle_costing_calculation(Profile, 15000).
+
+% what-if: flipping tenderer_data to False changes verdict to invalid
+test('query: what_if flipping tenderer_data yields invalid') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_what_if(Profile, tenderer_data_indicated_in_procurement_documents, false, lcc_method_validity_verdict(invalid_lcc_method, [tenderer_data_not_indicated], [cite(eu_dir_2014_24_art_68_2)])).
+
+% what-if: flipping a key that is already True to True keeps valid
+test('query: what_if keeping tenderer_data True stays valid') :-
+    life_cycle_costing_profile_for("basic_compliant", Profile),
+    life_cycle_costing_what_if(Profile, tenderer_data_indicated_in_procurement_documents, true, lcc_method_validity_verdict(valid_lcc_method, [], [])).
+
+:- end_module(test_queries).

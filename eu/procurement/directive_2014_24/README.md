@@ -17,8 +17,11 @@ manifest.yaml, no oracle, no verdict predicate.
 
 Import the module you need, by its own dotted path:
 
-    -import_from(eu.procurement.directive_2014_24.vocabulary, [works, services])
-    -import_from(eu.procurement.directive_2014_24.art4_thresholds, [art4_threshold])
+    :- use_module(eu/procurement/directive_2014_24/vocabulary, [contract_type/1]).
+    :- use_module(eu/procurement/directive_2014_24/art4_thresholds, [art4_threshold/4]).
+
+Only predicates are imported; the vocabulary atoms (`works`, `services`, ...)
+need no import in Clausal Prolog and are spelled directly.
 
 There is deliberately **no `__init__.clausal`**. This directory used to carry
 one that re-exported both modules, so a consumer could import the package root

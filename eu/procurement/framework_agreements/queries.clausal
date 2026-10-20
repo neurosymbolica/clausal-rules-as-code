@@ -1,0 +1,75 @@
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/procurement/framework_agreements.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLICS and
+% the kernel names it spells, and nothing else.
+%
+% Query-type coverage:
+%   #2 eligibility:        framework_agreements_checklist (from determination slice)
+%   #3 status_determination: framework_agreements_route_status/2
+%   #4 enumeration:        framework_agreements_enumerate_defects/2, framework_agreements_profile_keys/1
+%   #6 threshold:          framework_agreements_term_boundary/2, framework_agreements_threshold_status/3
+%   what-if:               framework_agreements_what_if/4
+% =====================================================================
+:- module(queries, [
+    framework_agreements_profile_keys/1,
+    framework_agreements_what_if/4,
+    framework_agreements_route_status/2,
+    framework_agreements_enumerate_defects/2,
+    framework_agreements_term_boundary/2,
+    framework_agreements_threshold_status/3
+]).
+
+% (Clausal Prolog: the seam imported what_if/5 from kit.query_combinators and
+% handed it decide_framework_agreements as a closure. what_if/5 is exactly
+% override_key/4 followed by the call, so the what-if below spells those two
+% goals and imports override_key/4 only -- the pilot's form, with no closure
+% crossing a module boundary. The 21 profile-key ATOMS the seam imported from
+% framework_agreements and the constructor call_off_verdict/4 from kernel need
+% no import; only the predicates are listed.)
+:- use_module(kit/query_combinators, [override_key/4]).
+
+:- use_module(eu/procurement/framework_agreements/framework_agreements, [
+    decide_framework_agreements/2,
+    decide_call_off/2,
+    call_off_route/2,
+    framework_term_limit_date/2,
+    framework_term_within_limit/3
+]).
+
+% =====================================================================
+% #4 enumeration: all 21 profile keys
+% =====================================================================
+framework_agreements_profile_keys([framework_start_date, framework_end_date, call_off_award_date, framework_operator_count, call_off_method_key, exceptional_case_duly_justified, contracting_authority_identified_in_call_for_competition, economic_operator_party_to_framework, call_off_entails_substantial_modification, call_off_within_limits_of_framework_terms, framework_sets_out_all_terms, objective_conditions_for_determining_performer_indicated, partly_with_partly_without_reopening_stipulated, objective_criteria_for_choice_of_route_stated, terms_subject_to_reopening_specified, reopened_competition_based_on_framework_terms, capable_operators_consulted_in_writing, time_limit_sufficiently_long, tenders_submitted_in_writing, tender_contents_confidential_until_time_limit_expired, award_made_on_framework_award_criteria]).
+
+% =====================================================================
+% what-if: override one key, re-evaluate the combined verdict
+% =====================================================================
+framework_agreements_what_if(Profile, OverriddenKey, NewValue, Result) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_framework_agreements(Hypothesis, Result).
+
+% =====================================================================
+% #3 status determination: route classification
+% =====================================================================
+framework_agreements_route_status(Profile, Route) :-
+    call_off_route(Profile, Route).
+
+% =====================================================================
+% #4 enumeration: all fired call-off defect IDs
+% =====================================================================
+framework_agreements_enumerate_defects(Profile, DefectIds) :-
+    decide_call_off(Profile, call_off_verdict(_, _, DefectIds, _)).
+
+% =====================================================================
+% #6 threshold: the four-year boundary date for a given start date
+% =====================================================================
+framework_agreements_term_boundary(StartDate, LimitDate) :-
+    framework_term_limit_date(StartDate, LimitDate).
+
+% =====================================================================
+% #6 threshold: classify an end date as within or exceeding the limit
+% =====================================================================
+framework_agreements_threshold_status(StartDate, EndDate, Status) :-
+    framework_term_within_limit(StartDate, EndDate, Status).
+
+:- end_module(queries).

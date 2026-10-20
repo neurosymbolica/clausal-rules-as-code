@@ -1,0 +1,438 @@
+% =====================================================================
+% ownership_interest.clausal -- THE DETERMINATION SLICE (Wave C, 2026-08-07;
+% determination slices over a shared kernel). This domain has exactly ONE
+% legal determination: the AMLR Art 52(1) OWNERSHIP-INTEREST test --
+% "'an ownership interest in the corporate entity' shall mean direct or
+% indirect ownership of 25 % or more of the shares or voting rights or
+% other ownership interest", where indirect ownership is computed by
+% MULTIPLYING the intermediate holdings along each chain and ADDING the
+% results across chains (Art 52(1) second subparagraph), with all
+% shareholdings on every level taken into account (third subparagraph).
+%
+% Self-contained top-to-bottom for that determination, per the layout:
+%   * its statutory VALUE fact          (was constants.clausal)
+%   * its arithmetic + verdict clauses  (was computation.clausal)
+%   * its own vocabulary declared here  (was schema.clausal)
+% All three former files collapse into this one; every clause body below is
+% BYTE-IDENTICAL to the file it came from (pure relocation).
+%
+% IMPORTS = LEXICAL CLOSURE. The only name this file spells that it does not
+% own is the kit's sum_list/2; findall/3 and in_/2 are engine builtins. The
+% `schema.clausal` header this file replaces stated the REFUTED rule that
+% "bare atoms ... resolve against the CALLING module at solve time" and
+% therefore had to be centralised: bare-atom resolution is COMPILE-TIME and
+% LEXICAL PER FILE (clausal/logic/compiler_v2.py:647-729), so a file needs
+% exactly the names it spells. Rule 3 (input-constructor closure) adds
+% nothing here: every argument this file's public predicates are queried
+% with is a plain list / string / integer, never a domain-owned compound
+% term, so no constructor has to be in scope for a caller's sake.
+%
+% Terminal verdict atoms: the shared terminal triple (matches sibling
+% eu_aml_amlr_beneficial_ownership_threshold -- D5 one-name-one-role).
+% `eligible` = a beneficial owner (Art 52(1) effective holding >= 25%),
+% `ineligible` = not a beneficial owner. No `indeterminate`: HOLDINGS is a
+% closed list argument with no missing-evidence channel (an empty list is
+% evidenced 0 bp -> ineligible). They are declared -module rather than
+% -private because the top-layer consumer queries.clausal and
+% tests/test_queries.clausal both spell them and import them FROM HERE
+% (one owner per name -- lint R6).
+%
+% INPUT CHECK (D80, 2026-10-20). The arguments HOLDINGS, PERSON and ENTITY
+% are this determination's whole input, and complete, well-formed input is
+% part of its contract. bo_chain_input_problem/4 (end of file) names the
+% first problem with them; effective_ownership/4 and both ubo_status/4
+% clauses run bo_chain_input_complete/3 before any rule decides. There is
+% no `indeterminate` verdict, so a bad input gives NO answer (the call
+% fails): it is never a definite verdict and never an error.
+% =====================================================================
+%
+% CLAUSAL PROLOG (converted from ownership_interest.seam, 2026-10-20).
+%   * A .clausal module exports PREDICATES only. The seam export list also
+%     declared VALUE ATOMS and data constructors; they need no export and no
+%     import here, so they are kept as documentation only:
+%       verdict atoms:          eligible, ineligible
+%       input-problem vocabulary (bo_chain_input_problem/4):
+%         not_ground, not_a_list(Argument), malformed_edge(Edge),
+%         wrong_type(What, Expected), out_of_range(Edge), self_holding(Edge),
+%         cyclic_holdings(Node), holdings, person, entity, expected_name,
+%         expected_integer
+%     The seam imports of the five citation keys and of units' basis_point
+%     are dropped for the same reason.
+%   * EXACT ARITHMETIC. The seam computed the aggregate with exact rationals
+%     (its `==` over `/`). Here each chain contribution is carried as an
+%     integer fraction fraction(Numerator, Denominator), the fractions are
+%     added in integers, and effective_ownership/4 answers the exact total
+%     in the sibling eu/aml/amlr_beneficial_ownership_threshold's spelling:
+%     an integer when the total is a whole number of basis points, and
+%     otherwise the reduced integer fraction term N/D (2499.5 bp is 4999/2).
+%     No native rational is ever built (CLP(Z) cannot hold one and Trealla
+%     has none). Every comparison with a line is against an INTEGER T, and
+%     "holding >= T" holds exactly when "floor(holding) >= T", so the
+%     comparisons read the whole basis points of the exact total
+%     (holding_whole_basis_points/2) in CLP(Z) and lose nothing.
+%   * NO NEGATION AS FAILURE. The input check collects every problem with
+%     findall/3: the first problem is the head of that list, and complete
+%     input is the empty list. Every negated test of the seam is a
+%     complementary predicate defined by disjoint positive clauses over a
+%     ground term (not_a_proper_list/1, not_three_element_list/1,
+%     not_holding_name/1, not_an_integer/1), `\=` is dif/2, and
+%     non-membership is maplist(dif(X), List).
+% =====================================================================
+
+:- module(ownership_interest, [
+    effective_ownership/4,
+    ubo_status/4,
+    ubo_threshold_bps/1,
+    bo_chain_input_problem/4,
+    bo_chain_input_complete/3,
+    holding_whole_basis_points/2,
+    holding_difference/3
+]).
+
+:- use_module(library(clpz)).
+
+:- use_module(eu/aml/amlr_bo_chain/citations, [implements/1]).
+
+% Ratio thresholds declared with their scale (ruling; ratio units
+% are on canonical). The scale leaves the identifier and becomes a fact the
+% engine holds; the /1 predicates still answer in the old scale, DERIVED.
+% (Clausal Prolog: the seam declared
+%   -constant_number_units(ubo_threshold, 2500, basis_point)
+% and divided by basis_point. A .clausal constant is a plain number with no
+% unit, so the declaration holds the value in its basis-point scale directly.)
+:- constant_value(ubo_threshold, 2500).
+
+ubo_threshold_bps(V) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    V #= constant(ubo_threshold).
+
+% AMLR Art 52(1): the 25% ownership-interest line, in basis points.
+
+effective_ownership(Holdings, Person, Entity, EffBps) :-
+    bo_chain_input_complete(Holdings, Person, Entity),
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    implements(eu_reg_2024_1624_art_52_1_every_level),
+    effective_ownership_fraction(Holdings, Person, Entity, Numerator, Denominator),
+    exact_basis_points(Numerator, Denominator, EffBps).
+
+% effective_ownership_fraction(HOLDINGS, PERSON, ENTITY, NUMERATOR, DENOMINATOR)
+% (private): PERSON's effective ownership of ENTITY, in basis points, as the
+% exact integer fraction NUMERATOR / DENOMINATOR -- the sum over every edge
+% into ENTITY of that edge's contribution (bo_contribution/5).
+effective_ownership_fraction(Holdings, Person, Entity, Numerator, Denominator) :-
+    findall(C, ( member([H, Entity, Pct], Holdings), bo_contribution(Holdings, Person, H, Pct, C) ), Cs),
+    fraction_sum(Cs, Numerator, Denominator).
+
+bo_contribution(_Holdings, Person, Person, Pct, C) :-
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    C = fraction(Pct, 1).
+
+bo_contribution(Holdings, Person, H, Pct, C) :-
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    dif(H, Person),
+    effective_ownership_fraction(Holdings, Person, H, SubNumerator, SubDenominator),
+    Numerator #= Pct * SubNumerator,
+    Denominator #= SubDenominator * 10000,
+    C = fraction(Numerator, Denominator).
+
+% fraction_sum(FRACTIONS, NUMERATOR, DENOMINATOR) (private): the sum of a list
+% of fraction(N, D) terms (D > 0) as one integer fraction; 0/1 for [].
+fraction_sum([], 0, 1).
+fraction_sum([fraction(N, D)|Fractions], Numerator, Denominator) :-
+    fraction_sum(Fractions, RestNumerator, RestDenominator),
+    Numerator #= N * RestDenominator + RestNumerator * D,
+    Denominator #= D * RestDenominator.
+
+% exact_basis_points(N, D, TOTAL) (private): N/D (D > 0) as an integer when
+% D divides N, else as the reduced fraction term N/D -- the spelling of
+% eu/aml/amlr_beneficial_ownership_threshold. Disjoint guards on the remainder.
+exact_basis_points(Numerator, Denominator, TotalBasisPoints) :-
+    0 #= Numerator mod Denominator,
+    TotalBasisPoints #= Numerator // Denominator.
+exact_basis_points(Numerator, Denominator, ReducedNumerator/ReducedDenominator) :-
+    Remainder #= Numerator mod Denominator,
+    Remainder #\= 0,
+    Divisor is gcd(Numerator, Denominator),
+    ReducedNumerator #= Numerator // Divisor,
+    ReducedDenominator #= Denominator // Divisor.
+
+% holding_whole_basis_points(TOTAL, WHOLE): the whole basis points of an
+% exact total (floor; every holding is >= 0, so // is the floor). Compared
+% with an INTEGER line T, TOTAL >= T exactly when WHOLE >= T.
+holding_whole_basis_points(TotalBasisPoints, TotalBasisPoints) :-
+    integer(TotalBasisPoints).
+holding_whole_basis_points(Numerator/Denominator, WholeBasisPoints) :-
+    WholeBasisPoints #= Numerator // Denominator.
+
+% holding_difference(MINUEND, SUBTRAHEND, DIFFERENCE): MINUEND - SUBTRAHEND,
+% exactly, for two totals in the spelling above; DIFFERENCE is in the same
+% spelling (an integer when whole, else the reduced fraction N/D).
+holding_difference(Minuend, Subtrahend, Difference) :-
+    holding_fraction(Minuend, MinuendNumerator, MinuendDenominator),
+    holding_fraction(Subtrahend, SubtrahendNumerator, SubtrahendDenominator),
+    Numerator #= MinuendNumerator * SubtrahendDenominator - SubtrahendNumerator * MinuendDenominator,
+    Denominator #= MinuendDenominator * SubtrahendDenominator,
+    exact_basis_points(Numerator, Denominator, Difference).
+
+% holding_fraction(TOTAL, N, D) (private): a total as the integer fraction N/D.
+holding_fraction(TotalBasisPoints, TotalBasisPoints, 1) :-
+    integer(TotalBasisPoints).
+holding_fraction(Numerator/Denominator, Numerator, Denominator).
+
+% The Art 52(1) OWNERSHIP-INTEREST TEST, stated once per polarity.
+% Art 52(1): "'an ownership interest in the corporate entity' shall mean
+% direct or indirect ownership of 25 % or more of the shares or voting
+% rights or other ownership interest" -- "or more" is INCLUSIVE, hence `>=`
+% for the reaching test and the strict complement `<` for the below test.
+% Both ubo_status/4 clauses previously spelled this same aggregate / line /
+% compare sequence verbatim; naming it puts the statutory test in ONE place
+% and leaves ubo_status/4 as verdict wiring a reader can check against
+% Art 52(1) without reading any arithmetic (tell-don't-ask, trigger 1: the
+% sequence recurs across 2 clauses AND the instrument names the concept --
+% docs/formalization/tell-dont-ask.md §2, §5). Both are GUARDS (arity 3, no
+% STATUS output arg), so the ground verdict stays in ubo_status/4's head
+% (C17). Deliberately NOT in the -module list: module-local semantic
+% predicates cannot collide with an imported bare atom (guide §4).
+ownership_interest_reaches_threshold(Holdings, Person, Entity) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    effective_ownership(Holdings, Person, Entity, Eff),
+    ubo_threshold_bps(Thr),
+    holding_whole_basis_points(Eff, WholeEff),
+    WholeEff #>= Thr.
+
+ownership_interest_below_threshold(Holdings, Person, Entity) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    effective_ownership(Holdings, Person, Entity, Eff),
+    ubo_threshold_bps(Thr),
+    holding_whole_basis_points(Eff, WholeEff),
+    WholeEff #< Thr.
+
+ubo_status(Holdings, Person, Entity, eligible) :-
+    bo_chain_input_complete(Holdings, Person, Entity),
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    ownership_interest_reaches_threshold(Holdings, Person, Entity).
+
+ubo_status(Holdings, Person, Entity, ineligible) :-
+    bo_chain_input_complete(Holdings, Person, Entity),
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    ownership_interest_below_threshold(Holdings, Person, Entity).
+
+% =====================================================================
+% THE INPUT CHECK (D80, 2026-10-20)
+% =====================================================================
+% bo_chain_input_problem(HOLDINGS, PERSON, ENTITY, PROBLEM): PROBLEM is the
+% FIRST thing wrong with the input, in this order:
+%   not_ground                          -- some argument holds an unbound variable
+%   not_a_list(holdings)                -- HOLDINGS is not a proper list
+%   malformed_edge(EDGE)                -- an edge is not a three-element list
+%   wrong_type(EDGE, expected_name)     -- its holder or held entity is not a name
+%   wrong_type(EDGE, expected_integer)  -- its percentage is not an integer
+%   out_of_range(EDGE)                  -- its percentage is below 0 or above
+%                                          10 000 basis points (100 %)
+%   self_holding(EDGE)                  -- an entity holds itself
+%   cyclic_holdings(NODE)               -- NODE holds itself through a chain
+%                                          (NOTES section 2: the graph must have
+%                                          no cycles; one would not terminate)
+%   wrong_type(person, expected_name)   -- PERSON is not a name
+%   wrong_type(entity, expected_name)   -- ENTITY is not a name
+% A name is a non-empty atom or a non-empty string. The check is total and
+% negation-safe: ground/1 is tested first, every later test needs a ground
+% input, in_/2 only runs over a proper list, and no arithmetic is done
+% before the integer/1 test. Over-issue (more than 100 % of an entity held
+% in total) is NOT refused here: NOTES section 4 leaves it to the caller
+% (over_issued/1), and the hypothetical queries build such graphs on purpose.
+% (Clausal Prolog: member/2 is the seam's in_/2; each complementary test
+% below is a positive predicate that is exact over a GROUND term, which is
+% why the ground test comes first.)
+bo_chain_input_problem(Holdings, Person, Entity, Problem) :-
+    findall(Candidate,
+            input_problem_candidate(Holdings, Person, Entity, Candidate),
+            [Problem|_]).
+
+% Complete input: the list of problems is empty.
+bo_chain_input_complete(Holdings, Person, Entity) :-
+    findall(Candidate,
+            input_problem_candidate(Holdings, Person, Entity, Candidate),
+            []).
+
+input_problem_candidate(Holdings, Person, Entity, not_ground) :-
+    term_variables([Holdings, Person, Entity], [_|_]).
+input_problem_candidate(Holdings, Person, Entity, Problem) :-
+    ground([Holdings, Person, Entity]),
+    holdings_problem(Holdings, Problem).
+input_problem_candidate(Holdings, Person, Entity, wrong_type(person, expected_name)) :-
+    ground([Holdings, Person, Entity]),
+    not_holding_name(Person).
+input_problem_candidate(Holdings, Person, Entity, wrong_type(entity, expected_name)) :-
+    ground([Holdings, Person, Entity]),
+    not_holding_name(Entity).
+
+holdings_problem(Holdings, not_a_list(holdings)) :-
+    not_a_proper_list(Holdings).
+holdings_problem(Holdings, Problem) :-
+    is_list(Holdings),
+    member(Edge, Holdings),
+    edge_problem(Edge, Problem).
+holdings_problem(Holdings, cyclic_holdings(Node)) :-
+    is_list(Holdings),
+    findall(N, ( member([N, Next, _], Holdings), reaches(Holdings, Next, N, [Next]) ), Cyclic),
+    Cyclic = [Node|_].
+
+% not_a_proper_list(X) (private): the positive complement of is_list/1 over a
+% ground X -- X ends in something other than [].
+not_a_proper_list(X) :-
+    not_a_list_cell(X),
+    dif(X, []).
+not_a_proper_list([_|Tail]) :-
+    not_a_proper_list(Tail).
+
+% not_a_list_cell(X) (private): a ground X that is not a list cell [_|_] --
+% atomic, or a compound with another functor. (dif(X, [_|_]) would NOT say
+% this: its anonymous variables could still be bound apart, so it does not
+% fail on a list cell. The list-cell functor is read from [_|_] itself, so
+% no engine's spelling of it is hard-wired.)
+not_a_list_cell(X) :-
+    atomic(X).
+not_a_list_cell(X) :-
+    compound(X),
+    functor(X, Name, Arity),
+    functor([_|_], CellName, CellArity),
+    dif(Name/Arity, CellName/CellArity).
+
+edge_problem(Edge, malformed_edge(Edge)) :-
+    not_three_element_list(Edge).
+edge_problem(Edge, wrong_type(Edge, expected_name)) :-
+    Edge = [Holder, _, _],
+    not_holding_name(Holder).
+edge_problem(Edge, wrong_type(Edge, expected_name)) :-
+    Edge = [Holder, Held, _],
+    holding_name(Holder),
+    not_holding_name(Held).
+edge_problem(Edge, wrong_type(Edge, expected_integer)) :-
+    Edge = [_, _, Percentage],
+    not_an_integer(Percentage).
+edge_problem(Edge, out_of_range(Edge)) :-
+    Edge = [_, _, Percentage],
+    integer(Percentage),
+    Percentage #< 0.
+edge_problem(Edge, out_of_range(Edge)) :-
+    Edge = [_, _, Percentage],
+    integer(Percentage),
+    Percentage #> 10000.
+edge_problem(Edge, self_holding(Edge)) :-
+    Edge = [Node, Node, _].
+
+three_element_list([_, _, _]).
+
+% not_three_element_list(EDGE) (private): the positive complement of
+% three_element_list/1 over a ground EDGE -- it does not unify with
+% [_, _, _]: it stops being a list cell before the third element, or it
+% goes on after it.
+not_three_element_list(Edge) :-
+    not_a_list_cell(Edge).
+not_three_element_list([_|Tail]) :-
+    not_a_list_cell(Tail).
+not_three_element_list([_, _|Tail]) :-
+    not_a_list_cell(Tail).
+not_three_element_list([_, _, _|Tail]) :-
+    dif(Tail, []).
+
+% not_an_integer(X) (private): the positive complement of integer/1 over a
+% ground X -- an atom, a float, or a compound term (a string is a list of
+% characters, so it is compound).
+not_an_integer(X) :-
+    atom(X).
+not_an_integer(X) :-
+    float(X).
+not_an_integer(X) :-
+    compound(X).
+
+% holding_name(X): a non-empty atom or a non-empty string ("alice" under
+% -double_quotes(chars) is a string, not an atom). atom/1 alone would also
+% accept [], which names nothing.
+% (Clausal Prolog: a string is a list of one-character atoms on every engine
+% this domain runs on, so a non-empty string is a non-empty character list.)
+holding_name(X) :-
+    atom(X),
+    dif(X, []).
+holding_name(X) :-
+    X = [_|_],
+    character_list(X).
+
+% not_holding_name(X) (private): the positive complement of holding_name/1
+% over a ground X, by disjoint clauses.
+not_holding_name(X) :-
+    X = [].
+not_holding_name(X) :-
+    number(X).
+not_holding_name(X) :-
+    compound(X),
+    not_a_list_cell(X).
+not_holding_name(X) :-
+    X = [_|_],
+    not_character_list(X).
+
+% character_list(LIST) / not_character_list(LIST) (private): a non-empty
+% proper list of one-character atoms, and its complement over a ground
+% non-empty list cell.
+character_list([C]) :-
+    single_character(C).
+character_list([C, D|Rest]) :-
+    single_character(C),
+    character_list([D|Rest]).
+
+not_character_list([C|_]) :-
+    not_single_character(C).
+not_character_list([C|Tail]) :-
+    single_character(C),
+    not_a_list_cell(Tail),
+    dif(Tail, []).
+not_character_list([C, D|Rest]) :-
+    single_character(C),
+    not_character_list([D|Rest]).
+
+single_character(C) :-
+    atom(C),
+    atom_length(C, 1).
+
+not_single_character(C) :-
+    atom(C),
+    atom_length(C, Length),
+    dif(Length, 1).
+not_single_character(C) :-
+    number(C).
+not_single_character(C) :-
+    compound(C).
+
+% reaches(HOLDINGS, FROM, TO, VISITED): some chain of edges leads from FROM
+% to TO. VISITED grows on every step and nodes are finite, so it terminates
+% on any ground graph, cyclic or not.
+reaches(Holdings, From, To, _) :-
+    member([From, To, _], Holdings).
+reaches(Holdings, From, To, Visited) :-
+    member([From, Next, _], Holdings),
+    maplist(dif(Next), Visited),
+    reaches(Holdings, Next, To, [Next|Visited]).
+
+% Helper predicates added by the Clausal Prolog conversion (exact integer
+% fractions; the positive complements that replace negation as failure).
+% They carry no statutory text of their own.
+no_statute("effective_ownership_fraction", 5, "computation_helper").
+no_statute("fraction_sum", 3, "computation_helper").
+no_statute("exact_basis_points", 3, "computation_helper").
+no_statute("holding_whole_basis_points", 2, "computation_helper").
+no_statute("holding_difference", 3, "computation_helper").
+no_statute("holding_fraction", 3, "computation_helper").
+no_statute("not_a_proper_list", 1, "computation_helper").
+no_statute("not_a_list_cell", 1, "computation_helper").
+no_statute("not_three_element_list", 1, "computation_helper").
+no_statute("not_an_integer", 1, "computation_helper").
+no_statute("not_holding_name", 1, "computation_helper").
+no_statute("character_list", 1, "computation_helper").
+no_statute("not_character_list", 1, "computation_helper").
+no_statute("single_character", 1, "computation_helper").
+no_statute("not_single_character", 1, "computation_helper").
+
+:- end_module(ownership_interest).

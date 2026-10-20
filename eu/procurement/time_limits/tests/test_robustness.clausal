@@ -1,0 +1,424 @@
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the decision predicate
+% decide_time_limits/2 (and the facade time_limits_decision_resolvable/1)
+% against incomplete and malformed profiles.
+%
+% The contract these tests hold the domain to comes from NOTES.md section 1:
+%   - "With no procedure type or no stage, or a procedure outside the five,
+%     there is no verdict."  -> no solution, and no exception either.
+%   - the three circumstance flags: "Absent means it does not apply."
+%     -> a stated default (the reductions of Arts 27(2)-(4) and 28(3)-(6)
+%        are permissions the authority "may" use only where the condition
+%        holds), tested below as a default, not as a refusal.
+%   - observed_time_limit_days is optional; its absence is reported as
+%     observed_days_not_supplied (time_limits.clausal header).
+% A malformed value is not an absent one: a flag that is neither True nor
+% False, or a day count that is not a non-negative number, must not
+% produce a definite verdict.
+%
+% Run: python -m clausal.testing eu/procurement/time_limits/tests/test_robustness.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% status, conformity, stage, reduction-condition and profile-key atoms, the
+% procedure atoms, time_limits_verdict/4, cite/1, item/3 -- have no counterpart:
+% atoms and compound terms need no import. Only predicates are imported.)
+:- module(test_robustness, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/time_limits, [
+    decide_time_limits/2,
+    time_limits_decision_resolvable/1,
+    time_limits_subject/1,
+    time_limits_profile_for/2,
+    time_limits_input_problem/2,
+    time_limits_input_acceptable/1,
+    time_limits_what_if/4,
+    time_limits_checklist/2]).
+:- use_module(kit/query_combinators, [override_key/4]).
+
+% ---- helpers ---------------------------------------------------------
+
+% OUTCOME is answers(VERDICTS) -- every verdict decide_time_limits/2 gives --
+% or raised(ERROR) when the call throws.
+decision_outcome(Profile, Outcome) :-
+    catch(
+        (findall(Verdict, decide_time_limits(Profile, Verdict), Verdicts),
+         Outcome = answers(Verdicts)),
+        Error,
+        Outcome = raised(Error)).
+
+% outcome_without_verdicts/1: the positive complement, over decision_outcome/2's
+% two shapes, of `answers([_|_])` -- no verdict was given, or the call raised.
+outcome_without_verdicts(answers([])).
+outcome_without_verdicts(raised(_)).
+
+% The documented answer for an unusable profile: no verdict, no exception.
+gives_no_verdict(Profile) :-
+    decision_outcome(Profile, Outcome),
+    Outcome = answers([]).
+
+% The open-procedure tender-stage profile with every flag False (the fixture
+% open_tenders_baseline, minimum 35 days), spelled out so single keys can be
+% changed. PIN, ELECTRONIC, URGENCY are the three flag values.
+open_tenders_profile(Pin, Electronic, Urgency, Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-Pin,
+        electronic_submission_accepted-Electronic,
+        state_of_urgency_substantiated-Urgency
+    ]).
+
+open_tenders_profile_observing(Days, Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-Days
+    ]).
+
+% =====================================================================
+% 1. DROPPING EACH INPUT, one at a time, from the open_tenders_baseline
+%    fixture (whose 35-day verdict test_public_interface already pins).
+% =====================================================================
+
+% procedure_type_key and stage_key are required (NOTES.md section 1: "there
+% is no verdict"). The domain reads them with PROFILE[KEY] subscripts
+% (time_limits.clausal), which raise
+% existence_error(dict_key, KEY) instead of failing: an exception from inside
+% the rule, not a guard.
+test('dropping procedure type raises an unguarded dict key existence error instead of giving no verdict') :-
+    dict_pairs(Profile, [
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('dropping stage raises an unguarded dict key existence error instead of giving no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+% The three flags default to "does not apply" (NOTES.md section 1, "Absent
+% means it does not apply"; time_limits.clausal): the reductions
+% are permissions conditional on a fact, so without the fact the base figure
+% of Art 27(1) stands. The verdict must equal the all-False verdict.
+test('default: an absent prior information notice flag reads as not published') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    decide_time_limits(Profile, Verdict),
+    Verdict = time_limits_verdict(minimum_days_prescribed, 35, observed_days_not_supplied, [cite(eu_dir_2014_24_art_27)]).
+
+test('default: an absent electronic submission flag reads as not accepted') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        state_of_urgency_substantiated-false
+    ]),
+    decide_time_limits(Profile, Verdict),
+    Verdict = time_limits_verdict(minimum_days_prescribed, 35, observed_days_not_supplied, [cite(eu_dir_2014_24_art_27)]).
+
+test('default: an absent urgency flag reads as not substantiated') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false
+    ]),
+    decide_time_limits(Profile, Verdict),
+    Verdict = time_limits_verdict(minimum_days_prescribed, 35, observed_days_not_supplied, [cite(eu_dir_2014_24_art_27)]).
+
+% observed_time_limit_days is optional; its absence is named, never read as
+% compliance (time_limits.clausal). Dropped from the
+% open_tenders_baseline_allowing_35 fixture, which otherwise meets.
+test('default: an absent observed day count is reported as not supplied') :-
+    time_limits_profile_for("open_tenders_baseline_allowing_35", WithDays),
+    decide_time_limits(WithDays, time_limits_verdict(_, _, meets_prescribed_minimum, _)),
+    open_tenders_profile(false, false, false, WithoutDays),
+    findall(Conformity,
+        decide_time_limits(WithoutDays, time_limits_verdict(_, _, Conformity, _)),
+        Conformities),
+    Conformities = [observed_days_not_supplied].
+
+% =====================================================================
+% 2. WRONG TYPES for each input. Expected: no verdict.
+% =====================================================================
+
+% ---- procedure_type_key and stage_key: not one of the closed atoms -----
+test('procedure type spelled as a character list gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-"open_procedure",
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('procedure type given as a number gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-1,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('procedure type given as a list gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-[open_procedure],
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('procedure type outside the five procedures gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-not_a_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+% An unbound procedure type is not a procedure: it must not be solved for.
+% decide_time_limits unifies it with every table row instead
+% (time_limits.clausal read it without a type check).
+test('unbound procedure type gives no verdict rather than one verdict per procedure') :-
+    dict_pairs(Profile, [
+        procedure_type_key-_,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('stage given as a number gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-1,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+test('stage spelled as a character list gives no verdict') :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-"receipt_of_tenders",
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    gives_no_verdict(Profile).
+
+% ---- the three flags: neither True nor False ---------------------------
+% applicable_reduction_condition/2 (time_limits.clausal) matches
+% only True, so any other value silently reads as "does not apply" and the
+% 35-day base verdict comes back as if the flag were False. A malformed flag
+% is not an absent one.
+test('prior information notice flag given as the number 1 still gives a definite verdict') :-
+    open_tenders_profile(1, false, false, Profile), gives_no_verdict(Profile).
+test('prior information notice flag given as an atom still gives a definite verdict') :-
+    open_tenders_profile(yes, false, false, Profile), gives_no_verdict(Profile).
+test('prior information notice flag given as a list still gives a definite verdict') :-
+    open_tenders_profile([true], false, false, Profile), gives_no_verdict(Profile).
+test('prior information notice flag given as a character list still gives a definite verdict') :-
+    open_tenders_profile("True", false, false, Profile), gives_no_verdict(Profile).
+test('electronic submission flag given as the number 1 still gives a definite verdict') :-
+    open_tenders_profile(false, 1, false, Profile), gives_no_verdict(Profile).
+test('electronic submission flag given as an atom still gives a definite verdict') :-
+    open_tenders_profile(false, yes, false, Profile), gives_no_verdict(Profile).
+test('electronic submission flag given as a list still gives a definite verdict') :-
+    open_tenders_profile(false, [true], false, Profile), gives_no_verdict(Profile).
+test('electronic submission flag given as a character list still gives a definite verdict') :-
+    open_tenders_profile(false, "True", false, Profile), gives_no_verdict(Profile).
+test('urgency flag given as the number 1 still gives a definite verdict') :-
+    open_tenders_profile(false, false, 1, Profile), gives_no_verdict(Profile).
+test('urgency flag given as an atom still gives a definite verdict') :-
+    open_tenders_profile(false, false, yes, Profile), gives_no_verdict(Profile).
+test('urgency flag given as a list still gives a definite verdict') :-
+    open_tenders_profile(false, false, [true], Profile), gives_no_verdict(Profile).
+test('urgency flag given as a character list still gives a definite verdict') :-
+    open_tenders_profile(false, false, "True", Profile), gives_no_verdict(Profile).
+
+% An UNBOUND flag is worse than a malformed one: profile_get(PROFILE, KEY, True)
+% (time_limits.clausal) binds the variable to True, so the
+% reduction is applied as though the condition had been established.
+test('unbound prior information notice flag gives no verdict instead of applying the 15-day reduction') :-
+    open_tenders_profile(_, false, false, Profile), gives_no_verdict(Profile).
+test('unbound electronic submission flag gives no verdict instead of applying the 30-day reduction') :-
+    open_tenders_profile(false, _, false, Profile), gives_no_verdict(Profile).
+test('unbound urgency flag gives no verdict instead of applying the 15-day reduction') :-
+    open_tenders_profile(false, false, _, Profile), gives_no_verdict(Profile).
+
+% ---- observed_time_limit_days: not a non-negative number ---------------
+% check_gte/5 (kit formalize_lib) matches only number(VALUE), so a non-number
+% matches no clause and route 1 fails closed (time_limits.clausal).
+test('observed day count spelled as a character list gives no verdict') :-
+    open_tenders_profile_observing("40", Profile), gives_no_verdict(Profile).
+test('observed day count given as an atom gives no verdict') :-
+    open_tenders_profile_observing(forty, Profile), gives_no_verdict(Profile).
+test('observed day count given as a list gives no verdict') :-
+    open_tenders_profile_observing([40], Profile), gives_no_verdict(Profile).
+test('observed day count given as a boolean gives no verdict') :-
+    open_tenders_profile_observing(true, Profile), gives_no_verdict(Profile).
+test('unbound observed day count gives no verdict') :-
+    open_tenders_profile_observing(_, Profile), gives_no_verdict(Profile).
+% A negative day count is a number but no notice can allow it; the domain
+% compares it anyway and reports a breach.
+test('negative observed day count is reported as a breach instead of refused') :-
+    open_tenders_profile_observing(-5, Profile), gives_no_verdict(Profile).
+
+% ---- the profile itself is not a dict ---------------------------------
+% The engine raises type_error(dict, _) from the PROFILE[KEY] subscript; no
+% verdict is given, which is the property checked here.
+test('a profile that is not a dict gives no definite verdict') :-
+    decision_outcome(not_a_procedure, Outcome),
+    outcome_without_verdicts(Outcome).
+
+% =====================================================================
+% 3. THE EMPTY PROFILE: no verdict, no exception -- through the decision
+%    predicate and through the resolvable facade, which should simply fail.
+% =====================================================================
+test('empty profile raises an unguarded dict key existence error instead of giving no verdict') :-
+    dict_pairs(Profile, []),
+    gives_no_verdict(Profile).
+
+test('empty profile makes the resolvable facade raise instead of failing') :-
+    catch(
+        (findall(Profile, (dict_pairs(Profile, []), time_limits_decision_resolvable(Profile)), Resolved),
+         Outcome = answers(Resolved)),
+        Error,
+        Outcome = raised(Error)),
+    Outcome = answers([]).
+
+% =====================================================================
+% 4. EXACTLY ONE ANSWER for every registered fixture profile.
+% =====================================================================
+test('every fixture profile yields exactly one verdict') :-
+    findall(Subject, time_limits_subject(Subject), Subjects),
+    length(Subjects, 24),
+    findall(Subject,
+        (time_limits_subject(Subject),
+         time_limits_profile_for(Subject, Profile),
+         findall(Verdict, decide_time_limits(Profile, Verdict), Verdicts),
+         length(Verdicts, VerdictCount),
+         dif(VerdictCount, 1)),
+        Offenders),
+    Offenders = [].
+
+% =====================================================================
+% 5. BOUNDARIES of the inclusive floor (Art 27(1) "shall be 35 days";
+%    time_limits.clausal): at the figure meets, one day below is
+%    short, one day above meets. Checked at each distinct published figure.
+% =====================================================================
+% (Clausal Prolog: the seam splat {**PROFILE, observed_time_limit_days: DAYS} is
+% the kit's override_key/4, whose definition is exactly that splat; dict_put/4,
+% the engine builtin for it, has no supplier in the ISO export.)
+conformity_at(Profile, Days, Conformity) :-
+    override_key(Profile, observed_time_limit_days, Days, Observed),
+    findall(Found,
+        decide_time_limits(Observed,
+            time_limits_verdict(minimum_days_prescribed, _, Found, _)),
+        [Conformity]).
+
+floor_boundaries_hold(Profile, Minimum) :-
+    Below #= Minimum - 1,
+    Above #= Minimum + 1,
+    conformity_at(Profile, Below, shorter_than_prescribed_minimum),
+    conformity_at(Profile, Minimum, meets_prescribed_minimum),
+    conformity_at(Profile, Above, meets_prescribed_minimum).
+
+test('boundary: open tenders base of 35 days is an inclusive floor') :-
+    time_limits_profile_for("open_tenders_baseline", Profile),
+    floor_boundaries_hold(Profile, 35).
+test('boundary: open tenders electronic figure of 30 days is an inclusive floor') :-
+    time_limits_profile_for("open_tenders_electronic_submission", Profile),
+    floor_boundaries_hold(Profile, 30).
+test('boundary: restricted tenders electronic figure of 25 days is an inclusive floor') :-
+    time_limits_profile_for("restricted_tenders_electronic_submission", Profile),
+    floor_boundaries_hold(Profile, 25).
+test('boundary: open tenders prior information notice figure of 15 days is an inclusive floor') :-
+    time_limits_profile_for("open_tenders_prior_information_notice", Profile),
+    floor_boundaries_hold(Profile, 15).
+test('boundary: restricted tenders urgency figure of 10 days is an inclusive floor') :-
+    time_limits_profile_for("restricted_tenders_urgency", Profile),
+    floor_boundaries_hold(Profile, 10).
+
+% =====================================================================
+% 6. THE INPUT CHECK (ruling D80): time_limits_input_problem/2
+%    names the first problem, and finds none on any registered fixture.
+% =====================================================================
+test('input check finds no problem on any registered fixture') :-
+    findall(Subject,
+        (time_limits_subject(Subject),
+         time_limits_profile_for(Subject, Profile),
+         time_limits_input_problem(Profile, _)),
+        Offenders),
+    Offenders = [].
+test('input check reports an unbound variable as not_ground') :-
+    open_tenders_profile(_, false, false, Profile),
+    time_limits_input_problem(Profile, not_ground).
+test('input check reports a profile that is not a dict') :-
+    time_limits_input_problem(not_a_procedure, not_a_dict).
+test('input check reports a missing procedure type first on the empty profile') :-
+    dict_pairs(Profile, []),
+    findall(Problem, time_limits_input_problem(Profile, Problem), [missing_key(procedure_type_key)]).
+test('input check reports a missing stage') :-
+    dict_pairs(Profile, [procedure_type_key-open_procedure]),
+    time_limits_input_problem(Profile, missing_key(stage_key)).
+test('input check reports an unknown procedure type') :-
+    dict_pairs(Profile, [
+        procedure_type_key-not_a_procedure,
+        stage_key-receipt_of_tenders
+    ]),
+    time_limits_input_problem(Profile,
+        wrong_value(procedure_type_key, expected_procedure_type)).
+test('input check reports an unknown stage') :-
+    dict_pairs(Profile, [procedure_type_key-open_procedure, stage_key-1]),
+    time_limits_input_problem(Profile,
+        wrong_value(stage_key, expected_stage)).
+test('input check reports a flag that is not exactly True or False') :-
+    open_tenders_profile(false, 1, false, Profile),
+    time_limits_input_problem(Profile, wrong_type(electronic_submission_accepted, expected_boolean)).
+test('input check reports a boolean day count as not an integer') :-
+    open_tenders_profile_observing(true, Profile),
+    time_limits_input_problem(Profile, wrong_type(observed_time_limit_days, expected_integer)).
+test('input check reports a fractional day count as not an integer') :-
+    open_tenders_profile_observing(34.5, Profile),
+    time_limits_input_problem(Profile, wrong_type(observed_time_limit_days, expected_integer)).
+test('input check reports a negative day count') :-
+    open_tenders_profile_observing(-5, Profile),
+    time_limits_input_problem(Profile, negative_count(observed_time_limit_days)).
+test('input check accepts a zero day count, which is then a breach') :-
+    open_tenders_profile_observing(0, Profile),
+    time_limits_input_acceptable(Profile),
+    decide_time_limits(Profile, time_limits_verdict(_, 35, shorter_than_prescribed_minimum, _)).
+test('checklist and what-if give no answer on a refused profile') :-
+    open_tenders_profile(yes, false, false, Profile),
+    findall(Checklist, time_limits_checklist(Profile, Checklist), []),
+    findall(Days, time_limits_what_if(Profile, state_of_urgency_substantiated, true, Days), []).
+test('what-if can still correct the refused key it overrides') :-
+    open_tenders_profile(yes, false, false, Profile),
+    time_limits_what_if(Profile, prior_information_notice_published, true, 15).
+
+:- end_module(test_robustness).

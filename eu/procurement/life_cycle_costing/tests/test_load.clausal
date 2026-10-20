@@ -1,0 +1,61 @@
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/procurement/life_cycle_costing/tests/test_load.clausal
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% verdict, status, limb-id, profile-key, cost-category, Union-act and problem
+% atoms, the citation keys, the kernel verdict constructors, cite/1, item/3 --
+% have no counterpart: atoms and compound terms need no import. Only predicates
+% are imported.)
+:- module(test_load, []).
+:- use_module(eu/procurement/life_cycle_costing/kernel).
+:- use_module(eu/procurement/life_cycle_costing/citations, [citation/2, implements/1]).
+
+test('kernel verdict atoms are pairwise distinct') :-
+    dif(valid_lcc_method, invalid_lcc_method),
+    dif(union_common_method_mandatory_and_applied, union_common_method_mandatory_and_not_applied),
+    dif(union_common_method_mandatory_and_applied, no_union_common_method_mandatory),
+    dif(union_common_method_mandatory_and_not_applied, no_union_common_method_mandatory),
+    dif(lcc_computed, lcc_no_costs_declared),
+    dif(lcc_computed, lcc_indeterminate),
+    dif(lcc_no_costs_declared, lcc_indeterminate),
+    dif(satisfied, not_satisfied).
+
+test('lcc_method_validity_verdict builds and destructures') :-
+    Verdict = lcc_method_validity_verdict(valid_lcc_method, [], []),
+    Verdict = lcc_method_validity_verdict(Status, DefectIds, Citations),
+    Status = valid_lcc_method,
+    DefectIds = [],
+    Citations = [].
+
+test('lcc_mandatory_method_verdict builds and destructures') :-
+    Verdict = lcc_mandatory_method_verdict(no_union_common_method_mandatory, [], []),
+    Verdict = lcc_mandatory_method_verdict(Status, DefectIds, Citations),
+    Status = no_union_common_method_mandatory,
+    DefectIds = [],
+    Citations = [].
+
+test('lcc_computation_verdict builds and destructures') :-
+    Verdict = lcc_computation_verdict(lcc_computed, 0, []),
+    Verdict = lcc_computation_verdict(Status, TotalEurCents, ExcludedCategories),
+    Status = lcc_computed,
+    TotalEurCents = 0,
+    ExcludedCategories = [].
+
+test('scaffold life_cycle_costing_verdict builds and destructures') :-
+    Verdict = life_cycle_costing_verdict(satisfied, []),
+    Verdict = life_cycle_costing_verdict(Status, Citations),
+    Status = satisfied,
+    Citations = [].
+
+test('citation record resolves for eu_dir_2014_24_art_68_1') :-
+    citation(eu_dir_2014_24_art_68_1, Metadata),
+    implements(eu_dir_2014_24_art_68_1).
+
+test('cite term builds and destructures for eu_dir_2014_24_art_68_2') :-
+    C = cite(eu_dir_2014_24_art_68_2),
+    C = cite(Key),
+    Key = eu_dir_2014_24_art_68_2.
+
+test('implements succeeds for eu_dir_2014_24_annex_xiii') :-
+    implements(eu_dir_2014_24_annex_xiii).
+
+:- end_module(test_load).

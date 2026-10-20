@@ -1,0 +1,125 @@
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query-combinator layer
+% (Q1 wave: #5/#6/#8/#9/#16/#24 over the AMLR Art 52(1) 25% threshold).
+%
+%   diff/what-if: a profile against itself changes nothing; below-vs-above
+%                 flips exactly the threshold row (full delta term asserted,
+%                 statuses + payloads included); the missing-key channel
+%                 diffs unknown([ownership_chains]) -> met.
+%   boundary:     the EMPIRICALLY located direct-holding cliff EQUALS the
+%                 declared Art 52(1) constant (flip_scan finds 2500 without
+%                 reading it) -- inclusive boundary, flip lands ON 2500.
+%   gap:          minimal top-up is exact at the boundary (2000 -> 500),
+%                 correct under exact-rational aggregates (24.995% -> +1 bp,
+%                 the ceil case integer subtraction gets wrong), 0 when
+%                 already qualifying, 2500 from evidenced zero; MINIMALITY
+%                 witnessed (gap-1 stays ineligible, gap flips).
+%   (min-unsat amlr_bo_minimal_unsatisfiable_subset/2 is tested in the private overlay,
+%    private/eu/aml/amlr_beneficial_ownership_threshold/tests, D67.)
+%
+% Run (from the repository root):
+%   PYTHONPATH=kit:. python -m clausal.testing eu/aml/amlr_beneficial_ownership_threshold/tests/test_queries.clausal
+% =====================================================================
+
+% (Clausal Prolog: the seam imports of the bare ATOMS -- met,
+% effective_holding_below_25_percent_threshold, required_ownership_threshold,
+% eligible, ineligible, ownership_chains -- and of the data constructors
+% delta/3, unmet/1 and unknown/1 have no counterpart: atoms and compound
+% terms need no import. Only predicates are imported. A profile dict is built
+% with dict_pairs/2.)
+:- module(test_queries, []).
+:- use_module(library(clpz)).
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold, [
+    amlr_bo_diff/3, amlr_bo_what_if/3, amlr_bo_direct_boundary/1,
+    amlr_bo_gap_to_threshold/2,
+    amlr_bo_threshold/1, amlr_bo_status/2]).
+
+% ---------------------------------------------------------------------
+% fixtures
+% ---------------------------------------------------------------------
+q_above(Profile) :- dict_pairs(Profile, [ownership_chains-[[3000]]]).       % direct 30%     -> BO
+q_below(Profile) :- dict_pairs(Profile, [ownership_chains-[[2000]]]).       % direct 20%     -> not BO
+q_subbp(Profile) :- dict_pairs(Profile, [ownership_chains-[[5000, 4999]]]). % 24.995% exact-rational near-miss
+q_missing(Profile) :- dict_pairs(Profile, []).            % key absent     -> indeterminate
+
+% =====================================================================
+% #5 comparison -- amlr_bo_diff/3
+% =====================================================================
+test('diff: a profile against itself changes nothing') :-
+    q_above(P), amlr_bo_diff(P, P, Changed), Changed = [].
+test('diff: below vs above flips exactly the threshold row') :-
+    q_below(A), q_above(B),
+    amlr_bo_diff(A, B, Changed),
+    Changed = [delta(required_ownership_threshold,
+                      unmet(effective_holding_below_25_percent_threshold),
+                      met)].
+test('DET diff') :-
+    q_below(A), q_above(B),
+    findall(C, amlr_bo_diff(A, B, C), L), length(L, 1).
+
+% =====================================================================
+% #16 what-if -- amlr_bo_what_if/3
+% =====================================================================
+test('what-if: dropping to 20pct flips met -> unmet') :-
+    q_above(P),
+    amlr_bo_what_if(P, [[2000]], Changed),
+    Changed = [delta(required_ownership_threshold,
+                      met,
+                      unmet(effective_holding_below_25_percent_threshold))].
+test('what-if: a same-verdict change reports no delta') :-
+    q_above(P),
+    amlr_bo_what_if(P, [[2600]], Changed),
+    Changed = [].
+test('what-if: supplying chains to a chains-less profile resolves unknown -> met') :-
+    q_missing(P),
+    amlr_bo_what_if(P, [[5000, 5000]], Changed),
+    Changed = [delta(required_ownership_threshold,
+                      unknown([ownership_chains]),
+                      met)].
+test('what-if: the stored profile is untouched (re-diff still flips)') :-
+    q_above(P),
+    amlr_bo_what_if(P, [[2000]], _),
+    amlr_bo_what_if(P, [[2000]], Changed),
+    Changed = [delta(required_ownership_threshold,
+                      met,
+                      unmet(effective_holding_below_25_percent_threshold))].
+
+% =====================================================================
+% #6 threshold / #24 -- amlr_bo_direct_boundary/1
+% =====================================================================
+test('boundary: located direct-holding cliff == declared Art 52(1) constant') :-
+    amlr_bo_direct_boundary(B),
+    amlr_bo_threshold(T),
+    B #= T.
+test('boundary: flip is ON the threshold (inclusive ''25% or more'')') :-
+    amlr_bo_direct_boundary(B),
+    amlr_bo_status([[B]], eligible),
+    Below #= B - 1,
+    amlr_bo_status([[Below]], ineligible).
+test('DET boundary') :-
+    findall(B, amlr_bo_direct_boundary(B), L), length(L, 1).
+
+% =====================================================================
+% #8 counterfactual -- amlr_bo_gap_to_threshold/2
+% =====================================================================
+test('gap: direct 20pct needs exactly +500 bp') :-
+    amlr_bo_gap_to_threshold([[2000]], 500).
+test('gap: 24.995pct exact-rational aggregate needs +1 bp (ceil, not floor)') :-
+    amlr_bo_gap_to_threshold([[5000, 4999]], 1).
+test('gap: an already-qualifying holder needs 0') :-
+    amlr_bo_gap_to_threshold([[3000]], 0).
+test('gap: evidenced zero holdings need the full 2500 bp') :-
+    amlr_bo_gap_to_threshold([], 2500).
+test('gap MINIMALITY: gap flips the verdict, gap-1 does not') :-
+    amlr_bo_gap_to_threshold([[2000]], Gap),
+    amlr_bo_status([[Gap], [2000]], eligible),
+    Short #= Gap - 1,
+    amlr_bo_status([[Short], [2000]], ineligible).
+test('gap: mixed direct+indirect base (20% + 50%x9.99% = 24.995%) needs +1 bp') :-
+    amlr_bo_gap_to_threshold([[2000], [5000, 999]], 1).
+test('DET gap (ineligible base)') :-
+    findall(G, amlr_bo_gap_to_threshold([[2000]], G), L), length(L, 1).
+test('DET gap (eligible base)') :-
+    findall(G, amlr_bo_gap_to_threshold([[3000]], G), L), length(L, 1).
+
+:- end_module(test_queries).

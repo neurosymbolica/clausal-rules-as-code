@@ -1,0 +1,28 @@
+% Run: cd <corpus root> && python -m clausal.testing
+%      eu/procurement/utilities_negotiated_without_prior_call/tests/test_load.clausal
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% verdict, ground, profile-key, condition-flag, citation-key and procedure
+% atoms, utilities_negotiated_verdict/3, cite/1 -- have no counterpart: atoms
+% and compound terms need no import. Only predicates are imported.)
+:- module(test_load, []).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/citations, [
+    citation/2,
+    implements/1]).
+
+test('verdict atoms are distinct') :-
+    dif(use_lawful, use_unlawful),
+    dif(use_lawful, n_a),
+    dif(use_unlawful, n_a).
+
+test('result constructor builds and destructures') :-
+    Verdict = utilities_negotiated_verdict(use_lawful, n_a, [cite(eu_dir_2014_25_art_50_chapeau)]),
+    Verdict = utilities_negotiated_verdict(Status, Ground, Citations),
+    Status = use_lawful,
+    Ground = n_a,
+    Citations = [cite(eu_dir_2014_25_art_50_chapeau)].
+
+test('one real citation record resolves') :-
+    citation(eu_dir_2014_25_art_50_chapeau, _Metadata),
+    implements(eu_dir_2014_25_art_50_chapeau).
+
+:- end_module(test_load).

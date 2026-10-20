@@ -1,0 +1,213 @@
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query-taxonomy layer
+% (#4/#5/#6/#7/#16/#24 over the AMLR Art 52(1) ownership
+% CHAIN domain; query-type coverage sweep 2026-07-21).
+%
+%   set-holding:  first-matching-edge functional override; fail-closed on
+%                 a non-existent edge; the input list is untouched.
+%   boundary:     the bisect_flip-located direct cliff EQUALS the declared
+%                 Art 52(1) constant (found without reading it); flip
+%                 lands ON 2500 (inclusive "25 % or more").
+%   gap:          smallest new direct stake that flips; ceil-correct on
+%                 the exact-rational 2499.5-bp chain aggregate (+1 bp);
+%                 0 when already qualifying; 2500 from an empty graph;
+%                 MINIMALITY witnessed (gap flips, gap-1 does not).
+%   what-if:      hypothetical edge change re-runs the determination;
+%                 stored graph untouched.
+%   sensitivity:  edge leverage = eff(edge@100%) - eff(edge@0%); 0 for
+%                 another holder's stake.
+%   direct-vs-eff: the paired-domain discrepancy row (wholly-indirect
+%                 UBO: direct 0 vs effective 2500).
+%   holders:      qualifying-holder enumeration (sorted, deduped,
+%                 intermediates included as holders); _at(statutory) is
+%                 PINNED to the ubo_status-derived form.
+%   justification: verdict + [EFF, THR, provenance-META] basis.
+%
+% D67: the edge-flip and min-support tests (stage 3) and the rule-impact
+% and consistency tests (type pass) moved to the private overlay
+% private/eu/aml/amlr_bo_chain/tests/test_queries_private.seam.
+%
+% Run (from the repository root):
+%   PYTHONPATH=kit:. python -m clausal.testing eu/aml/amlr_bo_chain/tests/test_queries.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of the verdict ATOMS eligible / ineligible
+% and the -private record keys ref / verbatim have no counterpart: atoms need
+% no import. Only predicates are imported. The near-miss aggregate is the
+% exact fraction term 4999/2 (2499.5 bp); ISO `<` evaluates it as a division,
+% and 2499.5 is exactly representable, so the comparison is exact here.)
+:- module(test_queries, []).
+:- use_module(library(clpz)).
+:- use_module(eu/aml/amlr_bo_chain, [
+    bo_chain_direct_boundary/1, bo_chain_direct_vs_effective/5,
+    bo_chain_edge_sensitivity/6, bo_chain_gap_to_threshold/4,
+    bo_chain_justification/5,
+    bo_chain_qualifying_holders/3, bo_chain_qualifying_holders_at/4,
+    bo_chain_set_holding/5, bo_chain_what_if_holding/7,
+    effective_ownership/4, ubo_status/4, ubo_threshold_bps/1]).
+
+% ---------------------------------------------------------------------
+% fixtures -- graphs as [HOLDER, HELD, PCT_BPS] edge lists (harness shape)
+% ---------------------------------------------------------------------
+% 50% x 50% chain: exactly 25.00% -> BO (wholly indirect)
+g_chain([["alice", "h1", 5000], ["h1", "target", 5000]]).
+% 50% x 49.99% chain: 24.995% exact-rational near-miss -> not BO
+g_subbp([["alice", "h1", 5000], ["h1", "target", 4999]]).
+% 10% direct + 50% x 30% chain: 10% + 15% = 25% -> BO (parallel add)
+g_parallel([["alice", "target", 1000], ["alice", "h1", 5000],
+            ["h1", "target", 3000]]).
+% chain + unrelated holders (bob 30% direct, carol 20% direct;
+% target fully issued: h1 50% + bob 30% + carol 20% = 100%)
+g_multi([["alice", "h1", 5000], ["h1", "target", 5000],
+         ["bob", "target", 3000], ["carol", "target", 2000]]).
+% duplicate parallel direct stakes (multigraph): 25% + 26%
+g_dup([["alice", "target", 2500], ["alice", "target", 2600]]).
+
+% =====================================================================
+% bo_chain_set_holding/5 -- the #16 override core
+% =====================================================================
+test('set-holding: replaces exactly the named edge') :-
+    g_chain(G),
+    bo_chain_set_holding(G, "h1", "target", 4000, G2),
+    G2 = [["alice", "h1", 5000], ["h1", "target", 4000]].
+test('set-holding: fail-closed on a non-existent edge') :-
+    g_chain(G),
+    findall(X, bo_chain_set_holding(G, "zed", "target", 4000, X), L),
+    length(L, 0).
+test('set-holding: duplicate parallel edges -- only the FIRST is touched') :-
+    g_dup(G),
+    bo_chain_set_holding(G, "alice", "target", 0, G2),
+    G2 = [["alice", "target", 0], ["alice", "target", 2600]].
+test('DET set-holding') :-
+    g_chain(G),
+    findall(X, bo_chain_set_holding(G, "h1", "target", 4000, X), L),
+    length(L, 1).
+
+% =====================================================================
+% #6 threshold -- bo_chain_direct_boundary/1
+% =====================================================================
+test('boundary: bisect-located direct cliff == declared Art 52(1) constant') :-
+    bo_chain_direct_boundary(B),
+    ubo_threshold_bps(T),
+    B #= T.
+test('boundary: flip is ON the threshold (inclusive ''25 % or more'')') :-
+    bo_chain_direct_boundary(B),
+    ubo_status([["p", "t", B]], "p", "t", eligible),
+    Below #= B - 1,
+    ubo_status([["p", "t", Below]], "p", "t", ineligible).
+test('DET boundary') :-
+    findall(B, bo_chain_direct_boundary(B), L), length(L, 1).
+
+% =====================================================================
+% #8 counterfactual -- bo_chain_gap_to_threshold/4
+% =====================================================================
+test('gap: 24.995pct exact-rational chain aggregate needs +1 bp (ceil)') :-
+    g_subbp(G),
+    bo_chain_gap_to_threshold(G, "alice", "target", 1).
+test('gap: a 20pct direct holder needs exactly +500 bp') :-
+    bo_chain_gap_to_threshold([["alice", "target", 2000]],
+                              "alice", "target", 500).
+test('gap: an already-qualifying holder needs 0') :-
+    g_chain(G),
+    bo_chain_gap_to_threshold(G, "alice", "target", 0).
+test('gap: an empty graph needs the full 2500 bp') :-
+    bo_chain_gap_to_threshold([], "alice", "target", 2500).
+test('gap MINIMALITY: gap flips the verdict, gap-1 does not') :-
+    g_subbp(G),
+    bo_chain_gap_to_threshold(G, "alice", "target", Gap),
+    ubo_status([["alice", "target", Gap]|G], "alice", "target", eligible),
+    Short #= Gap - 1,
+    ubo_status([["alice", "target", Short]|G], "alice", "target", ineligible).
+test('DET gap (ineligible base)') :-
+    g_subbp(G),
+    findall(X, bo_chain_gap_to_threshold(G, "alice", "target", X), L),
+    length(L, 1).
+test('DET gap (eligible base)') :-
+    g_chain(G),
+    findall(X, bo_chain_gap_to_threshold(G, "alice", "target", X), L),
+    length(L, 1).
+
+% =====================================================================
+% #16 what_if -- bo_chain_what_if_holding/7
+% =====================================================================
+test('what-if: raising the weak link to 50% flips alice to BO') :-
+    g_subbp(G),
+    bo_chain_what_if_holding(G, "h1", "target", 5000,
+                             "alice", "target", eligible).
+test('what-if: cutting the chain root drops alice below the line') :-
+    g_chain(G),
+    bo_chain_what_if_holding(G, "alice", "h1", 4000,
+                             "alice", "target", ineligible).
+test('what-if: the stored graph is untouched (original verdict re-derivable)') :-
+    g_chain(G),
+    bo_chain_what_if_holding(G, "alice", "h1", 0, "alice", "target", ineligible),
+    ubo_status(G, "alice", "target", eligible).
+test('what-if: fail-closed on a hypothetical about a non-existent edge') :-
+    g_chain(G),
+    findall(V, bo_chain_what_if_holding(G, "zed", "target", 9000,
+                                        "alice", "target", V), L),
+    length(L, 0).
+
+% =====================================================================
+% #24 sensitivity -- bo_chain_edge_sensitivity/6
+% =====================================================================
+test('sensitivity: the h1->target link controls 50% of alice''s effective stake') :-
+    g_parallel(G),
+    % eff(edge@100%) = 10% + 50% = 60%; eff(edge@0%) = 10% -> swing 5000 bp
+    bo_chain_edge_sensitivity(G, "h1", "target", "alice", "target", 5000).
+test('sensitivity: another holder''s stake has zero leverage on alice') :-
+    g_multi(G),
+    bo_chain_edge_sensitivity(G, "bob", "target", "alice", "target", 0).
+test('DET sensitivity') :-
+    g_parallel(G),
+    findall(S, bo_chain_edge_sensitivity(G, "h1", "target",
+                                         "alice", "target", S), L),
+    length(L, 1).
+
+% =====================================================================
+% #5 comparison -- bo_chain_direct_vs_effective/5
+% =====================================================================
+test('direct-vs-effective: a wholly-indirect UBO shows 0 direct vs 2500 effective') :-
+    g_chain(G),
+    bo_chain_direct_vs_effective(G, "alice", "target", 0, 2500).
+test('direct-vs-effective: parallel graph splits 1000 direct / 2500 effective') :-
+    g_parallel(G),
+    bo_chain_direct_vs_effective(G, "alice", "target", 1000, 2500).
+
+% =====================================================================
+% #4 enumeration -- bo_chain_qualifying_holders/3 (+ _at/4 pin)
+% =====================================================================
+test('holders: qualifying holders sorted, intermediates included, sub-line excluded') :-
+    g_multi(G),
+    % alice 25% (chain), bob 30%, h1 50% qualify; carol 20% does not
+    bo_chain_qualifying_holders(G, "target", ["alice", "bob", "h1"]).
+test('holders: empty graph has no qualifying holders') :-
+    bo_chain_qualifying_holders([], "target", []).
+test('holders PIN: _at(statutory) == the ubo_status-derived enumeration') :-
+    g_multi(G),
+    ubo_threshold_bps(T),
+    bo_chain_qualifying_holders_at(G, "target", T, QAt),
+    bo_chain_qualifying_holders(G, "target", Q),
+    QAt = Q.
+
+% =====================================================================
+% #7 justification -- bo_chain_justification/5
+% =====================================================================
+test('justification: eligible verdict carries [EFF, THR, provenance] basis') :-
+    g_chain(G),
+    bo_chain_justification(G, "alice", "target", eligible, Basis),
+    Basis = [Eff, Thr, Meta],
+    Eff #= 2500,
+    Thr #= 2500,
+    get(Meta, ref, _),
+    get(Meta, verbatim, _).
+test('justification: near-miss verdict shows the exact-rational shortfall') :-
+    g_subbp(G),
+    bo_chain_justification(G, "alice", "target", ineligible, Basis),
+    Basis = [Eff, Thr, _],
+    Eff < Thr.
+test('DET justification') :-
+    g_chain(G),
+    findall(B, bo_chain_justification(G, "alice", "target", _, B), L),
+    length(L, 1).
+
+:- end_module(test_queries).

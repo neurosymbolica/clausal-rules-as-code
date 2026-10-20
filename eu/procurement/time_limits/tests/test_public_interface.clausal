@@ -1,0 +1,127 @@
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the __init__ re-export (what an external caller sees).
+% Run: python -m clausal.testing eu/procurement/time_limits/tests/test_public_interface.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% status, conformity, stage, reduction-condition and profile-key atoms, the
+% procedure atoms, time_limits_verdict/4, cite/1, item/3 -- have no counterpart:
+% atoms and compound terms need no import. Only predicates are imported.)
+:- module(test_public_interface, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/time_limits, [
+    decide_time_limits/2,
+    time_limits_status/2,
+    minimum_days/2,
+    time_limits_conformity/2,
+    time_limits_checklist/2,
+    time_limits_decision_resolvable/1,
+    time_limits_status_values/1,
+    time_limits_conformity_values/1,
+    time_limits_floor/3,
+    time_limits_subject/1,
+    time_limits_profile_for/2,
+    time_limits_assess/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complements (ruling 2026-10-20) of the seam's `not Goal`: the given
+% value is not among Goal's answers -- findall/3 plus the kit's dif-based
+% not_member/2, so a broken rule that gave BOTH answers still fails the test.
+time_limits_conformity_never(Profile, Conformity) :-
+    findall(Found, time_limits_conformity(Profile, Found), FoundConformities),
+    not_member(Conformity, FoundConformities).
+
+test('public interface resolves on every registered subject') :-
+    findall(Subject, time_limits_subject(Subject), SubjectList),
+    length(SubjectList, SubjectCount),
+    SubjectCount #= 24,
+    findall(
+        Subject,
+        (
+            time_limits_subject(Subject),
+            findall(time_limits_verdict(Status, MinimumDays, Conformity, Citations),
+                time_limits_assess(Subject, time_limits_verdict(Status, MinimumDays, Conformity, Citations)),
+                [_|_])
+        ),
+        AssessedSubjectList),
+    length(AssessedSubjectList, SubjectCount).
+
+test('every assessed status is in the exported closed vocabulary') :-
+    time_limits_status_values(StatusValues),
+    findall(Subject, (
+        time_limits_subject(Subject),
+        time_limits_assess(Subject, time_limits_verdict(Status, _, _, _)),
+        not_member(Status, StatusValues)
+    ), []).
+
+test('decision facade: checklist + resolvable hold via the package surface') :-
+    time_limits_profile_for("open_tenders_baseline", Profile),
+    time_limits_decision_resolvable(Profile),
+    time_limits_checklist(Profile, Checklist),
+    length(Checklist, 1),
+    member(item(_, minimum_days_prescribed, _), Checklist).
+
+test('an ad-hoc profile built from re-exported atoms resolves') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-true,
+        state_of_urgency_substantiated-false
+    ]),
+    minimum_days(Profile, 30),
+    time_limits_status(Profile, minimum_days_prescribed).
+
+test('floor query is exported: restricted tenders floor to 10 days') :-
+    time_limits_floor(restricted_procedure, receipt_of_tenders, 10).
+
+test('every assessed conformity is in the exported closed vocabulary') :-
+    time_limits_conformity_values(ConformityValues),
+    findall(Subject, (
+        time_limits_subject(Subject),
+        time_limits_assess(Subject, time_limits_verdict(_, _, Conformity, _)),
+        not_member(Conformity, ConformityValues)
+    ), []).
+
+% The conformity decision is reachable through the PACKAGE surface, on an
+% ad-hoc profile a caller builds from re-exported atoms -- which is how the
+% composition layer reaches it. Both directions, on the same 20 days: short
+% against the Art 27(1) base, compliant once Art 27(2) applies.
+test('public interface: an ad-hoc profile decides conformity both ways') :-
+    dict_pairs(ShortProfile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-20
+    ]),
+    time_limits_conformity(ShortProfile, shorter_than_prescribed_minimum),
+    time_limits_conformity_never(ShortProfile, meets_prescribed_minimum),
+    dict_pairs(LawfulProfile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-true,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-20
+    ]),
+    time_limits_conformity(LawfulProfile, meets_prescribed_minimum),
+    time_limits_conformity_never(LawfulProfile, shorter_than_prescribed_minimum).
+
+% The same ad-hoc profile WITHOUT the day count: not compliant, not in breach,
+% and explicitly so. This is the shape every case in the corpus has today.
+test('public interface: an unsupplied day count is named, never assumed') :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]),
+    time_limits_conformity(Profile, observed_days_not_supplied),
+    time_limits_conformity_never(Profile, meets_prescribed_minimum),
+    time_limits_conformity_never(Profile, shorter_than_prescribed_minimum),
+    time_limits_conformity_never(Profile, no_prescribed_minimum_to_meet).
+
+:- end_module(test_public_interface).

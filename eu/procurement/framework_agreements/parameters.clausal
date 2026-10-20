@@ -1,0 +1,34 @@
+% =====================================================================
+% parameters.clausal -- transposition/implementation seam for eu/procurement/framework_agreements.
+%
+% The four-year maximum term of Art 33(1) is this domain's ONE statutory
+% figure. It is a fixed value in the Directive (not a Member-State choice),
+% but it is SOURCED here so the determination slice can reference it by name
+% rather than inlining the literal.
+%
+% Source: Directive 2014/24/EU Art 33(1), OJ L 94, 28.3.2014.
+% =====================================================================
+:- module(parameters, [
+    framework_term_limit_years/1,
+    parameter_source/2
+]).
+
+% Clausal Prolog: the VALUE fact framework_term_limit_years(4) lives in the
+% logic module framework_agreements.clausal, because the Prolog parameter
+% checker reads a record key as real only where a logic module holds the fact
+% (parameters.clausal is the provenance registry). This module re-exports it,
+% so `parameters:framework_term_limit_years/1` is still where a consumer finds
+% the figure.
+:- use_module(eu/procurement/framework_agreements/framework_agreements, [
+    framework_term_limit_years/1]).
+
+% Clausal Prolog record form (the Prolog parameter checker's signed-off shape):
+%   parameter_source(Key, [label-'...', ref-'...', verbatim-'...']).
+% the key an atom; label, ref, verbatim in that order, every value a quoted atom.
+parameter_source(framework_term_limit_years, [
+    label-'Directive 2014/24/EU Art 33(1) -- maximum term of a framework agreement (four years)',
+    ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014L0024',
+    verbatim-'The term of a framework agreement shall not exceed four years, save in exceptional cases duly justified, in particular by the subject of the framework agreement.'
+]).
+
+:- end_module(parameters).

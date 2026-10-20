@@ -1,0 +1,71 @@
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/procurement/shortlisting.
+% A TOP-LAYER consumer: imports the determination slices' PUBLICS and
+% the kernel names it spells, and nothing else.
+% Covers the four declared query types:
+%   #3 status_determination  -> shortlisting_what_if/4
+%   #4 enumeration           -> shortlisting_profile_keys/1
+%   #6 threshold             -> shortlisting_threshold_flip/4
+%   #23 calculation          -> shortlisting_floor_comparison/7
+% =====================================================================
+% Clausal Prolog: the ten profile-key atoms the seam imported from kernel need
+% no import (atoms are not imported).
+:- module(queries, [
+    shortlisting_profile_keys/1,
+    shortlisting_what_if/4,
+    shortlisting_threshold_flip/5,
+    shortlisting_floor_comparison/7
+]).
+
+:- use_module(eu/procurement/shortlisting/shortlisting, [
+    shortlisting_status/2,
+    shortlisting_input_acceptable/1,
+    shortlisting_invitation_floor/4
+]).
+
+:- use_module(kit/query_combinators, [override_key/4, flip_scan/4]).
+
+% =====================================================================
+% #4 enumeration -- the ten-key schema.
+% =====================================================================
+shortlisting_profile_keys([procedure_type_key, objective_and_non_discriminatory_criteria_indicated, minimum_number_indicated, declared_minimum_candidates, declared_maximum_candidates, qualified_candidates, invited_candidates, number_invited_sufficient_for_genuine_competition, invited_include_non_requesting_economic_operators, invited_include_candidates_without_required_capabilities]).
+
+% =====================================================================
+% #3 status_determination -- what-if combinator.
+% Override one profile key, re-evaluate, return the new status.
+% =====================================================================
+shortlisting_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    shortlisting_input_acceptable(Profile),
+    ground(OverriddenKey),
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    shortlisting_status(Hypothesis, NewStatus).
+
+% =====================================================================
+% #6 threshold -- flip-point combinator.
+% Given a profile and a numeric key to vary, find the boundary value
+% at which the status changes (e.g. qualified_candidates crossing the
+% declared minimum, or declared_minimum crossing the statutory floor).
+% =====================================================================
+threshold_probe(Profile, Key, X, Status) :-
+    override_key(Profile, Key, X, Modified),
+    shortlisting_status(Modified, Status).
+
+% The PROBE closure: the seam lambda ((X, STATUS) <- threshold_probe(PROFILE,
+% KEY, X, STATUS)) is, in Clausal Prolog, the partial goal
+% threshold_probe(Profile, Key), which flip_scan/4 calls with X and STATUS
+% appended (call/3).
+shortlisting_threshold_flip(Profile, Key, Lo, Hi, Boundary) :-
+    shortlisting_input_acceptable(Profile),
+    ground(Key),
+    flip_scan(Lo, Hi, threshold_probe(Profile, Key), Boundary).
+
+% =====================================================================
+% #23 calculation -- comparison combinator.
+% Compute the invitation floor for two (declared_min, qualified) pairs
+% under the same procedure type and return both values side by side.
+% =====================================================================
+shortlisting_floor_comparison(ProcedureType, DeclaredMinA, QualifiedA, DeclaredMinB, QualifiedB, FloorA, FloorB) :-
+    shortlisting_invitation_floor(ProcedureType, DeclaredMinA, QualifiedA, FloorA),
+    shortlisting_invitation_floor(ProcedureType, DeclaredMinB, QualifiedB, FloorB).
+
+:- end_module(queries).

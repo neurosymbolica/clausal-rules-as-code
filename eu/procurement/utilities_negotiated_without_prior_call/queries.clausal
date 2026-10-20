@@ -1,0 +1,64 @@
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/procurement/utilities_negotiated_without_prior_call.
+% A TOP-LAYER consumer: imports the determination slice's PUBLICS and
+% the kernel names it spells, and nothing else.
+%
+% Query types served:
+%   #7  justification -- the checklist carries cite(...) provenance per item
+%                        (utilities_negotiated_without_prior_call_checklist/2 in the slice)
+%   #23 calculation   -- unmet-condition count (utilities_negotiated_without_prior_call_unmet_count/2)
+%   #16 what-if       -- override one profile key, re-decide
+% =====================================================================
+
+:- module(queries, [
+    utilities_negotiated_without_prior_call_profile_keys/1,
+    utilities_negotiated_without_prior_call_what_if/4
+]).
+
+% (Clausal Prolog: the kernel names, the profile-key and condition-flag ATOMS
+% and the procedure atoms the seam imported need no import; only the
+% predicates are listed. The seam also imported the checklist and unmet-count
+% predicates, which no clause here calls.)
+:- use_module(kit/query_combinators, [override_key/4]).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/utilities_negotiated_without_prior_call, [
+    utilities_negotiated_without_prior_call_status/2]).
+
+% --- profile key schema (enumeration query type) ---
+
+utilities_negotiated_without_prior_call_profile_keys([
+    pleaded_ground_key,
+    contract_type_key,
+    sole_operator_reason_key,
+    no_suitable_tenders_or_requests_received,
+    initial_conditions_not_substantially_altered,
+    contract_purely_for_research_experiment_study_or_development,
+    not_for_securing_profit_or_recovering_research_costs,
+    award_does_not_prejudice_competitive_award_of_subsequent_contracts,
+    only_particular_operator_can_perform,
+    no_reasonable_alternative_or_substitute,
+    absence_of_competition_not_artificially_narrowed,
+    extreme_urgency_time_limits_cannot_be_met,
+    urgency_events_unforeseeable_by_contracting_entity,
+    urgency_not_attributable_to_contracting_entity,
+    additional_deliveries_by_original_supplier,
+    change_of_supplier_would_cause_technical_incompatibility,
+    repetition_conforms_to_basic_project,
+    original_contract_followed_article_44_1_procedure,
+    basic_project_indicated_extent_and_conditions,
+    possible_use_of_this_procedure_disclosed_at_first_tender,
+    supplies_quoted_and_purchased_on_commodity_market,
+    bargain_opportunity_available_for_very_short_time,
+    price_considerably_lower_than_normal_market_prices,
+    particularly_advantageous_conditions_from_winding_up_or_liquidator,
+    supplier_winding_up_or_in_insolvency_procedure,
+    contract_follows_directive_design_contest,
+    awarded_to_contest_winner_or_all_winners_invited
+]).
+
+% --- what-if: override one key, re-decide (#16 counterfactual) ---
+
+utilities_negotiated_without_prior_call_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    utilities_negotiated_without_prior_call_status(Hypothesis, NewStatus).
+
+:- end_module(queries).

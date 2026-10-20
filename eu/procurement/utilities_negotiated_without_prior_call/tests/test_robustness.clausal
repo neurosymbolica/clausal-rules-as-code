@@ -1,0 +1,439 @@
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the decision predicate
+% decide_utilities_negotiated_without_prior_call/2 against incomplete and
+% malformed profiles.
+%
+% The contract these tests hold the domain to comes from NOTES.md:
+%   - section 1: "With no pleaded ground there is no verdict."
+%     -> no solution, and no exception.
+%   - section 1: a pleaded ground that "is not one of the ten" is use_unlawful
+%     (the Art 50 chapeau list is exhaustive).
+%   - section 2: "Each condition is met only when its flag is `true`. A flag
+%     that is absent counts as not established, so the condition is unmet."
+%     and "There is no `indeterminate` verdict: the entity relying on an
+%     exception must establish it."
+%     -> a stated default for an ABSENT flag: dropping it gives use_unlawful.
+%        A PRESENT flag with any other value is refused (ruling D80,
+%        2026-10-20), as is any other malformed value.
+%   - section 3: the contract type is an extra condition for grounds (e)-(j)
+%     only; "Grounds (a) to (d) apply to any contract type."
+%   - section 4(c): "With no reason given, or a reason outside the three, the
+%     ground fails."
+% What NO documented default covers is an UNBOUND value: a variable is not
+% `true`, not a contract type and not a ground, so it must not be solved for.
+%
+% Run: python -m clausal.testing eu/procurement/utilities_negotiated_without_prior_call/tests/test_robustness.clausal
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% profile-key, ground, condition-flag, verdict and procedure atoms, the
+% problem vocabulary, utilities_negotiated_verdict/3, and the -private test
+% atoms answers/1, raised/1, statuses/1, yes, not_a_ground, not_a_profile,
+% not_a_contract_type -- have no counterpart: atoms and compound terms need no
+% import. Only predicates are imported.)
+:- module(test_robustness, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call, [
+    decide_utilities_negotiated_without_prior_call/2,
+    utilities_negotiated_without_prior_call_input_problem/2,
+    utilities_negotiated_without_prior_call_status/2,
+    utilities_negotiated_without_prior_call_checklist/2,
+    utilities_negotiated_without_prior_call_unmet_count/2]).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/queries, [
+    utilities_negotiated_without_prior_call_what_if/4]).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/fixtures, [
+    utilities_negotiated_without_prior_call_subject/1,
+    utilities_negotiated_without_prior_call_profile_for/2]).
+:- use_module(kit/query_combinators, [override_key/4]).
+:- use_module(formalize_lib, [not_member/2, term_mismatch/2]).
+
+% ---- helpers ---------------------------------------------------------
+
+% OUTCOME is answers(VERDICTS) -- every verdict the decision gives -- or
+% raised(ERROR) when the call throws.
+decision_outcome(Profile, Outcome) :-
+    catch(
+        (findall(Verdict, decide_utilities_negotiated_without_prior_call(Profile, Verdict), Verdicts),
+         Outcome = answers(Verdicts)),
+        Error,
+        Outcome = raised(Error)).
+
+gives_no_verdict(Profile) :-
+    decision_outcome(Profile, Outcome),
+    Outcome = answers([]).
+
+% Exactly one verdict, and it is the chapeau's use_unlawful.
+gives_only_use_unlawful(Profile) :-
+    decision_outcome(Profile, Outcome),
+    Outcome = answers([utilities_negotiated_verdict(use_unlawful, n_a, _)]).
+
+gives_only_use_lawful(Profile) :-
+    decision_outcome(Profile, Outcome),
+    Outcome = answers([utilities_negotiated_verdict(use_lawful, _, _)]).
+
+fixture(Subject, Profile) :-
+    utilities_negotiated_without_prior_call_profile_for(Subject, Profile).
+
+% The lawful fixtures, the profiles to start from.
+lawful_subject(Subject) :-
+    utilities_negotiated_without_prior_call_subject(Subject),
+    fixture(Subject, Profile),
+    decide_utilities_negotiated_without_prior_call(Profile, utilities_negotiated_verdict(use_lawful, _, _)).
+
+% Grounds whose own words limit the contract type (NOTES.md section 3).
+ground_limited_by_contract_type(art_50_e_additional_deliveries).
+ground_limited_by_contract_type(art_50_f_repetition).
+ground_limited_by_contract_type(art_50_g_commodity_market).
+ground_limited_by_contract_type(art_50_h_bargain_purchase).
+ground_limited_by_contract_type(art_50_i_advantageous_winding_up).
+ground_limited_by_contract_type(art_50_j_design_contest).
+
+% ---- positive complements (rulings 2026-10-20) ---------------------------
+% Each replaces a seam `not Goal` over decision_outcome/2's shapes: one clause
+% per shape the negated goal does NOT accept.
+
+% answers([_|_]) or raised(_): the complement of gives_no_verdict/1.
+gives_some_verdict_or_raises(Profile) :-
+    decision_outcome(Profile, Outcome),
+    outcome_with_verdicts_or_raised(Outcome).
+outcome_with_verdicts_or_raised(answers([_|_])).
+outcome_with_verdicts_or_raised(raised(_)).
+
+% outcome_without_verdicts/1: the positive complement, over decision_outcome/2's
+% two shapes, of `answers([_|_])` -- no verdict was given, or the call raised.
+outcome_without_verdicts(answers([])).
+outcome_without_verdicts(raised(_)).
+
+% The complements of gives_only_use_unlawful/1 and gives_only_use_lawful/1:
+% the call raised, gave no verdict, gave one verdict that does not match the
+% pattern (formalize_lib term_mismatch/2 over the ground verdict), or gave more
+% than one.
+gives_other_than_only_use_unlawful(Profile) :-
+    decision_outcome(Profile, Outcome),
+    outcome_other_than_only(utilities_negotiated_verdict(use_unlawful, n_a, _), Outcome).
+gives_other_than_only_use_lawful(Profile) :-
+    decision_outcome(Profile, Outcome),
+    outcome_other_than_only(utilities_negotiated_verdict(use_lawful, _, _), Outcome).
+outcome_other_than_only(_, raised(_)).
+outcome_other_than_only(_, answers([])).
+outcome_other_than_only(Pattern, answers([Verdict])) :- term_mismatch(Pattern, Verdict).
+outcome_other_than_only(_, answers([_, _|_])).
+
+% The complement of length(List, 1).
+not_exactly_one([]).
+not_exactly_one([_, _|_]).
+
+% The complement of ground_limited_by_contract_type/1 over the ground atoms.
+ground_not_limited_by_contract_type(Ground) :-
+    not_member(Ground, [
+        art_50_e_additional_deliveries, art_50_f_repetition,
+        art_50_g_commodity_market, art_50_h_bargain_purchase,
+        art_50_i_advantageous_winding_up, art_50_j_design_contest]).
+
+% profile_without_key(Key, Profile, Reduced): dict_remove/3 (Reduced is Profile
+% without Key; fails if Key is absent), written from dict_pairs/2 because the
+% ISO export's dict companion supplies dict_pairs/2, get/3, get/4 and
+% dict_keys/2 only.
+profile_without_key(Key, Profile, Reduced) :-
+    dict_pairs(Profile, Pairs),
+    pairs_without_key(Pairs, Key, ReducedPairs),
+    dict_pairs(Reduced, ReducedPairs).
+pairs_without_key([Key-_|Tail], Key, Tail).
+pairs_without_key([OtherKey-Value|Tail], Key, [OtherKey-Value|Rest]) :-
+    dif(OtherKey, Key),
+    pairs_without_key(Tail, Key, Rest).
+
+% =====================================================================
+% 1. DROPPING EACH INPUT, one at a time, from every lawful fixture.
+% =====================================================================
+
+test('there are twelve lawful fixtures to start from') :-
+    findall(Subject, lawful_subject(Subject), Subjects),
+    length(Subjects, 12).
+
+% NOTES.md section 1: with no pleaded ground there is no verdict.
+test('dropping the pleaded ground gives no verdict, for every lawful fixture') :-
+    findall(Subject,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         profile_without_key(pleaded_ground_key, Profile, Reduced),
+         gives_some_verdict_or_raises(Reduced)),
+        Offenders),
+    Offenders = [].
+
+% NOTES.md section 2: an absent condition flag counts as not established, so
+% the ground fails and the use is unlawful. Every key of every lawful fixture
+% other than the three selector keys is a condition flag.
+test('default: dropping any condition flag from a lawful fixture gives use_unlawful') :-
+    % guard against a vacuous pass: the 12 lawful fixtures carry 26 condition flags
+    findall(Subject - Key,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         dict_keys(Profile, Keys),
+         member(Key, Keys),
+         not_member(Key, [pleaded_ground_key, contract_type_key, sole_operator_reason_key])),
+        Examined),
+    length(Examined, ExaminedCount),
+    ExaminedCount #> 20,
+    findall(Subject - Key,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         dict_keys(Profile, Keys),
+         member(Key, Keys),
+         not_member(Key, [pleaded_ground_key, contract_type_key, sole_operator_reason_key]),
+         profile_without_key(Key, Profile, Reduced),
+         gives_other_than_only_use_unlawful(Reduced)),
+        Offenders),
+    Offenders = [].
+
+% NOTES.md section 3: for grounds (e)-(j) the contract type is a condition, so
+% its absence is "not established" and the use is unlawful.
+test('default: dropping the contract type gives use_unlawful where the ground is limited by type') :-
+    findall(Subject,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         get(Profile, pleaded_ground_key, Ground),
+         ground_limited_by_contract_type(Ground),
+         profile_without_key(contract_type_key, Profile, Reduced),
+         gives_other_than_only_use_unlawful(Reduced)),
+        Offenders),
+    Offenders = [].
+
+% NOTES.md section 3: "Grounds (a) to (d) apply to any contract type", so the
+% contract type is not an input of theirs and dropping it changes nothing.
+test('dropping the contract type leaves grounds (a) to (d) lawful') :-
+    findall(Subject,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         get(Profile, pleaded_ground_key, Ground),
+         ground_not_limited_by_contract_type(Ground),
+         profile_without_key(contract_type_key, Profile, Reduced),
+         gives_other_than_only_use_lawful(Reduced)),
+        Offenders),
+    Offenders = [].
+
+% NOTES.md section 4(c): "With no reason given ... the ground fails."
+test('default: dropping the sole operator reason gives use_unlawful') :-
+    findall(Subject,
+        (lawful_subject(Subject), fixture(Subject, Profile),
+         get(Profile, pleaded_ground_key, art_50_c_sole_operator),
+         profile_without_key(sole_operator_reason_key, Profile, Reduced),
+         gives_other_than_only_use_unlawful(Reduced)),
+        Offenders),
+    Offenders = [].
+
+% =====================================================================
+% 2. WRONG TYPES for each input.
+% =====================================================================
+
+% ---- pleaded ground: a non-atom is malformed and refused (ruling
+%      D80); an atom outside the ten is use_unlawful (NOTES.md 1) ----------
+test('pleaded ground spelled as a character list gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, "art_50_a_no_suitable_tenders", Changed),
+    gives_no_verdict(Changed).
+test('pleaded ground given as a number gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, 50, Changed),
+    gives_no_verdict(Changed).
+test('pleaded ground given as a list gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, [art_50_a_no_suitable_tenders], Changed),
+    gives_no_verdict(Changed).
+test('pleaded ground outside the ten gives use_unlawful') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, not_a_ground, Changed),
+    gives_only_use_unlawful(Changed).
+
+% An unbound pleaded ground is not a ground. The lawful clauses read it with
+% get(PROFILE, pleaded_ground_key, <ground>) (rule file lines 149-199), which
+% BINDS the variable to each ground in turn, so a profile that pleads nothing
+% is decided as though it pleaded whichever ground its flags satisfy.
+test('unbound pleaded ground gives no verdict instead of being solved to a lawful ground') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, _, Changed),
+    gives_no_verdict(Changed).
+
+% ---- contract type: a malformed value is refused, not read as "not
+%      established" (ruling D80: the burden-of-proof default of
+%      NOTES.md section 2 covers an ABSENT fact only) ---------------------
+test('contract type spelled as a character list gives no verdict for ground (e)') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, "supplies", Changed),
+    gives_no_verdict(Changed).
+test('contract type given as a number gives no verdict for ground (e)') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, 1, Changed),
+    gives_no_verdict(Changed).
+test('contract type given as a list gives no verdict for ground (e)') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, [supplies], Changed),
+    gives_no_verdict(Changed).
+
+% An unbound contract type: type_status/3 reads it with
+% profile_get(PROFILE, contract_type_key, supplies) (rule file lines 31-50),
+% which binds the variable to supplies and finds the type gate met.
+test('unbound contract type gives no verdict instead of satisfying the supplies-only gate of ground (e)') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, _, Changed),
+    gives_no_verdict(Changed).
+% Ground (f) has TWO met clauses for the type gate (works, services; rule file
+% lines 33-34); an unbound type satisfies both.
+test('unbound contract type gives no verdict instead of satisfying the works-or-services gate of ground (f)') :-
+    fixture("f_lawful", Profile),
+    override_key(Profile, contract_type_key, _, Changed),
+    gives_no_verdict(Changed).
+
+% ---- condition flags: a present value other than true or false is
+%      refused (ruling D80); only an ABSENT flag reads as not
+%      established (NOTES.md section 2) --------------------------------------
+test('condition flag given as the number 1 gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, 1, Changed),
+    gives_no_verdict(Changed).
+test('condition flag given as an atom other than true gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, yes, Changed),
+    gives_no_verdict(Changed).
+test('condition flag spelled as a character list gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, "true", Changed),
+    gives_no_verdict(Changed).
+test('condition flag given as a list gives no verdict') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, [true], Changed),
+    gives_no_verdict(Changed).
+
+% An unbound flag: condition_status/3 reads it with
+% profile_get(PROFILE, KEY, true) (rule file line 22), which binds the
+% variable to true and finds the condition established.
+test('unbound condition flag gives no verdict instead of reading as established') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, _, Changed),
+    gives_no_verdict(Changed).
+test('all condition flags unbound give no verdict instead of a lawful use') :-
+    dict_pairs(Profile, [
+        pleaded_ground_key-art_50_f_repetition,
+        contract_type_key-services,
+        repetition_conforms_to_basic_project-_,
+        original_contract_followed_article_44_1_procedure-_,
+        basic_project_indicated_extent_and_conditions-_,
+        possible_use_of_this_procedure_disclosed_at_first_tender-_
+    ]),
+    gives_no_verdict(Profile).
+
+% ---- sole operator reason: a non-atom is refused (ruling D80); an
+%      atom outside the three makes the ground fail (NOTES.md section 4(c)),
+%      tested in section 5 below --------------------------------------------
+test('sole operator reason spelled as a character list gives no verdict') :-
+    fixture("c_art_lawful", Profile),
+    override_key(Profile, sole_operator_reason_key, "unique_artistic_work_or_performance", Changed),
+    gives_no_verdict(Changed).
+test('sole operator reason given as a number gives no verdict') :-
+    fixture("c_art_lawful", Profile),
+    override_key(Profile, sole_operator_reason_key, 3, Changed),
+    gives_no_verdict(Changed).
+% An unbound reason: ground_status/3 for (c) reads it with profile_get against
+% each of the three reasons (rule file lines 66, 73, 83), binding it.
+test('unbound sole operator reason gives no verdict instead of being solved to a reason') :-
+    fixture("c_art_lawful", Profile),
+    override_key(Profile, sole_operator_reason_key, _, Changed),
+    gives_no_verdict(Changed).
+
+% ---- the profile itself is not a dict ---------------------------------
+test('a profile that is not a dict gives no definite verdict') :-
+    decision_outcome(not_a_profile, Outcome),
+    outcome_without_verdicts(Outcome).
+
+% =====================================================================
+% 3. THE EMPTY PROFILE: no pleaded ground, so no verdict (NOTES.md 1).
+% =====================================================================
+test('empty profile gives no verdict and raises nothing') :-
+    dict_pairs(Empty, []),
+    gives_no_verdict(Empty).
+
+% =====================================================================
+% 4. EXACTLY ONE ANSWER for every registered fixture profile.
+% =====================================================================
+test('every fixture profile yields exactly one verdict') :-
+    findall(Subject, utilities_negotiated_without_prior_call_subject(Subject), Subjects),
+    length(Subjects, 24),
+    findall(Subject,
+        (utilities_negotiated_without_prior_call_subject(Subject),
+         fixture(Subject, Profile),
+         findall(Verdict, decide_utilities_negotiated_without_prior_call(Profile, Verdict), Verdicts),
+         not_exactly_one(Verdicts)),
+        Offenders),
+    Offenders = [].
+
+% =====================================================================
+% 5. THE INPUT CHECK (ruling D80): a present key with the wrong
+%    type is refused (no verdict), and
+%    utilities_negotiated_without_prior_call_input_problem/2 names it.
+% =====================================================================
+problem_is(Profile, ExpectedProblem) :-
+    findall(Problem, utilities_negotiated_without_prior_call_input_problem(Profile, Problem), [ExpectedProblem]),
+    gives_no_verdict(Profile).
+
+test('input check finds no problem on any registered fixture') :-
+    findall(Subject,
+        (utilities_negotiated_without_prior_call_subject(Subject),
+         fixture(Subject, Profile),
+         utilities_negotiated_without_prior_call_input_problem(Profile, _)),
+        Offenders),
+    Offenders = [].
+test('refused: an unbound value is reported as not_ground') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, _, Changed),
+    problem_is(Changed, not_ground).
+test('refused: a profile that is not a dict') :-
+    problem_is(not_a_profile, not_a_dict).
+test('refused: the empty profile is reported as missing the pleaded ground') :-
+    dict_pairs(Empty, []),
+    problem_is(Empty, missing_key(pleaded_ground_key)).
+test('refused: a pleaded ground given as a number') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, 50, Changed),
+    problem_is(Changed, wrong_type(pleaded_ground_key, expected_atom)).
+test('refused: a pleaded ground spelled as a character list') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, pleaded_ground_key, "art_50_a_no_suitable_tenders", Changed),
+    problem_is(Changed, wrong_type(pleaded_ground_key, expected_atom)).
+test('refused: a contract type given as a list') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, [supplies], Changed),
+    problem_is(Changed, wrong_type(contract_type_key, expected_atom)).
+test('refused: a contract type that is not works, supplies or services') :-
+    fixture("e_lawful", Profile),
+    override_key(Profile, contract_type_key, not_a_contract_type, Changed),
+    problem_is(Changed, wrong_value(contract_type_key, expected_contract_type)).
+test('refused: a sole operator reason given as a number') :-
+    fixture("c_art_lawful", Profile),
+    override_key(Profile, sole_operator_reason_key, 3, Changed),
+    problem_is(Changed, wrong_type(sole_operator_reason_key, expected_atom)).
+test('refused: a condition flag given as the number 1') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, 1, Changed),
+    problem_is(Changed,
+        wrong_type(initial_conditions_not_substantially_altered, expected_boolean)).
+test('refused: a condition flag given as an atom other than true or false') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, yes, Changed),
+    problem_is(Changed,
+        wrong_type(initial_conditions_not_substantially_altered, expected_boolean)).
+test('refused: a condition flag spelled as a character list') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, "true", Changed),
+    problem_is(Changed,
+        wrong_type(initial_conditions_not_substantially_altered, expected_boolean)).
+test('documented: a sole operator reason that is an atom outside the three is not refused and the use is unlawful') :-
+    fixture("c_art_lawful", Profile),
+    override_key(Profile, sole_operator_reason_key, not_a_ground, Referred),
+    findall(Problem, utilities_negotiated_without_prior_call_input_problem(Referred, Problem), []),
+    gives_only_use_unlawful(Referred).
+test('status, checklist, unmet count and what-if give no answer on a refused profile') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, 1, Refused),
+    findall(Status, utilities_negotiated_without_prior_call_status(Refused, Status), []),
+    findall(Checklist, utilities_negotiated_without_prior_call_checklist(Refused, Checklist), []),
+    findall(Count, utilities_negotiated_without_prior_call_unmet_count(Refused, Count), []),
+    findall(NewStatus, utilities_negotiated_without_prior_call_what_if(Refused, no_suitable_tenders_or_requests_received, true, NewStatus), []).
+test('what-if can still correct the refused key it overrides') :-
+    fixture("a_lawful", Profile),
+    override_key(Profile, initial_conditions_not_substantially_altered, 1, Refused),
+    utilities_negotiated_without_prior_call_what_if(Refused, initial_conditions_not_substantially_altered, true, use_lawful).
+
+:- end_module(test_robustness).

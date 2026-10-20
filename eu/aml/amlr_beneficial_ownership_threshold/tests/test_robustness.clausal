@@ -1,0 +1,286 @@
+% =====================================================================
+% test_robustness.clausal -- robustness tests for the AMLR Art 52(1)
+% beneficial-ownership threshold domain: the decision predicate
+% amlr_bo_decision/2 (and assess_amlr_bo/3, which wraps it), plus the raw
+% chain-level verdict amlr_bo_status/2.
+%
+% What a robust answer looks like here. The decision vocabulary is
+% eligible / ineligible / indeterminate (NOTES.md section 4). For a missing
+% or ill-typed input the acceptable outcomes are `indeterminate`, no answer
+% (NOTES.md section 4: "A present ownership_chains value that is not a list
+% of lists of numbers gives no answer"), or a deliberate ISO error from a
+% guard. The domain has no input guards, so any error that comes back is
+% incidental (a crash). A definite `eligible` or `ineligible` is a
+% fails-open defect.
+%
+% Tests whose names start with FAILS OPEN, CRASH or KNOWN DEFECT are minimal
+% reproductions of a defect and are expected to fail until the rulebase is
+% fixed. Do not weaken them.
+%
+% Not included: a profile whose ownership_chains value is an unbound
+% variable ({ownership_chains: _}), and amlr_bo_status/2 with unbound
+% chains. Both do not terminate (the kit's aggregate_over/3 enumerates
+% lists for the unbound value), which would hang this whole file; they are
+% reported separately rather than written as tests.
+% =====================================================================
+
+% (Clausal Prolog: the seam imports of value ATOMS -- eligible, ineligible,
+% indeterminate, ownership_chains, required_ownership_threshold,
+% expected_integer, not_ground, not_a_profile, empty_chain -- and of the data
+% constructors assessment/3, item/3, unknown/1, missing_key/1, not_a_list/1,
+% wrong_type/2 and out_of_range/1 have no counterpart: atoms and compound
+% terms need no import. Only predicates are imported. A profile dict is built
+% with dict_pairs/2.)
+:- module(test_robustness, []).
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold, [
+    amlr_bo_decision/2, amlr_bo_status/2, assess_amlr_bo/3, amlr_bo_effective_holding/2,
+    amlr_bo_subject/1, amlr_bo_profile_for/2, amlr_bo_assess/2]).
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold/beneficial_ownership, [
+    amlr_bo_input_problem/2]).
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold, [
+    amlr_bo_checklist/2, amlr_bo_what_if/3, amlr_bo_gap_to_threshold/2]).
+
+% no_definite_decision(PROFILE): amlr_bo_decision/2 gives neither eligible
+% nor ineligible. An error raised inside propagates and fails the test as a
+% crash.
+% (Clausal Prolog: "eligible is not among the decisions" is dif/2 from every
+% collected decision, in place of the seam's `not in_(...)`.)
+no_definite_decision(Profile) :-
+    findall(D, amlr_bo_decision(Profile, D), Decisions),
+    maplist(dif(eligible), Decisions),
+    maplist(dif(ineligible), Decisions).
+
+% no_definite_status(CHAINS): the same for the raw amlr_bo_status/2.
+no_definite_status(Chains) :-
+    findall(S, amlr_bo_status(Chains, S), Statuses),
+    maplist(dif(eligible), Statuses),
+    maplist(dif(ineligible), Statuses).
+
+exactly_one_decision(Profile) :-
+    findall(D, amlr_bo_decision(Profile, D), Decisions),
+    length(Decisions, 1).
+
+% =====================================================================
+% Controls: the valid starting profiles still give their pinned answers
+% (fixtures.clausal person_direct_30pct and person_chain_50x49pct_below).
+% =====================================================================
+test('control: direct 30 percent is eligible') :-
+    dict_pairs(Profile, [ownership_chains-[[3000]]]),
+    amlr_bo_decision(Profile, eligible).
+test('control: 50 x 49.99 chain is ineligible') :-
+    dict_pairs(Profile, [ownership_chains-[[5000, 4999]]]),
+    amlr_bo_decision(Profile, ineligible).
+
+% =====================================================================
+% 1. Dropping the one required input, ownership_chains (profile_keys.yaml;
+%    INTERFACE-SPEC.md Profile Contract: required, no default).
+% =====================================================================
+test('missing ownership_chains: indeterminate, exactly once') :-
+    dict_pairs(Profile, []),
+    amlr_bo_decision(Profile, indeterminate),
+    dict_pairs(Profile2, []),
+    exactly_one_decision(Profile2).
+test('ownership_chains misspelled as another key: indeterminate') :-
+    dict_pairs(Profile, ['ownership'-[[3000]]]),
+    amlr_bo_decision(Profile, indeterminate).
+
+% =====================================================================
+% 2. Wrong types.
+% =====================================================================
+% --- the known issue: an empty chain counts as 100 percent -------------
+% bo_chain_holding([], 10000) in beneficial_ownership.clausal is the base
+% case of the chain product, so a chain with no levels at all multiplies
+% out to 10000 bp. NOTES.md section 2 records this ("A chain written as an
+% empty list counts as a 100 % holding"), but a chain with no levels states
+% no ownership, so it must not produce a definite beneficial-owner answer.
+test('KNOWN DEFECT: an empty ownership chain [[]] is counted as 100 percent and yields a definite decision') :-
+    dict_pairs(Profile, [ownership_chains-[[]]]),
+    no_definite_decision(Profile).
+test('KNOWN DEFECT: an empty chain beside a 10 percent chain lifts the person over the threshold') :-
+    dict_pairs(Profile, [ownership_chains-[[1000], []]]),
+    no_definite_decision(Profile).
+test('KNOWN DEFECT: amlr_bo_status counts an empty chain [[]] as 100 percent') :-
+    no_definite_status([[]]).
+test('KNOWN DEFECT: assess_amlr_bo reports a definite decision for an empty chain [[]]') :-
+    dict_pairs(Profile, [ownership_chains-[[]]]),
+    assess_amlr_bo("subject", Profile, Result),
+    Result = assessment(_, Decision, _),
+    Decision = indeterminate.
+
+% --- ownership_chains not a list of lists ------------------------------
+% The kit's aggregate_over/3 (query_combinators.seam) iterates with in_/2
+% and drops any member whose chain product fails, so a value that is not a
+% list of lists sums to 0 and is reported ineligible. This contradicts
+% NOTES.md section 4, which says such a value "gives no answer".
+test('FAILS OPEN: ownership_chains given as a number yields ineligible') :-
+    dict_pairs(Profile, [ownership_chains-3000]),
+    no_definite_decision(Profile).
+test('FAILS OPEN: ownership_chains given as an atom yields ineligible') :-
+    dict_pairs(Profile, [ownership_chains-'thirty']),
+    no_definite_decision(Profile).
+test('FAILS OPEN: ownership_chains given as a string yields ineligible') :-
+    dict_pairs(Profile, [ownership_chains-"3000"]),
+    no_definite_decision(Profile).
+test('FAILS OPEN: ownership_chains given as the boolean atom true yields ineligible') :-
+    dict_pairs(Profile, [ownership_chains-'true']),
+    no_definite_decision(Profile).
+test('FAILS OPEN: ownership_chains given as a flat list of numbers yields ineligible') :-
+    dict_pairs(Profile, [ownership_chains-[3000]]),
+    no_definite_decision(Profile).
+test('FAILS OPEN: amlr_bo_status on chains given as an atom yields ineligible') :-
+    no_definite_status('thirty').
+
+% --- a level of a chain not a number -----------------------------------
+% The chain product RESULT == LEVEL * TAIL / 10000 in beneficial_ownership.clausal
+% raises a CLP domain_error(clpz_expression, _) on these; that is not a guard.
+test('CRASH: a chain level given as a string raises a CLP domain error') :-
+    dict_pairs(Profile, [ownership_chains-[["3000"]]]),
+    no_definite_decision(Profile).
+test('CRASH: a string on the second level of a chain raises a CLP domain error') :-
+    dict_pairs(Profile, [ownership_chains-[[5000, "5000"]]]),
+    no_definite_decision(Profile).
+test('CRASH: a chain level given as an atom raises a CLP domain error') :-
+    dict_pairs(Profile, [ownership_chains-[['thirty']]]),
+    no_definite_decision(Profile).
+test('CRASH: a chain level given as a list raises a CLP domain error') :-
+    dict_pairs(Profile, [ownership_chains-[[[3000]]]]),
+    no_definite_decision(Profile).
+test('CRASH: a chain level given as the boolean atom true raises a CLP domain error') :-
+    dict_pairs(Profile, [ownership_chains-[['true']]]),
+    no_definite_decision(Profile).
+
+% --- the profile itself not a dict --------------------------------------
+test('profile given as an atom: no definite decision') :-
+    no_definite_decision('profile').
+test('profile given as a list: no definite decision') :-
+    no_definite_decision([]).
+test('profile given as a number: no definite decision') :-
+    no_definite_decision(42).
+
+% =====================================================================
+% 3. The empty profile, and the empty list of chains.
+%    {} is pinned above (indeterminate). An empty LIST of chains is by
+%    design ineligible: NOTES.md section 2, "An empty list of chains gives
+%    0", and beneficial_ownership.clausal's aggregation comment, "empty CHAINS
+%    -> 0". It is evidence of no ownership, not a missing input.
+% =====================================================================
+test('empty profile: indeterminate, no crash') :-
+    dict_pairs(Profile, []),
+    no_definite_decision(Profile).
+test('empty list of chains (by design, NOTES section 2): ineligible, exactly once') :-
+    dict_pairs(Profile, [ownership_chains-[]]),
+    amlr_bo_decision(Profile, ineligible),
+    dict_pairs(Profile2, [ownership_chains-[]]),
+    exactly_one_decision(Profile2),
+    amlr_bo_effective_holding([], 0).
+
+% =====================================================================
+% 4. Exactly one answer for every fixture profile (fixtures.clausal).
+% =====================================================================
+test('exactly one decision: every fixture subject') :-
+    findall(S, amlr_bo_subject(S), Subjects),
+    length(Subjects, 3),
+    findall(S,
+            ( member(S, Subjects),
+              amlr_bo_profile_for(S, P),
+              exactly_one_decision(P) ),
+            Single),
+    length(Single, 3).
+test('exactly one assessment: every fixture subject') :-
+    findall(S, amlr_bo_subject(S), Subjects),
+    findall(S,
+            ( member(S, Subjects),
+              findall(R, amlr_bo_assess(S, R), Results),
+              length(Results, 1) ),
+            Single),
+    length(Single, 3).
+
+% =====================================================================
+% Boundary values at the 2500 bp line (parameters.clausal bo_threshold; Art
+% 52(1) "25 % or more", inclusive).
+% =====================================================================
+test('boundary: 2499 bp is ineligible') :-
+    dict_pairs(Profile, [ownership_chains-[[2499]]]),
+    amlr_bo_decision(Profile, ineligible).
+test('boundary: 2500 bp is eligible') :-
+    dict_pairs(Profile, [ownership_chains-[[2500]]]),
+    amlr_bo_decision(Profile, eligible).
+test('boundary: 2501 bp is eligible') :-
+    dict_pairs(Profile, [ownership_chains-[[2501]]]),
+    amlr_bo_decision(Profile, eligible).
+test('boundary: parallel chains 1000 + 1499 bp is ineligible') :-
+    dict_pairs(Profile, [ownership_chains-[[1000], [1499]]]),
+    amlr_bo_decision(Profile, ineligible).
+
+% =====================================================================
+% 5. The input check (added with the D80 fix, 2026-10-20). Each problem
+%    term of amlr_bo_input_problem/2 is reported for a minimal profile, a
+%    valid profile has none, the problem is the reason in the checklist
+%    item, and the unbound cases that used to hang now terminate.
+% =====================================================================
+test('input check: a valid profile has no problem') :-
+    dict_pairs(Profile, [ownership_chains-[[5000, 4999], [3000]]]),
+    findall(P, amlr_bo_input_problem(Profile, P), []).
+test('input check: exactly one problem term is reported') :-
+    dict_pairs(Profile, [ownership_chains-[[], ['thirty'], [-1]]]),
+    findall(P, amlr_bo_input_problem(Profile, P), Problems),
+    length(Problems, 1).
+test('input check reports not_ground for an unbound ownership_chains value') :-
+    dict_pairs(Profile, [ownership_chains-_]),
+    amlr_bo_input_problem(Profile, not_ground).
+test('input check reports not_ground for an unbound level inside a chain') :-
+    dict_pairs(Profile, [ownership_chains-[[5000, _]]]),
+    amlr_bo_input_problem(Profile, not_ground).
+test('input check reports not_a_profile for an atom profile') :-
+    amlr_bo_input_problem('profile', not_a_profile).
+test('input check reports missing_key for the empty profile') :-
+    dict_pairs(Profile, []),
+    amlr_bo_input_problem(Profile, missing_key(ownership_chains)).
+test('input check reports not_a_list for ownership_chains given as a number') :-
+    dict_pairs(Profile, [ownership_chains-3000]),
+    amlr_bo_input_problem(Profile, not_a_list(ownership_chains)).
+test('input check reports not_a_list for a chain given as a number') :-
+    dict_pairs(Profile, [ownership_chains-[3000]]),
+    amlr_bo_input_problem(Profile, not_a_list(3000)).
+test('input check reports empty_chain for [[]]') :-
+    dict_pairs(Profile, [ownership_chains-[[]]]),
+    amlr_bo_input_problem(Profile, empty_chain).
+test('input check reports wrong_type expected_integer for a string level') :-
+    dict_pairs(Profile, [ownership_chains-[["3000"]]]),
+    amlr_bo_input_problem(Profile, wrong_type("3000", expected_integer)).
+test('input check reports out_of_range for a negative level') :-
+    dict_pairs(Profile, [ownership_chains-[[-1]]]),
+    amlr_bo_input_problem(Profile, out_of_range(-1)).
+test('input check reports out_of_range above 10000 basis points') :-
+    dict_pairs(Profile, [ownership_chains-[[10001]]]),
+    amlr_bo_input_problem(Profile, out_of_range(10001)).
+test('input check accepts the range ends 0 and 10000 basis points') :-
+    dict_pairs(Profile, [ownership_chains-[[0], [10000]]]),
+    findall(P, amlr_bo_input_problem(Profile, P), []).
+test('the checklist item names the problem as its unknown reason') :-
+    dict_pairs(Profile, [ownership_chains-[[]]]),
+    amlr_bo_checklist(Profile, Checklist),
+    Checklist = [item(required_ownership_threshold, unknown([empty_chain]), _)].
+test('an unbound ownership_chains value is indeterminate and terminates (formerly did not terminate)') :-
+    dict_pairs(Profile, [ownership_chains-_]),
+    amlr_bo_decision(Profile, indeterminate),
+    dict_pairs(Profile2, [ownership_chains-_]),
+    exactly_one_decision(Profile2).
+test('amlr_bo_status with unbound chains is indeterminate and terminates (formerly did not terminate)') :-
+    findall(S, amlr_bo_status(_, S), [indeterminate]).
+test('an unbound profile is indeterminate') :-
+    amlr_bo_decision(_, indeterminate).
+test('a level above 100 percent is indeterminate') :-
+    dict_pairs(Profile, [ownership_chains-[[20000]]]),
+    amlr_bo_decision(Profile, indeterminate).
+test('a negative level is indeterminate') :-
+    dict_pairs(Profile, [ownership_chains-[[-5000], [8000]]]),
+    amlr_bo_decision(Profile, indeterminate).
+test('effective holding: an empty chain gives no total') :-
+    findall(T, amlr_bo_effective_holding([[]], T), []).
+test('gap to threshold: an empty chain gives no gap') :-
+    findall(G, amlr_bo_gap_to_threshold([[]], G), []).
+test('what-if: a profile given as an atom gives no answer and no error') :-
+    findall(C, amlr_bo_what_if('profile', [[3000]], C), []).
+
+:- end_module(test_robustness).

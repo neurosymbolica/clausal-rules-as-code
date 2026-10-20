@@ -1,0 +1,456 @@
+% =====================================================================
+% beneficial_ownership.clausal -- THE DETERMINATION: AMLR (Reg (EU)
+% 2024/1624) Art 52(1) beneficial ownership through an OWNERSHIP INTEREST
+% -- aggregate effective holding (direct + indirect, multiplied along each
+% chain and added across parallel chains) against the 25 % (2500 bp)
+% threshold.
+%
+% Wave C re-slice (2026-08-07): this is the domain's SOLE determination, so
+% schema + constants + computation + requirements + decision collapse into
+% this one self-contained file. Clause bodies are BYTE-IDENTICAL to the
+% Wave-B layer files they came from -- only relocation, declaration
+% placement and import wiring changed. The per-clause provenance comments
+% below travelled with their clauses.
+%
+% Contains, in the order the Wave-B DAG had them:
+%   constants     -- bo_threshold/1 (the Art 52(1) 2500 bp value fact),
+%                    amlr_bo_requirement_ids/1
+%   computation   -- chain multiplication + parallel-chain aggregation and
+%                    the bp projections
+%   requirements  -- ownership_threshold_eff/2 + requirement/4 (kit
+%                    status_gte threshold->status family)
+%   decision      -- checklist, labelled decision, assessment envelope
+%
+% VOCABULARY: the six bare atoms below were schema.clausal's whole -module
+% list. They are declared HERE (one owner per name, lint R6) because this is
+% the only slice; queries/fixtures/__init__ import them FROM this file.
+% There is no kernel content: see kernel.clausal's header for the decision
+% procedure that emptied it.
+%
+% INPUT CHECK (D80, 2026-10-20). A complete, well-formed profile is part of
+% this determination's contract. amlr_bo_input_problem/2 (end of file) names
+% the first problem with a profile; every public entry point runs it before
+% any rule decides. A bad profile gives `indeterminate`, with the problem as
+% the reason in the checklist item (unknown([PROBLEM])); a missing
+% ownership_chains key keeps its documented reason unknown([ownership_chains]).
+% An empty chain [] is refused as malformed (a chain needs at least one
+% level), so it can no longer count as a 100 % holding.
+%
+% Clausal Prolog (conversion from the seam, 2026-10-20):
+%   * EXACT ARITHMETIC. The seam computed the chain product with its CLP
+%     `==`, which kept an exact rational (50 % x 49.99 % = 2499.5 bp).
+%     CLP(Z) and ISO arithmetic have no rationals (`#=` with `/` demands an
+%     exact quotient; `is` gives a float), so a holding is carried here as an
+%     exact fraction NUMERATOR/DENOMINATOR of integers (PART 2). A total
+%     that is a whole number of basis points is returned as that integer, as
+%     before; any other total is returned as the reduced fraction term N/D
+%     (2499.5 bp is 4999/2), the ISO spelling of the same exact rational.
+%   * Every threshold comparison is against an INTEGER (2500 bp), and for an
+%     integer T, "holding >= T" holds exactly when "floor(holding) >= T"; so
+%     the comparisons read the whole basis points of the exact total
+%     (holding_whole_basis_points/2) and lose nothing.
+%   * The parallel-chain sum is a local exact fold (bo_sum_of_chains/2) in
+%     place of kit aggregate_over/3, whose sum_list/2 adds numbers and
+%     cannot add fractions.
+%   * No negation: every seam `not G` is now a positive complementary test
+%     (see the input check at the end of this file).
+% =====================================================================
+
+% Clausal Prolog: a .clausal module exports PREDICATES only (Name/Arity). The
+% seam export list also declared VALUE ATOMS and the input-problem data
+% constructors; in Clausal Prolog an atom or a compound term needs no
+% declaration and no import, so they are listed here as documentation only:
+%   eligible, ineligible, indeterminate,
+%   effective_holding_below_25_percent_threshold,
+%   required_ownership_threshold, ownership_chains,
+%   % input-problem vocabulary (amlr_bo_input_problem/2)
+%   not_ground, not_a_profile, missing_key(KEY), not_a_list(WHAT),
+%   empty_chain, wrong_type(WHAT, EXPECTED), out_of_range(LEVEL),
+%   expected_integer
+:- module(beneficial_ownership, [
+    bo_threshold/1,
+    amlr_bo_requirement_ids/1,
+    amlr_bo_threshold/1,
+    amlr_bo_effective_holding/2,
+    amlr_bo_status/2,
+    amlr_bo_minimum_holding_bps/1,
+    amlr_bo_effective_holding_bps/2,
+    requirement/4,
+    amlr_bo_checklist/2,
+    amlr_bo_decision/2,
+    assess_amlr_bo/3,
+    amlr_bo_input_problem/2,
+    amlr_bo_input_complete/1
+]).
+
+:- use_module(library(clpz)).
+
+% (Clausal Prolog: cite/1 and the three citation key atoms need no import;
+% only the implements/1 predicate is imported.)
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold/citations, [implements/1]).
+% `met` IDENTITY (kit threshold->status family adoption, 2026-07-19), and the
+% one NON-LEXICAL import in this file: requirement/4 statuses are built by
+% formalize_lib.status_gte, whose `met` is formalize_lib-scoped, so no clause
+% here SPELLS `met`. It is imported (never redeclared -- a local declaration
+% would be a SEPARATE functor identity that would not unify with kit-built
+% statuses) because __init__.clausal re-exports `met` FROM THIS MODULE onto the
+% package facade, which is where tests/test_l1_interface.clausal and
+% tests/test_queries.clausal import it from. Formerly schema.clausal held this
+% re-export. Deleting it breaks both test files, loudly.
+% (Clausal Prolog: `met`, value/1, absent/1, labels/3 and assessment/3 are an
+% atom and data constructors: they are global by spelling and need no import,
+% so only the predicates are imported. profile_lacks/2 is the kit's positive
+% complement of profile_has/2, used by the input check below in place of the
+% seam's `not profile_has(...)`.)
+:- use_module(formalize_lib, [
+    status_gte/4,
+    eval_requirements/4, decide_labeled/3,
+    profile_lacks/2]).
+
+bo_threshold(2500).
+
+amlr_bo_requirement_ids([required_ownership_threshold]).
+
+% =====================================================================
+% PART 2 -- exact holdings (Clausal Prolog). A holding is the term
+% NUMERATOR/DENOMINATOR, both integers, DENOMINATOR > 0, read in basis
+% points: 4999/2 is 2499.5 bp. bo_chain_holding/2 and bo_sum_of_chains/2
+% build it unreduced; bo_effective_holding/2 returns it as an integer or a
+% reduced fraction.
+% =====================================================================
+
+% The empty chain is the product's neutral element, 10000 bp (100 %). It is
+% only ever reached as the tail of a chain: the input check refuses an empty
+% chain [] before any chain is multiplied out.
+bo_chain_holding([], 10000/1).
+
+bo_chain_holding([LevelBasisPoints|RemainingLevels], ResultNumerator/ResultDenominator) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    bo_chain_holding(RemainingLevels, TailNumerator/TailDenominator),
+    % RESULT_BASIS_POINTS == LEVEL_BASIS_POINTS * TAIL_BASIS_POINTS / 10000,
+    % exactly: the numerator takes the level, the denominator the / 10000.
+    ResultNumerator #= LevelBasisPoints * TailNumerator,
+    ResultDenominator #= TailDenominator * 10000.
+
+% Parallel-chain aggregation (Art 52(1) "adding together the results from
+% those various chains"): kit aggregate_over (query_combinators) adopted in
+% place of the module-local map+sum fold (decision-preserving dedup).
+% bo_chain_holding/2 is deterministic (disjoint list-shape guards), so the
+% combinator's once/1 is a no-op; empty CHAINS -> 0, same as the retired
+% base clause, and the integer-bp sum is the same right-fold (kit sum_list).
+% (Clausal Prolog: the sum is now the local exact fold bo_sum_of_chains/2 --
+% kit sum_list/2 cannot add fractions. It is the same right-fold over the
+% same list, empty CHAINS -> 0, with no once/1.)
+bo_chains_total(Chains, TotalBasisPoints) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    bo_sum_of_chains(Chains, TotalBasisPoints).
+
+bo_sum_of_chains([], 0/1).
+bo_sum_of_chains([Chain|Chains], SumNumerator/SumDenominator) :-
+    bo_chain_holding(Chain, ChainNumerator/ChainDenominator),
+    bo_sum_of_chains(Chains, RestNumerator/RestDenominator),
+    SumNumerator #= ChainNumerator * RestDenominator + RestNumerator * ChainDenominator,
+    SumDenominator #= ChainDenominator * RestDenominator.
+
+bo_effective_holding(Chains, TotalBasisPoints) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    bo_chains_total(Chains, Numerator/Denominator),
+    exact_basis_points(Numerator, Denominator, TotalBasisPoints).
+
+% exact_basis_points(N, D, TOTAL): N/D as an integer when D divides N, else
+% as the reduced fraction term. Disjoint guards on the remainder.
+exact_basis_points(Numerator, Denominator, TotalBasisPoints) :-
+    0 #= Numerator mod Denominator,
+    TotalBasisPoints #= Numerator // Denominator.
+exact_basis_points(Numerator, Denominator, ReducedNumerator/ReducedDenominator) :-
+    Remainder #= Numerator mod Denominator,
+    Remainder #\= 0,
+    Divisor is gcd(Numerator, Denominator),
+    ReducedNumerator #= Numerator // Divisor,
+    ReducedDenominator #= Denominator // Divisor.
+
+% holding_whole_basis_points(TOTAL, WHOLE): the whole basis points of an
+% exact total (floor; every holding is >= 0, so // is the floor). Compared
+% with an INTEGER threshold T, TOTAL >= T exactly when WHOLE >= T.
+holding_whole_basis_points(TotalBasisPoints, TotalBasisPoints) :-
+    integer(TotalBasisPoints).
+holding_whole_basis_points(Numerator/Denominator, WholeBasisPoints) :-
+    WholeBasisPoints #= Numerator // Denominator.
+
+% The Art 52(1) OWNERSHIP-INTEREST TEST, stated once per polarity.
+% Art 52(1): "'an ownership interest in the corporate entity' shall mean
+% direct or indirect ownership of 25 % or more of the shares or voting
+% rights or other ownership interest" -- "or more" is INCLUSIVE, hence `>=`
+% for the reaching test (exactly 2500 bp qualifies) and the strict
+% complement `<` for the below test. Both bo_status/2 clauses previously
+% spelled this same aggregate / line / compare sequence verbatim; naming it
+% puts the statutory test in ONE place and leaves bo_status/2 as verdict
+% wiring a reader can check against Art 52(1) without reading any
+% arithmetic (tell-don't-ask, trigger 1: the sequence recurs across 2
+% clauses AND the instrument names the concept -- docs/formalization/
+% tell-dont-ask.md §2, §5). Both are GUARDS (arity 1, no STATUS output
+% arg), so the ground verdict stays in bo_status/2's head (C17).
+% Deliberately NOT added to the -module list above: keeping them
+% module-local means neither can collide with the exported bare atom
+% effective_holding_below_25_percent_threshold (guide §4).
+%
+% NOTE the requirement/4 channel below reaches the SAME Art 52(1) line by a
+% different route (kit status_gte over ownership_threshold_eff/2, which adds
+% the three-valued missing-evidence branch bo_status/2 has no room for).
+% These predicates are NOT folded into that channel and vice versa: the kit
+% call IS the tell there (guide §3, kit precedence), and the two channels
+% are separately mutation-covered (M2 here, M3 there).
+effective_holding_reaches_threshold(Chains) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    bo_effective_holding(Chains, TotalBasisPoints),
+    bo_threshold(ThresholdBasisPoints),
+    holding_whole_basis_points(TotalBasisPoints, WholeBasisPoints),
+    WholeBasisPoints #>= ThresholdBasisPoints.
+
+effective_holding_below_threshold(Chains) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    bo_effective_holding(Chains, TotalBasisPoints),
+    bo_threshold(ThresholdBasisPoints),
+    holding_whole_basis_points(TotalBasisPoints, WholeBasisPoints),
+    WholeBasisPoints #< ThresholdBasisPoints.
+
+bo_status(Chains, eligible) :-
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    effective_holding_reaches_threshold(Chains).
+
+bo_status(Chains, ineligible) :-
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    effective_holding_below_threshold(Chains).
+
+amlr_bo_threshold(ThresholdBasisPoints) :- bo_threshold(ThresholdBasisPoints).
+
+% The chain-level entry points run the input check on the one-key profile
+% {ownership_chains: CHAINS}. Bad chains give no holding, and the status
+% `indeterminate` (D80; the domain's own "cannot decide" verdict).
+% (Clausal Prolog: the seam `not amlr_bo_input_complete(...)` of the
+% indeterminate clause is its positive complement: the profile HAS an input
+% problem. amlr_bo_input_problem/2 gives exactly one problem, so the clause
+% gives exactly one answer.)
+amlr_bo_effective_holding(Chains, TotalBasisPoints) :-
+    dict_pairs(Profile, [ownership_chains-Chains]),
+    amlr_bo_input_complete(Profile),
+    bo_effective_holding(Chains, TotalBasisPoints).
+
+amlr_bo_status(Chains, Status) :-
+    dict_pairs(Profile, [ownership_chains-Chains]),
+    amlr_bo_input_complete(Profile),
+    bo_status(Chains, Status).
+amlr_bo_status(Chains, indeterminate) :-
+    dict_pairs(Profile, [ownership_chains-Chains]),
+    amlr_bo_input_problem(Profile, _).
+
+amlr_bo_minimum_holding_bps(ThresholdBps) :- bo_threshold(ThresholdBps).
+
+amlr_bo_effective_holding_bps(Chains, TotalBps) :-
+    dict_pairs(Profile, [ownership_chains-Chains]),
+    amlr_bo_input_complete(Profile),
+    bo_effective_holding(Chains, TotalBps).
+
+% Kit threshold->status family adoption (2026-07-19 value-level design;
+% decision-preserving): the hand-rolled 3-clause met / unmet / unknown
+% comparison block is retired in favor of kit status_gte. bo_effective_holding
+% is a DERIVED value (not a profile key), so key-level check_gte does not
+% apply; ownership_threshold_eff/2 extracts the effective value instead:
+%   value(TOTAL_BPS)               -- ownership_chains present AND the Art 52(1)
+%                                   aggregate derives;
+%   absent([ownership_chains])   -- the ownership_chains KEY is missing. The
+%                                   unknown guard is the KEY, NOT the compared
+%                                   value -- exactly the retired third clause's
+%                                   `not (ownership_chains in PROFILE)` guard.
+% A present ownership_chains whose value defeats bo_effective_holding matches
+% NEITHER clause, so requirement/4 fails with no solution -- same as the
+% retired block. Boundary sense preserved: INCLUSIVE >= (Art 52(1) "25 % or
+% more"; exactly 2500 bp is met). Unmet reason atom + Art 52(1) citation
+% (all three status branches, incl. unknown) unchanged. `met`/`unmet`/`unknown`
+% are now built INSIDE formalize_lib; this module re-exports the kit's `met` so
+% the domain-wide bare-atom identity is the kit's (see the import block above;
+% formerly schema.clausal held that re-export).
+% D80 input check: value(...) only for a profile with no input problem;
+% otherwise absent([REASON]), so status_gte builds unknown([REASON]) and the
+% decision is indeterminate. REASON is ownership_chains for the missing key
+% (unchanged) and the problem term itself for every other problem.
+% (Clausal Prolog: the value handed to status_gte is the WHOLE basis points
+% of the exact total -- the comparison with the integer threshold is exact,
+% see holding_whole_basis_points/2.)
+ownership_threshold_eff(Profile, value(WholeBps)) :-
+    amlr_bo_input_complete(Profile),
+    get(Profile, ownership_chains, Chains),
+    bo_effective_holding(Chains, TotalBps),
+    holding_whole_basis_points(TotalBps, WholeBps).
+
+ownership_threshold_eff(Profile, absent([Reason])) :-
+    amlr_bo_input_problem(Profile, Problem),
+    input_problem_reason(Problem, Reason).
+
+% (Clausal Prolog: the seam `PROBLEM is not missing_key(ownership_chains)`
+% guard is dif/2.)
+input_problem_reason(missing_key(ownership_chains), ownership_chains).
+input_problem_reason(Problem, Problem) :- dif(Problem, missing_key(ownership_chains)).
+
+requirement(required_ownership_threshold, Profile, Status, cite(eu_reg_2024_1624_art_52_1)) :-
+    implements(eu_reg_2024_1624_art_52_1),
+    ownership_threshold_eff(Profile, Eff),
+    bo_threshold(ThresholdBps),
+    status_gte(Eff, ThresholdBps, effective_holding_below_25_percent_threshold, Status).
+
+amlr_bo_checklist(Profile, Checklist) :-
+    amlr_bo_requirement_ids(Ids),
+    eval_requirements(Ids, Profile,
+                      requirement,
+                      Checklist).
+
+amlr_bo_decision(Profile, Decision) :-
+    amlr_bo_checklist(Profile, Checklist),
+    decide_labeled(Checklist, labels(eligible, indeterminate, ineligible), Decision).
+
+assess_amlr_bo(Subject, Profile, assessment(Subject, Decision, Checklist)) :-
+    amlr_bo_checklist(Profile, Checklist),
+    amlr_bo_decision(Profile, Decision).
+
+% =====================================================================
+% no_statute -- predicates with no statutory basis of their own (provision tracking,
+% 2026-10-18). The Art 52(1) determination is made in the clauses above that carry
+% implements(...); these only expose, read into or reshape it.
+% =====================================================================
+
+no_statute("amlr_bo_threshold", 1, "interface_shape").
+no_statute("amlr_bo_effective_holding", 2, "interface_shape").
+no_statute("amlr_bo_status", 2, "interface_shape").
+no_statute("amlr_bo_minimum_holding_bps", 1, "interface_shape").
+no_statute("amlr_bo_effective_holding_bps", 2, "interface_shape").
+no_statute("ownership_threshold_eff", 2, "computation_helper").
+no_statute("amlr_bo_checklist", 2, "projection_of_verdict").
+no_statute("amlr_bo_decision", 2, "projection_of_verdict").
+no_statute("assess_amlr_bo", 3, "projection_of_verdict").
+no_statute("amlr_bo_input_problem", 2, "interface_shape").
+no_statute("amlr_bo_input_complete", 1, "interface_shape").
+% Clausal Prolog: the helpers the conversion added (exact-fraction arithmetic in
+% place of the seam's rationals, and the positive complements in place of `not`).
+no_statute("bo_sum_of_chains", 2, "computation_helper").
+no_statute("exact_basis_points", 3, "computation_helper").
+no_statute("holding_whole_basis_points", 2, "computation_helper").
+no_statute("not_a_proper_list", 1, "computation_helper").
+no_statute("not_an_integer", 1, "computation_helper").
+
+% =====================================================================
+% THE INPUT CHECK (D80, 2026-10-20)
+% =====================================================================
+% amlr_bo_input_problem(PROFILE, PROBLEM): PROBLEM is the FIRST thing wrong
+% with PROFILE, in this order:
+%   not_ground                              -- PROFILE holds an unbound variable
+%   not_a_profile                           -- PROFILE is not a dict
+%   missing_key(ownership_chains)           -- the one required key is absent
+%                                              (profile_keys.yaml; no default)
+%   not_a_list(ownership_chains)            -- its value is not a proper list
+%   not_a_list(CHAIN)                       -- a chain is not a proper list
+%   empty_chain                             -- a chain has no level (lead's rule
+%                                              under D80: a chain needs at least
+%                                              one level)
+%   wrong_type(LEVEL, expected_integer)     -- a level is not an integer
+%   out_of_range(LEVEL)                     -- a level is below 0 or above
+%                                              10 000 basis points (100 %)
+% The check is total and negation-safe: ground/1 is tested first, every
+% later test needs a ground dict, in_/2 only runs over a proper list, and no
+% arithmetic is done before the integer/1 test.
+%
+% Clausal Prolog (no negation, ruling 2026-10-20): the problems are
+% collected with findall/3 and the first problem is the head of that list;
+% a profile is complete when the list is []. Each seam `not TEST` is a
+% positive complement:
+%   not ground(P)        -> term_variables(P, [_|_])  (P has a variable)
+%   not profile_has(P,K) -> kit profile_lacks(P, K)    (dif/2 from every key)
+%   not is_list(X)       -> not_a_proper_list/1
+%   not integer(X)       -> not_an_integer/1
+% ONE negation is left: `\+ dict_keys(Profile, _)` for not_a_profile. The
+% engine's dict is neither atomic nor compound, while the ISO export's dict
+% is an attribute(Key, Value) list, which IS compound, so no positive type
+% test names "not a dict" on both; it needs a reified dict test from the
+% engine and the dict shim.
+amlr_bo_input_problem(Profile, Problem) :-
+    findall(Candidate, input_problem_candidate(Profile, Candidate), [Problem|_]).
+
+amlr_bo_input_complete(Profile) :-
+    findall(Candidate, input_problem_candidate(Profile, Candidate), []).
+
+input_problem_candidate(Profile, not_ground) :-
+    term_variables(Profile, [_|_]).
+input_problem_candidate(Profile, not_a_profile) :-
+    ground(Profile),
+    \+ dict_keys(Profile, _).
+input_problem_candidate(Profile, missing_key(ownership_chains)) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    profile_lacks(Profile, ownership_chains).
+input_problem_candidate(Profile, Problem) :-
+    ground(Profile),
+    dict_keys(Profile, _),
+    get(Profile, ownership_chains, Chains),
+    chains_problem(Chains, Problem).
+
+chains_problem(Chains, not_a_list(ownership_chains)) :-
+    not_a_proper_list(Chains).
+chains_problem(Chains, Problem) :-
+    is_list(Chains),
+    member(Chain, Chains),
+    chain_problem(Chain, Problem).
+
+chain_problem(Chain, not_a_list(Chain)) :-
+    not_a_proper_list(Chain).
+chain_problem(Chain, empty_chain) :-
+    Chain = [].
+chain_problem(Chain, Problem) :-
+    is_list(Chain),
+    member(Level, Chain),
+    level_problem(Level, Problem).
+
+level_problem(Level, wrong_type(Level, expected_integer)) :-
+    not_an_integer(Level).
+level_problem(Level, out_of_range(Level)) :-
+    integer(Level),
+    Level #< 0.
+level_problem(Level, out_of_range(Level)) :-
+    integer(Level),
+    Level #> 10000.
+
+% not_a_proper_list/1: the positive complement of is_list/1 for a GROUND
+% term (the only kind the input check reaches): an atomic term other than [],
+% a list cell whose tail is not a proper list, a compound that is not a list
+% cell (its name/arity differs from the list cell's, read off [_] so the
+% clause holds on every system's list functor), or an engine dict, which is
+% neither atomic nor compound. Disjoint on the engine; in the ISO export a
+% dict IS a list, so there the last clause can hold for a proper list (still
+% a problem, still the domain's `indeterminate`). The dict clause excludes []
+% because the ISO export's empty dict IS [], the end of every proper list.
+not_a_proper_list(Term) :-
+    atomic(Term),
+    dif(Term, []).
+not_a_proper_list([_|Tail]) :-
+    not_a_proper_list(Tail).
+not_a_proper_list(Term) :-
+    compound(Term),
+    functor(Term, Name, Arity),
+    functor([_], ListName, ListArity),
+    dif(Name/Arity, ListName/ListArity).
+not_a_proper_list(Term) :-
+    dif(Term, []),
+    dict_keys(Term, _).
+
+% not_an_integer/1: the positive complement of integer/1 for a GROUND value
+% (the only kind the input check reaches): an atom, a float, a compound (lists
+% and character lists included), or an engine dict, which is neither atomic
+% nor compound. Disjoint on the engine; in the ISO export a dict IS a list, so
+% there the last two clauses can both hold for one value (same problem term,
+% no effect on the first problem or on acceptability).
+not_an_integer(Value) :- atom(Value).
+not_an_integer(Value) :- float(Value).
+not_an_integer(Value) :- compound(Value).
+not_an_integer(Value) :- dict_keys(Value, _).
+
+:- end_module(beneficial_ownership).

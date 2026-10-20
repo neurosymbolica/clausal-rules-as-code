@@ -137,3 +137,41 @@ def test_main_structural_exit_code(tmp_path):
     _w(d, "__init__.seam", "r(a, P, S, implements(eu_reg_x)) <- (true)\n")
     _citations(d, [])  # missing record -> structural problem
     assert cp.main([d]) == 1
+
+
+# A Clausal Prolog domain's translation layer is translation/<lang>.clausal in Prolog
+# syntax (2026-10-20 conversion). translation_langs listed only seam files, so such a
+# layer was never checked: the gate passed it without reading it.
+_PL_CITATIONS = (":- module(citations, [citation/2, implements/1]).\n\n"
+                 "citation(eu_reg_x, [label-'Art 1', ref-'r', verbatim-'v']).\n\n"
+                 "implements(K) :- citation(K, _).\n")
+
+
+def _pl_translated_domain(d, fr_records):
+    _w(d, "rules.clausal", ":- module(rules, [r/1]).\n\nr(a) :- implements(eu_reg_x).\n")
+    _w(d, "citations.clausal", _PL_CITATIONS)
+    _w(d, "citations-sources.yaml", "eu_reg_x:\n  status: verified\n")
+    _w(d, "translation/fr.clausal", ":- module(fr, [translation/2]).\n\n" + fr_records)
+    _w(d, "translation/fr-sources.yaml", "eu_reg_x:\n  status: verified\n")
+
+
+def test_translation_langs_lists_a_prolog_layer(tmp_path):
+    d = str(tmp_path)
+    _w(d, "translation/fr.clausal", ":- module(fr, [translation/2]).\n")
+    _w(d, "translation/de.seam", "-module(de, [translation(ATOM, META)])\n")
+    _w(d, "translation/fr-sources.yaml", "{}\n")
+    assert cp.translation_langs(d) == ["de", "fr"]
+
+
+def test_prolog_translation_layer_incomplete_is_a_problem(tmp_path):
+    d = str(tmp_path)
+    _pl_translated_domain(d, "")
+    probs = cp.structural_problems(d)
+    assert "translation[fr]: eu_reg_x: citation atom has no translation record" in probs, probs
+
+
+def test_domain_metrics_counts_a_prolog_translation_layer(tmp_path):
+    d = str(tmp_path)
+    _pl_translated_domain(d, "translation(eu_reg_x, [ref-'r', verbatim-'v']).\n")
+    m = cp.domain_metrics(d)
+    assert m["translations"]["fr"] == {"total": 1, "verified": 1, "unverified": 0}
