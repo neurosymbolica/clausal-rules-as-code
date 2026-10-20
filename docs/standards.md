@@ -9,8 +9,29 @@ open where none does.
 | The legal text itself | Formex 4 XML (the Official Journal's format) and XHTML, as published by the Publications Office, pinned by SHA-256 |
 | Units of the text | Article, paragraph and point identifiers taken from the official document structure |
 | Licence | European Union Public Licence, EUPL-1.2, for the whole repository |
-| Execution | Clausal Prolog, an open-source engine directed at the ISO Prolog standard; the two core kit libraries also ship ISO Prolog (`.pl`) versions |
+| Language | Clausal Prolog (`.clausal`), a restricted subset of ISO Prolog, meant to run on ordinary ISO-conforming Prolog engines; see below |
 | Data formats | Plain text: YAML records, Markdown documentation, HTML reports; no proprietary formats |
+
+## The language: a restricted subset of ISO Prolog
+
+The rules are written in **Clausal Prolog** (`.clausal` files), and it is a deliberately
+**restricted subset of ISO Prolog** (ISO/IEC 13211-1). That restriction is the point:
+
+- **It runs on standard engines.** Because every Clausal Prolog program is ISO Prolog, it is meant
+  to run on ordinary ISO-conforming engines, such as Scryer Prolog and Trealla Prolog, as well as
+  on the Clausal engine, with small companion libraries for what ISO leaves open (dictionaries,
+  dates). Plain ISO Prolog (`.pl`) versions are generated from the same source. No one engine,
+  and no one vendor, is needed to run the law.
+- **It keeps rules declarative.** The cut (`!`) and if-then-else (`->`) are refused, so no rule
+  silently discards answers because of the order its clauses are written in; the remaining
+  cut-like constructs, such as negation as failure, are being phased out in favour of their pure
+  equivalents. A rule can be read on its own, next to the provision it implements.
+- **It is a standard others already know.** ISO Prolog is an international standard with several
+  independent open-source implementations and decades of use in legal and expert systems.
+
+The domains in this preview are being converted from the engine's earlier Python-like syntax
+(`.seam`) to `.clausal`, with each domain's own tests required to pass unchanged on the Clausal
+engine and on independent ISO engines.
 
 ## Interoperability by design
 
