@@ -1,0 +1,319 @@
+# =====================================================================
+# cumulation.clausal -- eu/state_aid/de_minimis_cumulation's SOLE
+# DETERMINATION SLICE: the Commission Regulation (EU) 2023/2831 Art 3(2)
+# de minimis CUMULATION test, top to bottom in one file -- its statutory
+# VALUE facts (the EUR 300 000 ceiling, the 3-year lookback, the 29-Feb
+# clamp), its rolling-window aggregation, and its verdict assembly.
+#
+# Determination-slices re-slice (Wave C, 2026-08-07). Formerly four
+# horizontal layers -- schema + constants + computation + decision --
+# merged here UNCHANGED: every clause body is byte-identical to its
+# pre-merge text (this is a relocation, not a rewrite), and the multiset
+# of (functor, arity) clause heads across the package is equal on both
+# sides.
+#
+# ONE SLICE, not two, and the reason is the law rather than the old file
+# count. de_minimis_aid_in_window/3 is public and de_minimis_verdict/3 is
+# public, but they are ONE determination: Art 3(2) is a single norm whose
+# aggregate ("the total amount of de minimis aid granted ... over any
+# period of three years") is the input to its own ceiling test. Splitting
+# them would put a slice->slice edge back into the DAG for no legal
+# object -- the same finding as eu/banking/crr_lcr (one slice absorbing
+# its numeric projection) and eu/banking/crr_own_funds_min_ratios ("three
+# ratios that are ONE determination").
+#
+# NO kernel.clausal, and the reason is measured rather than assumed
+# (recipe "Kernel membership", decision procedure):
+#   * step 1 -- this domain declares NO compound result constructor for
+#     its determination. The verdict shape is the BARE ATOM TRIPLE
+#     eligible/ineligible/indeterminate, carried in argument 3 of
+#     de_minimis_verdict/3; there is no <domain>_verdict/N term, no
+#     factor/2, no obligation/2. The one compound the domain does mint --
+#     ref_comparison/4 -- is the QUERY layer's own #5 comparison result
+#     and is declared in queries.clausal, the file that both builds and
+#     is the sole in-package reader of it; a top-layer constructor is not
+#     a shared floor.
+#   * step 2 -- VALUE ATOMS face the strict ">= 2 SLICES" bar, and with
+#     exactly one determination that bar is unreachable by construction.
+#     All three of the old schema.clausal atoms therefore live HERE, in
+#     the only slice that spells them; queries.clausal imports the two it
+#     actually uses FROM this file (`indeterminate` it never spells --
+#     it inherits the IC-11 channel through de_minimis_verdict/3 -- so it
+#     no longer imports it either).
+# Same shape and same reasoning as eu/banking/crr_lcr and
+# eu/crypto_assets/mica_casp_authorisation_conditions, which also carry
+# no kernel file.
+#
+# IMPORTS ARE LEXICAL CLOSURE ONLY (design doc SS0.1-0.2): the three
+# names below are exactly the ones this file's clause bodies SPELL. The
+# refuted Wave-B rule ("bare atoms are module-scoped; they resolve
+# against the CALLING module at solve time", quoted verbatim in the old
+# schema.clausal header) is NOT reproduced -- bare-atom resolution is
+# compile-time and lexical, per file (clausal/logic/compiler_v2.py:
+# 647-729). Rule 3 (input-constructor closure) has NO instance here:
+# every argument the tests and eval/score_harness.py pass to this file's
+# public predicates is a plain integer, a [Y, M, D] list or a list of
+# [DATE, AMOUNT] pairs -- no domain-minted compound term reaches a query
+# argument, so nothing has to be in scope beyond the lexical closure.
+# =====================================================================
+
+-module(cumulation, [
+    eligible,
+    ineligible,
+    indeterminate,
+    de_minimis_ceiling(CEILING),
+    de_minimis_ceiling_amount(AMOUNT),
+    sum_cents(A0, A1),
+    is_feb_29(A0, A1),
+    lookback_years(A0),
+    de_minimis_aid_in_window(GRANTS, REFERENCE_DATE, TOTAL_CENTS),
+    de_minimis_verdict(GRANTS, REFERENCE_DATE, VERDICT),
+    # the input check (ruling D80, 2026-10-20) and its problem terms
+    de_minimis_input_problem(GRANTS, REFERENCE_DATE, PROBLEM),
+    not_ground(ARGUMENT),
+    wrong_type(ARGUMENT, EXPECTED),
+    not_a_list(ARGUMENT),
+    malformed_grant(GRANT),
+    negative_amount(ARGUMENT),
+    grants,
+    reference_date,
+    grant_date,
+    grant_amount,
+    expected_date,
+    expected_integer
+])
+-double_quotes(chars)
+
+-import_from(european_union, [euro, eur_cent])
+-import_from(formalize_lib, [sum_list])
+-import_from(date_time, [
+    date, days_between])
+-import_from(kit.date_guard, [must_be_date])
+-import_from(eu.state_aid.de_minimis_cumulation.citations, [
+    implements, eu_reg_2023_2831_art_3_1, eu_reg_2023_2831_art_3_2, eu_reg_2023_2831_art_3_4, eu_reg_2023_2831_art_3_7])
+
+-strict_atoms
+
+# ---------------------------------------------------------------------
+# Statutory VALUE facts (formerly constants.clausal). de_minimis_ceiling/1
+# and lookback_years/1 are the domain's two parameter sources; both carry
+# their Art 3(2) provenance in parameters.clausal, and queries.clausal
+# reads the SAME de_minimis_ceiling/1 fact so the decision and the query
+# layer cannot drift.
+# ---------------------------------------------------------------------
+
+-constant_number_currency(de_minimis_ceiling_eur, 300_000, euro)
+
+# The public interface still answers in euro-cents, but the value is now
+# DERIVED from the declaration above rather than written a second time:
+# dividing by the minor unit yields a bare integer. One source of truth.
+de_minimis_ceiling(CENTS) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    CENTS == constant(de_minimis_ceiling_eur) / eur_cent
+)
+
+# The same ceiling as a UNITED value, for callers that compute with it.
+# `constant/1` is file-local by construction (an imported constant is not
+# re-registered on the importer -- clausal/logic/constants.py:387), so a
+# sibling that needs the value gets it through this predicate, not through
+# a second declaration. Exported, because queries.clausal computes with it.
+de_minimis_ceiling_amount(AMOUNT) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    AMOUNT == constant(de_minimis_ceiling_eur)
+)
+
+sum_cents(LIST, SUM) <- (sum_list(LIST, SUM))
+
+is_feb_29(2, 29),
+
+lookback_years(3),
+
+# ---------------------------------------------------------------------
+# Rolling three-year window + cumulation (formerly computation.clausal).
+# window_start_3y/6 and the helpers of the input check below
+# (input_problem_candidate/3, grant_problem/2, is_integer_amount/1,
+# is_date/1) are slice-private: they have clauses here and no consumer
+# outside this file, so they stay off the -module list. The check itself,
+# de_minimis_input_problem/3, is exported so a caller can ask WHY an input
+# was refused.
+# ---------------------------------------------------------------------
+
+# ---------------------------------------------------------------------
+# THE INPUT CHECK (ruling D80, 2026-10-20). Complete, well-typed input
+# is part of this domain's contract: GRANTS is a ground list of
+# [date(Y, M, D), AMOUNT_CENTS] pairs with AMOUNT_CENTS a non-negative
+# integer (NOTES.md section 2: "Amounts are integer euro-cents"; Art 3(5):
+# "All figures used shall be gross"), and REFERENCE_DATE is a date(Y, M, D).
+# de_minimis_input_problem/3 gives the FIRST problem, or fails when the
+# input is well formed. It is total and negation-safe: groundness is tested
+# first (so `in_` never runs over an open list -- the cause of the former
+# non-termination on an unbound or partial grants list), then the list
+# shape, then each grant's shape, date type and amount type, and only then
+# the sign of an amount already known to be an integer.
+#
+# Every public entry point runs it before deciding:
+#   de_minimis_aid_in_window/3 fails on a problem (no total), so every query
+#   predicate built on it fails too; de_minimis_verdict/3 answers
+#   `indeterminate` (its third clause); de_minimis_what_if/4 inherits that.
+# ---------------------------------------------------------------------
+
+de_minimis_input_problem(GRANTS, REFERENCE_DATE, PROBLEM) <- (
+    findall(CANDIDATE, input_problem_candidate(GRANTS, REFERENCE_DATE, CANDIDATE), [PROBLEM, *_])
+)
+
+input_problem_candidate(GRANTS, _, not_ground(grants)) <- (
+    not ground(GRANTS)
+)
+
+input_problem_candidate(_, REFERENCE_DATE, not_ground(reference_date)) <- (
+    not ground(REFERENCE_DATE)
+)
+
+input_problem_candidate(GRANTS, REFERENCE_DATE, wrong_type(reference_date, expected_date)) <- (
+    ground(GRANTS),
+    ground(REFERENCE_DATE),
+    not is_date(REFERENCE_DATE)
+)
+
+input_problem_candidate(GRANTS, REFERENCE_DATE, not_a_list(grants)) <- (
+    ground(GRANTS),
+    ground(REFERENCE_DATE),
+    not is_list(GRANTS)
+)
+
+input_problem_candidate(GRANTS, REFERENCE_DATE, PROBLEM) <- (
+    ground(GRANTS),
+    ground(REFERENCE_DATE),
+    is_list(GRANTS),
+    in_(GRANT, GRANTS),
+    grant_problem(GRANT, PROBLEM)
+)
+
+# One grant, ground by now. Clause order is the reporting order.
+grant_problem(GRANT, malformed_grant(GRANT)) <- (
+    not (is_list(GRANT), length(GRANT, 2))
+)
+
+grant_problem([GRANT_DATE, _], wrong_type(grant_date, expected_date)) <- (
+    not is_date(GRANT_DATE)
+)
+
+grant_problem([_, AMOUNT], wrong_type(grant_amount, expected_integer)) <- (
+    not is_integer_amount(AMOUNT)
+)
+
+grant_problem([_, AMOUNT], negative_amount(grant_amount)) <- (
+    is_integer_amount(AMOUNT),
+    AMOUNT < 0
+)
+
+# An integer that is not a boolean (True/False are integers to the host).
+is_integer_amount(AMOUNT) <- (
+    integer(AMOUNT),
+    not (AMOUNT is True),
+    not (AMOUNT is False)
+)
+
+# A date in the sense of the kit date guard, as a test that fails instead
+# of raising. Only called on a ground term, so the guard cannot raise its
+# instantiation error here.
+is_date(VALUE) <- (
+    catch(must_be_date(VALUE), error(type_error(_, _), _), fail)
+)
+
+de_minimis_aid_in_window(GRANTS, REFERENCE_DATE, TOTAL_CENTS) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    implements(eu_reg_2023_2831_art_3_4),
+    not de_minimis_input_problem(GRANTS, REFERENCE_DATE, _),
+    date(REF_YEAR, REF_MONTH, REF_DAY) is REFERENCE_DATE,
+    window_start_3y(REF_YEAR, REF_MONTH, REF_DAY, START_YEAR, START_MONTH, START_DAY),
+    WINDOW_START_OBJECT is date(START_YEAR, START_MONTH, START_DAY),
+    findall(AMOUNT, (
+        in_([GRANT_DATE, AMOUNT], GRANTS),
+        days_between(REFERENCE_DATE, GRANT_DATE, DAYS_BEFORE_REF),
+        DAYS_BEFORE_REF >= 0,
+        days_between(GRANT_DATE, WINDOW_START_OBJECT, DAYS_AFTER_START),
+        DAYS_AFTER_START > 0
+    ), AMOUNTS),
+    sum_cents(AMOUNTS, TOTAL_CENTS)
+)
+
+window_start_3y(REF_YEAR, 2, 29, START_YEAR, 2, 28) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    lookback_years(N),
+    START_YEAR == REF_YEAR - N
+)
+
+window_start_3y(REF_YEAR, REF_MONTH, REF_DAY, START_YEAR, REF_MONTH, REF_DAY) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    not is_feb_29(REF_MONTH, REF_DAY),
+    lookback_years(N),
+    START_YEAR == REF_YEAR - N
+)
+
+# ---------------------------------------------------------------------
+# Verdict assembly (formerly decision.clausal). Art 3(2)/(7): "shall not
+# exceed" is inclusive, so exactly EUR 300 000 stays eligible; the third
+# clause is the IC-11 unknown channel for any input problem that
+# de_minimis_input_problem/3 reports (incomplete input, a reference or
+# grant date that is not a date, a non-integer or negative amount, a
+# grants list or grant of the wrong shape).
+#
+# The Art 3(2) ceiling test itself, stated ONCE per polarity. Art 3(2)
+# reads "the total amount of de minimis aid granted ... to a single
+# undertaking shall NOT EXCEED EUR 300 000 over any period of three
+# years", and Art 3(7) turns the same words round for the negative case
+# ("aid EXCEEDING the ceiling ... shall not benefit"). "Shall not exceed"
+# is inclusive, hence <= for the within-ceiling limb and the strict
+# complement > for the exceeding limb -- the two guards are disjoint and
+# jointly exhaustive over an integer TOTAL_CENTS, which is what keeps
+# de_minimis_verdict/3 deterministic.
+#
+# Both are GUARDS: they take an already-bound TOTAL_CENTS and bind
+# nothing (CEILING is local to each body), so the verdict atoms stay
+# ground in the clause heads and C17 is not undone. Module-local -- NOT
+# added to the -module list above, per the guide's default, so the names
+# cannot collide with an imported atom and the domain's declared
+# interface (and its generated INTERFACE-SPEC.md) is unchanged.
+# ---------------------------------------------------------------------
+
+cumulated_aid_within_ceiling(TOTAL_CENTS) <- (
+    implements(eu_reg_2023_2831_art_3_2),
+    TOTAL_CENTS(eur_cent) <= constant(de_minimis_ceiling_eur)
+)
+
+cumulated_aid_exceeds_ceiling(TOTAL_CENTS) <- (
+    implements(eu_reg_2023_2831_art_3_7),
+    TOTAL_CENTS(eur_cent) > constant(de_minimis_ceiling_eur)
+)
+
+de_minimis_verdict(GRANTS, REFERENCE_DATE, eligible) <- (
+    implements(eu_reg_2023_2831_art_3_1),
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_aid_in_window(GRANTS, REFERENCE_DATE, TOTAL_CENTS),
+    cumulated_aid_within_ceiling(TOTAL_CENTS)
+)
+
+de_minimis_verdict(GRANTS, REFERENCE_DATE, ineligible) <- (
+    implements(eu_reg_2023_2831_art_3_1),
+    implements(eu_reg_2023_2831_art_3_2),
+    de_minimis_aid_in_window(GRANTS, REFERENCE_DATE, TOTAL_CENTS),
+    cumulated_aid_exceeds_ceiling(TOTAL_CENTS)
+)
+
+de_minimis_verdict(GRANTS, REFERENCE_DATE, indeterminate) <- (
+    de_minimis_input_problem(GRANTS, REFERENCE_DATE, _)
+)
+
+# =====================================================================
+# no_statute -- predicates with no statutory basis of their own (provision tracking,
+# 2026-10-18; input check 2026-10-20): summing a list of amounts, and refusing input that is
+# incomplete, of the wrong type or a negative amount.
+# =====================================================================
+
+no_statute("sum_cents", 2, "computation_helper"),
+no_statute("de_minimis_input_problem", 3, "computation_helper"),
+no_statute("input_problem_candidate", 3, "computation_helper"),
+no_statute("grant_problem", 2, "computation_helper"),
+no_statute("is_integer_amount", 1, "computation_helper"),
+no_statute("is_date", 1, "computation_helper"),

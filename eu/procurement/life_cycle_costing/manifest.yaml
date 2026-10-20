@@ -1,0 +1,836 @@
+id: eu/procurement/life_cycle_costing
+shape_family: constraint-satisfaction
+kit_version: "0.1.0"
+
+# Determination-slices layout. THREE legal determinations, so THREE slices, and
+# NO SLICE GATES ANOTHER. That separation is the domain's whole point:
+#
+#   lcc_method_validity.clausal -- Art 68(1)(b) + Art 68(2): is the contracting
+#     authority's life-cycle costing method lawful? Owns the nine validity
+#     limbs, the two applicability gates, the ten profile keys it reads and the
+#     per-limb checklist.
+#   mandatory_method.clausal -- Art 68(3) + Annex XIII: has a Union legislative
+#     act made a common method mandatory, and was it applied? Owns the
+#     three-atom Union-act vocabulary, the single-member Annex XIII fact table,
+#     and the displacement rule.
+#   lcc_computation.clausal -- Art 68(1): what does the life-cycle cost come
+#     to? Owns the six-atom cost-category vocabulary, per-component
+#     admissibility, and the exact integer sum.
+#
+# A method can be unlawful and the arithmetic still correct; a mandatory Union
+# method can displace the authority's own without making that own method's
+# defects disappear. `decide_lcc_method_validity/2` never reads the Art 68(3)
+# keys (see operative_readings[art_68_3_displacement_does_not_switch_off_art_68_2]),
+# `decide_lcc_mandatory_method/2` never reads the Art 68(2) flags, and
+# `decide_lcc_computation/2` never reads either.
+#
+# kernel.clausal holds the THREE result-shape constructors and nothing else --
+# no rules, no facts, no imports. Result-shape constructors are an
+# unconditional kernel category regardless of slice count; the VALUE atoms live
+# in whichever slice reads them (declare-where-used).
+modules:
+  - kernel
+  - citations
+  - parameters
+  - queries
+  - fixtures
+
+# public_interface: bare atoms (vocabulary) + name/arity predicates, grouped per
+# submodule -- keep in sync with the `-module(...)` export headers re-exported
+# via __init__.clausal. The ORDER's public_interface is a strict SUBSET of this:
+# it pins only the twelve names the sealed oracle actually calls, read
+# mechanically off eval/score_harness.py with
+# `auto.oracle_interface.oracle_calls` (which reports `unenumerable: []` and
+# `unfollowed: []` for this harness, so that list is COMPLETE for predicates).
+# This list is the package's own surface and is producer-authored.
+public_interface:
+  # -- kernel.clausal (result-shape constructors) --
+  - "lcc_method_validity_verdict/3"
+  - "lcc_mandatory_method_verdict/3"
+  - "lcc_computation_verdict/3"
+  # -- lcc_method_validity.clausal (verdict vocabulary) --
+  - "valid_lcc_method"
+  - "invalid_lcc_method"
+  - "satisfied"
+  - "not_satisfied"
+  - "externality_costs_assessed"
+  - "externality_costs_not_assessed"
+  # -- lcc_method_validity.clausal (the nine Art 68 limb ids, in statutory order) --
+  - "externality_cost_monetary_value_not_determinable"
+  - "tenderer_data_not_indicated"
+  - "costing_method_not_indicated"
+  - "externality_method_criteria_not_objectively_verifiable"
+  - "externality_method_criteria_discriminatory"
+  - "undue_favour_or_disadvantage_of_economic_operators"
+  - "externality_method_not_accessible"
+  - "externality_data_not_obtainable_with_reasonable_effort"
+  - "externality_data_not_obtainable_by_gpa_operators"
+  # -- lcc_method_validity.clausal (profile keys) --
+  - "tenderer_data_indicated_in_procurement_documents"
+  - "costing_method_indicated_in_procurement_documents"
+  - "externality_method_criteria_objectively_verifiable"
+  - "externality_method_criteria_non_discriminatory"
+  - "externality_method_established_for_repeated_or_continuous_application"
+  - "externality_method_unduly_favours_or_disadvantages_operators"
+  - "externality_method_accessible_to_all_interested_parties"
+  - "externality_data_obtainable_with_reasonable_effort"
+  - "externality_data_obtainable_by_third_country_gpa_operators"
+  # -- lcc_method_validity.clausal (rules) --
+  - "decide_lcc_method_validity/2"
+  - "lcc_method_validity_limb_status/4"
+  - "lcc_externality_assessment/2"
+  # -- mandatory_method.clausal (vocabulary) --
+  - "directive_2009_33_ec"
+  - "other_union_act"
+  - "no_union_common_method"
+  - "union_common_method_act_key"
+  - "union_common_method_applied"
+  - "union_common_method_mandatory_and_applied"
+  - "union_common_method_mandatory_and_not_applied"
+  - "no_union_common_method_mandatory"
+  - "listed_in_annex_xiii"
+  - "not_listed_in_annex_xiii"
+  - "no_union_act"
+  - "mandatory_union_common_method_not_applied"
+  # -- mandatory_method.clausal (rules) --
+  - "decide_lcc_mandatory_method/2"
+  - "lcc_mandatory_method_status/3"
+  - "lcc_union_act_listing/2"
+  # -- lcc_computation.clausal (vocabulary) --
+  - "cost_components"
+  - "acquisition_cost"
+  - "use_cost"
+  - "maintenance_cost"
+  - "end_of_life_cost"
+  - "other_cost_borne_by_authority_or_users"
+  - "environmental_externality_cost"
+  - "component_included"
+  - "component_excluded"
+  - "lcc_computed"
+  - "lcc_no_costs_declared"
+  - "lcc_indeterminate"
+  # -- lcc_computation.clausal (rules) --
+  - "lcc_cost_category/1"
+  - "decide_lcc_computation/2"
+  - "lcc_component_admissibility/3"
+  - "lcc_total/2"
+  # -- the D80 input check (life_cycle_costing.clausal) and its problem vocabulary --
+  - "life_cycle_costing_input_problem/3"
+  - "method_validity"
+  - "computation"
+  - "not_ground"
+  - "missing_key/1"
+  - "wrong_type/2"
+  - "not_a_list/1"
+  - "malformed_cost_component/1"
+  - "unknown_cost_category/1"
+  - "negative_amount/1"
+  - "cost_component/1"
+  - "wrong_value/2"
+  - "incoherent_input/1"
+  - "profile"
+  - "expected_dict"
+  - "expected_boolean"
+  - "expected_integer_euro_cents"
+  - "expected_zero_or_one"
+  - "expected_union_act_atom"
+  - "union_common_method_applied_without_union_act"
+  # -- citations.clausal --
+  - "cite/1"
+  - "citation/2"
+  - "eu_dir_2014_24_art_68_1"
+  - "eu_dir_2014_24_art_68_1_a"
+  - "eu_dir_2014_24_art_68_1_a_i"
+  - "eu_dir_2014_24_art_68_1_a_ii"
+  - "eu_dir_2014_24_art_68_1_a_iii"
+  - "eu_dir_2014_24_art_68_1_a_iv"
+  - "eu_dir_2014_24_art_68_1_b"
+  - "eu_dir_2014_24_art_68_2"
+  - "eu_dir_2014_24_art_68_2_a"
+  - "eu_dir_2014_24_art_68_2_b"
+  - "eu_dir_2014_24_art_68_2_c"
+  - "eu_dir_2014_24_art_68_3"
+  - "eu_dir_2014_24_annex_xiii"
+  # -- queries.clausal --
+  - "life_cycle_costing_profile_keys/1"
+  - "life_cycle_costing_what_if/4"
+  # -- fixtures.clausal --
+  - "life_cycle_costing_subject/1"
+  - "life_cycle_costing_profile_for/2"
+  - "life_cycle_costing_assess/2"
+
+# INDEPENDENCE CLASSIFICATION -- SPLIT, DECLARED, AND DELIBERATELY NOT
+# AVERAGED. The domain as a whole has NO third-party verdict oracle, so the
+# label is `no_oracle`. What eval/ actually carries, limb by limb:
+#
+#  (1) ART 68(2) METHOD VALIDITY -- nothing external, and there is no honest
+#      way to dress it otherwise. Every one of the nine limbs turns on an
+#      open-textured judgement the Directive leaves undefined ("objectively
+#      verifiable", "non-discriminatory", "unduly favour", "accessible",
+#      "reasonable effort", "normally diligent"), and every one of them is an
+#      ATOMIC INPUT here. THERE IS NO CJEU AUTHORITY ON ARTICLE 68 AT ALL --
+#      searched 2026-08-20 over the 231 CJEU judgments, orders and AG opinions
+#      that EUR-Lex records as citing CELEX 32014L0024; eight mention an
+#      "Article 68" and none of them is this one (three quote Art 67(2)'s
+#      cross-reference in a legal-framework recital, the rest are Art 68 of
+#      Directive 2004/17, Directive 2017/1132, Italian Legislative Decree
+#      163/2006 or the Romanian procurement law). That negative rests on
+#      EUR-Lex's citation graph being complete for 32014L0024.
+#  (2) ART 68(3) MANDATORY-METHOD DISPLACEMENT -- ONE fact is externally
+#      anchored and nothing more. `annex_xiii_act/1`'s single member comes from
+#      this domain's own Annex XIII pin, which is third-party text this author
+#      did not write. That is VALUE independence for "which act is on the
+#      list". It is NOT a verdict oracle: whether an act makes a common method
+#      mandatory FOR THIS CONTRACT is an atomic input, and whether the list is
+#      constitutive or declaratory is an unattested reading of this author's own.
+#      SEE THE FOURTH `sources:` ENTRY BELOW BEFORE READING ANY MORE INTO THIS.
+#  (3) THE COMPUTATION -- NOTHING. Integer addition over a declared list with an
+#      admissibility filter, checked against the same author's second
+#      implementation of the same reading.
+#  (4) eval/score_harness.py -- a same-author differential over all three
+#      determinations: an internal-consistency cross-check, NOT an independent
+#      oracle. FORMALIZING.md 9.5 requires the producer and the oracle to have
+#      different authors; this Wave-3 commission violates that by construction
+#      (one agent authored the order and the oracle) and the violation is
+#      recorded here rather than papered over.
+#
+# What IS unusually strong here, and is the only claim worth making: the
+# statutory text is anchored by TWO byte-identical statute pins whose cuts are
+# machine-checked (`extract_roots()`), and every citation verbatim was READ OUT
+# OF THOSE BYTES by the real reader rather than transcribed.
+independence: no_oracle
+
+# NO FAMILY BACKBONE IMPORT, AND THAT IS A DELIBERATE, CHECKABLE CLAIM.
+#
+# `eu.procurement.directive_2014_24` exports contract-type, contracting-authority-type and
+# procedure-type vocabulary plus the Art 4 threshold tables. Article 68 has a
+# hook for NONE of them: it carries no monetary threshold, no procedure
+# condition, and -- unlike Art 67(2)'s final sentence, which lets a Member State
+# limit a price-only award BY CONTRACT TYPE AND BY AUTHORITY TYPE -- no rule
+# whose operation turns on which kind of contract or which kind of authority is
+# in front of it. Art 68(1) speaks of "a product, service or works", but it
+# speaks of all three identically, so no clause of this domain would ever
+# discriminate between the contract-type atoms.
+#
+# Bare-atom resolution is compile-time and lexical PER FILE
+# (clausal/logic/compiler_v2.py:647-729), so importing names no clause spells
+# would be a DEAD IMPORT justified by a caller-resolution mechanism that does
+# not exist -- the exact defect the 2026-08 import minimisation removed corpus
+# -wide (127 -> 60 authored imports, 18 -> 0 dead edges). The Wave-2 Art 67
+# sibling imports the seven entity atoms because ITS Art 67(2) rule reads them;
+# copying that here would be cargo cult.
+#
+# WHAT TO DO IF THIS IS WRONG: the refutation is one grep. If any clause of
+# this domain ever spells a `eu.procurement.directive_2014_24` name, add the import and
+# delete this note. Until then the correct value is the empty list, not a
+# plausible-looking dependency.
+uses: []
+
+scope: "EU Directive 2014/24/EU Article 68 -- life-cycle costing. THREE
+  separable determinations over ONE procurement's declared life-cycle costing
+  approach; none gates another.
+  (A) METHOD VALIDITY: is the approach lawful? Returns valid_lcc_method, or
+  invalid_lcc_method with EVERY Art 68 limb the facts defeat -- an
+  environmental externality cost whose monetary value cannot be determined and
+  verified (Art 68(1)(b) proviso); procurement documents that fail to indicate
+  the data tenderers must provide, or the method the authority will use (Art
+  68(2) first alinea, two separate limbs); and the three cumulative conditions
+  Art 68(2) second alinea imposes on the method used to assess externality
+  costs -- objectively verifiable criteria and non-discriminatory criteria (two
+  limbs from point (a) sentence 1), no undue favour or disadvantage where the
+  method was not established for repeated or continuous application (point (a)
+  sentence 2), accessibility to all interested parties (point (b)), and data
+  obtainable with reasonable effort by normally diligent operators, both
+  generally and by operators from third countries party to the GPA (two limbs
+  from point (c)). Each defect carries its pinpoint citation.
+  TWO APPLICABILITY GATES, AND THEY OPERATE AT DIFFERENT LEVELS. The OUTER gate
+  is Art 68(2)'s own opening words, 'Where contracting authorities assess the
+  costs using a life-cycle costing approach': an EMPTY cost-component list is a
+  procurement that uses no such approach, and Art 68 then imposes nothing at
+  all. The INNER gate is Art 68(2) second alinea's own subject, 'The method
+  used for the assessment of costs imputed to environmental externalities':
+  where no declared component is an environmental externality cost there is no
+  such method, so the three conditions and the Art 68(1)(b) proviso are vacuous
+  and their six limbs cannot fire.
+  (B) MANDATORY-METHOD DISPLACEMENT: Art 68(3). Where a Union legislative act
+  has made a common life-cycle-costing method mandatory, that method displaces
+  the authority's own and must be applied; failing to apply it is a defect.
+  Annex XIII's list is PINNED as a second extract and carried as the
+  single-member fact table annex_xiii_act/1, and the listing is REPORTED
+  (lcc_union_act_listing/2) whether or not it changes the duty -- see
+  operative_readings[art_68_3_annex_xiii_is_declaratory].
+  (C) THE COMPUTATION: the exact integer euro-cent sum of the admissible
+  declared components. Six cost categories, five of them Art 68(1)(a) costs
+  borne by the contracting authority or other users and one Art 68(1)(b)
+  externality cost. A component is EXCLUDED from the sum, and its category
+  reported, exactly where it is an externality cost whose monetary value cannot
+  be determined and verified; the Art 68(1)(b) proviso is read for that
+  category ALONE. An empty component list is lcc_no_costs_declared with a total
+  of 0; any negative amount is lcc_indeterminate with a total of 0, and
+  lcc_total/2 yields NO SOLUTION for it rather than clamping.
+  ALL ARITHMETIC IS EXACT INTEGER ADDITION. Money is integer euro-cents; there
+  is NO DIVISION anywhere and therefore NO ROUNDING -- no discounting, no net
+  present value, no annualisation, no residual value, no per-kilometre or
+  per-unit normalisation. Art 68 prescribes none of those and this domain
+  invents none.
+  OUT OF SCOPE, and registered in excluded_set with pinpoints: the Art 2(1)(20)
+  definition of 'life cycle'; Art 25 (GPA and other international agreements),
+  to which Art 68(2)(c) refers; Arts 42-43 (technical specifications and
+  labels), the other place a life-cycle requirement can be imposed; Art 67
+  (award criteria), which is where a life-cycle cost is USED; Art 69
+  (abnormally low tenders); Art 70 (contract performance conditions); and Art
+  87 (exercise of the delegation), the procedure by which Annex XIII is
+  updated. ALSO OUT OF SCOPE and NOT registrable there, because it is a
+  different instrument this domain does not pin: the CONTENT of any Union act
+  that makes a common method mandatory -- above all Directive 2009/33/EC, whose
+  costing methodology no longer exists (see the fourth `sources:` entry).
+  And every evaluative judgement Art 68 leaves open -- whether a monetary value
+  can be determined and verified, whether criteria are objectively verifiable
+  or non-discriminatory, whether a method unduly favours an operator, whether
+  it is accessible, and whether data can be provided with reasonable effort by
+  a normally diligent operator -- is an ATOMIC INPUT, never derived.
+  INPUTS MUST BE COMPLETE AND WELL TYPED (D80): life_cycle_costing_input_problem/3
+  runs before every determination; a profile that is not ground, has a key of the
+  wrong type or outside its vocabulary, lacks a key the open gates require, or
+  pairs no_union_common_method with union_common_method_applied True gives
+  lcc_indeterminate from the computation and NO ANSWER from the other entry points."
+
+sources:
+  - "Directive 2014/24/EU of the European Parliament and of the Council of
+    26 February 2014 on public procurement and repealing Directive 2004/18/EC
+    (OJ L 94, 28.3.2014), CELEX 32014L0024 -- Article 68 (life-cycle costing).
+    PINNED at ARTICLE granularity: consolidated CELEX 02014L0024-20260101,
+    sources/02014L0024-20260101-art068.fmx4.xml, sha256
+    c01729e7fd182ac1bd2f06306be94916ea98842f9a1783490ffd6d47a0b9c000, 13 units,
+    cut BYTE-IDENTICALLY (processing instructions included) from
+    CL2014L0024EN0060010.0001.xml sha256 d732f7f9a547b315...e157772. See
+    sources/02014L0024-20260101-art068.meta.yaml for the cut and its three-way
+    verification. Article 68 has never been amended: the consolidated Formex
+    carries no CLG.MDF modification marker anywhere in the article."
+  - "Directive 2014/24/EU Annex XIII (list of Union legal acts referred to in
+    Article 68(3)). PINNED as a SECOND extract of the same document:
+    sources/02014L0024-20260101-annex13.fmx4.xml, sha256
+    8db7c50b81a128c852b229b4348d29e580069815e0de0e4c2266ff96d9e010ce, 2 units,
+    root division_annex_xiii. Its whole operative content is one sentence --
+    'Directive 2009/33/EC of the European Parliament and of the Council.' -- and
+    that sentence is what annex_xiii_act/1 carries. Also never amended since
+    2014."
+  - "NO FAMILY BACKBONE. `eu.procurement.directive_2014_24.vocabulary` is deliberately NOT used: no
+    clause of this domain spells any name it exports, and Article 68 has no
+    contract-type, authority-type, procedure-type or threshold hook. See the
+    `uses:` comment."
+  - "DIRECTIVE 2009/33/EC -- AND THE FINDING THAT MATTERS MOST IN THIS FILE.
+    Annex XIII names one act: Directive 2009/33/EC on the promotion of clean and
+    energy-efficient road transport vehicles. Its ORIGINAL Article 6 and Annex
+    carried a common 'methodology for the calculation of operational lifetime
+    costs' with prescribed figures -- fuel energy contents (diesel 36 MJ/litre,
+    petrol 32 MJ/litre, ...), emission costs (CO2 0,03-0,04 EUR/kg; NOx 0,0044
+    EUR/g; NMHC 0,001 EUR/g; particulates 0,087 EUR/g, 2007 prices, doublable
+    but no further) and lifetime mileages (M1 200 000 km, N1 250 000 km, N2/N3
+    1 000 000 km, M2/M3 800 000 km). That WOULD have been a published,
+    third-party, arithmetically checkable method and therefore real value
+    independence for the Art 68(3) limb.
+    IT NO LONGER EXISTS. Article 1(7) of Directive (EU) 2019/1161 reads
+    'Articles 6 and 7 are deleted', and Article 1(11) replaced the Annex
+    wholesale with clean-vehicle procurement targets. In force since 1 August
+    2019; the latest consolidation of 2009/33 (02009L0033-20240520) renders the
+    gap as the EUR-Lex deletion marker and contains no MJ, no EUR/kg, no EUR/g
+    and no lifetime mileage. Recital 24 of 2019/1161 says the intent in terms:
+    'no mandatory methodology should be required to be used'.
+    ANNEX XIII WAS NEVER UPDATED. The Art 68(3) delegated power to update the
+    list 'due to ... the repeal or modification of existing legal acts' has not
+    been exercised: the only acts ever amending 2014/24 are six threshold
+    regulations and one corrigendum. So on the text in force on 2026-01-01,
+    Annex XIII IS A DANGLING POINTER and Art 68(3) first alinea has, on its own
+    designated mechanism, nothing to bite on.
+    THIS DOMAIN THEREFORE CLAIMS NO INDEPENDENCE FROM THE CLEAN VEHICLES
+    METHODOLOGY AND DOES NOT IMPLEMENT IT. What Art 68(3) is formalized as here
+    is the DISPLACEMENT RULE alone, with the identity of the mandating act an
+    atomic input. It also makes operative_readings[art_68_3_annex_xiii_is_declaratory]
+    LOAD-BEARING rather than academic: under the constitutive reading Art 68(3)
+    is a dead letter today, and under the declaratory reading it revives the
+    moment any Union act imposes a method, whether or not the list catches up.
+    A CORPUS HAZARD RECORDED WHILE HERE, because this layer ingests Formex: the
+    .ENG.fmx4 manifestation of the CONSOLIDATED 2009/33 still physically
+    contains the full text of the deleted Articles 6 and 7, wrapped in
+    <?CLG.MDFO ... ACTION=\"DELETED\" ...?> processing instructions. A reader
+    that strips processing instructions and takes the elements will emit an
+    Article 6 that does not legally exist. `_tools/provisions/units.py` has no
+    CLG.MDF handling today; 2014/24 happens not to be affected because none of
+    its amendments deleted anything, but the next consolidated act pinned in
+    this corpus may be."
+  - "CJEU: NONE. There is no CJEU or General Court judgment, order or Advocate
+    General opinion interpreting Article 68 of Directive 2014/24/EU. Searched
+    2026-08-20 across all 231 case-law documents EUR-Lex records as citing CELEX
+    32014L0024. This domain therefore ships no eval/cjeu_cases.yaml and claims
+    no source-independent axis, unlike its Wave-2 Art 67 sibling."
+
+query_interface:
+  23: "lcc_total/2"                     # calculation: the exact integer euro-cent life-cycle cost
+
+# THE DEFERRAL REGISTER. Machine-read: check_provisions T3 requires every entry
+# to name RESOLVABLE UNITS of a pinned document, a non-empty reason and a
+# non-empty consequence, and section 6 requires every `what:` in
+# _orders/life-cycle-costing.yaml's deferred_set to appear here.
+#
+# THE REGISTER IS SHORT BECAUSE THE PINS ARE TIGHT. Between them the two
+# extracts define 15 units; 13 are formalized and the 2 below are the two
+# headings. The cross-article boundaries are NOT here -- a deferral of a
+# neighbouring article is UNWRITABLE for a pinned domain, because T3 rejects an
+# entry naming no units and `#art_067` does not resolve against an Art 68
+# extract. `excluded_set` (spec 13.21) is the relation that exists for exactly
+# that case, and T6's load-bearing check is the negative one: a `cites:` that
+# DOES resolve inside this domain's own extract is refused and told to move
+# here.
+deferred_set:
+  - what: article_heading
+    units:
+      - 02014L0024-20260101#art_068
+    reason: >-
+      Article 68's own title, "Life-cycle costing", carries no obligation: it is
+      the document's structure, not operative law. Deferred so that every unit
+      the pinned extract defines is accounted for, rather than left silently
+      unaccounted.
+    consequence: >-
+      None. A heading states no rule, so nothing turns on it.
+  - what: annex_heading
+    units:
+      - 02014L0024-20260101#division_annex_xiii
+    reason: >-
+      The bare "ANNEX XIII" title of the annex container. The annex's operative
+      content -- the heading "LIST OF UNION LEGAL ACTS REFERRED TO IN ARTICLE
+      68(3)" together with the one act it names -- is the SECOND unit of that
+      extract and is formalized (annex_xiii_act/1, cited at
+      eu_dir_2014_24_annex_xiii). This unit is the container's own label and
+      states no rule.
+    consequence: >-
+      None. A heading states no rule. Note that this is the only unit either pin
+      contributes that carries no legal content of its own; a reviewer checking
+      whether the Annex XIII pin earns its place should look at the OTHER unit.
+
+# THE SCOPE BOUNDARY REGISTER (spec 13.21). Every entry says "this domain does
+# NOT do X", names the provisions of Directive 2014/24/EU that X lives in, and
+# states what breaks for a caller who relies on this domain anyway.
+#
+# `cites:` NOT `units:`, and the difference is the whole point: a deferral names
+# units of THIS domain's extracts, an exclusion names provisions OUTSIDE them.
+#
+# ONE BOUNDARY IS MISSING FROM THIS REGISTER AND THAT IS A PROPERTY OF THE
+# REGISTER, NOT AN OMISSION. T6 refuses a `cites:` naming a doc_id this domain
+# does not pin, so the single most consequential boundary this domain has --
+# the CONTENT of Directive 2009/33/EC, the act Annex XIII names -- cannot be
+# registered here at all. It is in `scope:` and in the fourth `sources:` entry
+# instead, which are prose and are not checked. A future `excluded_set` that
+# allowed an unpinned instrument with a CELEX id would close that hole.
+excluded_set:
+  - what: definition_of_life_cycle
+    cites:
+      - "02014L0024-20260101#point_002.001_20"
+    reason: >-
+      Art 2(1)(20) defines "life cycle" as all consecutive and/or interlinked
+      stages, including research and development, production, trading and its
+      conditions, transport, use and maintenance, from raw-material acquisition
+      to disposal, clearance and end of service. Article 68 costs THE LIFE
+      CYCLE, so that definition sets the outer edge of what this domain sums --
+      but the definition is a classification question about a particular cost,
+      not a costing rule, and it is not in either pinned extract.
+    consequence: >-
+      A caller must decide for itself, against Art 2(1)(20), whether a cost it
+      is about to declare falls within the product's, works' or service's life
+      cycle at all, and must leave it out of `cost_components` if it does not.
+      This domain sums what it is given: a cost incurred outside the life cycle,
+      declared under any of the six categories, will be added to the total and
+      nothing here can notice.
+  - what: gpa_and_international_agreements
+    cites:
+      - "02014L0024-20260101#art_025"
+    reason: >-
+      Art 68(2)(c) requires the data to be obtainable "including [by] economic
+      operators from third countries party to the GPA or other international
+      agreements by which the Union is bound". WHICH third countries and WHICH
+      agreements those are is Art 25's subject, not Art 68's.
+    consequence: >-
+      A caller must resolve, under Art 25 and the GPA's own coverage schedules,
+      which operators the Art 68(2)(c) extension actually reaches BEFORE setting
+      `externality_data_obtainable_by_third_country_gpa_operators`. This domain
+      takes that boolean as given; it has no list of covered countries and
+      cannot tell an over-broad answer from a correct one.
+  - what: technical_specifications_and_labels
+    cites:
+      - "02014L0024-20260101#art_042"
+      - "02014L0024-20260101#art_043"
+    reason: >-
+      Arts 42 and 43 are the other place a life-cycle consideration enters a
+      procurement: as a technical specification a tender must MEET, or as a
+      label the authority may require. Art 68 is about putting a monetary value
+      on life-cycle costs, which is a different operation with different
+      conditions.
+    consequence: >-
+      A caller must run Arts 42-43 itself for any life-cycle requirement it
+      imposes as a specification rather than costs. Note the sharp edge: a
+      requirement imposed as a technical specification is a PASS/FAIL condition
+      whose breach disqualifies a tender, whereas a cost declared here merely
+      enters a sum. Mistaking one for the other silently converts a
+      disqualification into a few euro-cents.
+  - what: award_criteria
+    cites:
+      - "02014L0024-20260101#art_067"
+    reason: >-
+      Art 67 governs the award criteria -- the basis on which the most
+      economically advantageous tender is identified, and Art 67(2) names
+      life-cycle costing as an example of a cost-effectiveness approach. This
+      domain computes the life-cycle cost and validates the method; it never
+      asks whether the resulting figure may lawfully be used to rank tenders,
+      what weight it carries, or whether the criteria set as a whole is valid.
+      Formalized separately in eu/procurement/award_criteria_meat.
+    consequence: >-
+      A caller must run Art 67 itself, AFTER this domain, and must decide FOR
+      ITSELF in what shape the figure crosses the boundary. THIS DOMAIN TAKES NO
+      POSITION ON THAT and its output is a bare integer euro-cent quantity from
+      `lcc_total/2`: it is neither a SCORE_POINTS value on a 0..100 scale nor a
+      `fixed_price_or_cost_eur_cents` value, and converting it into either is
+      the caller's step, not this domain's. A caller that feeds a euro-cent
+      total into a points-scaled score criterion will produce a ranking whose
+      arithmetic is meaningless and which nothing on either side of the boundary
+      can detect. Note also the asymmetry: eu/procurement/award_criteria_meat
+      excludes Art 68 and its excluded_set entry says the result arrives there
+      as a SCORE_POINTS value on a cost-side criterion. That is ITS declared
+      reading of ITS interface, not an agreement reached with this domain, which
+      did not exist when it was written.
+  - what: abnormally_low_tenders
+    cites:
+      - "02014L0024-20260101#art_069"
+    reason: >-
+      Art 69 obliges the authority to require explanations for a tender that
+      appears abnormally low, and to reject it in defined cases. It operates on
+      a tender's price, after the award criteria have been applied.
+    consequence: >-
+      A caller must run Art 69 itself. A tender whose life-cycle cost this
+      domain computes as very low may be abnormally low and liable to
+      rejection; nothing here inspects the tender or the tenderer at all.
+  - what: contract_performance_conditions
+    cites:
+      - "02014L0024-20260101#art_070"
+    reason: >-
+      Art 70 lets an authority lay down environmental, social and
+      employment-related conditions on the performance of the contract. Those
+      are obligations that bind the winner, not costs entering a comparison.
+    consequence: >-
+      A caller must run Art 70 itself for any environmental requirement it means
+      to impose as a performance condition. An environmental externality this
+      domain prices at zero, or excludes for want of a determinable monetary
+      value, may still be perfectly capable of being imposed as an Art 70
+      condition -- and the two questions are unrelated, so an exclusion here is
+      no reason to drop the requirement there.
+  - what: delegated_acts_updating_annex_xiii
+    cites:
+      - "02014L0024-20260101#art_087"
+    reason: >-
+      Art 68(3) second alinea empowers the Commission to update the Annex XIII
+      list by delegated act "in accordance with Article 87". Art 87 is the
+      procedure -- duration of the delegation, revocation, objection periods --
+      and this domain models no procedure.
+    consequence: >-
+      A caller must check, against the Official Journal, whether Annex XIII has
+      been updated since the consolidation this domain pins
+      (02014L0024-20260101, in force 1 January 2026). `annex_xiii_act/1` is a
+      snapshot of that pinned text and will not notice a delegated act adding or
+      removing an entry; the way to update it is to re-pin the annex, whose
+      sha256 mismatch then makes the change loud. THIS IS NOT HYPOTHETICAL: the
+      power has never been exercised, and the one act on the list lost its
+      costing methodology in 2019 (see the fourth `sources:` entry), so the list
+      is out of date NOW.
+
+# THE INTERPRETIVE CHOICES (spec 13.23). Each entry is a provision this domain
+# DOES formalize, read in a way a competent lawyer could disagree with. Unlike
+# deferred_set and excluded_set, a unit here is normally ALSO covered by a rule:
+# that is the point -- the domain answers, and this says on what reading.
+#
+# EVERY ONE OF THE FIVE IS BACKED BY A CELL IN THE SEALED CASE LIST ON WHICH
+# THE REJECTED READING DEMONSTRABLY DIES, and `eval/score_harness.py`'s
+# `sanity_check()` asserts that divergence before any rulebase is loaded. That
+# check exists because of a measured failure in the Wave-2 Art 67 sibling: both
+# its Art 67(5) anchors set a flag where all rival readings agreed, so three
+# readings were consistent with all 985 of its cases and its anchors anchored
+# nothing. A register of readings no case can separate is a register of
+# opinions.
+#
+# NONE HAS AN AUTHORITY AND NONE IS ATTESTED. `authority: none` is a real value
+# -- an operator's judgement standing alone -- and since 176c8efc a missing
+# ATTESTATION no longer blocks the engineering gate; it blocks SERVICE. This
+# domain must not be relied on in service until a qualified professional has
+# signed all five off. `_tools/review_queue.py` lists them worst-first.
+# `authority: none` is not a formality here: there is no CJEU authority on
+# Article 68 at all (see `sources:`), so every one of these five is decided on
+# the text and on nothing else.
+operative_readings:
+  - what: art_68_1_a_categories_are_illustrative
+    units:
+      - "02014L0024-20260101#point_068.001_a"
+      - "02014L0024-20260101#point_068.001_a_i"
+      - "02014L0024-20260101#point_068.001_a_iv"
+    question: >-
+      Art 68(1)(a) reads "costs, borne by the contracting authority or other
+      users, such as: (i) costs relating to acquisition, (ii) costs of use ...
+      (iii) maintenance costs, (iv) end of life costs ...". Is that four-item
+      list EXHAUSTIVE of the authority-side costs an Article 68 life-cycle
+      costing may cover, or ILLUSTRATIVE, so that a fifth kind of cost borne by
+      the authority or other users is equally coverable?
+    readings:
+      - id: illustrative
+        consequence: >-
+          The cost-category vocabulary carries a sixth atom,
+          `other_cost_borne_by_authority_or_users`, and a component declared
+          under it is admissible and enters the total like any other. A caller
+          costing, say, insurance or decommissioning liability over the life
+          cycle has somewhere to put it. The price is that the atom is a
+          catch-all whose contents this domain cannot inspect: whether the cost
+          is really borne by the authority or other users, and really falls
+          within the Art 2(1)(20) life cycle, is the caller's judgement.
+      - id: exhaustive
+        conservative: true
+        consequence: >-
+          Only the four named categories are Article 68(1)(a) costs. A cost
+          outside them is excluded from the total and reported as an excluded
+          category. Safer in the sense that it condemns more and admits less --
+          it cannot be used to smuggle an arbitrary figure into a life-cycle
+          cost under a category nobody can check. Costly because it refuses to
+          cost things the Directive plainly permits to be costed, and because it
+          leaves a caller with a genuine fifth cost no lawful place to declare
+          it.
+    chosen: illustrative
+    rationale: >-
+      "SUCH AS" IS EXPRESS. The Directive uses it twice inside this very point
+      -- once to introduce the four sub-points and once inside (ii) ("such as
+      consumption of energy and other resources") -- and again in (iv) and in
+      (b). Reading an express illustration as exhaustive is not conservatism, it
+      is an error, and the fact that the conservative label sits on the rival is
+      a fact about which side condemns more, not about which side is right. NOTE
+      THE DEPARTURE ANYWAY: this domain leaves the reading marked conservative,
+      and that is the reviewable decision. If it is overturned, the fix is to
+      delete one member of `lcc_cost_category/1` and one clause of
+      `lcc_component_admissibility/3`; nothing else moves.
+    authority: none
+    attested: ~
+
+  - what: art_68_2_a_undue_favour_is_an_independent_limb
+    units:
+      - "02014L0024-20260101#point_068.002_a"
+    question: >-
+      Art 68(2)(a) reads "it is based on objectively verifiable and
+      non-discriminatory criteria. In particular, where it has not been
+      established for repeated or continuous application, it shall not unduly
+      favour or disadvantage certain economic operators". Is the second sentence
+      an INDEPENDENT obligation, breachable by an ad-hoc method whose criteria
+      are nevertheless objectively verifiable and non-discriminatory -- or is
+      "in particular" a SPECIFICATION of the non-discrimination requirement, so
+      that a non-discriminatory method cannot breach it?
+    readings:
+      - id: independent_limb
+        conservative: true
+        consequence: >-
+          A method that was not established for repeated or continuous
+          application, and that unduly favours or disadvantages certain economic
+          operators, is defective under Art 68(2)(a) EVEN IF the caller has
+          certified its criteria non-discriminatory. The defect
+          `undue_favour_or_disadvantage_of_economic_operators` is reported on
+          its own. The two caller-supplied judgements stay independent, so a
+          defect report says which one failed. NOTE THE SPELLING: the defect id
+          is deliberately NOT the profile key it reads
+          (`externality_method_unduly_favours_or_disadvantages_operators`).
+          Every other limb's key and defect differ already; these two would
+          otherwise have collided on one atom, and an atom that is both a
+          profile key and a limb id lets a clause that confuses the two succeed
+          by accident on this limb and no other.
+      - id: illustrative_of_non_discrimination
+        consequence: >-
+          The second sentence does no work of its own: where the criteria are
+          certified non-discriminatory the undue-favour limb cannot fire, and
+          where they are not, the discrimination limb has already fired. The
+          sentence collapses into a gloss. Textually attractive -- "in
+          particular" ordinarily introduces an instance rather than an addition
+          -- but it makes a whole sentence of the Directive inert, and it lets
+          one caller-asserted boolean (non-discrimination), which this domain
+          cannot verify, switch off a check.
+    chosen: independent_limb
+    rationale: >-
+      Two reasons, and the second is the one that decides it. FIRST, the second
+      sentence carries its OWN condition -- "where it has not been established
+      for repeated or continuous application" -- which the first sentence does
+      not. A pure gloss does not need a scope condition of its own; a distinct
+      obligation does, and this one has one. SECOND, and decisively, a reading
+      whose effect is "an unverifiable caller assertion disables a statutory
+      check" is the less safe one whatever its textual merit -- the same test
+      the Wave-2 Art 67 sibling applied to its own fixed-price question. The
+      rival has the better claim on the ordinary sense of "in particular", and
+      this entry exists because that is not obviously outweighed. RESIDUAL HOLE,
+      stated rather than hidden: on the chosen reading a method ESTABLISHED for
+      repeated or continuous application can unduly favour an operator with no
+      Art 68(2)(a) defect at all, because the sentence's own condition excludes
+      it. That is what the text says; a reviewer who finds it intolerable should
+      look at Art 18(1)'s general equal-treatment principle, which this domain
+      does not pin.
+    authority: none
+    attested: ~
+
+  - what: art_68_3_annex_xiii_is_declaratory
+    units:
+      - "02014L0024-20260101#parag_068.003"
+      - "02014L0024-20260101#division_annex_xiii-list_of_union_legal_acts_referred_to_in_article_68_3"
+    question: >-
+      Art 68(3) reads "Whenever a common method for the calculation of
+      life-cycle costs has been made mandatory by a legislative act of the
+      Union, that common method shall be applied ... A list of such legislative
+      acts ... is set out in Annex XIII." Does the duty follow the UNION ACT --
+      so a Union act that makes a method mandatory but is not (yet) in Annex
+      XIII triggers it -- or does it follow the LIST, so that only a listed act
+      can?
+    readings:
+      - id: declaratory
+        conservative: true
+        consequence: >-
+          `lcc_mandatory_method_status/3` treats any Union act the caller names
+          as triggering the duty, listed or not, and `lcc_union_act_listing/2`
+          reports the Annex XIII status separately without changing the verdict.
+          An authority that ignores a newly-imposed Union method is reported as
+          defective from the day that method binds, not from the day the
+          Commission gets round to amending the annex.
+      - id: constitutive
+        consequence: >-
+          Only an act named in Annex XIII triggers the duty.
+          `annex_xiii_act/1` becomes the gate rather than a report, and an
+          unlisted act yields `no_union_common_method_mandatory`. Predictable,
+          and it gives the annex a job. But it makes the duty depend on
+          administrative housekeeping rather than on law, and -- see below -- it
+          makes Art 68(3) a dead letter on the text in force today.
+    chosen: declaratory
+    rationale: >-
+      THE SECOND ALINEA ARGUES AGAINST ITSELF AS A GATE. It empowers the
+      Commission to update the list "WHEN AN UPDATE OF THE LIST IS NECESSARY DUE
+      TO the adoption of new legislation making a common method mandatory or the
+      repeal or modification of existing legal acts" -- so the list FOLLOWS the
+      legislation, and a lag between them is contemplated by the provision
+      itself. A gate that the drafter expects to be out of date is a signpost.
+      Sentence 1 is also self-contained: it conditions the duty on the act, and
+      mentions the list only in the sentence after. AND THE FACT MAKES THIS
+      LOAD-BEARING RATHER THAN ACADEMIC: the sole act on the list, Directive
+      2009/33/EC, lost its costing methodology when Article 1(7) of Directive
+      (EU) 2019/1161 deleted its Articles 6 and 7, and Annex XIII has never been
+      updated. On the constitutive reading Art 68(3) therefore commands nothing
+      at all today; on the declaratory reading it revives the moment any Union
+      act imposes a method. See the fourth `sources:` entry for the verification.
+      RESIDUAL HOLE: this reading puts the whole weight on the caller's
+      `union_common_method_act_key`, which this domain cannot check. A caller who
+      names `directive_2009_33_ec` merely because it is the Annex XIII entry --
+      not because that act imposes anything today -- will get a confident
+      `union_common_method_mandatory_and_not_applied`, and nothing here can tell
+      that from the real thing.
+    authority: none
+    attested: ~
+
+  - what: art_68_1_b_unverifiable_externality_is_excluded_not_fatal
+    units:
+      - "02014L0024-20260101#point_068.001_b"
+    question: >-
+      Art 68(1)(b) admits externality costs "provided their monetary value can
+      be determined and verified". Where a declared externality component fails
+      that proviso, does the COMPONENT drop out of the life-cycle cost, leaving
+      the rest of the sum standing -- or is the life-cycle cost itself
+      unavailable?
+    readings:
+      - id: component_excluded
+        consequence: >-
+          `lcc_component_admissibility/3` returns `component_excluded` for that
+          component alone; the total is the sum of the rest, the status is
+          `lcc_computed`, and the excluded category is REPORTED in the verdict
+          so the omission is visible rather than silent. The Art 68(1)(b) defect
+          is reported separately by the validity slice, so the caller learns
+          both that the method is defective and what the lawful part of the cost
+          comes to.
+      - id: costing_is_indeterminate
+        conservative: true
+        consequence: >-
+          Any unverifiable externality component makes the whole computation
+          `lcc_indeterminate` with a total of 0. Safer in that it never returns
+          a number derived from a breakdown it has just called defective; costly
+          in that it discards a lawful acquisition-and-maintenance figure the
+          caller can compute perfectly well, and gives a caller nothing to act on.
+      - id: included_anyway
+        consequence: >-
+          The proviso is treated as addressed to the authority's method design
+          rather than to the sum, so the component is counted and the defect
+          merely reported. Rejected outright: it produces a life-cycle cost that
+          includes a figure the Directive says may not be included, which is the
+          one outcome the proviso exists to prevent.
+    chosen: component_excluded
+    rationale: >-
+      The proviso is drafted as a condition on WHAT (b) COVERS -- "costs imputed
+      to environmental externalities ... provided their monetary value can be
+      determined and verified" -- not as a condition on the exercise as a whole.
+      So the natural effect is on the item, and the rest of Art 68(1)'s
+      categories are untouched by it. This also keeps the three determinations
+      independent, which is this domain's design commitment: the defect is
+      reported by the validity slice and the number by the computation slice,
+      and neither gates the other. NOTE THE DEPARTURE: the conservative reading
+      is `costing_is_indeterminate` and this domain departs from it. The
+      departure is defensible only because the exclusion is REPORTED -- the
+      verdict names the excluded category, so a caller who wants the
+      conservative behaviour can implement it in one line by refusing any
+      verdict whose excluded-category list is non-empty. If the reporting were
+      dropped, this choice would become indefensible.
+    authority: none
+    attested: ~
+
+  - what: art_68_3_displacement_does_not_switch_off_art_68_2
+    units:
+      - "02014L0024-20260101#parag_068.002"
+      - "02014L0024-20260101#parag_068.003"
+    question: >-
+      Where Art 68(3) makes a Union common method mandatory, so that the
+      authority's own method is displaced, do the Art 68(2) second-alinea
+      conditions still bite on the method actually used -- or does the Union
+      legislator's own choice of method settle them, leaving only the Art 68(2)
+      first-alinea duty to indicate the data and the method?
+    readings:
+      - id: conditions_always_assessed
+        conservative: true
+        consequence: >-
+          `decide_lcc_method_validity/2` never reads
+          `union_common_method_act_key` or `union_common_method_applied` at all.
+          The nine limbs are assessed on whatever method is in front of them.
+          A caller gets two independent verdicts and composes them. The
+          discomfort, stated plainly: on this reading the domain can report a
+          method mandated by a Union legislative act as failing an Art 68(2)
+          condition -- which is a coherent thing for a court to say about a
+          national authority's application of it, and an odd thing to say about
+          the Union act itself.
+      - id: displacement_switches_them_off
+        consequence: >-
+          Where a Union common method is mandatory, the three conditions are not
+          assessed and only the first-alinea indication duties remain. Tidier,
+          and arguably right that the Union legislator has already made the
+          judgement Art 68(2)(a)-(c) asks the authority to make. But it lets
+          `union_common_method_act_key` -- a caller-supplied atom this domain
+          cannot verify, and which today names an act with no method in it -- 
+          switch off six statutory checks at once.
+    chosen: conditions_always_assessed
+    rationale: >-
+      Chosen on the same test as the second entry above, and for the same
+      reason: a reading whose effect is "an unverifiable caller assertion
+      disables a statutory check" is the less safe one, and here it disables six
+      at once. Art 68(2)'s conditions are addressed to "the method used for the
+      assessment of costs imputed to environmental externalities" without any
+      carve-out for a method the Union has mandated, and Art 68(3) says only
+      that the common method "shall be applied" -- it does not say the
+      conditions cease to apply to it. Keeping the slices independent is also
+      what makes the domain's three verdicts composable at all: a caller wanting
+      the rival's behaviour can implement it by ignoring the validity verdict
+      whenever the mandatory-method verdict says a Union method applies, which is
+      one line and is reversible; the reverse is not.
+    authority: none
+    attested: ~
+
+# ARMED 2026-09-05: 15 units, 0 unaccounted, after the marker pass. The ratchet
+# blocks on COVERAGE; the T1 clauses this domain still carries are annotation
+# debt, reported beside the verdict and never in it.
+provision_tracking: enforced

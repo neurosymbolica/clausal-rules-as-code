@@ -1,0 +1,65 @@
+# =====================================================================
+# kit.dates  —  generic [YEAR, MONTH, DAY]-list ⇄ native date adapters.
+#
+# ***DEPRECATED 2026-08-31, WITH A STATED END. DO NOT USE IN NEW WORK.***
+# The operator's standard is the TERM date(Y, M, D) — a real datetime.date.
+# [Y, M, D] never was the standard, however this header once read. Carry a
+# date AS a date; at a JSON/profile boundary use an ISO-8601 string with
+# `date_string_iso/2` from the date_time stdlib (bidirectional, already
+# present, and it had zero corpus uses when this notice was written).
+#
+# WHY THIS IS DEPRECATED RATHER THAN MERELY DISCOURAGED: extracting this was
+# a good LOCAL fix — it stopped every domain writing its own converter — and
+# it institutionalised the wrong representation GLOBALLY. While a blessed kit
+# export is described as "domain-independent glue", converting at the
+# boundary reads as sanctioned rather than transitional, and the C21 ratchet
+# has a permanent escape hatch built into the kit itself.
+#
+# DELETE THIS MODULE once date/3 lands in the engine (it registers `date` at
+# arity 4 only today, so date(Y, M, D) does not parse yet — that is the ONLY
+# reason this still exists) and the corpus's 1295 triples are migrated. The
+# count and its per-file baseline live in
+# clausify-domains/_tools/date_representation_baseline.json.
+#
+# Many domains carry dates as JSON-friendly [YEAR, MONTH, DAY] integer
+# triples on the input profile (no term construction needed by callers),
+# then need a real `date/4` object for native ordering / arithmetic. That
+# list→date lift is domain-independent glue — it lives here so a domain
+# imports it instead of re-defining a local `date_from_triple` (the
+# eu/procurement/exclusion_grounds sighting, 2026-07-24).
+#
+# `date/4` builds a real datetime.date, so leap years / month lengths are
+# exact by construction and an invalid triple (e.g. [2025, 2, 29]) simply
+# fails rather than producing a bogus date. Compare/arith with the native
+# `<`, `>=`, `date_add`, `date_diff` from the `date_time` stdlib.
+# =====================================================================
+-module(dates, [
+    date_from_triple(TRIPLE, DATE_OBJECT)
+])
+# date(Y, M, D) is a TERM (built and matched here, never called): declared, not imported, so
+# the module stays Python-free for a Clausal Prolog importer (engine python_bridges rule).
+-private([date(Y, M, D)])
+-double_quotes(chars)
+-strict_atoms
+
+# 2026-09-01 date migration (auto-assess-emits-date-triples-across-the-layer-1-boundary):
+# TRIPLE may hold the standard `date(Y, M, D)` term -- a real datetime.date, which is
+# what a marshaller now hands the engine for a profile's governing date -- or,
+# TRANSITIONALLY, the legacy [Y, M, D] list. Two clauses, DISJOINT and cut-free, the
+# same shape kit/planner_lib.clausal's profile_clock_seed/4 and
+# kit/rolling_window.clausal's day_of/2 took (clausify 5b2b0e4): `date(_, _, _) is V`
+# succeeds only for a real date, a `[Y, M, D]` pattern unifies only with a list, so a
+# malformed value still matches NEITHER and this predicate's fail-loud property is
+# preserved. `ground(TRIPLE)` FIRST and it is load-bearing -- `date(_, _, _) is V` on an
+# UNBOUND V does not TEST anything, it BINDS V to a date pattern, which is the exact
+# silent-collapse defect 5b2b0e4's own suite caught and named.
+# TRIPLE CLAUSE DELETED 2026-09-01: no consumer passes one. The corpus holds a
+# single [Y, M, D] literal (a _work/ scaffold, C21 baseline) and auto/assess's
+# marshaller writes a real datetime.date into the profile, so both sources of a
+# governing date are migrated. What remains accepts ONLY a real date, which is
+# the whole point -- a malformed value now matches nothing and fails loudly
+# rather than being quietly lifted from a list.
+date_from_triple(DATE, DATE) <- (
+    ground(DATE),
+    date(_, _, _) is DATE
+)

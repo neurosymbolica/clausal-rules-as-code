@@ -1,0 +1,877 @@
+id: eu/procurement/framework_agreements
+shape_family: constraint-satisfaction
+kit_version: "0.1.0"
+
+# Module layout. TWO legal determinations, both in ONE decision module,
+# framework_agreements.seam (the module names below are the real files):
+#   (A) Art 33(1): is the framework agreement's own TERM lawful? The four-year
+#     limit, its exceptional-case escape, the anniversary arithmetic with the
+#     29-February clamp, the two term limb ids and the pure boundary predicates.
+#   (B) Art 33(2)-(5): given the framework's parameters and a proposed
+#     call-off, is the call-off lawful, and by which ROUTE? The five route
+#     atoms, the seventeen call-off limb ids, the award-window test and the two
+#     call-off method atoms.
+# The same module holds the input check, framework_agreements_input_problem/2
+# (ruling D80, 2026-10-20).
+# NEITHER DETERMINATION GATES THE OTHER, and that separation is a decision, not an
+# accident: a call-off made under an over-long framework is still tested on its
+# own Art 33(2)-(5) conditions, and an over-long term is a defect of the
+# FRAMEWORK, reported once, not a defect re-reported on every call-off made
+# under it. `decide_call_off/2` never reads `exceptional_case_duly_justified`
+# and never consults `decide_framework_term/2`'s verdict.
+#
+# kernel.clausal holds the TWO result-shape constructors and nothing else -- no
+# rules, no facts, no imports. Result-shape constructors are an unconditional
+# kernel category regardless of slice count; the VALUE atoms live in whichever
+# slice reads them (declare-where-used), and the kernel is for slice<->slice
+# sharing only.
+modules:
+  - kernel
+  - citations
+  - parameters
+  - framework_agreements
+  - queries
+  - fixtures
+
+# public_interface: bare atoms (vocabulary) + name/arity predicates, grouped per
+# submodule -- keep in sync with the `-module(...)` export headers re-exported
+# via __init__.clausal. The ORDER's public_interface is a strict SUBSET of this:
+# it pins only the EIGHT names the sealed oracle actually calls, read
+# mechanically off eval/score_harness.py with `auto.oracle_interface.oracle_calls`
+# (which reported `unenumerable: []` and `unfollowed: []` -- the profile keys and
+# the input-vocabulary atoms are resolved through `profile_terms(atom_values=True)`
+# and are pinned in the order's `root_exports` instead). This list is the
+# package's own surface and is producer-authored; the order's is the contract.
+public_interface:
+  # -- kernel.clausal (result-shape constructors) --
+  - "framework_term_verdict/3"
+  - "call_off_verdict/4"
+  # -- framework_agreements.seam, framework term (verdict vocabulary) --
+  - "lawful_framework_term"
+  - "unlawful_framework_term"
+  - "within_four_year_limit"
+  - "exceeds_four_year_limit"
+  # -- framework_agreements.seam, framework term (the two Art 33(1) limb ids, in reporting order) --
+  - "framework_end_date_precedes_start_date"
+  - "framework_term_exceeds_four_years"
+  # -- framework_agreements.seam, framework term (profile keys) --
+  - "framework_start_date"
+  - "framework_end_date"
+  - "exceptional_case_duly_justified"
+  # -- framework_agreements.seam, framework term (membership table + rules) --
+  - "framework_term_defect_id/1"
+  - "decide_framework_term/2"
+  - "framework_term_limit_date/2"
+  - "framework_term_within_limit/3"
+  # -- framework_agreements.seam, call-off (verdict vocabulary) --
+  - "call_off_lawful"
+  - "call_off_unlawful"
+  - "satisfied"
+  - "not_satisfied"
+  - "award_date_within_framework_term"
+  - "award_date_outside_framework_term"
+  # -- framework_agreements.seam, call-off (the five Art 33(3)-(4) routes) --
+  - "single_operator_direct_award"
+  - "multi_operator_direct_award_all_terms_set_out"
+  - "multi_operator_direct_award_under_split_framework"
+  - "multi_operator_reopened_competition"
+  - "no_lawful_route"
+  # -- framework_agreements.seam, call-off (the seventeen limb ids, in statutory order) --
+  - "call_off_awarded_outside_framework_term"
+  - "contracting_authority_not_identified_in_call_for_competition"
+  - "economic_operator_not_party_to_framework"
+  - "substantial_modification_of_framework_terms"
+  - "call_off_outside_limits_of_framework_terms"
+  - "reopening_competition_in_single_operator_framework"
+  - "direct_award_without_all_terms_set_out"
+  - "objective_conditions_for_determining_performer_not_indicated"
+  - "objective_criteria_for_choice_of_route_not_stated"
+  - "terms_subject_to_reopening_not_specified"
+  - "reopening_not_available_where_framework_sets_out_all_terms"
+  - "reopened_competition_not_based_on_framework_terms"
+  - "capable_operators_not_all_consulted_in_writing"
+  - "time_limit_not_sufficiently_long"
+  - "tenders_not_submitted_in_writing"
+  - "tender_contents_opened_before_time_limit_expired"
+  - "award_not_made_on_framework_award_criteria"
+  # -- framework_agreements.seam, call-off (input vocabulary) --
+  - "without_reopening_competition"
+  - "with_reopening_competition"
+  # -- framework_agreements.seam, call-off (profile keys) --
+  - "call_off_award_date"
+  - "framework_operator_count"
+  - "call_off_method_key"
+  - "contracting_authority_identified_in_call_for_competition"
+  - "economic_operator_party_to_framework"
+  - "call_off_entails_substantial_modification"
+  - "call_off_within_limits_of_framework_terms"
+  - "framework_sets_out_all_terms"
+  - "objective_conditions_for_determining_performer_indicated"
+  - "partly_with_partly_without_reopening_stipulated"
+  - "objective_criteria_for_choice_of_route_stated"
+  - "terms_subject_to_reopening_specified"
+  - "reopened_competition_based_on_framework_terms"
+  - "capable_operators_consulted_in_writing"
+  - "time_limit_sufficiently_long"
+  - "tenders_submitted_in_writing"
+  - "tender_contents_confidential_until_time_limit_expired"
+  - "award_made_on_framework_award_criteria"
+  # -- framework_agreements.seam, call-off (membership tables + rules) --
+  - "call_off_method/1"
+  - "call_off_route_id/1"
+  - "call_off_defect_id/1"
+  - "decide_call_off/2"
+  - "call_off_route/2"
+  - "call_off_award_window_status/4"
+  # -- parameters.clausal --
+  - "parameter_source/2"
+  - "framework_term_limit_years/1"
+  # -- citations.clausal --
+  - "cite/1"
+  - "citation/2"
+  - "eu_dir_2014_24_art_33_1"
+  - "eu_dir_2014_24_art_33_2"
+  - "eu_dir_2014_24_art_33_3"
+  - "eu_dir_2014_24_art_33_4"
+  - "eu_dir_2014_24_art_33_5"
+  # -- queries.clausal --
+  - "framework_agreements_profile_keys/1"
+  - "framework_agreements_what_if/4"
+  # -- fixtures.clausal --
+  - "framework_agreements_subject/1"
+  - "framework_agreements_profile_for/2"
+  - "framework_agreements_assess/2"
+
+# INDEPENDENCE CLASSIFICATION -- `no_oracle`, and there is NO split to declare.
+#
+# Unlike the Wave-2 Art 67 domain, this one has no third-party axis at all.
+# eval/ carries ONE artefact, eval/score_harness.py, and it is a SAME-AUTHOR
+# differential: a second implementation, in a flat limb-table representation, of
+# the same reading of the same pinned text, by the agent that also wrote
+# _orders/framework-agreements.yaml. FORMALIZING.md 9.5 wants the producer and
+# the oracle to have different authors; that holds here only in the weak sense
+# that the producer is a model and the oracle is this agent. The ORDER and the
+# ORACLE share an author, so a systematic misreading of Article 33 is invisible
+# to the whole battery.
+#
+# WHAT IS DELIBERATELY *NOT* CLAIMED. Two CJEU judgments touch Article 33 --
+# Autorita Garante della Concorrenza e del Mercato v Coopservice C-216/17
+# (ECLI:EU:C:2018:1034) and Simonsen & Weel C-23/20 (ECLI:EU:C:2021:490). Both
+# turn on the duty to state the MAXIMUM QUANTITY or value of the services
+# capable of being ordered under a framework agreement. This domain does not
+# model quantity or value at all -- that is Art 5(5)'s determination and it is
+# in `excluded_set` -- so a cjeu_cases.yaml over those two cases would be two
+# cases about a limb that does not exist here. They are named in the order's
+# `sources:` as context and score nothing. Do not let their existence be read as
+# an independence axis; there is none. The Art 57 score_harness over-claim is on
+# the record as the thing not to repeat, and the Wave-2 Art 67 note about not
+# letting two real cases launder a 300-probe battery applies a fortiori where
+# the cases do not even touch the battery.
+#
+# WHAT THE BATTERY DOES CARRY INSTEAD, and it is the honest substitute:
+# FAULT INJECTION plus REFUTED RIVAL READINGS. eval/mutations.yaml is fifteen
+# hand-written legal errors, and `sanity_check()` in the harness asserts that
+# each of ELEVEN named rival readings of Article 33 actually DIES somewhere in the
+# swept case space, printing the count and the first diverging cell. A control
+# that every rival also passes anchors nothing; that is the Wave-2 Art 67
+# finding (5200/5630, three readings consistent with all 985 cases) and it is
+# the failure this layer exists to remove.
+#
+# The statutory text is externally anchored by this domain's own statute pin
+# (sources/02014L0024-20260101-art033.fmx4.xml, sha256 707fc3da...), verified
+# four ways including against a control cut of the enclosing chapter.
+independence: no_oracle
+
+# NO SHARED-BACKBONE IMPORTS, AND THE EMPTY LIST IS THE DECLARATION.
+#
+# The Wave-3 commission brief asks for `uses:` naming `eu.procurement.directive_2014_24`.
+# This domain does not import it, and writing the name here anyway would be a
+# false declaration that produces a DEAD IMPORT in the rulebase.
+#
+# What `eu.procurement.directive_2014_24` exports is (i) the contract-type and
+# contracting-authority-type and procedure-type vocabularies and (ii) the Art 4
+# threshold table. Article 33 turns on NONE of them: it has no monetary
+# threshold (Art 4 and Art 5(5) are excluded below), it draws no distinction
+# between works, supplies and services -- points (a), (b) and (c) of Art 33(4)
+# each name all three together, in the same breath -- and it draws no
+# distinction between categories of contracting authority. Every one of the 21
+# profile keys is a fact about the framework agreement or the call-off, not
+# about the contract's type or the authority's category.
+#
+# Bare-atom resolution is COMPILE-TIME AND LEXICAL, PER FILE
+# (clausal/logic/compiler_v2.py:647-729), so importing a name no clause of this
+# domain spells is not "closure": it is a dead import the conventions gate
+# flags, justified by a caller-resolution mechanism that does not exist. The
+# Wave-2 Art 67 manifest makes the same argument for the two threshold
+# predicates it declines to import; this domain is the case where the argument
+# reaches the whole module.
+#
+# CONSEQUENCE FOR A CALLER COMPOSING THIS DOMAIN WITH ITS NEIGHBOURS: this
+# domain's profile shares NO key with eu/procurement/thresholds or
+# eu/procurement/award_criteria_meat, so there is nothing to keep in sync and
+# nothing that can drift. A caller that needs the contract type in order to run
+# Art 4 alongside this determination carries it in ITS OWN profile.
+#
+# `formalize_lib` is a separate obligation and is NOT optional:
+# `conformance.check_domain` fails a rulebase that does not
+# `-import_from(formalize_lib, ...)`. The producer must import it in whichever
+# slice spells its names (`eval_requirements/4` and `check_true/4` are the
+# natural fits for the seventeen-limb checklist).
+uses: []
+
+# A REAL parameters.clausal + parameters-sources.yaml PAIR, not the `parameters:
+# none` opt-out. Article 33 carries exactly one statutory figure -- the four
+# years of Art 33(1) third subparagraph -- and it is the whole of one of this
+# domain's two determinations. See parameters-sources.yaml for what is
+# deliberately NOT sourced there (the anniversary arithmetic, the inclusive
+# boundary, and the single-versus-several switch, none of which the Directive
+# supplies as a figure).
+
+scope: "EU Directive 2014/24/EU Article 33 -- framework agreements. TWO
+  separable determinations, and neither gates the other.
+  (A) FRAMEWORK TERM: is the framework agreement's own term lawful under Art
+  33(1)? Returns lawful_framework_term, or unlawful_framework_term with every
+  limb the facts defeat -- a term exceeding four years without a duly justified
+  exceptional case (Art 33(1) third subparagraph), and a well-formedness limb
+  for an end date preceding the start date, which is NOT an Article 33 rule and
+  is labelled as such. The four-year limit is measured on the FRAMEWORK's own
+  declared term, from FRAMEWORK_START_DATE to the fourth anniversary of that
+  date, inclusive: a term of exactly four years does not EXCEED four years.
+  (B) CALL-OFF LAWFULNESS AND ROUTE: given the framework's parameters and one
+  proposed call-off, is the call-off lawful, and by which of the routes Art
+  33(3) and Art 33(4)(a)-(c) supply? Returns the ROUTE -- single-operator direct
+  award, multi-operator direct award (all terms set out), multi-operator direct
+  award under a split framework, multi-operator reopened competition, or
+  no_lawful_route -- together with every one of the seventeen Art 33(2)-(5)
+  limbs the facts defeat, each with its pinpoint citation. THE HARD PART OF THIS
+  ARTICLE IS SCOPE, NOT TEST: Art 33(3)'s within-the-limits condition is read
+  only for a single-operator framework, Art 33(4)(a)'s two conditions only for a
+  direct award, and Art 33(5)'s six procedural conditions only for a competition
+  referred to in points (b) and (c) of Art 33(4) -- so they reach no direct award
+  and no single-operator framework, whatever the caller says its method is.
+  DATES are date(YEAR, MONTH, DAY) terms, checked by the kit date guard and
+  compared chronologically; there is no ISO string and no [Y, M, D] list.
+  INPUTS MUST BE COMPLETE: a profile that is not a ground dict, a present key of
+  the wrong type (a date that is not date(Y, M, D), a count that is not an
+  integer of at least 1, a boolean that is not exactly True or False, a method
+  outside the two method atoms), or an absent key the law reads on that
+  profile's route gets NO answer from the determination concerned;
+  framework_agreements_input_problem/2 names the first problem.
+  OUT OF SCOPE, each registered in excluded_set below with its consequence: Art
+  4 thresholds and Art 5(5) the estimated value of a framework agreement (so
+  neither whether the Directive applies at all, nor the maximum quantity duty
+  that Coopservice C-216/17 and Simonsen & Weel C-23/20 turn on, is tested
+  here); Art 18 principles of procurement, which is where this Directive puts
+  the anti-abuse rule that Directive 2004/18/EC Art 32(2) put inside the
+  framework-agreements article; Art 26 the choice of procedure by which the
+  framework was concluded; Art 34 dynamic purchasing systems and Art 35
+  electronic auctions; Art 67 the award criteria themselves; and Art 72
+  modification of contracts during their term. Every evaluative judgment Art 33
+  leaves open -- whether the case is an exceptional one duly justified (Art
+  33(1)), whether a call-off entails a substantial modification of the
+  framework's terms (Art 33(2)), and whether a time limit is sufficiently long
+  (Art 33(5)(b)) -- is an ATOMIC INPUT, never derived."
+
+sources:
+  - "Directive 2014/24/EU of the European Parliament and of the Council of
+    26 February 2014 on public procurement and repealing Directive 2004/18/EC
+    (OJ L 94, 28.3.2014), CELEX 32014L0024 -- Article 33 (framework agreements).
+    PINNED at ARTICLE granularity: consolidated CELEX 02014L0024-20260101,
+    sources/02014L0024-20260101-art033.fmx4.xml, sha256
+    707fc3dab41b3e351529cb3f331ceef7addaab9fb8a798aaa46c08ab67845b29, 13 units,
+    cut from CL2014L0024EN0060010.0001.xml sha256 d732f7f9a547b315...e157772.
+    See sources/02014L0024-20260101-art033.meta.yaml for the cut and its
+    four-way verification, including the control cut of the enclosing CHAPTER II
+    (82 units, 69 of them out of this domain's scope)."
+  - "No shared-backbone import. eu.procurement.directive_2014_24 exports contract-type,
+    contracting-authority-type and procedure-type vocabularies and the Art 4
+    threshold table; Article 33 turns on none of them. See `uses:` above."
+  - "CJEU, for context only and scoring nothing: Autorita Garante della
+    Concorrenza e del Mercato v Coopservice C-216/17 (ECLI:EU:C:2018:1034);
+    Simonsen & Weel C-23/20 (ECLI:EU:C:2021:490). Both turn on the maximum
+    quantity or value a framework agreement must state, which is Art 5(5)'s
+    determination and is excluded here. There is no cjeu_cases.yaml in this
+    package and no independence is claimed from these judgments."
+
+query_interface:
+  3: "call_off_route/2"               # status_determination: by which Art 33(3)/(4) route
+  6: "framework_term_limit_date/2"    # threshold: the exact date at which the term stops being lawful
+  16: "framework_agreements_what_if/4"  # what_if: re-evaluate under a hypothetical fact change
+
+# THE DEFERRAL REGISTER. Machine-read: check_provisions T3 requires every entry
+# to name RESOLVABLE UNITS of the pinned document, a non-empty reason and a
+# non-empty consequence, and section 6 requires every `what:` in
+# _orders/framework-agreements.yaml's deferred_set to appear here.
+#
+# IT HAS ONE ENTRY, AND THAT IS THE MEASUREMENT, NOT A SHORTCUT. Pinning Article
+# 33 alone (not CHAPTER II, which would have added Arts 34-39 as 69
+# permanently-RED units) leaves 13 units, of which 12 carry a rule of this
+# domain and the thirteenth is the article's own title.
+#
+# THE RUN GRANULARITY MATTERS HERE AND IS MEASURED, NOT ASSUMED. Art 33(1),
+# 33(2) and 33(3) each carry several <ALINEA> subparagraphs, and the reader
+# joins each PARAG into exactly ONE run -- so `#parag_033.001/2` is OUT OF RANGE,
+# not a way to defer the definition sentence separately from the four-year rule.
+# Deferrals and citations in this domain address WHOLE PARAG units.
+#
+# The cross-article boundaries -- Arts 4, 5, 18, 26, 34, 35, 67, 72 -- are NOT
+# here. A deferral of a neighbouring article is UNWRITABLE for a pinned domain:
+# T3 rejects an entry naming no units, and `#art_072` does not resolve against an
+# Art 33 extract. `excluded_set` (spec 13.21) is the relation that exists for
+# exactly that case.
+deferred_set:
+  - what: article_heading
+    units:
+      - 02014L0024-20260101#art_033
+    reason: >-
+      Article 33's own title, "Framework agreements", carries no obligation: it
+      is the document's structure, not operative law. Deferred so that every
+      unit the pinned extract defines is accounted for, rather than left
+      silently unaccounted.
+    consequence: >-
+      None. A heading states no rule, so nothing turns on it.
+
+# THE SCOPE BOUNDARY REGISTER (spec 13.21). Every entry says "this domain does
+# NOT do X", names the provisions of Directive 2014/24/EU that X lives in, and
+# states what breaks for a caller who relies on this domain anyway.
+#
+# `cites:` NOT `units:`, and the difference is the whole point: a deferral names
+# units of THIS domain's extract, an exclusion names provisions OUTSIDE it. T6's
+# load-bearing check is the negative one -- a `cites:` that resolves inside the
+# Art 33 extract is refused and told to move to deferred_set.
+#
+# EVERY BOUNDARY BELOW IS ONE **THIS DOMAIN** DREW, NOT ONE THE STATUTE DREW.
+# Measured on the pinned bytes 2026-08-20: ARTICLE 33 REFERENCES NO OTHER ARTICLE
+# OF THE DIRECTIVE AT ALL. Its only cross-references are internal -- "this
+# paragraph and in paragraphs 3 and 4", "in accordance with point (a)", "in
+# accordance with point (c)", "the competitions referred to in points (b) and (c)
+# of paragraph 4" -- plus one generic "this Directive" in 33(1). The single
+# occurrence of the string "Article 33" inside the extract is the article's own
+# TITLE. So no `cites:` here records a reference Art 33 makes; each records where
+# a question this domain declines to answer is answered instead. Where the
+# neighbouring article points BACK at Art 33, that is stated with the
+# neighbour's own verbatim and is checked -- see the Art 35 entry, which is the
+# only one of the eight that does.
+#
+# WRITING THE `consequence:` FIELDS FORCED TWO INTERPRETIVE CHOICES INTO THE
+# OPEN, which is what that field is for (brief section 3.7). The Art 72 entry
+# could not be written without saying whether the Art 33(2) substantial-
+# modification prohibition is tested here as an atomic input or delegated to Art
+# 72's substantiality limbs; and the Art 18 entry could not be written without
+# saying whether the anti-abuse rule is a condition this domain tests at all.
+# Both are registered in operative_readings below rather than settled in prose.
+excluded_set:
+  - what: thresholds
+    cites:
+      - "02014L0024-20260101#art_004"
+    reason: >-
+      Art 4 sets the threshold amounts above which the Directive applies. This
+      domain asks whether a framework agreement's term and a call-off under it
+      comply with Article 33; it never asks whether the Directive reaches the
+      procurement in the first place. Formalized separately in
+      eu/procurement/thresholds.
+    consequence: >-
+      A caller must run Art 4 itself, BEFORE this domain. This domain will
+      cheerfully report `call_off_lawful` on a framework agreement wholly below
+      the threshold, where Article 33 does not apply at all and the answer is not
+      "lawful" but "not governed by this Directive". Nothing here inspects any
+      value, so it cannot notice.
+  - what: estimated_value_of_a_framework_agreement
+    cites:
+      - "02014L0024-20260101#art_005"
+    reason: >-
+      Art 5(5) says that for framework agreements the value to be taken into
+      consideration is the maximum estimated value net of VAT of ALL the
+      contracts envisaged for the total term. Computing that value, and the duty
+      to state a maximum quantity that the CJEU has read out of it, is Art 5's
+      determination and needs inputs this domain does not have.
+    consequence: >-
+      A caller must run Art 5(5) itself. THE SHARP EDGE: Coopservice C-216/17 and
+      Simonsen & Weel C-23/20 hold that a framework agreement must state the
+      maximum quantity or value of the supplies capable of being ordered, and
+      that once it is exhausted the agreement has spent its effects. This domain
+      models no quantity and no value, so a call-off made ABOVE an exhausted
+      maximum will be reported `call_off_lawful` here on facts the Court has held
+      unlawful. That is the largest single hole in this domain and it is stated
+      rather than hidden.
+  - what: principles_of_procurement_and_the_anti_abuse_rule
+    cites:
+      - "02014L0024-20260101#art_018"
+    reason: >-
+      Art 18(1) carries the equal-treatment, non-discrimination, transparency and
+      proportionality principles, and its second subparagraph the rule that "the
+      design of the procurement shall not be made with the intention of excluding
+      it from the scope of this Directive or of artificially narrowing
+      competition". THAT is where Directive 2014/24/EU puts the anti-abuse rule
+      which Directive 2004/18/EC Art 32(2) put inside the framework-agreements
+      article itself ("Contracting authorities may not use framework agreements
+      improperly or in such a way as to prevent, restrict or distort
+      competition"). That sentence is NOT in Article 33 of this Directive:
+      searched exhaustively across the whole consolidated act, "improperly" does
+      not occur and "distort competition" occurs once, in Art 30(6), about
+      competitive dialogue.
+    consequence: >-
+      A caller must apply Art 18 itself, and must not read a `call_off_lawful`
+      from this domain as a finding that the framework agreement was used
+      properly. An authority that concludes a four-year framework with a single
+      operator in order to avoid competing the work, and then calls off within
+      the terms, satisfies every limb this domain tests. Art 18(1) second
+      subparagraph is where that is answered, and it turns on INTENTION, which is
+      not among this domain's 21 inputs. See
+      operative_readings[anti_abuse_principle_is_not_an_operative_condition_of_art_33].
+  - what: choice_of_procedure_for_concluding_the_framework
+    cites:
+      - "02014L0024-20260101#art_026"
+    reason: >-
+      Art 33(1) first subparagraph permits framework agreements "provided that
+      they apply the procedures provided for in this Directive". THAT PROVISO
+      NAMES NO ARTICLE -- checked: Art 33 cites no article of the Directive
+      anywhere -- so pointing it at Art 26 is THIS DOMAIN's inference about where
+      the question is answered, not a cross-reference the statute draws. WHICH
+      procedures those are, and when each is available, is Art 26 and the
+      articles it points at (Arts 27-32). This domain takes the framework as concluded and asks
+      about its term and its call-offs.
+    consequence: >-
+      A caller must run Art 26 itself, BEFORE this domain. A framework agreement
+      concluded through a negotiated procedure without prior publication that did
+      not qualify under Art 32 is unlawful at its root, and every one of its
+      call-offs is unlawful with it -- and this domain will still report the
+      call-off lawful, because the Art 33(1) first-subparagraph proviso is not
+      among its limbs. Note the ordering: this is a defect the caller must
+      exclude BEFORE the answer here means anything.
+  - what: dynamic_purchasing_systems
+    cites:
+      - "02014L0024-20260101#art_034"
+    reason: >-
+      Art 34 governs dynamic purchasing systems -- the other technique in the
+      same chapter for repeated purchasing. A DPS is NOT a framework agreement.
+      CHECKED AGAINST ART 34's OWN PINNED SPAN, not asserted: the strings
+      "Article 33" and "framework agreement" each occur ZERO times in it, and
+      Art 34(2) opens "In order to procure under a dynamic purchasing system,
+      contracting authorities shall follow the rules of the restricted
+      procedure." Art 34(1) requires the system to be "open throughout the period
+      of validity of the purchasing system to any economic operator that
+      satisfies the selection criteria", and the word "years" does not occur in
+      Art 34 at all -- there is no four-year analogue. Formalized separately in
+      eu/procurement/dynamic_purchasing_system.
+    consequence: >-
+      A caller must not route a dynamic purchasing system through this domain.
+      Doing so imports a four-year term limit that Art 34 does not impose (a DPS
+      has a stated period of validity and no statutory maximum) and a
+      closed-parties rule that inverts the DPS's defining feature, which is that
+      any operator meeting the selection criteria may join at any time. Every
+      answer would be wrong in the direction of over-restriction.
+  - what: electronic_auctions
+    cites:
+      - "02014L0024-20260101#art_035"
+    reason: >-
+      Art 35 governs electronic auctions -- a repetitive electronic process for
+      presenting new prices, used as a stage WITHIN a procedure rather than as a
+      procurement technique of its own. THIS IS THE ONE NEIGHBOUR THAT REALLY
+      DOES POINT BACK AT ARTICLE 33, and here is the sentence, verbatim from Art
+      35(2)'s own pinned span: "In the same circumstances, an electronic auction
+      may be held on the reopening of competition among the parties to a
+      framework agreement as provided for in points (b) or (c) of Article 33(4)
+      and on the opening for competition of contracts to be awarded under the
+      dynamic purchasing system referred to in Article 34." Note what it
+      confirms in passing: Art 35 treats a reopening as arising under points (b)
+      OR (c) of Art 33(4) and nowhere else, which is the structure this domain's
+      route rule implements. Formalized separately in
+      eu/procurement/electronic_auction.
+    consequence: >-
+      A caller reopening competition BY ELECTRONIC AUCTION must run Art 35
+      alongside this domain, on the same reopening. This domain's Art 33(5) limbs
+      (written consultation, a sufficiently long time limit, written tenders,
+      confidentiality until the time limit expires, award on the framework's
+      criteria) do not include any of Art 35's conditions, and Art 35's own
+      conditions -- that the specifications be established with precision, that
+      the auction be announced in the contract notice, that the invitation state
+      the mathematical formula -- are simply absent here. A `call_off_lawful`
+      says nothing about the auction.
+  - what: award_criteria
+    cites:
+      - "02014L0024-20260101#art_067"
+    reason: >-
+      Art 33(5)(d) requires a reopened competition to be awarded to the best
+      tender "on the basis of the award criteria set out in the procurement
+      documents for the framework agreement". WHETHER those criteria are lawful,
+      and which tender is in fact the most economically advantageous on them, is
+      Art 67's determination. Formalized separately in
+      eu/procurement/award_criteria_meat.
+    consequence: >-
+      A caller must run Art 67 itself on the framework's criteria, and must run
+      its ranking to know which tender the Art 33(5)(d) limb is satisfied BY.
+      This domain reads a single boolean, `award_made_on_framework_award_criteria`,
+      which asserts only that the authority applied the framework's stated
+      criteria; it neither checks that those criteria are lawful under Art 67 nor
+      recomputes the ranking. A reopened competition awarded faithfully on
+      criteria that Art 67 condemns passes this domain's limb.
+  - what: modification_of_contracts_during_their_term
+    cites:
+      - "02014L0024-20260101#art_072"
+    reason: >-
+      Art 72 governs when a contract or a framework agreement may be modified
+      during its term without a new procurement procedure, including the Art
+      72(4) test of when a modification is SUBSTANTIAL. Art 33(2) third
+      subparagraph carries its own prohibition -- a call-off "may under no
+      circumstances entail substantial modifications to the terms laid down in
+      that framework agreement" -- and the relation between the two is a genuine
+      interpretive question, not a boundary that can simply be drawn.
+    consequence: >-
+      A caller must run Art 72 itself on any modification OF the framework
+      agreement (an extension of its term, a change to its terms, a change of
+      contractor), which this domain does not model at all -- it takes the
+      framework as concluded and asks about ONE call-off under it. And it must
+      resolve the Art 33(2) substantiality question for itself before calling:
+      this domain reads `call_off_entails_substantial_modification` as an ATOMIC
+      INPUT and does not run Art 72(4)'s limbs on it. See
+      operative_readings[substantial_modification_limb_and_article_72], where
+      that choice is the declared reading rather than an assumption. Feeding
+      False for a call-off that in truth changes the economic balance in the
+      contractor's favour produces a confident `call_off_lawful` that is wrong,
+      and nothing in this domain can detect it.
+
+# THE INTERPRETIVE CHOICES (spec 13.23). Each entry is a provision this domain
+# DOES formalize, read in a way a competent lawyer could disagree with. Unlike
+# deferred_set and excluded_set, a unit here is normally ALSO covered by a rule:
+# that is the point -- the domain answers, and this says on what reading.
+#
+# NONE HAS AN AUTHORITY AND NONE IS ATTESTED. `authority: none` is a real value
+# -- an operator's judgement standing alone -- and it does not block. The missing
+# ATTESTATION does: this domain must not be relied on in service until a
+# qualified professional has signed all five off. `_tools/review_queue.py` lists
+# them worst-first.
+#
+# THREE OF THE FIVE WERE FORCED BY A `consequence:` FIELD rather than found by
+# introspection: the Art 72 entry and the Art 18 entry could not be written into
+# excluded_set without making the choice, and the award-window entry could not be
+# written into the oracle without fixing an interval convention. That is the
+# consequence field working as an interpretation detector.
+operative_readings:
+  - what: four_year_term_measurement_basis
+    units:
+      - "02014L0024-20260101#parag_033.001"
+    question: >-
+      Art 33(1) third subparagraph reads "The term of a framework agreement shall
+      not exceed four years". Is the four years measured on the FRAMEWORK's own
+      term -- the period during which contracts may be awarded under it -- or on
+      the whole period over which the framework generates obligations, so that a
+      call-off whose PERFORMANCE runs past the fourth anniversary breaches it
+      too?
+    readings:
+      - id: framework_term_only
+        consequence: >-
+          The limit binds FRAMEWORK_START_DATE to FRAMEWORK_END_DATE and nothing
+          else. A call-off awarded inside the term may be performed after the
+          term expires, and this domain carries NO call-off performance dates at
+          all -- there is no key for one, so a producer cannot invent a limb that
+          reads it. Matches the drafting: the provision speaks of the term of the
+          AGREEMENT, and Art 33(1)'s definition sentence speaks of "contracts to
+          be awarded during a given period", which is an award window, not a
+          performance window. Risk: a four-year framework whose final call-off is
+          a ten-year concession-like contract passes here.
+      - id: framework_term_plus_call_off_performance
+        conservative: true
+        consequence: >-
+          The limit binds the whole period over which the framework produces
+          contracts AND those contracts run, so a CALL_OFF_PERFORMANCE_END_DATE
+          key would exist and a call-off performed beyond the fourth anniversary
+          would breach Art 33(1). Safer against the abuse the four-year rule
+          exists to prevent -- a short framework generating long contracts --
+          and much more restrictive than settled practice. Costly: it condemns
+          the ordinary case of a maintenance contract called off in the
+          framework's final month.
+    chosen: framework_term_only
+    rationale: >-
+      Chosen on the text: Art 33(1) limits "the term of a framework agreement",
+      and the definition two sentences earlier tells us what a term is for --
+      establishing the terms governing "contracts to be awarded during a given
+      period". A period during which contracts are AWARDED is an award window.
+      NOTE THE DEPARTURE: the conservative reading is
+      `framework_term_plus_call_off_performance` and this domain departs from it.
+      The departure is the reviewable decision. NOTE ALSO HOW THE RIVAL IS
+      REFUTED, because it is not by the battery: the rival is closed off at the
+      INTERFACE -- no call-off performance date is a profile key, so no case can
+      distinguish the two readings and the oracle cannot kill the rival. If a
+      reviewer overturns this entry the fix is a new profile key and a new limb,
+      not a clause edit.
+    authority: none
+    attested: ~
+
+  - what: call_off_award_window
+    units:
+      - "02014L0024-20260101#parag_033.001"
+      - "02014L0024-20260101#parag_033.002"
+    question: >-
+      Art 33(1)'s definition sentence speaks of terms "governing contracts to be
+      awarded during a given period" and Art 33(2) of contracts "based on a
+      framework agreement". Neither says in terms that a call-off must be awarded
+      inside the framework's term. Is there an award-window rule at all; if so,
+      is the window CLOSED at both endpoints; and is it the term the framework
+      DECLARES, or that term capped at the four-year limit?
+    readings:
+      - id: closed_interval_of_the_declared_term
+        consequence: >-
+          The window is [FRAMEWORK_START_DATE, FRAMEWORK_END_DATE] with both
+          endpoints INSIDE, taken from the term the framework as concluded
+          declares. A call-off awarded on the framework's first or last day is in
+          window; one awarded the day before or the day after is not. An
+          over-long framework has ONE defect -- its term -- and its call-offs are
+          judged against the term it actually declares.
+      - id: half_open_interval
+        conservative: true
+        consequence: >-
+          The window excludes the end date, so a call-off awarded on the
+          framework's own last day is out of window. One day stricter, and it
+          makes a zero-length framework incapable of any lawful call-off. No
+          textual support for excluding the final day; it is the convention a
+          reader who thinks in half-open ranges reaches for by habit.
+      - id: window_capped_at_the_four_year_limit
+        consequence: >-
+          The window is the declared term intersected with the four-year limit,
+          so every call-off made in the fifth year of an over-long framework
+          carries an out-of-window defect ON TOP OF the framework's term defect.
+          Attractive as a way to make the four-year rule bite on call-offs;
+          double-counts one wrong as two, and makes the call-off determination
+          depend on the term determination, which this domain otherwise keeps
+          separate.
+      - id: no_award_window_rule
+        consequence: >-
+          Art 33 imposes no award window and the limb does not exist. A call-off
+          awarded years after the framework expired is judged only on the
+          closed-parties and terms limbs. Textually arguable -- the window is
+          read out of a DEFINITION -- and it leaves the four-year rule with no
+          effect at all on call-offs, which cannot be right.
+    chosen: closed_interval_of_the_declared_term
+    rationale: >-
+      There IS a window: "contracts to be awarded during a given period" is what
+      a framework agreement is for, and a rule limiting the period would be
+      pointless if contracts could be awarded outside it, so `no_award_window_rule`
+      is rejected. The window is CLOSED because a term expressed as two dates
+      ordinarily includes both, and nothing in Art 33 excludes the last day; the
+      conservative `half_open_interval` is departed from for that reason, and
+      because it produces the absurd result that a framework whose start and end
+      dates coincide can never be used. It is the DECLARED term rather than the
+      capped one because the two determinations are deliberately independent:
+      collapsing them means an over-long framework reports two defects for one
+      wrong, and it makes the call-off verdict move when the term verdict moves,
+      which is exactly the coupling the slice split exists to prevent. All three
+      rejected readings are refuted by the oracle's swept case space, not merely
+      argued against, and `sanity_check()` names the first cell each dies on.
+    authority: none
+    attested: ~
+
+  - what: reopening_availability_under_a_complete_terms_framework
+    units:
+      - "02014L0024-20260101#parag_033.004"
+      - "02014L0024-20260101#point_033.004_b"
+      - "02014L0024-20260101#point_033.004_c"
+    question: >-
+      Art 33(4) says a several-operator framework "shall be performed in one of
+      the following ways", and its point (c) authorises a reopening "where not
+      all the terms ... are laid down in the framework agreement". May a
+      contracting authority whose framework DOES set out all the terms, and which
+      never stipulated the Art 33(4)(b) partly-with-partly-without possibility,
+      nevertheless reopen competition among the parties?
+    readings:
+      - id: closed_list_of_three_routes
+        conservative: true
+        consequence: >-
+          It may not. "One of the following ways" is exhaustive: (a) is a direct
+          award, (b) needs the stipulation in the procurement documents, and (c)
+          is conditioned on NOT all the terms being laid down. That combination
+          therefore falls under none of them and the route is `no_lawful_route`,
+          carrying the limb
+          `reopening_not_available_where_framework_sets_out_all_terms`. Strict,
+          and it condemns a practice that is arguably MORE competitive than the
+          direct award the framework did authorise.
+      - id: reopening_always_permitted
+        consequence: >-
+          It may. A reopening is more competitive than a direct award and cannot
+          prejudice the operators, so nothing in Art 33 forbids an authority
+          entitled to award directly from competing the contract instead; point
+          (c) describes the case in which a reopening is COMPULSORY, not the only
+          case in which it is permitted. The route is a lawful
+          `multi_operator_reopened_competition` and the Art 33(5) procedural
+          limbs apply to it. Comfortable in practice; it reads "shall be
+          performed in one of the following ways" as if it said "may".
+    chosen: closed_list_of_three_routes
+    rationale: >-
+      Chosen as the conservative reading and on the chapeau's own words. Art
+      33(4) is drafted as an exhaustive trichotomy and point (b) exists precisely
+      to give an authority the option the rival would grant for free -- if
+      reopening were always available under a complete-terms framework, point (b)
+      would have nothing to do, because its whole content is permission to mix
+      the two routes plus the documentation duties that come with that
+      permission. The rival's practical merit is real and is why this is
+      registered rather than assumed: an authority that competes what it could
+      have awarded directly harms nobody. A reviewer overturning this entry
+      changes ONE branch of the route rule and one limb; the Art 33(5) limbs then
+      apply to the newly lawful reopening automatically, because they are scoped
+      on the ROUTE.
+    authority: none
+    attested: ~
+
+  - what: substantial_modification_limb_and_article_72
+    units:
+      - "02014L0024-20260101#parag_033.002"
+    question: >-
+      Art 33(2) third subparagraph forbids a call-off entailing "substantial
+      modifications to the terms laid down in that framework agreement". Is
+      substantiality here the same test as Art 72(4)'s -- the four in-any-event
+      limbs about admitting other candidates, the economic balance, the extension
+      of scope and the replacement of the contractor -- to be run inside this
+      domain, or is it a judgement this domain takes as given?
+    readings:
+      - id: atomic_input_here
+        conservative: true
+        consequence: >-
+          `call_off_entails_substantial_modification` is a single boolean the
+          caller supplies, and this domain neither derives it nor second-guesses
+          it. The Art 33(2) limb fires on it directly. Keeps the two articles'
+          determinations separate and does not silently import a test the
+          Directive states for a different question (modification of a contract
+          DURING its term, not the making of a contract UNDER a framework). The
+          cost is stated in the Art 72 excluded_set entry: a caller who answers
+          it wrong gets a confident wrong verdict and nothing here can detect it.
+      - id: delegate_to_art_72_substantiality_limbs
+        consequence: >-
+          The four Art 72(4) limbs are run against the call-off and the framework
+          as the reference contract, and the Art 33(2) limb fires where any of
+          them holds. Gives the caller a real test instead of a boolean, and
+          gives the two articles one coherent notion of substantiality. But it
+          imports four more atomic inputs (each of the Art 72(4) limbs is itself
+          open-textured), it duplicates eu/procurement/contract_modifications, and
+          it asserts an identity between two provisions that the Directive does
+          not state -- Art 33(2) says "substantial modifications to the terms",
+          Art 72(4) defines when "a modification of a contract" is substantial,
+          and a call-off is not a modification of the framework at all.
+    chosen: atomic_input_here
+    rationale: >-
+      Chosen as the conservative reading, and on the ground that the rival
+      asserts an identity the text does not: a call-off is a contract MADE UNDER
+      the framework, not a modification OF it, so Art 72(4)'s definition is at
+      best an analogy. Taking the judgement as an atomic input is the same
+      posture this domain takes to Art 33(1)'s "duly justified exceptional case"
+      and Art 33(5)(b)'s "sufficiently long" -- it hands open texture to the user
+      rather than inventing a crisp test. RESIDUAL HOLE, stated rather than
+      hidden: this leaves the single most consequential input in the domain
+      entirely unverified, and a caller with an interest in the answer supplies
+      it. A reviewer who overturns this should expect the change to reach the
+      profile contract, not just a clause.
+    authority: none
+    attested: ~
+
+  - what: anti_abuse_principle_is_not_an_operative_condition_of_art_33
+    units:
+      - "02014L0024-20260101#art_033"
+      - "02014L0024-20260101#parag_033.001"
+    question: >-
+      Directive 2004/18/EC Art 32(2) second subparagraph ended the
+      framework-agreements article with "Contracting authorities may not use
+      framework agreements improperly or in such a way as to prevent, restrict or
+      distort competition". Directive 2014/24/EU's Article 33 does not carry that
+      sentence. Should this domain nevertheless test an anti-abuse condition as
+      part of Article 33, reading the principle back in from the predecessor and
+      from recital 61?
+    readings:
+      - id: not_an_operative_condition_of_article_33
+        consequence: >-
+          No such limb exists here. The domain has no `used_improperly` input, no
+          intention input, and returns `call_off_lawful` on facts that Art 18(1)
+          would condemn. The consequence for a caller is written out in
+          excluded_set[principles_of_procurement_and_the_anti_abuse_rule]: a
+          lawful verdict from this domain is not a finding that the framework was
+          used properly. Faithful to the pinned bytes, and it keeps the
+          determination testable -- every one of the 21 inputs is a fact about
+          what was done, not about why.
+      - id: read_the_anti_abuse_rule_into_article_33
+        conservative: true
+        consequence: >-
+          An `improper_use_of_the_framework_agreement` limb is added, taking an
+          atomic input, and any call-off ticked improper is unlawful under Art 33
+          itself. Catches the abuse case inside this domain instead of deferring
+          it, which is safer for a caller who runs only this article. But it
+          formalizes as Article 33 a sentence that Article 33 does not contain,
+          and it makes the domain's verdict turn on an unfalsifiable input about
+          the authority's intention -- which is precisely the shape of finding
+          that Art 18(1) reserves to itself ("made with the INTENTION of ...").
+    chosen: not_an_operative_condition_of_article_33
+    rationale: >-
+      VERIFIED AGAINST THE PINNED BYTES, not asserted: the word "improperly" does
+      not occur anywhere in the consolidated act, and "distort competition"
+      occurs exactly once, in Art 30(6) about competitive dialogue. The 2004
+      sentence was not carried into Article 33; its content lives in Art 18(1)
+      second subparagraph, which this domain excludes with a stated consequence.
+      Note that the consolidated Formex manifestation carries an EMPTY
+      <PREAMBLE>, so recital 61 is not in the pinned document either and cannot
+      be cited from it -- which is a further reason not to found a limb on it.
+      DEPARTURE FROM THE CONSERVATIVE READING, and it is deliberate: the rival is
+      "safer" only in the sense that it condemns more, and a limb whose input is
+      the authority's own intention, self-reported, is not a check. This entry
+      exists because the Wave-3 commission brief for this domain attributed the
+      2004 sentence to Art 33(1) of the 2014 Directive and asked for the choice to
+      be registered rather than settled silently. It is registered, and the
+      premise is corrected.
+    authority: none
+    attested: ~
+  - what: which_art_33_4_subparagraph_each_call_off_route_cites
+    units:
+    - 02014L0024-20260101#parag_033.004
+    - 02014L0024-20260101#point_033.004_a
+    - 02014L0024-20260101#point_033.004_b
+    - 02014L0024-20260101#point_033.004_c
+    question: 'Art 33(4) offers three ways to award a call-off under a several-operator framework:
+      (a) without reopening, on the terms of the framework; (b) partly without and partly
+      with reopening; (c) with reopening, where not all the terms are laid down. This domain
+      implements a route it calls multi_operator_direct_award_under_split_framework, selected
+      when partly_with_partly_without_reopening_stipulated is true, and cites Art 33(4)(a)
+      for BOTH of that route''s defect limbs (direct_award_without_all_terms_set_out and objective_conditions_for_determining_performer_not_indicated).
+      Art 33(4)(c) is imported by the logic module and cited by NO limb at all. Separately,
+      the limb reopening_not_available_where_framework_sets_out_all_terms cites the Art 33(4)
+      CHAPEAU rather than any sub-paragraph. Three questions on one provision. Does the split
+      route take its all-terms and objective-conditions requirements from (a), as written,
+      or from (b), the sub-paragraph that names that route? Does the reopening-unavailable
+      limb rest on (c)? And is (c) genuinely inapplicable to this domain, or is its absence
+      the symptom?'
+    readings:
+    - id: subparagraph_a_supplies_the_direct_award_conditions
+      consequence: 'As written. (a) supplies the conditions on any DIRECT award (all terms
+        set out, objective conditions indicated) and (b) supplies only the route-choice and
+        reopening-terms duties, because the split route makes direct awards for part of its
+        volume. (c) is then genuinely inapplicable here: it governs reopening where the framework
+        does NOT lay down all terms, and the reopening limb this domain has is about the converse
+        case. The unused import is dead weight to delete, and the chapeau citation on reopening_not_available_where_framework_sets_out_all_terms
+        is right because no single sub-paragraph states that prohibition.'
+    - id: each_route_cites_its_own_subparagraph
+      conservative: true
+      consequence: 'Each route cites the sub-paragraph that names it. The split route''s limbs
+        move from (a) to (b); the reopening-unavailable limb moves from the chapeau to (c);
+        the unused import becomes used. A reader following a citation then lands on the sub-paragraph
+        describing the route that actually fired rather than one describing a different way
+        of awarding. Safer in the sense that matters for a citation: it cannot send a reader
+        to a provision about a route the case did not take.'
+    chosen: subparagraph_a_supplies_the_direct_award_conditions
+    rationale: 'RAISED BY TOOLING, NOT ADJUDICATED. check_citations refused promotion of the
+      2026-08-24 re-run with "eu_dir_2014_24_art_33_4_c: citation record but atom never cited",
+      which is how the unused import surfaced. Nobody has decided which sub-paragraph governs;
+      this records the question, not an answer. ESTABLISHED: the route is selected by partly_with_partly_without_reopening_stipulated;
+      its two limbs cite (a); (b) is cited by two OTHER limbs (objective_criteria_for_choice_of_route_not_stated,
+      terms_subject_to_reopening_not_specified); (c) is cited nowhere; and this domain''s
+      own verified citations-sources.yaml labels (b) "partly without and partly with reopening
+      of competition" and (c) "reopening competition where not all the terms are laid down".
+      NOT ESTABLISHED: which provision a reviewer would say each limb rests on. THE ORACLE
+      IS NOT EVIDENCE EITHER WAY: the re-run scored 1423/1423 with zero refutations while
+      citing as described, because the harness compares the citation atoms the rulebase emits
+      against those the reference expects, so a reference making the same attribution agrees
+      with it. Green means the two halves of the seal concur, not that the attribution is
+      right. THE VERSION ON MAIN IS COARSER, NOT BETTER: it cites the undifferentiated eu_dir_2014_24_art_33_4
+      six times and never mentions (a), (b) or (c) at all. Whichever way this is answered,
+      apply the answer to both.'
+    authority: none
+    attested: null
+
+# ARMED 2026-09-05: 13 units, 12 formalized, 1 deferred, 0 unaccounted, after
+# the marker convention was added. The ratchet blocks on COVERAGE; T1 is
+# annotation debt, reported not gated.
+provision_tracking: enforced

@@ -1,0 +1,265 @@
+# =====================================================================
+# ownership_interest.clausal -- THE DETERMINATION SLICE (Wave C, 2026-08-07;
+# determination slices over a shared kernel). This domain has exactly ONE
+# legal determination: the AMLR Art 52(1) OWNERSHIP-INTEREST test --
+# "'an ownership interest in the corporate entity' shall mean direct or
+# indirect ownership of 25 % or more of the shares or voting rights or
+# other ownership interest", where indirect ownership is computed by
+# MULTIPLYING the intermediate holdings along each chain and ADDING the
+# results across chains (Art 52(1) second subparagraph), with all
+# shareholdings on every level taken into account (third subparagraph).
+#
+# Self-contained top-to-bottom for that determination, per the layout:
+#   * its statutory VALUE fact          (was constants.clausal)
+#   * its arithmetic + verdict clauses  (was computation.clausal)
+#   * its own vocabulary declared here  (was schema.clausal)
+# All three former files collapse into this one; every clause body below is
+# BYTE-IDENTICAL to the file it came from (pure relocation).
+#
+# IMPORTS = LEXICAL CLOSURE. The only name this file spells that it does not
+# own is the kit's sum_list/2; findall/3 and in_/2 are engine builtins. The
+# `schema.clausal` header this file replaces stated the REFUTED rule that
+# "bare atoms ... resolve against the CALLING module at solve time" and
+# therefore had to be centralised: bare-atom resolution is COMPILE-TIME and
+# LEXICAL PER FILE (clausal/logic/compiler_v2.py:647-729), so a file needs
+# exactly the names it spells. Rule 3 (input-constructor closure) adds
+# nothing here: every argument this file's public predicates are queried
+# with is a plain list / string / integer, never a domain-owned compound
+# term, so no constructor has to be in scope for a caller's sake.
+#
+# Terminal verdict atoms: the shared terminal triple (matches sibling
+# eu_aml_amlr_beneficial_ownership_threshold -- D5 one-name-one-role).
+# `eligible` = a beneficial owner (Art 52(1) effective holding >= 25%),
+# `ineligible` = not a beneficial owner. No `indeterminate`: HOLDINGS is a
+# closed list argument with no missing-evidence channel (an empty list is
+# evidenced 0 bp -> ineligible). They are declared -module rather than
+# -private because the top-layer consumer queries.clausal and
+# tests/test_queries.clausal both spell them and import them FROM HERE
+# (one owner per name -- lint R6).
+#
+# INPUT CHECK (D80, 2026-10-20). The arguments HOLDINGS, PERSON and ENTITY
+# are this determination's whole input, and complete, well-formed input is
+# part of its contract. bo_chain_input_problem/4 (end of file) names the
+# first problem with them; effective_ownership/4 and both ubo_status/4
+# clauses run bo_chain_input_complete/3 before any rule decides. There is
+# no `indeterminate` verdict, so a bad input gives NO answer (the call
+# fails): it is never a definite verdict and never an error.
+# =====================================================================
+
+-module(ownership_interest, [
+    effective_ownership(HOLDINGS, PERSON, ENTITY, EFF_BPS),
+    ubo_status(HOLDINGS, PERSON, ENTITY, VERDICT),
+    ubo_threshold_bps(A0),
+    bo_chain_input_problem(HOLDINGS, PERSON, ENTITY, PROBLEM),
+    bo_chain_input_complete(HOLDINGS, PERSON, ENTITY),
+    eligible,
+    ineligible,
+    # input-problem vocabulary (bo_chain_input_problem/4)
+    not_ground,
+    not_a_list(ARGUMENT),
+    malformed_edge(EDGE),
+    wrong_type(WHAT, EXPECTED),
+    out_of_range(EDGE),
+    self_holding(EDGE),
+    cyclic_holdings(NODE),
+    holdings,
+    person,
+    entity,
+    expected_name,
+    expected_integer
+])
+-double_quotes(chars)
+
+-import_from(formalize_lib, [sum_list])
+
+-strict_atoms
+
+-import_from(units, [basis_point])
+-import_from(eu.aml.amlr_bo_chain.citations, [
+    implements, eu_reg_2024_1624_art_51_a, eu_reg_2024_1624_art_51_chapeau, eu_reg_2024_1624_art_52_1, eu_reg_2024_1624_art_52_1_every_level, eu_reg_2024_1624_art_52_1_indirect])
+
+# Ratio thresholds declared with their scale (ruling; ratio units
+# are on canonical). The scale leaves the identifier and becomes a fact the
+# engine holds; the /1 predicates still answer in the old scale, DERIVED.
+-constant_number_units(ubo_threshold, 2500, basis_point)
+
+ubo_threshold_bps(V) <- (
+    implements(eu_reg_2024_1624_art_52_1),
+    V == constant(ubo_threshold) / basis_point
+)
+
+# AMLR Art 52(1): the 25% ownership-interest line, in basis points.
+
+effective_ownership(HOLDINGS, PERSON, ENTITY, EFF_BPS) <- (
+    bo_chain_input_complete(HOLDINGS, PERSON, ENTITY),
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    implements(eu_reg_2024_1624_art_52_1_every_level),
+    findall(C, ( in_([H, ENTITY, PCT], HOLDINGS), bo_contribution(HOLDINGS, PERSON, H, PCT, C) ), CS),
+    sum_list(CS, EFF_BPS)
+)
+
+bo_contribution(HOLDINGS, PERSON, PERSON, PCT, C) <- (
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    C == PCT
+)
+
+bo_contribution(HOLDINGS, PERSON, H, PCT, C) <- (
+    implements(eu_reg_2024_1624_art_52_1_indirect),
+    not ('=='(H, PERSON)),
+    effective_ownership(HOLDINGS, PERSON, H, SUB),
+    C == PCT * SUB / 10000
+)
+
+# The Art 52(1) OWNERSHIP-INTEREST TEST, stated once per polarity.
+# Art 52(1): "'an ownership interest in the corporate entity' shall mean
+# direct or indirect ownership of 25 % or more of the shares or voting
+# rights or other ownership interest" -- "or more" is INCLUSIVE, hence `>=`
+# for the reaching test and the strict complement `<` for the below test.
+# Both ubo_status/4 clauses previously spelled this same aggregate / line /
+# compare sequence verbatim; naming it puts the statutory test in ONE place
+# and leaves ubo_status/4 as verdict wiring a reader can check against
+# Art 52(1) without reading any arithmetic (tell-don't-ask, trigger 1: the
+# sequence recurs across 2 clauses AND the instrument names the concept --
+# docs/formalization/tell-dont-ask.md §2, §5). Both are GUARDS (arity 3, no
+# STATUS output arg), so the ground verdict stays in ubo_status/4's head
+# (C17). Deliberately NOT in the -module list: module-local semantic
+# predicates cannot collide with an imported bare atom (guide §4).
+ownership_interest_reaches_threshold(HOLDINGS, PERSON, ENTITY) <- (
+    implements(eu_reg_2024_1624_art_52_1),
+    effective_ownership(HOLDINGS, PERSON, ENTITY, EFF),
+    ubo_threshold_bps(THR),
+    EFF >= THR
+)
+
+ownership_interest_below_threshold(HOLDINGS, PERSON, ENTITY) <- (
+    implements(eu_reg_2024_1624_art_52_1),
+    effective_ownership(HOLDINGS, PERSON, ENTITY, EFF),
+    ubo_threshold_bps(THR),
+    EFF < THR
+)
+
+ubo_status(HOLDINGS, PERSON, ENTITY, eligible) <- (
+    bo_chain_input_complete(HOLDINGS, PERSON, ENTITY),
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    ownership_interest_reaches_threshold(HOLDINGS, PERSON, ENTITY)
+)
+
+ubo_status(HOLDINGS, PERSON, ENTITY, ineligible) <- (
+    bo_chain_input_complete(HOLDINGS, PERSON, ENTITY),
+    implements(eu_reg_2024_1624_art_51_chapeau),
+    implements(eu_reg_2024_1624_art_51_a),
+    ownership_interest_below_threshold(HOLDINGS, PERSON, ENTITY)
+)
+
+# =====================================================================
+# THE INPUT CHECK (D80, 2026-10-20)
+# =====================================================================
+# bo_chain_input_problem(HOLDINGS, PERSON, ENTITY, PROBLEM): PROBLEM is the
+# FIRST thing wrong with the input, in this order:
+#   not_ground                          -- some argument holds an unbound variable
+#   not_a_list(holdings)                -- HOLDINGS is not a proper list
+#   malformed_edge(EDGE)                -- an edge is not a three-element list
+#   wrong_type(EDGE, expected_name)     -- its holder or held entity is not a name
+#   wrong_type(EDGE, expected_integer)  -- its percentage is not an integer
+#   out_of_range(EDGE)                  -- its percentage is below 0 or above
+#                                          10 000 basis points (100 %)
+#   self_holding(EDGE)                  -- an entity holds itself
+#   cyclic_holdings(NODE)               -- NODE holds itself through a chain
+#                                          (NOTES section 2: the graph must have
+#                                          no cycles; one would not terminate)
+#   wrong_type(person, expected_name)   -- PERSON is not a name
+#   wrong_type(entity, expected_name)   -- ENTITY is not a name
+# A name is a non-empty atom or a non-empty string. The check is total and
+# negation-safe: ground/1 is tested first, every later test needs a ground
+# input, in_/2 only runs over a proper list, and no arithmetic is done
+# before the integer/1 test. Over-issue (more than 100 % of an entity held
+# in total) is NOT refused here: NOTES section 4 leaves it to the caller
+# (over_issued/1), and the hypothetical queries build such graphs on purpose.
+bo_chain_input_problem(HOLDINGS, PERSON, ENTITY, PROBLEM) <- (
+    findall(CANDIDATE,
+            input_problem_candidate(HOLDINGS, PERSON, ENTITY, CANDIDATE),
+            [PROBLEM, *_])
+)
+
+bo_chain_input_complete(HOLDINGS, PERSON, ENTITY) <- (
+    not bo_chain_input_problem(HOLDINGS, PERSON, ENTITY, _)
+)
+
+input_problem_candidate(HOLDINGS, PERSON, ENTITY, not_ground) <- (
+    not ground([HOLDINGS, PERSON, ENTITY])
+)
+input_problem_candidate(HOLDINGS, PERSON, ENTITY, PROBLEM) <- (
+    ground([HOLDINGS, PERSON, ENTITY]),
+    holdings_problem(HOLDINGS, PROBLEM)
+)
+input_problem_candidate(HOLDINGS, PERSON, ENTITY, wrong_type(person, expected_name)) <- (
+    ground([HOLDINGS, PERSON, ENTITY]),
+    not holding_name(PERSON)
+)
+input_problem_candidate(HOLDINGS, PERSON, ENTITY, wrong_type(entity, expected_name)) <- (
+    ground([HOLDINGS, PERSON, ENTITY]),
+    not holding_name(ENTITY)
+)
+
+holdings_problem(HOLDINGS, not_a_list(holdings)) <- (
+    not is_list(HOLDINGS)
+)
+holdings_problem(HOLDINGS, PROBLEM) <- (
+    is_list(HOLDINGS),
+    in_(EDGE, HOLDINGS),
+    edge_problem(EDGE, PROBLEM)
+)
+holdings_problem(HOLDINGS, cyclic_holdings(NODE)) <- (
+    is_list(HOLDINGS),
+    findall(N, ( in_([N, NEXT, _], HOLDINGS), reaches(HOLDINGS, NEXT, N, [NEXT]) ), CYCLIC),
+    CYCLIC is [NODE, *_]
+)
+
+edge_problem(EDGE, malformed_edge(EDGE)) <- (
+    not three_element_list(EDGE)
+)
+edge_problem(EDGE, wrong_type(EDGE, expected_name)) <- (
+    EDGE is [HOLDER, _, _],
+    not holding_name(HOLDER)
+)
+edge_problem(EDGE, wrong_type(EDGE, expected_name)) <- (
+    EDGE is [HOLDER, HELD, _],
+    holding_name(HOLDER),
+    not holding_name(HELD)
+)
+edge_problem(EDGE, wrong_type(EDGE, expected_integer)) <- (
+    EDGE is [_, _, PERCENTAGE],
+    not integer(PERCENTAGE)
+)
+edge_problem(EDGE, out_of_range(EDGE)) <- (
+    EDGE is [_, _, PERCENTAGE],
+    integer(PERCENTAGE),
+    PERCENTAGE < 0
+)
+edge_problem(EDGE, out_of_range(EDGE)) <- (
+    EDGE is [_, _, PERCENTAGE],
+    integer(PERCENTAGE),
+    PERCENTAGE > 10000
+)
+edge_problem(EDGE, self_holding(EDGE)) <- (
+    EDGE is [NODE, NODE, _]
+)
+
+three_element_list([_, _, _]),
+
+# holding_name(X): a non-empty atom or a non-empty string ("alice" under
+# -double_quotes(chars) is a string, not an atom). atom/1 alone would also
+# accept [], which names nothing.
+holding_name(X) <- ( atom(X), X is not [] )
+holding_name(X) <- ( string(X), X is not [] )
+
+# reaches(HOLDINGS, FROM, TO, VISITED): some chain of edges leads from FROM
+# to TO. VISITED grows on every step and nodes are finite, so it terminates
+# on any ground graph, cyclic or not.
+reaches(HOLDINGS, FROM, TO, _) <- in_([FROM, TO, _], HOLDINGS)
+reaches(HOLDINGS, FROM, TO, VISITED) <- (
+    in_([FROM, NEXT, _], HOLDINGS),
+    not in_(NEXT, VISITED),
+    reaches(HOLDINGS, NEXT, TO, [NEXT, *VISITED])
+)

@@ -1,0 +1,69 @@
+-double_quotes(chars)
+# =====================================================================
+# test_input_mode.clausal -- INPUT MODE: public predicates called with the
+# result argument BOUND.
+# =====================================================================
+-import_from(eu.procurement.shortlisting.shortlisting, [
+    shortlisting_status,
+    statutory_minimum_candidates,
+    shortlisting_inclusion_modality
+])
+
+-import_from(eu.procurement.shortlisting.fixtures, [shortlisting_profile_for])
+
+-import_from(eu.procurement.shortlisting.kernel, [
+    limitation_permitted,
+    limitation_prohibited,
+    continuation_permitted,
+    limitation_not_available
+])
+
+-import_from(eu.procurement.shortlisting.shortlisting, [
+    restricted_procedure,
+    competitive_procedure_with_negotiation,
+    open_procedure,
+    requested_and_has_required_capabilities,
+    did_not_request_to_participate,
+    inclusion_permitted,
+    inclusion_prohibited
+])
+
+test("input mode: status holds with the verdict bound") <- (
+    shortlisting_profile_for("restricted_all_clear", PROFILE),
+    shortlisting_status(PROFILE, limitation_permitted)
+)
+
+test("input mode: the wrong bound status is rejected") <- (
+    shortlisting_profile_for("restricted_all_clear", PROFILE),
+    not shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("input mode: statutory minimum for restricted is 5") <- (
+    statutory_minimum_candidates(restricted_procedure, 5)
+)
+
+test("input mode: statutory minimum for CPWN is 3") <- (
+    statutory_minimum_candidates(competitive_procedure_with_negotiation, 3)
+)
+
+test("input mode: statutory minimum has no solution for open procedure") <- (
+    not statutory_minimum_candidates(open_procedure, _)
+)
+
+test("input mode: inclusion modality for requested and capable is permitted") <- (
+    shortlisting_inclusion_modality(requested_and_has_required_capabilities, inclusion_permitted)
+)
+
+test("input mode: inclusion modality for non-requesting is prohibited") <- (
+    shortlisting_inclusion_modality(did_not_request_to_participate, inclusion_prohibited)
+)
+
+test("input mode: open procedure status is limitation_not_available") <- (
+    shortlisting_profile_for("open_procedure", PROFILE),
+    shortlisting_status(PROFILE, limitation_not_available)
+)
+
+test("input mode: continuation profile yields continuation_permitted") <- (
+    shortlisting_profile_for("restricted_continuation", PROFILE),
+    shortlisting_status(PROFILE, continuation_permitted)
+)

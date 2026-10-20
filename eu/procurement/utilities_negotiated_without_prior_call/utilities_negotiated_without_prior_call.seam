@@ -1,0 +1,436 @@
+# utilities_negotiated_without_prior_call.clausal -- Directive 2014/25/EU Art 50.
+-module(utilities_negotiated_without_prior_call, [decide_utilities_negotiated_without_prior_call(PROFILE, VERDICT), utilities_negotiated_without_prior_call_status(PROFILE, STATUS), utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST), utilities_negotiated_without_prior_call_unmet_count(PROFILE, COUNT), pleaded_ground_key, contract_type_key, sole_operator_reason_key, art_50_a_no_suitable_tenders, art_50_b_research_contract, art_50_c_sole_operator, art_50_d_extreme_urgency, art_50_e_additional_deliveries, art_50_f_repetition, art_50_g_commodity_market, art_50_h_bargain_purchase, art_50_i_advantageous_winding_up, art_50_j_design_contest, unique_artistic_work_or_performance, competition_absent_for_technical_reasons, protection_of_exclusive_rights, no_suitable_tenders_or_requests_received, initial_conditions_not_substantially_altered, contract_purely_for_research_experiment_study_or_development, not_for_securing_profit_or_recovering_research_costs, award_does_not_prejudice_competitive_award_of_subsequent_contracts, only_particular_operator_can_perform, no_reasonable_alternative_or_substitute, absence_of_competition_not_artificially_narrowed, extreme_urgency_time_limits_cannot_be_met, urgency_events_unforeseeable_by_contracting_entity, urgency_not_attributable_to_contracting_entity, additional_deliveries_by_original_supplier, change_of_supplier_would_cause_technical_incompatibility, repetition_conforms_to_basic_project, original_contract_followed_article_44_1_procedure, basic_project_indicated_extent_and_conditions, possible_use_of_this_procedure_disclosed_at_first_tender, supplies_quoted_and_purchased_on_commodity_market, bargain_opportunity_available_for_very_short_time, price_considerably_lower_than_normal_market_prices, particularly_advantageous_conditions_from_winding_up_or_liquidator, supplier_winding_up_or_in_insolvency_procedure, contract_follows_directive_design_contest, awarded_to_contest_winner_or_all_winners_invited, utilities_negotiated_without_prior_call_input_problem(PROFILE, PROBLEM), utilities_negotiated_without_prior_call_input_acceptable(PROFILE), not_ground, not_a_dict, missing_key(KEY), wrong_type(KEY, EXPECTED), wrong_value(KEY, EXPECTED), expected_atom, expected_boolean, expected_contract_type])
+-double_quotes(chars)
+-private([condition_status(PROFILE, KEY, STATUS), type_status(GROUND, PROFILE, STATUS), ground_status(GROUND, PROFILE, STATUS), c_citations(PROFILE, CITATIONS), condition_item(KEY, PROFILE, CITATION, ITEM), type_item(GROUND, PROFILE, CITATION, ITEM), ground_checklist(GROUND, PROFILE, CHECKLIST), input_problem_in_order(PROFILE, PROBLEM), recognised_contract_type(CONTRACT_TYPE), condition_flag_key(KEY)])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.kernel, [utilities_negotiated_verdict, use_lawful, use_unlawful, n_a])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.citations, [cite, implements, eu_dir_2014_25_art_50_chapeau, eu_dir_2014_25_art_50_a, eu_dir_2014_25_art_50_b, eu_dir_2014_25_art_50_c, eu_dir_2014_25_art_50_c_i, eu_dir_2014_25_art_50_c_ii, eu_dir_2014_25_art_50_c_iii, eu_dir_2014_25_art_50_c_proviso, eu_dir_2014_25_art_50_d, eu_dir_2014_25_art_50_e, eu_dir_2014_25_art_50_f, eu_dir_2014_25_art_50_g, eu_dir_2014_25_art_50_h, eu_dir_2014_25_art_50_i, eu_dir_2014_25_art_50_j])
+-import_from(eu.procurement.directive_2014_24.vocabulary, [works, supplies, services])
+-import_from(formalize_lib, [profile_get, and_status, item, met, unmet])
+
+# --- profile key atoms ---
+# Declared as ATOMS by the -module export list above, and nothing else. These three
+# were ALSO written as zero-arity facts ("explicit facts for conformance") until
+# 2026-09-26. On the flipped engine a name defined as a predicate binds to that
+# predicate's handle, so every module importing these names -- the package facade,
+# fixtures, queries, tests -- received '<this module>\x1fpleaded_ground_key'
+# instead of the atom. The fixtures' dict keys are spelled bare, so
+# get(PROFILE, pleaded_ground_key, _) could never match: 3 of 40 public-interface
+# tests failed on every engine tree from 0738b335 onward. One name, one meaning.
+
+# --- the input check (ruling D80, 2026-10-20) ---
+#
+# utilities_negotiated_without_prior_call_input_problem(PROFILE, PROBLEM) names the FIRST problem with a
+# profile; every public entry point that takes a profile (the decision, the
+# status projection, the checklist, the unmet count and, through the status,
+# the what-if query) gives NO ANSWER when there is one. This domain has no
+# indeterminate verdict (NOTES.md section 2), so "cannot decide" is a failed
+# call, as NOTES.md section 1 already said for a missing pleaded ground.
+#
+# Problems, in order:
+#   not_ground                              -- an unbound variable anywhere in the
+#                                              profile (complete input is part of the
+#                                              contract)
+#   not_a_dict
+#   missing_key(pleaded_ground_key)
+#   wrong_type(pleaded_ground_key, expected_atom)
+#   wrong_type(contract_type_key, expected_atom)
+#   wrong_value(contract_type_key, expected_contract_type)
+#   wrong_type(sole_operator_reason_key, expected_atom)
+#   wrong_type(FLAG, expected_boolean)      -- a condition flag PRESENT but not
+#                                              exactly true or false
+# NOT problems, because NOTES.md documents what they mean in law:
+#   - an ABSENT condition flag or contract type: not established, so the ground
+#     fails (section 2: "the entity relying on an exception must establish it");
+#   - a pleaded ground that is an atom but not one of the ten: use_unlawful, the
+#     chapeau being exhaustive (section 1);
+#   - a sole operator reason that is an atom but not one of the three: the ground
+#     fails (section 4(c)).
+# Total and negation-safe: ground(PROFILE) is tested first and re-tested in
+# every later clause, so no `not` below runs over an unbound variable.
+
+utilities_negotiated_without_prior_call_input_problem(PROFILE, PROBLEM) <- (
+    once(input_problem_in_order(PROFILE, PROBLEM))
+)
+utilities_negotiated_without_prior_call_input_acceptable(PROFILE) <- (
+    not utilities_negotiated_without_prior_call_input_problem(PROFILE, _)
+)
+
+input_problem_in_order(PROFILE, not_ground) <- (
+    not ground(PROFILE)
+)
+input_problem_in_order(PROFILE, not_a_dict) <- (
+    ground(PROFILE),
+    not is_dict(PROFILE)
+)
+input_problem_in_order(PROFILE, missing_key(pleaded_ground_key)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    not profile_get(PROFILE, pleaded_ground_key, _)
+)
+input_problem_in_order(PROFILE, wrong_type(pleaded_ground_key, expected_atom)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, pleaded_ground_key, GROUND),
+    not atom(GROUND)
+)
+input_problem_in_order(PROFILE, wrong_type(contract_type_key, expected_atom)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, contract_type_key, CONTRACT_TYPE),
+    not atom(CONTRACT_TYPE)
+)
+input_problem_in_order(PROFILE, wrong_value(contract_type_key, expected_contract_type)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, contract_type_key, CONTRACT_TYPE),
+    atom(CONTRACT_TYPE),
+    not recognised_contract_type(CONTRACT_TYPE)
+)
+input_problem_in_order(PROFILE, wrong_type(sole_operator_reason_key, expected_atom)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, sole_operator_reason_key, REASON),
+    not atom(REASON)
+)
+input_problem_in_order(PROFILE, wrong_type(FLAG_KEY, expected_boolean)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    condition_flag_key(FLAG_KEY),
+    profile_get(PROFILE, FLAG_KEY, FLAG_VALUE),
+    not (FLAG_VALUE is true),
+    not (FLAG_VALUE is false)
+)
+
+recognised_contract_type(works),
+recognised_contract_type(supplies),
+recognised_contract_type(services),
+
+condition_flag_key(no_suitable_tenders_or_requests_received),
+condition_flag_key(initial_conditions_not_substantially_altered),
+condition_flag_key(contract_purely_for_research_experiment_study_or_development),
+condition_flag_key(not_for_securing_profit_or_recovering_research_costs),
+condition_flag_key(award_does_not_prejudice_competitive_award_of_subsequent_contracts),
+condition_flag_key(only_particular_operator_can_perform),
+condition_flag_key(no_reasonable_alternative_or_substitute),
+condition_flag_key(absence_of_competition_not_artificially_narrowed),
+condition_flag_key(extreme_urgency_time_limits_cannot_be_met),
+condition_flag_key(urgency_events_unforeseeable_by_contracting_entity),
+condition_flag_key(urgency_not_attributable_to_contracting_entity),
+condition_flag_key(additional_deliveries_by_original_supplier),
+condition_flag_key(change_of_supplier_would_cause_technical_incompatibility),
+condition_flag_key(repetition_conforms_to_basic_project),
+condition_flag_key(original_contract_followed_article_44_1_procedure),
+condition_flag_key(basic_project_indicated_extent_and_conditions),
+condition_flag_key(possible_use_of_this_procedure_disclosed_at_first_tender),
+condition_flag_key(supplies_quoted_and_purchased_on_commodity_market),
+condition_flag_key(bargain_opportunity_available_for_very_short_time),
+condition_flag_key(price_considerably_lower_than_normal_market_prices),
+condition_flag_key(particularly_advantageous_conditions_from_winding_up_or_liquidator),
+condition_flag_key(supplier_winding_up_or_in_insolvency_procedure),
+condition_flag_key(contract_follows_directive_design_contest),
+condition_flag_key(awarded_to_contest_winner_or_all_winners_invited),
+
+# --- condition status: atomic boolean input ---
+
+condition_status(PROFILE, KEY, met) <- (profile_get(PROFILE, KEY, true))
+condition_status(PROFILE, KEY, unmet(false)) <- (not profile_get(PROFILE, KEY, true))
+
+# --- type gate per ground ---
+
+type_status(art_50_a_no_suitable_tenders, _PROFILE, met) <- (1 == 1)
+type_status(art_50_b_research_contract, _PROFILE, met) <- (1 == 1)
+type_status(art_50_c_sole_operator, _PROFILE, met) <- (1 == 1)
+type_status(art_50_d_extreme_urgency, _PROFILE, met) <- (1 == 1)
+type_status(art_50_e_additional_deliveries, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_e_additional_deliveries, PROFILE, unmet(false)) <- (not profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_f_repetition, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, works))
+type_status(art_50_f_repetition, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, services))
+type_status(art_50_f_repetition, PROFILE, unmet(false)) <- (
+    not profile_get(PROFILE, contract_type_key, works),
+    not profile_get(PROFILE, contract_type_key, services)
+)
+type_status(art_50_g_commodity_market, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_g_commodity_market, PROFILE, unmet(false)) <- (not profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_h_bargain_purchase, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_h_bargain_purchase, PROFILE, unmet(false)) <- (not profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_i_advantageous_winding_up, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, supplies))
+type_status(art_50_i_advantageous_winding_up, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, services))
+type_status(art_50_i_advantageous_winding_up, PROFILE, unmet(false)) <- (
+    not profile_get(PROFILE, contract_type_key, supplies),
+    not profile_get(PROFILE, contract_type_key, services)
+)
+type_status(art_50_j_design_contest, PROFILE, met) <- (profile_get(PROFILE, contract_type_key, services))
+type_status(art_50_j_design_contest, PROFILE, unmet(false)) <- (not profile_get(PROFILE, contract_type_key, services))
+
+# --- ground status: cumulative conditions per ground ---
+
+ground_status(art_50_a_no_suitable_tenders, PROFILE, STATUS) <- (
+    condition_status(PROFILE, no_suitable_tenders_or_requests_received, S1),
+    condition_status(PROFILE, initial_conditions_not_substantially_altered, S2),
+    and_status([S1, S2], STATUS)
+)
+ground_status(art_50_b_research_contract, PROFILE, STATUS) <- (
+    condition_status(PROFILE, contract_purely_for_research_experiment_study_or_development, S1),
+    condition_status(PROFILE, not_for_securing_profit_or_recovering_research_costs, S2),
+    condition_status(PROFILE, award_does_not_prejudice_competitive_award_of_subsequent_contracts, S3),
+    and_status([S1, S2, S3], STATUS)
+)
+ground_status(art_50_c_sole_operator, PROFILE, STATUS) <- (
+    profile_get(PROFILE, sole_operator_reason_key, unique_artistic_work_or_performance),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_i),
+    condition_status(PROFILE, only_particular_operator_can_perform, S1),
+    and_status([S1], STATUS)
+)
+ground_status(art_50_c_sole_operator, PROFILE, STATUS) <- (
+    profile_get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_ii),
+    implements(eu_dir_2014_25_art_50_c_proviso),
+    condition_status(PROFILE, only_particular_operator_can_perform, S1),
+    condition_status(PROFILE, no_reasonable_alternative_or_substitute, S2),
+    condition_status(PROFILE, absence_of_competition_not_artificially_narrowed, S3),
+    and_status([S1, S2, S3], STATUS)
+)
+ground_status(art_50_c_sole_operator, PROFILE, STATUS) <- (
+    profile_get(PROFILE, sole_operator_reason_key, protection_of_exclusive_rights),
+    implements(eu_dir_2014_25_art_50_c),
+    implements(eu_dir_2014_25_art_50_c_iii),
+    implements(eu_dir_2014_25_art_50_c_proviso),
+    condition_status(PROFILE, only_particular_operator_can_perform, S1),
+    condition_status(PROFILE, no_reasonable_alternative_or_substitute, S2),
+    condition_status(PROFILE, absence_of_competition_not_artificially_narrowed, S3),
+    and_status([S1, S2, S3], STATUS)
+)
+ground_status(art_50_c_sole_operator, PROFILE, unmet(false)) <- (
+    not profile_get(PROFILE, sole_operator_reason_key, unique_artistic_work_or_performance),
+    not profile_get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    not profile_get(PROFILE, sole_operator_reason_key, protection_of_exclusive_rights)
+)
+ground_status(art_50_d_extreme_urgency, PROFILE, STATUS) <- (
+    condition_status(PROFILE, extreme_urgency_time_limits_cannot_be_met, S1),
+    condition_status(PROFILE, urgency_events_unforeseeable_by_contracting_entity, S2),
+    condition_status(PROFILE, urgency_not_attributable_to_contracting_entity, S3),
+    and_status([S1, S2, S3], STATUS)
+)
+ground_status(art_50_e_additional_deliveries, PROFILE, STATUS) <- (
+    type_status(art_50_e_additional_deliveries, PROFILE, T),
+    condition_status(PROFILE, additional_deliveries_by_original_supplier, S1),
+    condition_status(PROFILE, change_of_supplier_would_cause_technical_incompatibility, S2),
+    and_status([T, S1, S2], STATUS)
+)
+ground_status(art_50_f_repetition, PROFILE, STATUS) <- (
+    type_status(art_50_f_repetition, PROFILE, T),
+    condition_status(PROFILE, repetition_conforms_to_basic_project, S1),
+    condition_status(PROFILE, original_contract_followed_article_44_1_procedure, S2),
+    condition_status(PROFILE, basic_project_indicated_extent_and_conditions, S3),
+    condition_status(PROFILE, possible_use_of_this_procedure_disclosed_at_first_tender, S4),
+    and_status([T, S1, S2, S3, S4], STATUS)
+)
+ground_status(art_50_g_commodity_market, PROFILE, STATUS) <- (
+    type_status(art_50_g_commodity_market, PROFILE, T),
+    condition_status(PROFILE, supplies_quoted_and_purchased_on_commodity_market, S1),
+    and_status([T, S1], STATUS)
+)
+ground_status(art_50_h_bargain_purchase, PROFILE, STATUS) <- (
+    type_status(art_50_h_bargain_purchase, PROFILE, T),
+    condition_status(PROFILE, bargain_opportunity_available_for_very_short_time, S1),
+    condition_status(PROFILE, price_considerably_lower_than_normal_market_prices, S2),
+    and_status([T, S1, S2], STATUS)
+)
+ground_status(art_50_i_advantageous_winding_up, PROFILE, STATUS) <- (
+    type_status(art_50_i_advantageous_winding_up, PROFILE, T),
+    condition_status(PROFILE, particularly_advantageous_conditions_from_winding_up_or_liquidator, S1),
+    condition_status(PROFILE, supplier_winding_up_or_in_insolvency_procedure, S2),
+    and_status([T, S1, S2], STATUS)
+)
+ground_status(art_50_j_design_contest, PROFILE, STATUS) <- (
+    type_status(art_50_j_design_contest, PROFILE, T),
+    condition_status(PROFILE, contract_follows_directive_design_contest, S1),
+    condition_status(PROFILE, awarded_to_contest_winner_or_all_winners_invited, S2),
+    and_status([T, S1, S2], STATUS)
+)
+
+# --- citations for ground (c) sub-reasons ---
+
+c_citations(PROFILE, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_i)]) <- (profile_get(PROFILE, sole_operator_reason_key, unique_artistic_work_or_performance))
+c_citations(PROFILE, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_ii), cite(eu_dir_2014_25_art_50_c_proviso)]) <- (profile_get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons))
+c_citations(PROFILE, [cite(eu_dir_2014_25_art_50_c), cite(eu_dir_2014_25_art_50_c_iii), cite(eu_dir_2014_25_art_50_c_proviso)]) <- (profile_get(PROFILE, sole_operator_reason_key, protection_of_exclusive_rights))
+
+# --- decide: one clause per lawful route ---
+
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_a_no_suitable_tenders, [cite(eu_dir_2014_25_art_50_a)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_a),
+    get(PROFILE, pleaded_ground_key, art_50_a_no_suitable_tenders),
+    ground_status(art_50_a_no_suitable_tenders, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_b_research_contract, [cite(eu_dir_2014_25_art_50_b)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_b),
+    get(PROFILE, pleaded_ground_key, art_50_b_research_contract),
+    ground_status(art_50_b_research_contract, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_c_sole_operator, CITATIONS)) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_c),
+    get(PROFILE, pleaded_ground_key, art_50_c_sole_operator),
+    ground_status(art_50_c_sole_operator, PROFILE, met),
+    c_citations(PROFILE, CITATIONS)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_d_extreme_urgency, [cite(eu_dir_2014_25_art_50_d)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_d),
+    get(PROFILE, pleaded_ground_key, art_50_d_extreme_urgency),
+    ground_status(art_50_d_extreme_urgency, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_e_additional_deliveries, [cite(eu_dir_2014_25_art_50_e)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_e),
+    get(PROFILE, pleaded_ground_key, art_50_e_additional_deliveries),
+    ground_status(art_50_e_additional_deliveries, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_f_repetition, [cite(eu_dir_2014_25_art_50_f)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_f),
+    get(PROFILE, pleaded_ground_key, art_50_f_repetition),
+    ground_status(art_50_f_repetition, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_g_commodity_market, [cite(eu_dir_2014_25_art_50_g)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_g),
+    get(PROFILE, pleaded_ground_key, art_50_g_commodity_market),
+    ground_status(art_50_g_commodity_market, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_h_bargain_purchase, [cite(eu_dir_2014_25_art_50_h)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_h),
+    get(PROFILE, pleaded_ground_key, art_50_h_bargain_purchase),
+    ground_status(art_50_h_bargain_purchase, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_i_advantageous_winding_up, [cite(eu_dir_2014_25_art_50_i)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_i),
+    get(PROFILE, pleaded_ground_key, art_50_i_advantageous_winding_up),
+    ground_status(art_50_i_advantageous_winding_up, PROFILE, met)
+)
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_lawful, art_50_j_design_contest, [cite(eu_dir_2014_25_art_50_j)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_j),
+    get(PROFILE, pleaded_ground_key, art_50_j_design_contest),
+    ground_status(art_50_j_design_contest, PROFILE, met)
+)
+
+# --- decide: fail-closed (chapeau exhaustive list) ---
+
+decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(use_unlawful, n_a, [cite(eu_dir_2014_25_art_50_chapeau)])) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    implements(eu_dir_2014_25_art_50_chapeau),
+    get(PROFILE, pleaded_ground_key, _GROUND),
+    not ground_status(_GROUND, PROFILE, met)
+)
+
+# --- status projection ---
+
+utilities_negotiated_without_prior_call_status(PROFILE, STATUS) <- (decide_utilities_negotiated_without_prior_call(PROFILE, utilities_negotiated_verdict(STATUS, _GROUND, _CITATIONS)))
+
+# --- checklist helpers ---
+
+condition_item(KEY, PROFILE, CITATION, ITEM) <- (
+    condition_status(PROFILE, KEY, STATUS),
+    ITEM is item(KEY, STATUS, CITATION)
+)
+type_item(GROUND, PROFILE, CITATION, ITEM) <- (
+    type_status(GROUND, PROFILE, STATUS),
+    ITEM is item(contract_type_key, STATUS, CITATION)
+)
+
+# --- ground checklist per route ---
+
+ground_checklist(art_50_a_no_suitable_tenders, PROFILE, CHECKLIST) <- (
+    condition_item(no_suitable_tenders_or_requests_received, PROFILE, cite(eu_dir_2014_25_art_50_a), ITEM1),
+    condition_item(initial_conditions_not_substantially_altered, PROFILE, cite(eu_dir_2014_25_art_50_a), ITEM2),
+    CHECKLIST is [ITEM1, ITEM2]
+)
+ground_checklist(art_50_b_research_contract, PROFILE, CHECKLIST) <- (
+    condition_item(contract_purely_for_research_experiment_study_or_development, PROFILE, cite(eu_dir_2014_25_art_50_b), ITEM1),
+    condition_item(not_for_securing_profit_or_recovering_research_costs, PROFILE, cite(eu_dir_2014_25_art_50_b), ITEM2),
+    condition_item(award_does_not_prejudice_competitive_award_of_subsequent_contracts, PROFILE, cite(eu_dir_2014_25_art_50_b), ITEM3),
+    CHECKLIST is [ITEM1, ITEM2, ITEM3]
+)
+ground_checklist(art_50_c_sole_operator, PROFILE, CHECKLIST) <- (
+    profile_get(PROFILE, sole_operator_reason_key, unique_artistic_work_or_performance),
+    condition_item(only_particular_operator_can_perform, PROFILE, cite(eu_dir_2014_25_art_50_c), ITEM1),
+    CHECKLIST is [ITEM1]
+)
+ground_checklist(art_50_c_sole_operator, PROFILE, CHECKLIST) <- (
+    profile_get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    condition_item(only_particular_operator_can_perform, PROFILE, cite(eu_dir_2014_25_art_50_c), ITEM1),
+    condition_item(no_reasonable_alternative_or_substitute, PROFILE, cite(eu_dir_2014_25_art_50_c_proviso), ITEM2),
+    condition_item(absence_of_competition_not_artificially_narrowed, PROFILE, cite(eu_dir_2014_25_art_50_c_proviso), ITEM3),
+    CHECKLIST is [ITEM1, ITEM2, ITEM3]
+)
+ground_checklist(art_50_c_sole_operator, PROFILE, CHECKLIST) <- (
+    profile_get(PROFILE, sole_operator_reason_key, protection_of_exclusive_rights),
+    condition_item(only_particular_operator_can_perform, PROFILE, cite(eu_dir_2014_25_art_50_c), ITEM1),
+    condition_item(no_reasonable_alternative_or_substitute, PROFILE, cite(eu_dir_2014_25_art_50_c_proviso), ITEM2),
+    condition_item(absence_of_competition_not_artificially_narrowed, PROFILE, cite(eu_dir_2014_25_art_50_c_proviso), ITEM3),
+    CHECKLIST is [ITEM1, ITEM2, ITEM3]
+)
+ground_checklist(art_50_c_sole_operator, PROFILE, [item(sole_operator_reason_key, unmet(false), cite(eu_dir_2014_25_art_50_c))]) <- (
+    not profile_get(PROFILE, sole_operator_reason_key, unique_artistic_work_or_performance),
+    not profile_get(PROFILE, sole_operator_reason_key, competition_absent_for_technical_reasons),
+    not profile_get(PROFILE, sole_operator_reason_key, protection_of_exclusive_rights)
+)
+ground_checklist(art_50_d_extreme_urgency, PROFILE, CHECKLIST) <- (
+    condition_item(extreme_urgency_time_limits_cannot_be_met, PROFILE, cite(eu_dir_2014_25_art_50_d), ITEM1),
+    condition_item(urgency_events_unforeseeable_by_contracting_entity, PROFILE, cite(eu_dir_2014_25_art_50_d), ITEM2),
+    condition_item(urgency_not_attributable_to_contracting_entity, PROFILE, cite(eu_dir_2014_25_art_50_d), ITEM3),
+    CHECKLIST is [ITEM1, ITEM2, ITEM3]
+)
+ground_checklist(art_50_e_additional_deliveries, PROFILE, CHECKLIST) <- (
+    type_item(art_50_e_additional_deliveries, PROFILE, cite(eu_dir_2014_25_art_50_e), ITEM0),
+    condition_item(additional_deliveries_by_original_supplier, PROFILE, cite(eu_dir_2014_25_art_50_e), ITEM1),
+    condition_item(change_of_supplier_would_cause_technical_incompatibility, PROFILE, cite(eu_dir_2014_25_art_50_e), ITEM2),
+    CHECKLIST is [ITEM0, ITEM1, ITEM2]
+)
+ground_checklist(art_50_f_repetition, PROFILE, CHECKLIST) <- (
+    type_item(art_50_f_repetition, PROFILE, cite(eu_dir_2014_25_art_50_f), ITEM0),
+    condition_item(repetition_conforms_to_basic_project, PROFILE, cite(eu_dir_2014_25_art_50_f), ITEM1),
+    condition_item(original_contract_followed_article_44_1_procedure, PROFILE, cite(eu_dir_2014_25_art_50_f), ITEM2),
+    condition_item(basic_project_indicated_extent_and_conditions, PROFILE, cite(eu_dir_2014_25_art_50_f), ITEM3),
+    condition_item(possible_use_of_this_procedure_disclosed_at_first_tender, PROFILE, cite(eu_dir_2014_25_art_50_f), ITEM4),
+    CHECKLIST is [ITEM0, ITEM1, ITEM2, ITEM3, ITEM4]
+)
+ground_checklist(art_50_g_commodity_market, PROFILE, CHECKLIST) <- (
+    type_item(art_50_g_commodity_market, PROFILE, cite(eu_dir_2014_25_art_50_g), ITEM0),
+    condition_item(supplies_quoted_and_purchased_on_commodity_market, PROFILE, cite(eu_dir_2014_25_art_50_g), ITEM1),
+    CHECKLIST is [ITEM0, ITEM1]
+)
+ground_checklist(art_50_h_bargain_purchase, PROFILE, CHECKLIST) <- (
+    type_item(art_50_h_bargain_purchase, PROFILE, cite(eu_dir_2014_25_art_50_h), ITEM0),
+    condition_item(bargain_opportunity_available_for_very_short_time, PROFILE, cite(eu_dir_2014_25_art_50_h), ITEM1),
+    condition_item(price_considerably_lower_than_normal_market_prices, PROFILE, cite(eu_dir_2014_25_art_50_h), ITEM2),
+    CHECKLIST is [ITEM0, ITEM1, ITEM2]
+)
+ground_checklist(art_50_i_advantageous_winding_up, PROFILE, CHECKLIST) <- (
+    type_item(art_50_i_advantageous_winding_up, PROFILE, cite(eu_dir_2014_25_art_50_i), ITEM0),
+    condition_item(particularly_advantageous_conditions_from_winding_up_or_liquidator, PROFILE, cite(eu_dir_2014_25_art_50_i), ITEM1),
+    condition_item(supplier_winding_up_or_in_insolvency_procedure, PROFILE, cite(eu_dir_2014_25_art_50_i), ITEM2),
+    CHECKLIST is [ITEM0, ITEM1, ITEM2]
+)
+ground_checklist(art_50_j_design_contest, PROFILE, CHECKLIST) <- (
+    type_item(art_50_j_design_contest, PROFILE, cite(eu_dir_2014_25_art_50_j), ITEM0),
+    condition_item(contract_follows_directive_design_contest, PROFILE, cite(eu_dir_2014_25_art_50_j), ITEM1),
+    condition_item(awarded_to_contest_winner_or_all_winners_invited, PROFILE, cite(eu_dir_2014_25_art_50_j), ITEM2),
+    CHECKLIST is [ITEM0, ITEM1, ITEM2]
+)
+
+# --- public checklist and unmet count ---
+
+utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    get(PROFILE, pleaded_ground_key, GROUND),
+    ground_checklist(GROUND, PROFILE, CHECKLIST)
+)
+utilities_negotiated_without_prior_call_unmet_count(PROFILE, COUNT) <- (
+    utilities_negotiated_without_prior_call_input_acceptable(PROFILE),
+    get(PROFILE, pleaded_ground_key, GROUND),
+    ground_checklist(GROUND, PROFILE, CHECKLIST),
+    findall(ITEM, (item(_, unmet(_), _) in CHECKLIST), UNMET_ITEMS),
+    length(UNMET_ITEMS, COUNT)
+)

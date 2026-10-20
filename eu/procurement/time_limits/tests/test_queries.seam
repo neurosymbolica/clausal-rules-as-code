@@ -1,0 +1,67 @@
+-double_quotes(chars)
+# =====================================================================
+# test_queries.clausal -- PROPERTY tests for the query layer.
+# One test per query-taxonomy predicate registered in manifest.yaml
+# query_interface (#4 enumerate, #6 floor, #16 what_if + profile keys).
+# Run: python -m clausal.testing eu/procurement/time_limits/tests/test_queries.clausal
+# =====================================================================
+-import_from(eu.procurement.time_limits.queries, [
+    time_limits_profile_keys, time_limits_what_if,
+    time_limits_enumerate, time_limits_floor])
+-import_from(eu.procurement.time_limits.fixtures, [
+    time_limits_profile_for])
+-import_from(eu.procurement.time_limits.time_limits, [
+    procedure_type_key, stage_key,
+    prior_information_notice_published,
+    electronic_submission_accepted,
+    state_of_urgency_substantiated,
+    observed_time_limit_days,
+    receipt_of_tenders, receipt_of_participation_requests,
+    baseline_minimum, with_prior_information_notice,
+    with_electronic_submission, under_state_of_urgency])
+-import_from(eu.procurement.directive_2014_24.vocabulary, [
+    open_procedure, restricted_procedure, competitive_dialogue])
+-strict_atoms
+
+test("profile keys: all six input keys are declared") <- (
+    time_limits_profile_keys(PROFILE_KEYS),
+    length(PROFILE_KEYS, 6),
+    procedure_type_key in PROFILE_KEYS,
+    stage_key in PROFILE_KEYS,
+    prior_information_notice_published in PROFILE_KEYS,
+    electronic_submission_accepted in PROFILE_KEYS,
+    state_of_urgency_substantiated in PROFILE_KEYS,
+    observed_time_limit_days in PROFILE_KEYS
+)
+
+test("what_if: turning electronic submission on moves open tenders 35 -> 30") <- (
+    time_limits_profile_for("open_tenders_baseline", PROFILE),
+    time_limits_what_if(PROFILE, electronic_submission_accepted, True, 30)
+)
+
+test("what_if: withdrawing the urgency substantiation moves restricted tenders 10 -> 30") <- (
+    time_limits_profile_for("restricted_tenders_urgency", PROFILE),
+    time_limits_what_if(PROFILE, state_of_urgency_substantiated, False, 30)
+)
+
+test("enumerate: the published open-procedure rows are all present") <- (
+    time_limits_enumerate(open_procedure, receipt_of_tenders, baseline_minimum, 35),
+    time_limits_enumerate(open_procedure, receipt_of_tenders, with_prior_information_notice, 15),
+    time_limits_enumerate(open_procedure, receipt_of_tenders, with_electronic_submission, 30),
+    time_limits_enumerate(open_procedure, receipt_of_tenders, under_state_of_urgency, 15)
+)
+
+test("enumerate: the table has exactly 18 published rows") <- (
+    findall(
+        [PROCEDURE_TYPE, STAGE, REDUCTION_CONDITION, DAYS],
+        time_limits_enumerate(PROCEDURE_TYPE, STAGE, REDUCTION_CONDITION, DAYS),
+        ROW_LIST),
+    length(ROW_LIST, 18)
+)
+
+test("floor: fully-reduced floors match the published least figures") <- (
+    time_limits_floor(open_procedure, receipt_of_tenders, 15),
+    time_limits_floor(restricted_procedure, receipt_of_tenders, 10),
+    time_limits_floor(restricted_procedure, receipt_of_participation_requests, 15),
+    time_limits_floor(competitive_dialogue, receipt_of_participation_requests, 30)
+)

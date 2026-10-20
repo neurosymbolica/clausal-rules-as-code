@@ -1,0 +1,604 @@
+# =====================================================================
+# time_limits.clausal -- THE Arts 27-31 determination slice (Dir 2014/24/EU).
+#
+# Determination-slices layout (2026-08-07): this file is the whole of the
+# minimum-time-limit determination -- the published day tables, the
+# reduction-condition tests, the verdict assembly, the two projections and
+# the checklist/resolvable facade. It absorbs the former constants.clausal,
+# computation.clausal and decision.clausal unchanged (clause bodies
+# byte-identical) and declares its own vocabulary instead of importing it
+# from a central schema file.
+#
+# decide_time_limits(PROFILE, time_limits_verdict(STATUS, MINIMUM_DAYS,
+#                                                 CONFORMITY, CITATIONS))
+#
+# PROFILE = {
+#   procedure_type_key:                 open_procedure | restricted_procedure |
+#                                       competitive_procedure_with_negotiation |
+#                                       competitive_dialogue | innovation_partnership,
+#   stage_key:                          receipt_of_tenders |
+#                                       receipt_of_participation_requests,
+#   prior_information_notice_published: True | False,
+#   electronic_submission_accepted:     True | False,
+#   state_of_urgency_substantiated:     True | False,
+#   observed_time_limit_days:           the day count the notice ACTUALLY
+#                                       allowed for this stage (integer)
+# }
+#
+# STATUS in { minimum_days_prescribed, no_minimum_prescribed,
+#             stage_not_applicable }.
+# MINIMUM_DAYS: integer when minimum_days_prescribed, n_a otherwise.
+# CONFORMITY in { meets_prescribed_minimum, shorter_than_prescribed_minimum,
+#                 observed_days_not_supplied, no_prescribed_minimum_to_meet }.
+#
+# WHY THE DOMAIN DECIDES CONFORMITY AND NOT A REVIEWER'S OVERLAY. Arts 27-31
+# fix a minimum; the record shows what was allowed; comparing the two is
+# arithmetic over the statute's own figures and takes no view about what the
+# record shows. That is the domain's work by the assess spec's own dividing
+# line (§3.1). Contrast "did they actually run the negotiated procedure",
+# which is record-reading and stays outside.
+#
+# WHY observed_time_limit_days IS A PROFILE KEY AND NOT A FOURTH FLAG. It is
+# an INPUT of the same kind as the three circumstance flags -- something the
+# contract notice says -- so it is read exactly as they are, through the kit's
+# profile accessors, and its ABSENCE is handled exactly as theirs is: by a
+# positive match that simply does not fire. What is new is that its absence
+# gets a NAME in the verdict (observed_days_not_supplied) instead of silently
+# selecting some other branch, because unlike a reduction flag there is no
+# safe default reading of "the notice allowed we-do-not-know-how-many days".
+# An unsupplied day count must never read as compliance, and the only way to
+# guarantee that is for the verdict to say so out loud.
+#
+# WHY THE FIVE ARTICLES ARE ONE SLICE, NOT FIVE. Arts 27-31 read like five
+# determinations (open / restricted / accelerated / with a prior information
+# notice / ...), but the formalization has exactly ONE public result family,
+# time_limits_verdict/3, produced by ONE predicate, decide_time_limits/2.
+# The procedure is an ARGUMENT: every article contributes rows to the single
+# minimum_time_limit_days/5 table, keyed (procedure, stage, condition).
+# A predicate has exactly one defining module, so splitting by article would
+# divide minimum_time_limit_days/5's 18 clauses -- and decide_time_limits/2's
+# three route clauses -- across files. That is not a split.
+#
+# Model: each row of minimum_time_limit_days/5 is a lawful minimum available
+# under one condition (baseline / prior information notice / electronic
+# submission / urgency). Reductions never compound beyond the published
+# figures (each targets one paragraph's base), so the lawful minimum for a
+# profile is the LEAST applicable row; the verdict cites every article key
+# achieving that least figure. ALL day figures are facts in this file. Zero
+# day literals in the rules.
+#
+# The verdict CONSTRUCTOR time_limits_verdict/3 is NOT declared here: it is
+# the shape of the answer, so it lives in kernel.clausal (see that header).
+#
+# IMPORTS ARE LEXICAL CLOSURE ONLY. Every name below is spelled in a clause
+# body or dict key of this file; nothing is imported "for closure". The old
+# rule "import the FULL schema vocabulary into every driver module" rests on
+# a caller-resolution mechanism that does not exist -- bare-atom resolution
+# is compile-time and lexical, per file (clausal/logic/compiler_v2.py:647-729).
+# The five eu.procurement.directive_2014_24.vocabulary PROCEDURE atoms ARE imported here, because
+# this file genuinely spells them: they are the first argument of every
+# minimum_time_limit_days/5 row. (The old computation.clausal imported them
+# too, on the refuted "profile VALUES must be bound in the callee's
+# namespace" reasoning, and spelled none of them -- that import is gone.)
+#
+# Source: EU Directive 2014/24/EU Arts 27-31.
+# =====================================================================
+
+-module(time_limits, [
+    # ---- status vocabulary (the STATUS slot of the verdict) ----------
+    minimum_days_prescribed, no_minimum_prescribed, stage_not_applicable,
+    # ---- the numeric n/a marker (the MINIMUM_DAYS slot) --------------
+    n_a,
+    # ---- checklist row id --------------------------------------------
+    overall,
+    # ---- profile keys ------------------------------------------------
+    procedure_type_key, stage_key,
+    prior_information_notice_published,
+    electronic_submission_accepted,
+    state_of_urgency_substantiated,
+    observed_time_limit_days,
+    # ---- conformity vocabulary (the CONFORMITY slot of the verdict) ---
+    meets_prescribed_minimum, shorter_than_prescribed_minimum,
+    observed_days_not_supplied, no_prescribed_minimum_to_meet,
+    # ---- stage vocabulary --------------------------------------------
+    receipt_of_tenders, receipt_of_participation_requests,
+    # ---- reduction-condition vocabulary ------------------------------
+    baseline_minimum, with_prior_information_notice,
+    with_electronic_submission, under_state_of_urgency,
+    # ---- closed value vocabularies (used by property tests) ----------
+    time_limits_status_values(STATUS_VALUES),
+    time_limits_conformity_values(CONFORMITY_VALUES),
+    time_limits_stage_values(STAGE_VALUES),
+    time_limits_reduction_condition_values(REDUCTION_CONDITION_VALUES),
+    # ---- the published day tables (Arts 27-31) -----------------------
+    minimum_time_limit_days(PROCEDURE_TYPE, STAGE, REDUCTION_CONDITION, DAYS, CITATION),
+    no_minimum_prescribed_for(PROCEDURE_TYPE, STAGE, CITATION),
+    stage_not_provided_for(PROCEDURE_TYPE, STAGE, CITATION),
+    # ---- the determination + its projections -------------------------
+    decide_time_limits(PROFILE, VERDICT),
+    time_limits_status(PROFILE, STATUS),
+    minimum_days(PROFILE, MINIMUM_DAYS),
+    time_limits_conformity(PROFILE, CONFORMITY),
+    observed_days_conformity(PROFILE, MINIMUM_DAYS, CONFORMITY),
+    conformity_of_check_status(CHECK_STATUS, CONFORMITY),
+    applicable_reduction_condition(PROFILE, REDUCTION_CONDITION),
+    candidate_time_limit(PROFILE, DAYS, CITATION),
+    # ---- checklist / resolvable facade -------------------------------
+    time_limits_checklist(PROFILE, CHECKLIST),
+    time_limits_decision_resolvable(PROFILE),
+    # ---- the input check (D80) and its problem vocabulary -------------
+    time_limits_input_problem(PROFILE, PROBLEM),
+    time_limits_input_acceptable(PROFILE),
+    not_ground, not_a_dict,
+    missing_key(KEY), wrong_value(KEY, EXPECTED), wrong_type(KEY, EXPECTED),
+    negative_count(KEY),
+    expected_procedure_type, expected_stage, expected_boolean, expected_integer
+])
+-double_quotes(chars)
+
+# The five procedure atoms are the backbone vocabulary (Art 26); they key
+# every row of minimum_time_limit_days/5 below, so this file spells them.
+-import_from(eu.procurement.directive_2014_24.vocabulary, [
+    open_procedure,
+    restricted_procedure,
+    competitive_procedure_with_negotiation,
+    competitive_dialogue,
+    innovation_partnership])
+
+-import_from(eu.procurement.time_limits.kernel, [
+    time_limits_verdict])
+
+-import_from(eu.procurement.time_limits.citations, [
+    cite,
+    implements,
+    eu_dir_2014_24_art_27,
+    eu_dir_2014_24_art_28,
+    eu_dir_2014_24_art_29,
+    eu_dir_2014_24_art_30,
+    eu_dir_2014_24_art_31])
+
+# check_gte/5 is the kit's profile-key-versus-threshold primitive, and the
+# comparison this domain needs is exactly that: it yields met / unmet(REASON) /
+# unknown([KEY]) with DISJOINT guards, so absence gets its own answer instead of
+# falling into either side, and a present non-number yields NO solution rather
+# than an accidental one. Rewriting those three clauses by hand here would be
+# the same code with a second chance to get the absent case wrong.
+-import_from(formalize_lib, [profile_get, item, check_gte, met, unmet, unknown])
+
+-strict_atoms
+
+-private([input_problem_in_order(PROFILE, PROBLEM),
+          recognised_procedure_type(PROCEDURE_TYPE),
+          circumstance_flag_key(KEY)])
+
+# =====================================================================
+# PART 1 -- the statutory VALUE facts (was constants.clausal).
+#
+# minimum_time_limit_days/5 is the star table: the published minimum day
+# counts of Directive 2014/24/EU Arts 27-31, one row per (procedure, stage,
+# reduction condition). Reductions DO NOT naively stack: each reduced figure
+# in the Directive text targets one specific paragraph's base figure (e.g.
+# Art 27(4)'s "reduce by five days" applies only to the 35-day limit of
+# Art 27(1), never to the 15-day figures of Art 27(2)/(3)). The lawful
+# minimum for a profile is therefore the LEAST of the applicable rows
+# (PART 2). Derived rows store the resulting absolute figure, with the
+# derivation in the row comment.
+# =====================================================================
+
+# ---- Closed value vocabularies (used by property tests) --------------
+time_limits_status_values([
+    minimum_days_prescribed, no_minimum_prescribed, stage_not_applicable]),
+time_limits_conformity_values([
+    meets_prescribed_minimum, shorter_than_prescribed_minimum,
+    observed_days_not_supplied, no_prescribed_minimum_to_meet]),
+time_limits_stage_values([
+    receipt_of_tenders, receipt_of_participation_requests]),
+time_limits_reduction_condition_values([
+    baseline_minimum, with_prior_information_notice,
+    with_electronic_submission, under_state_of_urgency]),
+
+# =====================================================================
+# minimum_time_limit_days/5 -- the published day tables (Arts 27-31).
+# One row per lawful (procedure, stage, condition) minimum.
+# =====================================================================
+
+# ---- Open procedure (Art 27), receipt of tenders ---------------------
+# Art 27(1) subpara 2: base minimum 35 days from contract-notice dispatch.
+minimum_time_limit_days(open_procedure, receipt_of_tenders,
+    baseline_minimum, 35, cite(eu_dir_2014_24_art_27)) <- (
+    implements(eu_dir_2014_24_art_27)
+),
+# Art 27(2): prior information notice published 35 days - 12 months before
+# the contract notice -> minimum may be shortened to 15 days.
+minimum_time_limit_days(open_procedure, receipt_of_tenders,
+    with_prior_information_notice, 15, cite(eu_dir_2014_24_art_27)) <- (
+    implements(eu_dir_2014_24_art_27)
+),
+# Art 27(4): electronic submission accepted -> the Art 27(1) 35-day limit
+# may be reduced by 5 days: 35 - 5 = 30. (Applies ONLY to the 27(1) base.)
+minimum_time_limit_days(open_procedure, receipt_of_tenders,
+    with_electronic_submission, 30, cite(eu_dir_2014_24_art_27)) <- (
+    implements(eu_dir_2014_24_art_27)
+),
+# Art 27(3): duly substantiated state of urgency -> minimum 15 days.
+minimum_time_limit_days(open_procedure, receipt_of_tenders,
+    under_state_of_urgency, 15, cite(eu_dir_2014_24_art_27)) <- (
+    implements(eu_dir_2014_24_art_27)
+),
+
+# ---- Restricted procedure (Art 28), receipt of participation requests
+# Art 28(1) subpara 2: base minimum 30 days from contract-notice (or
+# invitation-to-confirm-interest) dispatch.
+minimum_time_limit_days(restricted_procedure, receipt_of_participation_requests,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+# Art 28(6)(a): state of urgency -> requests-to-participate minimum 15 days.
+minimum_time_limit_days(restricted_procedure, receipt_of_participation_requests,
+    under_state_of_urgency, 15, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+
+# ---- Restricted procedure (Art 28), receipt of tenders ---------------
+# Art 28(2) subpara 2: base minimum 30 days from invitation-to-tender dispatch.
+minimum_time_limit_days(restricted_procedure, receipt_of_tenders,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+# Art 28(3): prior information notice published 35 days - 12 months before
+# the contract notice -> tender minimum may be shortened to 10 days.
+minimum_time_limit_days(restricted_procedure, receipt_of_tenders,
+    with_prior_information_notice, 10, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+# Art 28(5): electronic submission accepted -> the Art 28(2) 30-day limit
+# may be reduced by 5 days: 30 - 5 = 25. (Applies ONLY to the 28(2) base.)
+minimum_time_limit_days(restricted_procedure, receipt_of_tenders,
+    with_electronic_submission, 25, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+# Art 28(6)(b): state of urgency -> tender minimum 10 days.
+minimum_time_limit_days(restricted_procedure, receipt_of_tenders,
+    under_state_of_urgency, 10, cite(eu_dir_2014_24_art_28)) <- (
+    implements(eu_dir_2014_24_art_28)
+),
+
+# ---- Competitive procedure with negotiation (Art 29) -----------------
+# Art 29(1) subpara 4: requests-to-participate base minimum 30 days.
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_participation_requests,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+# Art 28(6)(a) applied by Art 29(1) subpara 4: urgency -> requests 15 days.
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_participation_requests,
+    under_state_of_urgency, 15, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+# Art 29(1) subpara 4: initial-tender base minimum 30 days.
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_tenders,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+# Art 28(3) applied by Art 29(1) subpara 4: prior information notice ->
+# initial-tender minimum 10 days.
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_tenders,
+    with_prior_information_notice, 10, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+# Art 28(5) applied by Art 29(1) subpara 4: electronic submission ->
+# 30 - 5 = 25 days. (Applies ONLY to the 30-day base.)
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_tenders,
+    with_electronic_submission, 25, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+# Art 28(6)(b) applied by Art 29(1) subpara 4: urgency -> tenders 10 days.
+minimum_time_limit_days(competitive_procedure_with_negotiation, receipt_of_tenders,
+    under_state_of_urgency, 10, cite(eu_dir_2014_24_art_29)) <- (
+    implements(eu_dir_2014_24_art_29)
+),
+
+# ---- Competitive dialogue (Art 30) -----------------------------------
+# Art 30(1) subpara 2: requests-to-participate minimum 30 days.
+# No accelerated (urgency) variant and no reductions are provided for.
+minimum_time_limit_days(competitive_dialogue, receipt_of_participation_requests,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_30)) <- (
+    implements(eu_dir_2014_24_art_30)
+),
+
+# ---- Innovation partnership (Art 31) ---------------------------------
+# Art 31(1) subpara 4: requests-to-participate minimum 30 days.
+# No accelerated (urgency) variant and no reductions are provided for.
+minimum_time_limit_days(innovation_partnership, receipt_of_participation_requests,
+    baseline_minimum, 30, cite(eu_dir_2014_24_art_31)) <- (
+    implements(eu_dir_2014_24_art_31)
+),
+
+# =====================================================================
+# no_minimum_prescribed_for/3 -- (procedure, stage) pairs the Directive
+# leaves without a prescribed minimum day count: tenders in competitive
+# dialogue / innovation partnership follow the invitation regime, with
+# no Art 27/28-style day table.
+# =====================================================================
+no_minimum_prescribed_for(competitive_dialogue, receipt_of_tenders,
+    cite(eu_dir_2014_24_art_30)) <- (
+    implements(eu_dir_2014_24_art_30)
+),
+no_minimum_prescribed_for(innovation_partnership, receipt_of_tenders,
+    cite(eu_dir_2014_24_art_31)) <- (
+    implements(eu_dir_2014_24_art_31)
+),
+
+# =====================================================================
+# stage_not_provided_for/3 -- (procedure, stage) pairs that do not exist:
+# the open procedure is single-stage (any interested operator tenders
+# directly; there is no request-to-participate stage).
+# =====================================================================
+stage_not_provided_for(open_procedure, receipt_of_participation_requests,
+    cite(eu_dir_2014_24_art_27)) <- (
+    implements(eu_dir_2014_24_art_27)
+),
+
+# =====================================================================
+# PART 2 -- the decision logic (was computation.clausal).
+# =====================================================================
+
+# =====================================================================
+# applicable_reduction_condition/2 -- which table conditions a profile
+# satisfies. baseline_minimum always applies; each reduction applies
+# only when its input flag is True.
+# =====================================================================
+
+applicable_reduction_condition(PROFILE, baseline_minimum) <- (
+    time_limits_input_acceptable(PROFILE)
+)
+
+applicable_reduction_condition(PROFILE, with_prior_information_notice) <- (
+    time_limits_input_acceptable(PROFILE),
+    profile_get(PROFILE, prior_information_notice_published, True)
+)
+
+applicable_reduction_condition(PROFILE, with_electronic_submission) <- (
+    time_limits_input_acceptable(PROFILE),
+    profile_get(PROFILE, electronic_submission_accepted, True)
+)
+
+applicable_reduction_condition(PROFILE, under_state_of_urgency) <- (
+    time_limits_input_acceptable(PROFILE),
+    profile_get(PROFILE, state_of_urgency_substantiated, True)
+)
+
+# =====================================================================
+# candidate_time_limit/3 -- every lawful minimum available to a profile:
+# the table rows for its (procedure, stage) whose condition it satisfies.
+# CITATION is the row's ready-made cite/1 term (built in PART 1 above).
+# =====================================================================
+
+candidate_time_limit(PROFILE, DAYS, CITATION) <- (
+    time_limits_input_acceptable(PROFILE),
+    PROCEDURE_TYPE is PROFILE[procedure_type_key],
+    STAGE is PROFILE[stage_key],
+    applicable_reduction_condition(PROFILE, REDUCTION_CONDITION),
+    minimum_time_limit_days(PROCEDURE_TYPE, STAGE, REDUCTION_CONDITION,
+        DAYS, CITATION)
+)
+
+# =====================================================================
+# observed_days_conformity/3 -- the days the notice ACTUALLY allowed,
+# against the minimum the Directive prescribes for this profile.
+#
+# Delegates to the kit's check_gte/5, which is this comparison exactly:
+#   met          -- observed >= MINIMUM_DAYS, an INCLUSIVE floor. Art 27(1)
+#                   reads "shall be 35 days", so allowing exactly the
+#                   published figure complies; only fewer days breaches.
+#   unmet(_)     -- observed < MINIMUM_DAYS: a real Arts 27-31 breach.
+#   unknown(_)   -- the key is absent from the profile.
+# The REASON slot is discarded (`_`): what is unmet is already stated by the
+# CONFORMITY atom, and the article is already in CITATIONS.
+#
+# THE ABSENT CASE IS THE ONE THAT MATTERS. check_gte's three clauses have
+# disjoint guards, so an absent key reaches `unknown` and can reach neither
+# comparison -- it cannot fall through into `meets_prescribed_minimum`. A
+# present NON-NUMBER matches none of the three and check_gte yields no
+# solution at all, which fails route 1 closed rather than inventing an answer
+# about a value nobody can compare.
+# =====================================================================
+
+observed_days_conformity(PROFILE, MINIMUM_DAYS, CONFORMITY) <- (
+    time_limits_input_acceptable(PROFILE),
+    check_gte(PROFILE, observed_time_limit_days, MINIMUM_DAYS, _, CHECK_STATUS),
+    conformity_of_check_status(CHECK_STATUS, CONFORMITY)
+)
+
+# The kit's status vocabulary -> this domain's conformity vocabulary. One
+# clause per kit status, disjoint, total over the three check_gte can produce.
+conformity_of_check_status(CHECK_STATUS, meets_prescribed_minimum) <- (
+    CHECK_STATUS is met
+)
+
+conformity_of_check_status(CHECK_STATUS, shorter_than_prescribed_minimum) <- (
+    CHECK_STATUS is unmet(_)
+)
+
+conformity_of_check_status(CHECK_STATUS, observed_days_not_supplied) <- (
+    CHECK_STATUS is unknown(_)
+)
+
+# =====================================================================
+# time_limits_input_problem/2 -- THE input check (ruling D80,
+# 2026-10-20). Every public entry point that takes a PROFILE runs it before
+# any rule reads the profile, and gives NO ANSWER when it finds a problem:
+# this domain has no indeterminate verdict, so "cannot decide" is a failed
+# call, as NOTES.md section 1 already said for a missing procedure or stage.
+#
+# PROBLEM is the FIRST problem, in this order:
+#   not_ground                         -- the profile holds an unbound variable
+#                                         (complete input is part of the contract)
+#   not_a_dict                         -- the profile is not a dict
+#   missing_key(procedure_type_key)    -- required, no default
+#   wrong_value(procedure_type_key, expected_procedure_type)
+#   missing_key(stage_key)             -- required, no default
+#   wrong_value(stage_key, expected_stage)
+#   wrong_type(FLAG, expected_boolean) -- a circumstance flag PRESENT but not
+#                                         exactly True or False. An ABSENT flag
+#                                         is not a problem: "Absent means it does
+#                                         not apply" (NOTES.md section 1), the
+#                                         reductions being permissions the
+#                                         authority "may" use (Arts 27(2)-(4),
+#                                         28(3)-(6)).
+#   wrong_type(observed_time_limit_days, expected_integer)
+#   negative_count(observed_time_limit_days)
+#                                      -- an ABSENT day count is not a problem: it
+#                                         is reported as observed_days_not_supplied.
+#
+# Total and negation-safe: ground(PROFILE) is tested first, and every later
+# clause re-tests it, so no `not` below ever runs over an unbound variable;
+# the type test integer/1 runs before the comparison with 0.
+# =====================================================================
+
+time_limits_input_problem(PROFILE, PROBLEM) <- (
+    once(input_problem_in_order(PROFILE, PROBLEM))
+)
+
+time_limits_input_acceptable(PROFILE) <- (
+    not time_limits_input_problem(PROFILE, _)
+)
+
+input_problem_in_order(PROFILE, not_ground) <- (
+    not ground(PROFILE)
+)
+input_problem_in_order(PROFILE, not_a_dict) <- (
+    ground(PROFILE),
+    not is_dict(PROFILE)
+)
+input_problem_in_order(PROFILE, missing_key(procedure_type_key)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    not profile_get(PROFILE, procedure_type_key, _)
+)
+input_problem_in_order(PROFILE, wrong_value(procedure_type_key, expected_procedure_type)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, procedure_type_key, PROCEDURE_TYPE),
+    not recognised_procedure_type(PROCEDURE_TYPE)
+)
+input_problem_in_order(PROFILE, missing_key(stage_key)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    not profile_get(PROFILE, stage_key, _)
+)
+input_problem_in_order(PROFILE, wrong_value(stage_key, expected_stage)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, stage_key, STAGE),
+    time_limits_stage_values(STAGE_VALUES),
+    not (STAGE in STAGE_VALUES)
+)
+input_problem_in_order(PROFILE, wrong_type(FLAG_KEY, expected_boolean)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    circumstance_flag_key(FLAG_KEY),
+    profile_get(PROFILE, FLAG_KEY, FLAG_VALUE),
+    not (FLAG_VALUE is True),
+    not (FLAG_VALUE is False)
+)
+input_problem_in_order(PROFILE, wrong_type(observed_time_limit_days, expected_integer)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, observed_time_limit_days, DAYS),
+    not integer(DAYS)
+)
+input_problem_in_order(PROFILE, negative_count(observed_time_limit_days)) <- (
+    ground(PROFILE), is_dict(PROFILE),
+    profile_get(PROFILE, observed_time_limit_days, DAYS),
+    integer(DAYS),
+    DAYS < 0
+)
+
+recognised_procedure_type(open_procedure),
+recognised_procedure_type(restricted_procedure),
+recognised_procedure_type(competitive_procedure_with_negotiation),
+recognised_procedure_type(competitive_dialogue),
+recognised_procedure_type(innovation_partnership),
+
+circumstance_flag_key(prior_information_notice_published),
+circumstance_flag_key(electronic_submission_accepted),
+circumstance_flag_key(state_of_urgency_substantiated),
+
+# =====================================================================
+# decide_time_limits/2 -- the top-level decision predicate.
+# Route 1: >= 1 applicable table row -> the least figure is the lawful
+#          minimum; cite every article key achieving it.
+# Route 2: (procedure, stage) with no prescribed minimum (competitive
+#          dialogue / innovation partnership tenders) -> no_minimum_prescribed.
+# Route 3: (procedure, stage) that does not exist (open procedure has no
+#          participation-request stage) -> stage_not_applicable.
+# Routes are mutually exclusive: the day table has no rows for the
+# route-2/route-3 pairs, and vice versa.
+#
+# CONFORMITY per route. Route 1 compares (above). Routes 2 and 3 prescribe no
+# figure, so there is nothing to compare and the slot says exactly that:
+# `no_prescribed_minimum_to_meet`, written into the head beside `n_a` for the
+# same reason `n_a` is. It is NOT a conformity claim in either direction --
+# an authority whose tender stage has no prescribed day table has not thereby
+# been found compliant with Arts 27-31, and must not read as though it had.
+# =====================================================================
+
+decide_time_limits(PROFILE, time_limits_verdict(minimum_days_prescribed, MINIMUM_DAYS, CONFORMITY, CITATIONS)) <- (
+    time_limits_input_acceptable(PROFILE),
+    findall(DAYS, candidate_time_limit(PROFILE, DAYS, _), CANDIDATE_DAYS_LIST),
+    not (CANDIDATE_DAYS_LIST is []),
+    min_list(CANDIDATE_DAYS_LIST, MINIMUM_DAYS),
+    findall(
+        CITATION,
+        candidate_time_limit(PROFILE, MINIMUM_DAYS, CITATION),
+        MINIMAL_CITE_TERMS),
+    sort(MINIMAL_CITE_TERMS, CITATIONS),
+    observed_days_conformity(PROFILE, MINIMUM_DAYS, CONFORMITY)
+)
+
+decide_time_limits(PROFILE, time_limits_verdict(no_minimum_prescribed, n_a, no_prescribed_minimum_to_meet, CITATIONS)) <- (
+    time_limits_input_acceptable(PROFILE),
+    PROCEDURE_TYPE is PROFILE[procedure_type_key],
+    STAGE is PROFILE[stage_key],
+    no_minimum_prescribed_for(PROCEDURE_TYPE, STAGE, CITATION),
+    CITATIONS is [CITATION]
+)
+
+decide_time_limits(PROFILE, time_limits_verdict(stage_not_applicable, n_a, no_prescribed_minimum_to_meet, CITATIONS)) <- (
+    time_limits_input_acceptable(PROFILE),
+    PROCEDURE_TYPE is PROFILE[procedure_type_key],
+    STAGE is PROFILE[stage_key],
+    stage_not_provided_for(PROCEDURE_TYPE, STAGE, CITATION),
+    CITATIONS is [CITATION]
+)
+
+# =====================================================================
+# Projections
+# =====================================================================
+
+# ---- STATUS only -----------------------------------------------------
+time_limits_status(PROFILE, STATUS) <- (
+    decide_time_limits(PROFILE, time_limits_verdict(STATUS, _, _, _))
+)
+
+# ---- MINIMUM_DAYS only (integer, or n_a for route 2/3) ---------------
+minimum_days(PROFILE, MINIMUM_DAYS) <- (
+    decide_time_limits(PROFILE, time_limits_verdict(_, MINIMUM_DAYS, _, _))
+)
+
+# ---- CONFORMITY only -------------------------------------------------
+time_limits_conformity(PROFILE, CONFORMITY) <- (
+    decide_time_limits(PROFILE, time_limits_verdict(_, _, CONFORMITY, _))
+)
+
+# =====================================================================
+# PART 3 -- checklist + resolvable facade (was decision.clausal).
+# The time-limit decision is total over the meaningful (procedure, stage)
+# pairs and yields exactly one verdict per profile, so the checklist is a
+# single-row structure: [item(overall, STATUS, CITATIONS)], for API
+# consistency with the exclusion_grounds / thresholds shapes.
+# =====================================================================
+
+# time_limits_checklist/2: single-row list [item(overall, STATUS, CITATIONS)]
+time_limits_checklist(PROFILE, CHECKLIST) <- (
+    decide_time_limits(PROFILE, time_limits_verdict(STATUS, _, _, CITATIONS)),
+    CHECKLIST is [item(overall, STATUS, CITATIONS)]
+)
+
+time_limits_decision_resolvable(PROFILE) <- (
+    decide_time_limits(PROFILE, _)
+)

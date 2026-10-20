@@ -1,0 +1,881 @@
+# =====================================================================
+# formalize_lib.clausal -- reusable formalization PRIMITIVES (domain-independent)
+# Clausal kit. Cut-free, ->-free, \+-free, ASCII-only, ALL_CAPS variables.
+# Converted from kit/formalize_lib.pl (ISO Prolog) per docs/clausal-cheatsheet.md.
+#
+# A domain supplies: requirement(?ID, +PROFILE, -STATUS, -CITATION), its
+# rule_set/checklist lists, and its facts.
+# Status = met | unmet(R) | unknown(KEYS).
+#   - met is a bare ATOM (exported from -module; importers share it via -import_from).
+#   - unmet(R) / unknown(KEYS) are compound terms (declared in -private below).
+#
+# CROSS-MODULE NOTE (differs from the .pl original):
+#   In Clausal, an imported predicate resolves its called names in the LIBRARY's
+#   module, not the caller's (name resolution is lexical -- see docs/import.md).
+#   The .pl version relied on a single flat namespace where eval_requirements
+#   could call the domain's requirement/4 directly. That does NOT work across
+#   Clausal modules. So eval_requirements/4 and assess/6 take the domain's
+#   requirement predicate as an explicit GOAL argument (REQ_PRED) and invoke it
+#   with call_goal/5 (the meta-predicate idiom). A domain calls, e.g.:
+#       assess("subj", REQ_IDS, PROFILE,
+#              ((ID, P, S, C) <- requirement(ID, P, S, C)),   # pass the goal
+#              labels("pos","indet","neg"), RESULT)
+#   The lambda is resolved in the DOMAIN's module, so its requirement/4 is found.
+# =====================================================================
+
+-meta_predicate(check_holds('?','?',1,'?','?'), eval_requirements('?','?',4,'?'), assess('?','?','?',4,'?','?'), not_defeated('?','?',2))
+
+-module(formalize_lib, [
+    profile_get(PROFILE, KEY, VALUE),
+    profile_has(PROFILE, KEY),
+    profile_lacks(PROFILE, KEY),
+    profile_set(WORLD_IN, NEW_ENTRY, WORLD_OUT),
+    profile_keys(PROFILE, KEYS),
+    check_gte(PROFILE, KEY, THRESHOLD, REASON, STATUS),
+    check_lte(PROFILE, KEY, THRESHOLD, REASON, STATUS),
+    status_gte(EFF, THRESHOLD, REASON, STATUS),
+    status_gt(EFF, THRESHOLD, REASON, STATUS),
+    status_lte(EFF, THRESHOLD, REASON, STATUS),
+    status_lt(EFF, THRESHOLD, REASON, STATUS),
+    check_ratio_gte(PROFILE, NUM_KEY, DENOM_KEY, MIN_BPS, REASON, STATUS),
+    check_ratio_lte(PROFILE, NUM_KEY, DENOM_KEY, MAX_BPS, REASON, STATUS),
+    ratio_bps(PROFILE, NUM_KEY, DENOM_KEY, RATIO_BPS),
+    required_numerator_gte(DENOM, MIN_BPS, REQ_NUM),
+    max_denom_gte(NUM, MIN_BPS, MAX_DENOM),
+    max_numerator_lte(DENOM, MAX_BPS, MAX_NUM),
+    min_denom_lte(NUM, MAX_BPS, MIN_DENOM),
+    check_tri(PROFILE, KEY, REASON, STATUS),
+    check_tri_neg(PROFILE, KEY, REASON, STATUS),
+    sum_list(LIST, SUM),
+    first_applicable(ITEMS, RESULT),
+    not_member(X, LIST),
+    member_matching(PATTERN, LIST),
+    memberd(X, LIST),
+    term_mismatch(PATTERN, TERM),
+    usable_positive(PROFILE, KEY, VALUE),
+    missing_keys(PROFILE, REQUIRED_KEYS, MISSING),
+    all_present(PROFILE, KEYS),
+    check_eq(PROFILE, KEY, WANT, REASON, STATUS),
+    check_true(PROFILE, KEY, REASON, STATUS),
+    check_false(PROFILE, KEY, REASON, STATUS),
+    check_holds(PROFILE, KEY, PRED, REASON, STATUS),
+    or_status(LIST, STATUS),
+    and_status(LIST, STATUS),
+    collect_unknown(LIST, KEYS),
+    member_unmet(LIST),
+    mark_unmet(STATUS, ACC_IN, ACC_OUT),
+    mark_unknown(STATUS, ACC_IN, ACC_OUT),
+    assess(SUBJECT, REQ_IDS, PROFILE, REQ_PRED, LABELS, RESULT),
+    eval_requirements(REQ_IDS, PROFILE, REQ_PRED, ITEMS),
+    decide_labeled(CHECKLIST, LABELS, DECISION),
+    summarize(CHECKLIST, HAS_UNMET, HAS_UNKNOWN),
+    classify_labeled(HAS_UNMET, HAS_UNKNOWN, LABELS, DECISION),
+    has_unmet(CHECKLIST),
+    has_unknown(CHECKLIST),
+    not_defeated(RULE_ID, PROFILE, DEFEAT_PRED),
+    attribute(KEY, VALUE),
+    item(ID, STATUS, CITATION),
+    met,
+    unmet(REASON),
+    no_disjunct_met,
+    some_conjunct_unmet,
+    unknown(KEYS),
+    value(VALUE),
+    absent(KEYS),
+    applicable,
+    inapplicable,
+    labels(POS, INDET, NEG),
+    assessment(SUBJECT, DECISION, CHECKLIST),
+    int_min(A, B, MIN),
+    int_max(A, B, MAX),
+    int_abs(A, ABS)
+])
+-double_quotes(chars)
+
+# eval_requirements/4 and assess/6 take the domain requirement predicate as a
+# goal argument (REQ_PRED) and invoke it with call_goal/5. call_goal resolves
+# the passed goal/lambda in the DOMAIN's module, so no requirement/4 needs to
+# live here (the .clausal parser does not accept a -meta_predicate directive;
+# call_goal handles the cross-module resolution directly).
+
+# Compound data-constructor functors this library CONSTRUCTS or MATCHES.
+# In Clausal a bare compound term raises a compile-time NameError unless it is
+# declared or imported -- there is no Prolog auto-minting (cheat-sheet S7).
+# These same functors are ALSO in the -module export list (they are the kit's
+# public data vocabulary: domains build attribute/2 and labels/3, and match item/3,
+# unmet/1, unknown/1, assessment/3). Declaring them here lets this library build
+# them and match works across modules. met is a bare exported ATOM (in the -module
+# list); importers must -import_from it to share functor identity.
+-strict_atoms
+-private([attribute(KEY, VALUE), item(ID, STATUS, CITATION),
+          unmet(REASON), unknown(KEYS), value(VALUE), absent(KEYS),
+          labels(POS, INDET, NEG), assessment(SUBJECT, DECISION, CHECKLIST)])
+
+# --- Profile access --------------------------------------------------
+# profile_get(PROFILE, KEY, VALUE): VALUE is bound to the first attribute(KEY, _) found.
+# The list head is decomposed in the BODY (attribute(...) is bound via `is`), not as a
+# compound literal in the head-arg list pattern -- a head-arg compound inside a
+# list pattern does not reliably preserve groundness of inner values in Clausal
+# (cheat-sheet S8). Disjoint guards (HEAD_KEY is/ is not KEY) keep it cut-free.
+#
+# DICT-NATIVE PROFILES (transition bridge, dict-native-profile-api design):
+# a profile may be a native DictTerm instead of an attribute(KEY, VALUE) list.
+# This leading clause reads a DictTerm via the dict `get` builtin (which unifies
+# its VALUE arg exactly as the list clauses do, and fails on an absent key). It
+# is ADDITIVE and DISJOINT from the list clauses: is_dict/1 gates it to dicts,
+# and the [HEAD, *_] head pattern below never unifies with a DictTerm -- so no
+# profile is read by both representations (no spurious multiplicity). profile_has
+# rides on this automatically (it delegates to profile_get). Un-migrated
+# attribute-list domains are unaffected. Drop this clause once the corpus
+# migration completes and every profile is a DictTerm.
+profile_get(PROFILE, KEY, VALUE) <- (
+    is_dict(PROFILE),
+    get(PROFILE, KEY, VALUE)
+)
+profile_get([HEAD, *_], KEY, VALUE) <- (
+    HEAD is attribute(KEY, VALUE)
+)
+profile_get([HEAD, *TAIL], KEY, VALUE) <- (
+    HEAD is attribute(HEAD_KEY, _),
+    HEAD_KEY is not KEY,
+    profile_get(TAIL, KEY, VALUE)
+)
+profile_has(PROFILE, KEY) <- profile_get(PROFILE, KEY, _)
+# profile_lacks(PROFILE, KEY): the POSITIVE complement of profile_has -- KEY is
+# dif/2 from every key the profile holds (2026-09-29; replaces the kit's
+# `not profile_has(...)` guards). Ground KEY: exactly one of profile_has /
+# profile_lacks holds. Non-ground KEY: the answer carries dif constraints.
+profile_lacks(PROFILE, KEY) <- (
+    profile_keys(PROFILE, KEYS),
+    key_absent_from(KEY, KEYS)
+)
+# KEY may be a bare atom or a string; both match attribute(KEY, _) by unification.
+
+# profile_set(WORLD_IN, NEW_ENTRY, WORLD_OUT): functional WRITE completing the
+# read (profile_get) + presence (profile_has) accessor trio. Returns a NEW list
+# with the first SAME-functor entry replaced, or NEW_ENTRY appended if absent.
+# Matches by functor identity (NOT arg-0 key), so it works on any compound-term
+# attribute list -- the planner world's unary constructors (current_date/1,
+# applicant_age/1) as well as attribute(KEY, VALUE). Pure: no assert/retract.
+# (Lifted verbatim from planner_lib's former SetAttribute/3; snake_case per the
+# D6 accessor-trio naming, matching the attr->attribute / prof_get->profile_get
+# kit-rename sweep.)
+profile_set([], NEW_ENTRY, [NEW_ENTRY]),
+
+profile_set([ENTRY, *REST], NEW_ENTRY, [NEW_ENTRY, *REST]) <- (
+    functor(ENTRY, FUNCTOR_NAME, _),
+    functor(NEW_ENTRY, FUNCTOR_NAME, _)
+)
+
+profile_set([ENTRY, *REST], NEW_ENTRY, [ENTRY, *NEW_REST]) <- (
+    functor(ENTRY, FUNCTOR_OLD, _),
+    functor(NEW_ENTRY, FUNCTOR_NEW, _),
+    FUNCTOR_OLD != FUNCTOR_NEW,
+    profile_set(REST, NEW_ENTRY, NEW_REST)
+)
+
+# profile_keys(PROFILE, KEYS): ENUMERATION, the fourth member of the accessor
+# quartet (profile_get READ, profile_has PRESENCE, profile_set WRITE,
+# profile_keys ENUMERATION). KEYS is bound to every key profile_get/3 could
+# read from PROFILE. Polarity-consistent with profile_get: dict-mode reads the
+# DictTerm's own keys (mirrors the engine's own dict-key iteration, the
+# `dict_keys/2` builtin, in the engine's clausal/logic/builtins/dict_set.py --
+# sorted for a deterministic, reproducible KEYS list); list-mode collects the
+# KEY of every attribute(KEY, _) entry, pure recursion, same shape as
+# profile_set above. Disjoint WITHOUT negation, the way profile_get is: is_dict/1
+# gates the dict clause, and the [] / [HEAD, *TAIL] list patterns never unify
+# with a DictTerm (2026-09-29: was `not is_dict(ATTRS)`).
+#
+# This closes the kit migration's ONE escalated site (kit/planner_lib.clausal,
+# world_keys_valid/2): `K in STABLE` was dict-key enumeration with no
+# accessor, measured to make the accessor-respelled guard a dead instrument
+# (findall(K, profile_get(DICT, K, _), KS) == [] where `K in STABLE` yields
+# every key) -- see the kit migration report, §3 THE ONE ESCALATED SITE.
+profile_keys(PROFILE, KEYS) <- (
+    is_dict(PROFILE),
+    dict_keys(PROFILE, KEYS)
+)
+profile_keys([], KEYS) <- profile_keys_list([], KEYS)
+profile_keys([HEAD, *TAIL], KEYS) <- profile_keys_list([HEAD, *TAIL], KEYS)
+
+profile_keys_list([], []),
+profile_keys_list([HEAD, *TAIL], [KEY, *REST]) <- (
+    HEAD is attribute(KEY, _),
+    profile_keys_list(TAIL, REST)
+)
+
+# --- Atomic checks (each yields exactly one Status) ------------------
+# Each check_* has exactly THREE clauses (met / unmet / unknown-key), with
+# DISJOINT guards (no cut). A key that is present but wrong-typed (e.g. an atom
+# where a number is expected) matches NONE of the three, so the check -- and
+# therefore eval_requirements/assess -- fails outright for that subject.
+#
+# The STATUS output is bound IN THE BODY (STATUS is unmet(REASON) etc.), never as
+# a compound head literal: a compound literal in a head arg is not reliably bound
+# in output mode (an unbound caller var stays unbound) -- cheat-sheet S8. met
+# is a bare atom, bound in the body the same way (kept uniform here).
+
+# check_eff(PROFILE, KEY, EFF): extract the profile key into the value-level
+# threshold vocabulary -- value(VALUE) for a present numeric value, absent([KEY])
+# for an absent key. A present NON-number matches NEITHER clause, so a delegating
+# check FAILS with no solution -- preserving the pre-delegation fail-closed
+# behavior (the old value clauses each carried number(VALUE)).
+check_eff(PROFILE, KEY, value(VALUE)) <- (
+    profile_get(PROFILE, KEY, VALUE), number(VALUE)
+)
+check_eff(PROFILE, KEY, absent([KEY])) <- (
+    profile_lacks(PROFILE, KEY)
+)
+
+# check_gte/check_lte: profile-key threshold checks, now DELEGATING to the
+# value-level status family below. Byte-parallel to the former hand-inlined
+# 3-clause forms -- identical met / unmet(REASON) / unknown([KEY]) and identical
+# fail-closed non-number mode (threshold-status family design 2026-07-19).
+check_gte(PROFILE, KEY, THRESHOLD, REASON, STATUS) <- (
+    check_eff(PROFILE, KEY, EFF), status_gte(EFF, THRESHOLD, REASON, STATUS)
+)
+check_lte(PROFILE, KEY, THRESHOLD, REASON, STATUS) <- (
+    check_eff(PROFILE, KEY, EFF), status_lte(EFF, THRESHOLD, REASON, STATUS)
+)
+
+# status_gte/status_gt/status_lte/status_lt(EFF, THRESHOLD, REASON, STATUS):
+# value-level threshold->status core -- promoted + generalized from us/irc_s121's
+# status_threshold to all four boundary senses. EFF is value(N) (present numeric)
+# or absent(KEYS) (caller-built missing-key list -- so the unknown key set need
+# not be the compared value, e.g. schengen reference_date, amlr ownership_chains).
+#   met           -- value(N), N (>= / > / <= / <) THRESHOLD per sense
+#   unmet(REASON) -- value(N), complementary boundary (strict senses exclude ==)
+#   unknown(KEYS) -- absent(KEYS)
+# Cut-free, disjoint-guarded, semidet. STATUS bound in the body (S8); value/absent
+# are INPUT patterns in the head arg (S8 concerns output compounds only).
+status_gte(value(N), T, _, STATUS)        <- (N >= T, STATUS is met)
+status_gte(value(N), T, REASON, STATUS)   <- (N < T, STATUS is unmet(REASON))
+status_gte(absent(KEYS), _, _, STATUS)  <- (STATUS is unknown(KEYS))
+
+status_gt(value(N), T, _, STATUS)         <- (N > T, STATUS is met)
+status_gt(value(N), T, REASON, STATUS)    <- (N <= T, STATUS is unmet(REASON))
+status_gt(absent(KEYS), _, _, STATUS)   <- (STATUS is unknown(KEYS))
+
+status_lte(value(N), T, _, STATUS)        <- (N <= T, STATUS is met)
+status_lte(value(N), T, REASON, STATUS)   <- (N > T, STATUS is unmet(REASON))
+status_lte(absent(KEYS), _, _, STATUS)  <- (STATUS is unknown(KEYS))
+
+status_lt(value(N), T, _, STATUS)         <- (N < T, STATUS is met)
+status_lt(value(N), T, REASON, STATUS)    <- (N >= T, STATUS is unmet(REASON))
+status_lt(absent(KEYS), _, _, STATUS)   <- (STATUS is unknown(KEYS))
+
+check_true(PROFILE, KEY, _, STATUS) <- (
+    profile_get(PROFILE, KEY, True), STATUS is met
+)
+check_true(PROFILE, KEY, REASON, STATUS) <- (
+    profile_get(PROFILE, KEY, False), STATUS is unmet(REASON)
+)
+check_true(PROFILE, KEY, _, STATUS) <- (
+    profile_lacks(PROFILE, KEY), STATUS is unknown([KEY])
+)
+
+check_false(PROFILE, KEY, _, STATUS) <- (
+    profile_get(PROFILE, KEY, False), STATUS is met
+)
+check_false(PROFILE, KEY, REASON, STATUS) <- (
+    profile_get(PROFILE, KEY, True), STATUS is unmet(REASON)
+)
+check_false(PROFILE, KEY, _, STATUS) <- (
+    profile_lacks(PROFILE, KEY), STATUS is unknown([KEY])
+)
+
+check_eq(PROFILE, KEY, WANT, _, STATUS) <- (
+    profile_get(PROFILE, KEY, WANT), STATUS is met
+)
+check_eq(PROFILE, KEY, WANT, REASON, STATUS) <- (
+    profile_get(PROFILE, KEY, VALUE), VALUE is not WANT, STATUS is unmet(REASON)
+)
+check_eq(PROFILE, KEY, _, _, STATUS) <- (
+    profile_lacks(PROFILE, KEY), STATUS is unknown([KEY])
+)
+
+# check_holds: apply a unary predicate PRED to the profile value via call_goal/2.
+check_holds(PROFILE, KEY, PRED, _, STATUS) <- (
+    profile_get(PROFILE, KEY, VALUE), call_goal(PRED, VALUE), STATUS is met
+)
+check_holds(PROFILE, KEY, PRED, REASON, STATUS) <- (
+    profile_get(PROFILE, KEY, VALUE), not call_goal(PRED, VALUE),
+    STATUS is unmet(REASON)
+)
+check_holds(PROFILE, KEY, _, _, STATUS) <- (
+    profile_lacks(PROFILE, KEY), STATUS is unknown([KEY])
+)
+
+# --- Ratio / denominator helpers (dict-native profiles) --------------
+# T3 (banking bps template) unblock. These helpers read a DICT-NATIVE profile
+# with the interpreter builtin get/3 (soft read; fails on absent key) for the
+# VALUE, and profile_has/2 for PRESENCE.
+# PRESENCE MIGRATED 2026-09-03 (operator decision, dict-membership fail-open):
+# these clauses used to spell presence `KEY in PROFILE` / `not (KEY in PROFILE)`,
+# on the since-retired premise that profile_has targets attribute/2 lists only.
+# profile_has has read dicts since the profile_get dict-bridge clause above, so
+# it is exact on the dict profiles these helpers take -- and unlike `in` it
+# survives export, where `in` lowers to `member/2` over the exported
+# attribute-list and reads presence backwards.
+# They let a banking ratio domain DELETE its hand-rolled usable_<X> guard +
+# bps cross-multiplication template and call check_ratio_gte/6 instead,
+# decision-preservingly (see crr_lcr / crr_leverage_ratio requirement/4).
+
+# The single scaling constant: number of basis points in 100 % (10000 bp = 100%).
+# Private fact -- the bps cross-multiplication scale used by check_ratio_gte.
+bps_full_scale(10000),
+
+# usable_positive(PROFILE, KEY, VALUE): VALUE is PROFILE[KEY], present and > 0.
+# The ">0 denominator" guard (mirrors the domains' usable_outflows/usable_exposure:
+# get(P,KEY,V), V>0). A non-positive or absent value makes it FAIL (no solution),
+# which the ratio requirement below turns into `unknown` (fail-closed). Matches the
+# domains exactly: they do not add a number(VALUE) type test -- V>0 is the guard.
+usable_positive(PROFILE, KEY, VALUE) <- (
+    get(PROFILE, KEY, VALUE),
+    VALUE > 0
+)
+
+# usable_nonpositive(PROFILE, KEY): the positive complement of
+# usable_positive(PROFILE, KEY, _) -- the key is absent from a dict, holds a
+# value that is not > 0, or the profile is an attribute LIST (usable_positive
+# reads with the dict-only get/3, so it never holds for a list). Replaces
+# `not usable_positive(...)` (2026-09-29).
+usable_nonpositive(PROFILE, KEY) <- (
+    is_dict(PROFILE),
+    profile_lacks(PROFILE, KEY)
+)
+usable_nonpositive(PROFILE, KEY) <- (
+    is_dict(PROFILE),
+    get(PROFILE, KEY, VALUE),
+    VALUE <= 0
+)
+usable_nonpositive([], _),
+usable_nonpositive([_, *_], _),
+
+# check_ratio_gte(PROFILE, NUM_KEY, DENOM_KEY, MIN_BPS, REASON, STATUS):
+# EXACT integer cross-multiplication of NUM/DENOM >= MIN_BPS/10000, yielding the
+# banking 4-clause requirement semantics with DISJOINT GUARDS (no cut):
+#   met     -- numerator + usable (>0) denominator present, NUM*10000 >= MIN_BPS*DENOM
+#   unmet   -- numerator + usable denominator present, NUM*10000 <  MIN_BPS*DENOM
+#   unknown -- numerator absent (fail-closed; missing numerator dominates)
+#   unknown -- numerator present but denominator absent OR non-positive
+# The boundary (NUM*10000 == MIN_BPS*DENOM) COMPLIES (met) -- an inclusive floor.
+# STATUS is bound IN THE BODY (never a compound head literal -- cheat-sheet S8).
+check_ratio_gte(PROFILE, NUM_KEY, DENOM_KEY, MIN_BPS, _, STATUS) <- (
+    get(PROFILE, NUM_KEY, NUMERATOR),
+    usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
+    bps_full_scale(SCALE),
+    SCALED_NUMERATOR == NUMERATOR * SCALE,
+    REQUIRED_SCALED == MIN_BPS * DENOMINATOR,
+    SCALED_NUMERATOR >= REQUIRED_SCALED,
+    STATUS is met
+)
+check_ratio_gte(PROFILE, NUM_KEY, DENOM_KEY, MIN_BPS, REASON, STATUS) <- (
+    get(PROFILE, NUM_KEY, NUMERATOR),
+    usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
+    bps_full_scale(SCALE),
+    SCALED_NUMERATOR == NUMERATOR * SCALE,
+    REQUIRED_SCALED == MIN_BPS * DENOMINATOR,
+    SCALED_NUMERATOR < REQUIRED_SCALED,
+    STATUS is unmet(REASON)
+)
+check_ratio_gte(PROFILE, NUM_KEY, _, _, _, STATUS) <- (
+    profile_lacks(PROFILE, NUM_KEY),
+    STATUS is unknown([NUM_KEY])
+)
+check_ratio_gte(PROFILE, NUM_KEY, DENOM_KEY, _, _, STATUS) <- (
+    profile_has(PROFILE, NUM_KEY),
+    usable_nonpositive(PROFILE, DENOM_KEY),
+    STATUS is unknown([DENOM_KEY])
+)
+
+# check_ratio_lte(PROFILE, NUM_KEY, DENOM_KEY, MAX_BPS, REASON, STATUS):
+# UPPER-BOUND mirror of check_ratio_gte -- EXACT integer cross-multiplication of
+# NUM/DENOM <= MAX_BPS/10000 (a bps ceiling/limit), with the SAME disjoint-guard
+# 4-clause shape + fail-closed denominator + unknown-on-missing-key behaviour:
+#   met     -- numerator + usable (>0) denominator present, NUM*10000 <= MAX_BPS*DENOM
+#   unmet   -- numerator + usable denominator present, NUM*10000 >  MAX_BPS*DENOM
+#   unknown -- numerator absent (fail-closed; missing numerator dominates)
+#   unknown -- numerator present but denominator absent OR non-positive
+# The boundary (NUM*10000 == MAX_BPS*DENOM) COMPLIES (met) -- an inclusive limit.
+# This is the exact upper-limit analogue of the eu/banking large-exposures bps
+# template (exposure/tier1 <= 25%); STATUS is bound IN THE BODY (cheat-sheet S8).
+check_ratio_lte(PROFILE, NUM_KEY, DENOM_KEY, MAX_BPS, _, STATUS) <- (
+    get(PROFILE, NUM_KEY, NUMERATOR),
+    usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
+    bps_full_scale(SCALE),
+    SCALED_NUMERATOR == NUMERATOR * SCALE,
+    LIMIT_SCALED == MAX_BPS * DENOMINATOR,
+    SCALED_NUMERATOR <= LIMIT_SCALED,
+    STATUS is met
+)
+check_ratio_lte(PROFILE, NUM_KEY, DENOM_KEY, MAX_BPS, REASON, STATUS) <- (
+    get(PROFILE, NUM_KEY, NUMERATOR),
+    usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
+    bps_full_scale(SCALE),
+    SCALED_NUMERATOR == NUMERATOR * SCALE,
+    LIMIT_SCALED == MAX_BPS * DENOMINATOR,
+    SCALED_NUMERATOR > LIMIT_SCALED,
+    STATUS is unmet(REASON)
+)
+check_ratio_lte(PROFILE, NUM_KEY, _, _, _, STATUS) <- (
+    profile_lacks(PROFILE, NUM_KEY),
+    STATUS is unknown([NUM_KEY])
+)
+check_ratio_lte(PROFILE, NUM_KEY, DENOM_KEY, _, _, STATUS) <- (
+    profile_has(PROFILE, NUM_KEY),
+    usable_nonpositive(PROFILE, DENOM_KEY),
+    STATUS is unknown([DENOM_KEY])
+)
+
+# ratio_bps(PROFILE, NUM_KEY, DENOM_KEY, RATIO_BPS): the shared bps-ratio
+# COMPUTATION motif (financial-cluster factoring audit 2026-07-19, T1) --
+# RATIO_BPS is PROFILE[NUM_KEY] * 10000 // PROFILE[DENOM_KEY], EXACT integer
+# floor division on the same private bps_full_scale fact as check_ratio_gte/lte.
+# Semidet; FAILS (no solution) when NUM_KEY is absent OR the denominator is
+# absent/non-positive (usable_positive guard) -- callers surface that failure
+# as `unknown` (fail-closed). Byte-parallel to the 6 hand-rolled clones it
+# extracts across 4 eu/banking domains (lcr_ratio_bps, leverage_ratio_bps,
+# capital_ratio_bps x3, exposure_ratio_bps); adoption retires each clone to a
+# one-liner (or deletes it) without changing any computed value or failure mode.
+ratio_bps(PROFILE, NUM_KEY, DENOM_KEY, RATIO_BPS) <- (
+    get(PROFILE, NUM_KEY, NUMERATOR),
+    usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
+    bps_full_scale(SCALE),
+    RATIO_BPS == NUMERATOR * SCALE // DENOMINATOR
+)
+
+# --- Ratio-inverse family: the algebraic dual of check_ratio_gte/lte -----
+# The query-coverage sweep (2026-07-21) found crr domains hand-deriving these
+# ceil/floor boundaries, each re-mirroring the PRIVATE SCALE=10000 fact (a
+# drift channel), because flip_scan is intractable over monetary ranges.
+# These expose the EXACT integer boundary at which check_ratio_gte/lte flips,
+# on the SAME bps_full_scale -- so a domain reads the boundary instead of
+# re-deriving the arithmetic. All semidet; callers pass ground integers.
+#
+# check_ratio_gte met iff  NUM*SCALE >= MIN_BPS*DENOM:
+#   required_numerator_gte(DENOM, MIN_BPS, REQ_NUM): least NUM that is met
+#     = ceil(MIN_BPS*DENOM / SCALE).
+required_numerator_gte(DENOM, MIN_BPS, REQ_NUM) <- (
+    bps_full_scale(SCALE),
+    REQ_NUM == (MIN_BPS * DENOM + SCALE - 1) // SCALE
+)
+#   max_denom_gte(NUM, MIN_BPS, MAX_DENOM): largest DENOM still met (MIN_BPS>0)
+#     = floor(NUM*SCALE / MIN_BPS).
+max_denom_gte(NUM, MIN_BPS, MAX_DENOM) <- (
+    MIN_BPS > 0,
+    bps_full_scale(SCALE),
+    MAX_DENOM == NUM * SCALE // MIN_BPS
+)
+# check_ratio_lte met iff  NUM*SCALE <= MAX_BPS*DENOM:
+#   max_numerator_lte(DENOM, MAX_BPS, MAX_NUM): largest NUM still met
+#     = floor(MAX_BPS*DENOM / SCALE).
+max_numerator_lte(DENOM, MAX_BPS, MAX_NUM) <- (
+    bps_full_scale(SCALE),
+    MAX_NUM == MAX_BPS * DENOM // SCALE
+)
+#   min_denom_lte(NUM, MAX_BPS, MIN_DENOM): least DENOM still met (MAX_BPS>0)
+#     = ceil(NUM*SCALE / MAX_BPS).
+min_denom_lte(NUM, MAX_BPS, MIN_DENOM) <- (
+    MAX_BPS > 0,
+    bps_full_scale(SCALE),
+    MIN_DENOM == (NUM * SCALE + MAX_BPS - 1) // MAX_BPS
+)
+
+# --- Tri-valued (Kleene) presence check ------------------------------
+# check_tri(PROFILE, KEY, REASON, STATUS): bridge to the engine tri_get/3 Kleene
+# read (dict-native profiles). tri_get binds VALUE to PROFILE[KEY] if present,
+# else to the Kleene Unknown builtin. This gives the standard three-way status
+# WITHOUT the pervasive `not get(P,K,True), not get(P,K,False)` guard-pair:
+#   met         -- PROFILE[KEY] is True
+#   unmet(R)    -- PROFILE[KEY] is False
+#   unknown([K])-- KEY absent (tri_get bound Unknown) OR any other value
+# Disjoint guards (True / False / neither) keep it cut-free and semidet.
+# NOTE: tri_get IS available in this engine (clausal.logic.builtins.dict_set),
+# so this bridges the builtin directly (a single soft read), NOT two get/3 probes.
+check_tri(PROFILE, KEY, _, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE), VALUE is True, STATUS is met
+)
+check_tri(PROFILE, KEY, REASON, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE), VALUE is False, STATUS is unmet(REASON)
+)
+check_tri(PROFILE, KEY, _, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE),
+    VALUE is not True, VALUE is not False,     # VALUE ground (tri_get): dif
+    STATUS is unknown([KEY])
+)
+
+# check_tri_neg(PROFILE, KEY, REASON, STATUS): NEGATIVE-polarity sibling of
+# check_tri -- the same Kleene tri_get read with met/unmet SWAPPED, for
+# carve-back keys where explicit False satisfies the element ("is NOT a
+# financial instrument", mica Art 2(4) -- paired-reified audit 2026-07-19 §2.3):
+#   met         -- PROFILE[KEY] is False
+#   unmet(R)    -- PROFILE[KEY] is True
+#   unknown([K])-- KEY absent (tri_get bound Unknown) OR any other value
+# Same disjoint guards (False / True / neither): cut-free, semidet, and
+# FAIL-CLOSED on a present non-boolean (unknown, never met) -- unlike
+# check_false, which hard-fails on that input and is therefore NOT the
+# identity swap for negative guard triples.
+check_tri_neg(PROFILE, KEY, _, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE), VALUE is False, STATUS is met
+)
+check_tri_neg(PROFILE, KEY, REASON, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE), VALUE is True, STATUS is unmet(REASON)
+)
+check_tri_neg(PROFILE, KEY, _, STATUS) <- (
+    tri_get(PROFILE, KEY, VALUE),
+    VALUE is not True, VALUE is not False,     # VALUE ground (tri_get): dif
+    STATUS is unknown([KEY])
+)
+
+# --- Integer list sum ------------------------------------------------
+# sum_list(LIST, SUM): SUM is the integer sum of LIST (empty list -> 0).
+# Cut-free structural recursion; the reinvented shape in 7 corpus domains
+# (sum_cents / sum_capped_wages), a plain integer sum with no domain quirk.
+sum_list([], 0),
+sum_list([HEAD, *TAIL], SUM) <- (
+    sum_list(TAIL, SUBTOTAL),
+    SUM == HEAD + SUBTOTAL
+)
+
+# --- Ordered-cascade: first applicable item --------------------------
+# first_applicable(ITEMS, RESULT): RESULT is the RESULT field of the FIRST item
+# whose guard atom is `applicable`; items marked `inapplicable` are skipped.
+# Items are item(RESULT, applicable | inapplicable, _) triples. Lifted verbatim
+# from eu/customs/customs_valuation_hierarchy (the first-rule-whose-guard-holds
+# cascade). Callers wrap in once/1 for a single leading result and pair with a
+# `not first_applicable(ITEMS, _)` clause for the all-inapplicable fallback.
+first_applicable([item(RESULT, applicable, _), *_], RESULT),
+first_applicable([item(_, inapplicable, _), *REST], RESULT) <- (
+    first_applicable(REST, RESULT)
+)
+
+# --- Negative list membership (explicitly recursive) -----------------
+# not_member(X, LIST): succeeds iff X unifies with NO element of LIST.
+# The kit's ONE spelling for "X is not in this LIST" (decision
+# 2026-09-03, from an internal export pilot: dict-membership fail-open).
+#
+# WHY IT IS NOT `X not in LIST`. `in`/`not in` are POLYMORPHIC in the Clausal
+# engine -- list membership OR dict-key presence -- but they lower to ISO
+# `member/2` on export, and an exported dict is an attribute-LIST. So
+# `\+ member(K, Dict)` is ALWAYS TRUE: a wrong answer nothing reports. The
+# translator now REFUSES negated membership whose right-hand side is not
+# PROVABLY a list, so `not in` is untranslatable at every site whose list
+# arrives from a predicate call. This helper carries no membership operator
+# at all: it lowers to `\+ X = Head` plus recursion, which is ISO and means
+# the same thing in both engines.
+#
+# CONTRACT. LIST must be a PROPER list (a partial list `[H|T]` with an
+# unbound tail leaves the last recursive call open, exactly as `\+ member/2`
+# over one would). X is used in GROUND MODE at every kit call site; the
+# implementation is nonetheless NAF-equivalent to `\+ member(X, LIST)` for a
+# non-ground X too, because `not (X is HEAD)` is negation-as-failure over
+# unification and therefore never BINDS X -- a pattern like
+# `item(_, met, _)` tests "no element unifies", which is what the negated
+# membership it replaces meant.
+#
+# NEGATION-FREE (2026-09-29; was `not (X is HEAD)`). Two modes, chosen by a
+# POSITIVE and disjoint test on X -- term_variables(X, []) vs [_, *_]:
+#
+#   VALUE mode, X ground (every kit call site). Each element is dif/2 from X.
+#     Pure: an element that is itself not ground leaves a dif constraint
+#     instead of an order-dependent failure.
+#
+#   PATTERN mode, X has variables, and ALL OF THEM ARE LOCAL WILDCARDS:
+#     `item(_, met, _)` reads "for ALL A, B: item(A, met, B) is not an
+#     element". dif/2 cannot say that -- it reads the wildcards as "for SOME"
+#     and would succeed on a matching element -- so the test is structural:
+#     term_mismatch/2 walks functor, arity and arguments, where a wildcard
+#     matches anything and is NEVER bound. Contract: LIST ground, pattern
+#     LINEAR (no variable twice). var/nonvar here only ever inspect the
+#     pattern's own wildcards, which nothing outside the pattern can bind.
+not_member(_, []),
+not_member(X, [HEAD, *TAIL]) <- (
+    term_variables(X, []),
+    dif(X, HEAD),
+    not_member(X, TAIL)
+)
+not_member(X, [HEAD, *TAIL]) <- (
+    term_variables(X, [_, *_]),
+    term_mismatch(X, HEAD),
+    not_member(X, TAIL)
+)
+
+# term_mismatch(P, E): pattern P (variables = wildcards) has no instance
+# equal to the GROUND term E. term_matches/2 is its exact complement, so the
+# first differing argument is found once: deterministic, no choice left.
+term_mismatch(P, E) <- (
+    nonvar(P),
+    functor(P, F, N),
+    functor(E, G, M),
+    dif([F, N], [G, M])    # all four bound by functor/3; spelled dif/2, not `is not`,
+)                          # which lints a list literal holding variables
+term_mismatch(P, E) <- (
+    nonvar(P),
+    functor(P, F, N),
+    functor(E, F, N),
+    N > 0,
+    '=..'(P, [_, *P_ARGS]),
+    '=..'(E, [_, *E_ARGS]),
+    args_mismatch(P_ARGS, E_ARGS)
+)
+
+args_mismatch([P, *_], [E, *_]) <- term_mismatch(P, E)
+args_mismatch([P, *P_REST], [E, *E_REST]) <- (
+    term_matches(P, E),
+    args_mismatch(P_REST, E_REST)
+)
+
+term_matches(P, _) <- var(P)
+term_matches(P, E) <- (
+    nonvar(P),
+    functor(P, F, N),
+    functor(E, F, N),
+    '=..'(P, [_, *P_ARGS]),
+    '=..'(E, [_, *E_ARGS]),
+    args_match(P_ARGS, E_ARGS)
+)
+
+# member_matching(PATTERN, LIST): some element of the GROUND list LIST is an
+# instance of PATTERN (variables = wildcards), found at the FIRST such element:
+# the positive twin of not_member/2's pattern mode, and the negation-free
+# replacement for once(in_(PATTERN, LIST)). Never binds PATTERN.
+member_matching(PATTERN, [E, *_]) <- term_matches(PATTERN, E)
+member_matching(PATTERN, [E, *TAIL]) <- (
+    term_mismatch(PATTERN, E),
+    member_matching(PATTERN, TAIL)
+)
+
+args_match([], []),
+args_match([P, *P_REST], [E, *E_REST]) <- (
+    term_matches(P, E),
+    args_match(P_REST, E_REST)
+)
+
+# --- Missing-keys / all-present collectors (dict-native profiles) -----
+# T4 (missing-keys) unblock. The REQUIRED key set is passed as a LIST ARG
+# (REQUIRED_KEYS) -- no per-domain required_X_key/1 fact table needed. Mirrors
+# the domains' findall(K, (required_X_key(K), not profile_has(PROFILE, K)), KEYS)
+# idiom, with the fact enumerator replaced by `in_(K, REQUIRED_KEYS)` list
+# membership. The absence test is the ACCESSOR, not `not (K in PROFILE)`
+# (migrated 2026-09-03): `in_` here really is list membership over the
+# REQUIRED_KEYS list argument and stays, but presence in the PROFILE is a
+# dict-key question, and `not (K in PROFILE)` lowers on export to
+# `\+ member(K, AttrList)` -- always true, so every required key would read
+# missing. profile_has/2 is exact in both engines and in both profile shapes.
+
+# missing_keys(PROFILE, REQUIRED_KEYS, MISSING): MISSING = the sublist of
+# REQUIRED_KEYS whose keys are NOT present in PROFILE (preserving list order).
+# MISSING == [] iff every required key is present.
+#
+# NEGATION-FREE (2026-09-29; was findall over `not profile_has(PROFILE, K)`).
+# Absence is stated POSITIVELY: K differs (dif) from every key the profile
+# holds. For a ground K exactly one of key_absent_from / memberd holds,
+# and holds once, so MISSING is deterministic as before; for a non-ground K
+# the answers carry the dif constraints instead of an order-dependent failure.
+# memberd takes the FIRST occurrence, matching profile_get on an
+# attribute list with a repeated key (memberd/2).
+missing_keys(PROFILE, REQUIRED_KEYS, MISSING) <- (
+    profile_keys(PROFILE, PRESENT),
+    missing_keys_from(REQUIRED_KEYS, PRESENT, MISSING)
+)
+
+missing_keys_from([], _, []),
+missing_keys_from([K, *KS], PRESENT, [K, *REST]) <- (
+    key_absent_from(K, PRESENT),
+    missing_keys_from(KS, PRESENT, REST)
+)
+missing_keys_from([K, *KS], PRESENT, REST) <- (
+    memberd(K, PRESENT),
+    missing_keys_from(KS, PRESENT, REST)
+)
+
+key_absent_from(_, []),
+key_absent_from(K, [HEAD, *TAIL]) <- (
+    # dif/2, not `is not`: engine 076d7b41 drops an `is not` constraint when a
+    # recursive clause exits (repro sent to the engine maintainers 2026-09-29)
+    dif(K, HEAD),
+    key_absent_from(K, TAIL)
+)
+
+# memberd(X, LIST): X is an element of LIST, found at its FIRST occurrence
+# (dif-guarded), so a ground X succeeds at most once -- membership with no
+# once/1 (Neumerkel & Kral's memberd, spelled without if_/3).
+memberd(X, [HEAD, *_]) <- (X is HEAD)
+memberd(X, [HEAD, *TAIL]) <- (
+    dif(X, HEAD),
+    memberd(X, TAIL)
+)
+
+# all_present(PROFILE, KEYS): semidet -- succeeds iff EVERY key in KEYS is in
+# PROFILE (the all-keys guard, mirroring the domains' X_inputs_present). Defined
+# via missing_keys so the two stay consistent: no missing keys <=> all present.
+all_present(PROFILE, KEYS) <- (
+    missing_keys(PROFILE, KEYS, [])
+)
+
+# --- Status combinators (carry the SET of missing keys) --------------
+# or_status: "met" if any member is met; else unknown(KEYS) if any unknowns;
+# else unmet(no_disjunct_met).
+# DETERMINISM: in_(met, LIST) / member_unmet(LIST) are enumerable existence
+# probes that succeed ONCE PER matching member -- so clause 1 (met) backtracked
+# and multiplied solutions (us/irc_s121 FORKED the lib over this; th/visa wrapped
+# both call sites in once/1). The clause guards are disjoint (met vs not-met), so
+# the ONLY multiplicity source is the leading probe; once/1 committed it to a single
+# witness, yielding EXACTLY ONE status. Retires the fork + the once() wrappers.
+# 2026-09-29: NEGATION-FREE. memberd/2 finds the FIRST met (dif-guarded, so a
+# single witness without once/1) and not_member/2 states "no met" positively.
+or_status(LIST, STATUS) <- (
+    memberd(met, LIST),
+    STATUS is met
+)
+or_status(LIST, STATUS) <- (
+    not_member(met, LIST),
+    collect_unknown(LIST, KEYS),
+    KEYS is not [],
+    STATUS is unknown(KEYS)
+)
+or_status(LIST, STATUS) <- (
+    not_member(met, LIST),
+    collect_unknown(LIST, []),
+    STATUS is unmet(no_disjunct_met)
+)
+
+# and_status: unmet(some_conjunct_unmet) if any member is unmet; else "met" if no unknowns;
+# else unknown(KEYS).
+# DETERMINISM: member_unmet/1 is an enumerable existence probe (succeeds once per
+# matching member); once/1 committed clause 1 to a single witness so and_status
+# yields EXACTLY ONE status (see the or_status determinism note above).
+# 2026-09-29: NEGATION-FREE. member_unmet/1 stops at the FIRST unmet (its
+# second clause requires a non-unmet head), so no once/1 is needed, and "no
+# unmet" is not_member/2 in pattern mode.
+and_status(LIST, STATUS) <- (
+    member_unmet(LIST),
+    STATUS is unmet(some_conjunct_unmet)
+)
+and_status(LIST, STATUS) <- (
+    not_member(unmet(_), LIST),
+    collect_unknown(LIST, []),
+    STATUS is met
+)
+and_status(LIST, STATUS) <- (
+    not_member(unmet(_), LIST),
+    collect_unknown(LIST, KEYS),
+    KEYS is not [],
+    STATUS is unknown(KEYS)
+)
+
+# member_unmet(LIST): true if LIST contains some unmet(_) element.
+# Head element decomposed in the body (HEAD is unmet(_)) to keep groundness
+# robust; disjoint guards via dif (cheat-sheet S8).
+member_unmet([HEAD, *_]) <- (
+    HEAD is unmet(_)
+)
+member_unmet([HEAD, *TAIL]) <- (
+    term_mismatch(unmet(_), HEAD),
+    member_unmet(TAIL)
+)
+
+# collect_unknown(LIST, KEYS): KEYS = sorted union of all unknown(KS) key-sets.
+collect_unknown([], []),
+collect_unknown([HEAD, *TAIL], ALL) <- (
+    HEAD is unknown(KS),
+    collect_unknown(TAIL, REST),
+    append(KS, REST, MERGED),
+    sort(MERGED, ALL)
+)
+collect_unknown([HEAD, *TAIL], ALL) <- (
+    term_mismatch(unknown(_), HEAD),
+    collect_unknown(TAIL, ALL)
+)
+
+# --- Generic checklist engine (LABEL-NEUTRAL) ------------------------
+# assess/6 is the reusable engine for checklist-shaped domains. Non-checklist
+# shapes (classification, deontic) write their own engine -- see kit/scaffolding.
+eval_requirements([], _, _, []),
+eval_requirements([REQ, *REQS], PROFILE, REQ_PRED, [ITEM, *ITEMS]) <- (
+    call_goal(REQ_PRED, REQ, PROFILE, STATUS, CITATION),
+    ITEM is item(REQ, STATUS, CITATION),
+    eval_requirements(REQS, PROFILE, REQ_PRED, ITEMS)
+)
+
+# decide_labeled/3 -- DETERMINISTIC single fold (no member/2, no cut, no ->).
+# labels(POS, INDET, NEG): the domain's terminal vocabulary.
+decide_labeled(CHECKLIST, labels(POS, INDET, NEG), DECISION) <- (
+    summarize(CHECKLIST, HAS_UNMET, HAS_UNKNOWN),
+    classify_labeled(HAS_UNMET, HAS_UNKNOWN, labels(POS, INDET, NEG), DECISION)
+)
+
+summarize([], False, False),
+summarize([HEAD, *TAIL], HAS_UNMET, HAS_UNKNOWN) <- (
+    HEAD is item(_, STATUS, _),
+    summarize(TAIL, HAS_UNMET0, HAS_UNKNOWN0),
+    mark_unmet(STATUS, HAS_UNMET0, HAS_UNMET),
+    mark_unknown(STATUS, HAS_UNKNOWN0, HAS_UNKNOWN)
+)
+
+# NOTE on the guard: `STATUS is not unmet(_)` is WRONG here -- in Clausal
+# `is not <pattern-with-wildcard>` tests non-identity, not non-matching, so it
+# SUCCEEDS even for a ground unmet("...") term (the fresh `_` differs from the
+# bound reason). That made clause 2 fire alongside the clause-1 head match, so
+# summarize backtracked and DECISION exploded (PM TODO 2026-06-24 part B). Use
+# `not (STATUS is unmet(_))` -- negation over the unification -- which fails
+# exactly when STATUS matches unmet(_). Pairs with the item-in-body groundness
+# fix in eval_requirements (a non-ground STATUS would still match unmet(_)).
+mark_unmet(unmet(_), _, True),
+mark_unmet(STATUS, ACC, ACC) <- (term_mismatch(unmet(_), STATUS))
+
+mark_unknown(unknown(_), _, True),
+mark_unknown(STATUS, ACC, ACC) <- (term_mismatch(unknown(_), STATUS))
+
+# classify_labeled: any unmet -> NEG; else any unknown -> INDET; else POS.
+classify_labeled(True, _, labels(_, _, NEG), NEG),
+classify_labeled(False, True, labels(_, INDET, _), INDET),
+classify_labeled(False, False, labels(POS, _, _), POS),
+
+assess(SUBJECT, REQ_IDS, PROFILE, REQ_PRED, LABELS,
+       assessment(SUBJECT, DECISION, CHECKLIST)) <- (
+    eval_requirements(REQ_IDS, PROFILE, REQ_PRED, CHECKLIST),
+    decide_labeled(CHECKLIST, LABELS, DECISION)
+)
+
+# --- Utility predicates ----------------------------------------------
+has_unmet(CHECKLIST) <- in_(item(_, unmet(_), _), CHECKLIST)
+has_unknown(CHECKLIST) <- in_(item(_, unknown(_), _), CHECKLIST)
+
+# --- Defeasibility primitives ----------------------------------------
+# not_defeated(RULE_ID, PROFILE, DEFEAT_PRED):
+#   Semidet: RULE_ID's conclusion stands for PROFILE -- no defeating condition fires.
+#   DEFEAT_PRED is a binary goal (RULE_ID, PROFILE) that succeeds when a defeater fires.
+#   The once/1 wrapper makes the check semidet even if DEFEAT_PRED is enumerable
+#   (multiple witnesses): once/1 commits to the first witness so the existence
+#   test does not multiply solutions in the surrounding clause. This mirrors the
+#   once(amount_satisfied(...)) idiom from the LegalBench diversity_jurisdiction
+#   calibration run (classification.md §6.3, meta-finding 2).
+#
+#   Usage (in a defeasible rule body):
+#       art6_basis_made_out(PROFILE, "art6_1_f") <- (
+#           ...,
+#           not_defeated("art6_1_f", PROFILE,
+#                        (ID, P) <- art6_basis_overridden(P, ID))
+#       )
+not_defeated(RULE_ID, PROFILE, DEFEAT_PRED) <- (
+    not once(call_goal(DEFEAT_PRED, RULE_ID, PROFILE))
+)
+
+# --- integer clamp / abs helpers ------------------------------------------
+# abs()/min()/max() are NOT valid inside == arithmetic expressions (only the
+# operators + - * / // % ** are). Use these predicate GOALS instead. Disjoint
+# guards -> semidet + cut-free; bind the result, don't nest in ==.
+#   e.g.  ALLOWANCE_TAPER == FULL - REDUCTION, int_max(ALLOWANCE_TAPER, 0, ALLOWANCE)
+int_min(A, B, A) <- ( A <= B )
+int_min(A, B, B) <- ( A > B )
+
+int_max(A, B, A) <- ( A >= B )
+int_max(A, B, B) <- ( A < B )
+
+int_abs(A, A) <- ( A >= 0 )
+int_abs(A, ABS) <- (
+    A < 0,
+    ABS == 0 - A
+)

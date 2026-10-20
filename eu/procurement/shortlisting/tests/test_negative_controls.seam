@@ -1,0 +1,124 @@
+-double_quotes(chars)
+# =====================================================================
+# test_negative_controls.clausal -- one positive/near-miss pair PER ROUTE.
+# Each near-miss must flip the verdict relative to the positive case,
+# proving each decision route is load-bearing.
+# =====================================================================
+-import_from(eu.procurement.shortlisting.shortlisting, [
+    shortlisting_status,
+    shortlisting_invitation_floor,
+    restricted_procedure,
+    competitive_procedure_with_negotiation,
+    open_procedure
+])
+
+-import_from(eu.procurement.shortlisting.fixtures, [shortlisting_profile_for])
+
+-import_from(eu.procurement.shortlisting.kernel, [
+    limitation_permitted,
+    limitation_prohibited,
+    continuation_permitted,
+    limitation_not_available
+])
+
+# Route 1: limitation_permitted vs limitation_prohibited (declared_min below statutory)
+test("negative control: all-clear is NOT limitation_prohibited") <- (
+    shortlisting_profile_for("restricted_all_clear", PROFILE),
+    not shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("negative control: below-statutory IS limitation_prohibited") <- (
+    shortlisting_profile_for("restricted_below_statutory", PROFILE),
+    shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("negative control: below-statutory is NOT limitation_permitted") <- (
+    shortlisting_profile_for("restricted_below_statutory", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+# Route 2: limitation_permitted vs continuation_permitted (qualified below declared)
+test("negative control: at-boundary is NOT continuation_permitted") <- (
+    shortlisting_profile_for("restricted_at_continuation_boundary", PROFILE),
+    not shortlisting_status(PROFILE, continuation_permitted)
+)
+
+test("negative control: continuation IS continuation_permitted") <- (
+    shortlisting_profile_for("restricted_continuation", PROFILE),
+    shortlisting_status(PROFILE, continuation_permitted)
+)
+
+test("negative control: continuation is NOT limitation_permitted") <- (
+    shortlisting_profile_for("restricted_continuation", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+# Route 3: limitation_permitted vs limitation_prohibited (max below min)
+test("negative control: max_at_min is NOT limitation_prohibited") <- (
+    shortlisting_profile_for("restricted_max_at_min", PROFILE),
+    not shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("negative control: max_below_min IS limitation_prohibited") <- (
+    shortlisting_profile_for("restricted_max_below_min", PROFILE),
+    shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("negative control: max_below_min is NOT limitation_permitted") <- (
+    shortlisting_profile_for("restricted_max_below_min", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+# Route 4: limitation_not_available (open procedure)
+test("negative control: open procedure is NOT limitation_permitted") <- (
+    shortlisting_profile_for("open_procedure", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+test("negative control: open procedure is NOT limitation_prohibited") <- (
+    shortlisting_profile_for("open_procedure", PROFILE),
+    not shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+test("negative control: open procedure IS limitation_not_available") <- (
+    shortlisting_profile_for("open_procedure", PROFILE),
+    shortlisting_status(PROFILE, limitation_not_available)
+)
+
+# Route 5: defect (criteria not indicated) flips to prohibited
+test("negative control: defect_criteria is NOT limitation_permitted") <- (
+    shortlisting_profile_for("restricted_defect_criteria", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+test("negative control: defect_criteria IS limitation_prohibited") <- (
+    shortlisting_profile_for("restricted_defect_criteria", PROFILE),
+    shortlisting_status(PROFILE, limitation_prohibited)
+)
+
+# Route 6: CPWN all-clear vs CPWN continuation
+test("negative control: cpwn_all_clear is NOT continuation_permitted") <- (
+    shortlisting_profile_for("cpwn_all_clear", PROFILE),
+    not shortlisting_status(PROFILE, continuation_permitted)
+)
+
+test("negative control: cpwn_continuation IS continuation_permitted") <- (
+    shortlisting_profile_for("cpwn_continuation", PROFILE),
+    shortlisting_status(PROFILE, continuation_permitted)
+)
+
+test("negative control: cpwn_continuation is NOT limitation_permitted") <- (
+    shortlisting_profile_for("cpwn_continuation", PROFILE),
+    not shortlisting_status(PROFILE, limitation_permitted)
+)
+
+# Route 7: invitation floor boundary (at statutory vs below statutory)
+test("negative control: floor at statutory is 5 not 4") <- (
+    shortlisting_invitation_floor(restricted_procedure, 5, 10, FLOOR),
+    FLOOR == 5
+)
+
+test("negative control: floor below statutory returns qualified not 5") <- (
+    shortlisting_invitation_floor(restricted_procedure, 4, 10, FLOOR),
+    FLOOR == 10
+)

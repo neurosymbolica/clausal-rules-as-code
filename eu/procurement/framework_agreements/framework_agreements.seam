@@ -1,0 +1,943 @@
+# =====================================================================
+# framework_agreements.clausal -- the "framework_agreements" DETERMINATION for eu/procurement/framework_agreements,
+# self-contained top to bottom: its statutory VALUE facts, its derived
+# arithmetic, its per-rule tests, its checklist and its verdict assembly.
+#
+# Two separable determinations over one profile:
+#   (A) Framework term lawfulness (Art 33(1)): four-year limit + exceptional case.
+#   (B) Call-off lawfulness and route (Art 33(2)-(5)): seventeen limbs, five routes.
+# Neither gates the other.
+#
+# Source: Directive 2014/24/EU Art 33 (OJ L 94, 28.3.2014).
+# =====================================================================
+-module(framework_agreements, [
+    # required public predicates
+    decide_framework_term(PROFILE, VERDICT),
+    framework_term_limit_date(START_DATE, LIMIT_DATE),
+    framework_term_within_limit(START_DATE, END_DATE, STATUS),
+    decide_call_off(PROFILE, VERDICT),
+    call_off_route(PROFILE, ROUTE),
+    call_off_award_window_status(START_DATE, END_DATE, AWARD_DATE, STATUS),
+
+    # the input check (ruling D80, 2026-10-20) and its problem terms
+    framework_agreements_input_problem(PROFILE, PROBLEM),
+    not_ground(ARGUMENT),
+    not_a_dict(ARGUMENT),
+    missing_key(KEY),
+    wrong_type(KEY, EXPECTED),
+    out_of_range(KEY, EXPECTED),
+    profile,
+    expected_date,
+    expected_integer,
+    expected_boolean,
+    expected_call_off_method,
+    expected_at_least_one,
+
+    # re-exported constructors from kernel
+    framework_term_verdict(STATUS, DEFECT_IDS, CITATIONS),
+    call_off_verdict(STATUS, ROUTE, DEFECT_IDS, CITATIONS),
+    framework_agreements_verdict(STATUS, CITATIONS),
+
+    # facade predicates
+    decide_framework_agreements(PROFILE, VERDICT),
+    framework_agreements_status(PROFILE, ROUTE),
+    framework_agreements_checklist(PROFILE, CHECKLIST),
+    framework_agreements_decision_resolvable(PROFILE),
+    framework_agreements_status_values(STATUS_VALUES),
+
+    # membership fact tables
+    call_off_method(METHOD),
+    call_off_route_id(ROUTE_ID),
+    call_off_defect_id(DEFECT_ID),
+    framework_term_defect_id(DEFECT_ID),
+
+    # profile key atoms (21)
+    framework_start_date,
+    framework_end_date,
+    call_off_award_date,
+    framework_operator_count,
+    call_off_method_key,
+    exceptional_case_duly_justified,
+    contracting_authority_identified_in_call_for_competition,
+    economic_operator_party_to_framework,
+    call_off_entails_substantial_modification,
+    call_off_within_limits_of_framework_terms,
+    framework_sets_out_all_terms,
+    objective_conditions_for_determining_performer_indicated,
+    partly_with_partly_without_reopening_stipulated,
+    objective_criteria_for_choice_of_route_stated,
+    terms_subject_to_reopening_specified,
+    reopened_competition_based_on_framework_terms,
+    capable_operators_consulted_in_writing,
+    time_limit_sufficiently_long,
+    tenders_submitted_in_writing,
+    tender_contents_confidential_until_time_limit_expired,
+    award_made_on_framework_award_criteria,
+
+    # call-off method atoms (2)
+    without_reopening_competition,
+    with_reopening_competition,
+
+    # route atoms (5)
+    single_operator_direct_award,
+    multi_operator_direct_award_all_terms_set_out,
+    multi_operator_direct_award_under_split_framework,
+    multi_operator_reopened_competition,
+    no_lawful_route,
+
+    # framework term status atoms (2) -- decide_framework_term/2 STATUS
+    lawful_framework_term,
+    unlawful_framework_term,
+
+    # facade status atoms (2) -- decide_framework_agreements/2 STATUS
+    framework_term_lawful,
+    framework_term_unlawful,
+
+    # call-off status atoms (2)
+    call_off_lawful,
+    call_off_unlawful,
+
+    # date-surface status atoms (4)
+    within_four_year_limit,
+    exceeds_four_year_limit,
+    award_date_within_framework_term,
+    award_date_outside_framework_term,
+
+    # framework term limb IDs (2)
+    framework_end_date_precedes_start_date,
+    framework_term_exceeds_four_years,
+
+    # call-off limb IDs (17)
+    call_off_awarded_outside_framework_term,
+    contracting_authority_not_identified_in_call_for_competition,
+    economic_operator_not_party_to_framework,
+    substantial_modification_of_framework_terms,
+    call_off_outside_limits_of_framework_terms,
+    reopening_competition_in_single_operator_framework,
+    direct_award_without_all_terms_set_out,
+    objective_conditions_for_determining_performer_not_indicated,
+    objective_criteria_for_choice_of_route_not_stated,
+    terms_subject_to_reopening_not_specified,
+    reopening_not_available_where_framework_sets_out_all_terms,
+    reopened_competition_not_based_on_framework_terms,
+    capable_operators_not_all_consulted_in_writing,
+    time_limit_not_sufficiently_long,
+    tenders_not_submitted_in_writing,
+    tender_contents_opened_before_time_limit_expired,
+    award_not_made_on_framework_award_criteria
+])
+-double_quotes(chars)
+
+-private([
+    framework_term_limb_ids(IDS),
+    call_off_limb_ids(IDS),
+    framework_term_defect_fires(LIMB_ID, PROFILE),
+    call_off_defect_fires(LIMB_ID, PROFILE, ROUTE),
+    framework_term_citation(LIMB_ID, CITATION),
+    call_off_citation(LIMB_ID, CITATION),
+    framework_term_checklist(PROFILE, CHECKLIST),
+    call_off_checklist(PROFILE, ROUTE, CHECKLIST),
+    call_off_status(DEFECT_IDS, STATUS),
+    framework_term_limb_status(LIMB_ID, PROFILE, STATUS),
+    call_off_limb_in_scope(LIMB_ID, PROFILE, ROUTE),
+    call_off_limb_status(LIMB_ID, PROFILE, ROUTE, STATUS),
+    input_problem_in_scope(SCOPE, PROFILE, PROBLEM),
+    framework_agreements_profile_key_list(KEYS),
+    input_problem_candidate(SCOPE, PROFILE, PROBLEM),
+    checkable_profile(PROFILE),
+    profile_key_type(KEY, TYPE),
+    value_has_type(TYPE, VALUE),
+    expected_type_name(TYPE, EXPECTED),
+    boolean_value(VALUE),
+    is_integer_value(VALUE),
+    is_date_value(VALUE),
+    key_required(SCOPE, PROFILE, KEY),
+    term_exceeds_limit(PROFILE),
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    route_is_reopened_competition(PROFILE),
+    framework_term_decision(PROFILE, VERDICT),
+    route_for_profile(PROFILE, ROUTE),
+    framework_term,
+    call_off,
+    whole_profile,
+    date_value,
+    integer_value,
+    boolean_flag,
+    call_off_method_value
+])
+
+-import_from(eu.procurement.framework_agreements.kernel, [
+    framework_term_verdict,
+    call_off_verdict,
+    framework_agreements_verdict
+])
+
+-import_from(eu.procurement.framework_agreements.citations, [
+    cite,
+    implements,
+    eu_dir_2014_24_art_33_1,
+    eu_dir_2014_24_art_33_2,
+    eu_dir_2014_24_art_33_3,
+    eu_dir_2014_24_art_33_4,
+    eu_dir_2014_24_art_33_5
+])
+
+-import_from(eu.procurement.framework_agreements.parameters, [
+    framework_term_limit_years
+])
+
+-import_from(formalize_lib, [item, met, unmet])
+-import_from(kit.deadline_lib, [date_before, date_after, date_on_or_before, date_on_or_after])
+-import_from(kit.date_guard, [must_be_date])
+
+-import_from(date_time, [date])
+
+# =====================================================================
+# MEMBERSHIP FACT TABLES
+# =====================================================================
+call_off_method(without_reopening_competition),
+call_off_method(with_reopening_competition),
+
+call_off_route_id(single_operator_direct_award),
+call_off_route_id(multi_operator_direct_award_all_terms_set_out),
+call_off_route_id(multi_operator_direct_award_under_split_framework),
+call_off_route_id(multi_operator_reopened_competition),
+call_off_route_id(no_lawful_route),
+
+call_off_defect_id(call_off_awarded_outside_framework_term),
+call_off_defect_id(contracting_authority_not_identified_in_call_for_competition),
+call_off_defect_id(economic_operator_not_party_to_framework),
+call_off_defect_id(substantial_modification_of_framework_terms),
+call_off_defect_id(call_off_outside_limits_of_framework_terms),
+call_off_defect_id(reopening_competition_in_single_operator_framework),
+call_off_defect_id(direct_award_without_all_terms_set_out),
+call_off_defect_id(objective_conditions_for_determining_performer_not_indicated),
+call_off_defect_id(objective_criteria_for_choice_of_route_not_stated),
+call_off_defect_id(terms_subject_to_reopening_not_specified),
+call_off_defect_id(reopening_not_available_where_framework_sets_out_all_terms),
+call_off_defect_id(reopened_competition_not_based_on_framework_terms),
+call_off_defect_id(capable_operators_not_all_consulted_in_writing),
+call_off_defect_id(time_limit_not_sufficiently_long),
+call_off_defect_id(tenders_not_submitted_in_writing),
+call_off_defect_id(tender_contents_opened_before_time_limit_expired),
+call_off_defect_id(award_not_made_on_framework_award_criteria),
+
+framework_term_defect_id(framework_end_date_precedes_start_date),
+framework_term_defect_id(framework_term_exceeds_four_years),
+
+# =====================================================================
+# HELPER: LEAP YEAR
+# =====================================================================
+# =====================================================================
+# HELPER: LIMB ID LISTS (ordered)
+# =====================================================================
+framework_term_limb_ids([framework_end_date_precedes_start_date, framework_term_exceeds_four_years]),
+
+call_off_limb_ids([call_off_awarded_outside_framework_term, contracting_authority_not_identified_in_call_for_competition, economic_operator_not_party_to_framework, substantial_modification_of_framework_terms, call_off_outside_limits_of_framework_terms, reopening_competition_in_single_operator_framework, direct_award_without_all_terms_set_out, objective_conditions_for_determining_performer_not_indicated, objective_criteria_for_choice_of_route_not_stated, terms_subject_to_reopening_not_specified, reopening_not_available_where_framework_sets_out_all_terms, reopened_competition_not_based_on_framework_terms, capable_operators_not_all_consulted_in_writing, time_limit_not_sufficiently_long, tenders_not_submitted_in_writing, tender_contents_opened_before_time_limit_expired, award_not_made_on_framework_award_criteria]),
+
+# =====================================================================
+# HELPER: CITATION MAPPINGS
+# =====================================================================
+framework_term_citation(framework_end_date_precedes_start_date, cite(eu_dir_2014_24_art_33_1)),
+framework_term_citation(framework_term_exceeds_four_years, cite(eu_dir_2014_24_art_33_1)),
+
+call_off_citation(call_off_awarded_outside_framework_term, cite(eu_dir_2014_24_art_33_2)),
+call_off_citation(contracting_authority_not_identified_in_call_for_competition, cite(eu_dir_2014_24_art_33_2)),
+call_off_citation(economic_operator_not_party_to_framework, cite(eu_dir_2014_24_art_33_2)),
+call_off_citation(substantial_modification_of_framework_terms, cite(eu_dir_2014_24_art_33_2)),
+call_off_citation(call_off_outside_limits_of_framework_terms, cite(eu_dir_2014_24_art_33_3)),
+call_off_citation(reopening_competition_in_single_operator_framework, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(direct_award_without_all_terms_set_out, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(objective_conditions_for_determining_performer_not_indicated, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(objective_criteria_for_choice_of_route_not_stated, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(terms_subject_to_reopening_not_specified, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(reopening_not_available_where_framework_sets_out_all_terms, cite(eu_dir_2014_24_art_33_4)),
+call_off_citation(reopened_competition_not_based_on_framework_terms, cite(eu_dir_2014_24_art_33_5)),
+call_off_citation(capable_operators_not_all_consulted_in_writing, cite(eu_dir_2014_24_art_33_5)),
+call_off_citation(time_limit_not_sufficiently_long, cite(eu_dir_2014_24_art_33_5)),
+call_off_citation(tenders_not_submitted_in_writing, cite(eu_dir_2014_24_art_33_5)),
+call_off_citation(tender_contents_opened_before_time_limit_expired, cite(eu_dir_2014_24_art_33_5)),
+call_off_citation(award_not_made_on_framework_award_criteria, cite(eu_dir_2014_24_art_33_5)),
+
+# =====================================================================
+# DATE SURFACE: framework_term_limit_date/2
+# Computes the fourth-anniversary limit date with 29-February clamp.
+# One date/3 term in, one date/3 term out. LIMIT_YEAR is computed in the
+# body before the output date is constructed (never as a head pattern with
+# an unbound component) -- a `date(Y, M, D)` head pattern whose components
+# are bound later never resolves into a real datetime.date, only a
+# transitional match-pattern object; see py/datetime.py's _DatePattern.
+# =====================================================================
+# ONE clause, was two plus a hand-rolled is_leap_year/1 (2026-09-01). The only
+# start date whose anniversary can fail to exist is 29 February, so the leap
+# question does not need asking: CONSTRUCT the anniversary and let the type
+# answer. `date/3` RAISES `domain_error` on 29 Feb of a non-leap year, and the
+# recovery clamps to 28 February — the same result the second clause computed,
+# reached without restating the Gregorian leap rule in `%` arithmetic.
+#
+# The catcher does NOT name the offending type. It used to read
+# `domain_error("date", _)`, which matched only while `-double_quotes(atom)`
+# made that literal an atom; under `-double_quotes(chars)` (step (3),
+# bb669be6) it became a string, stopped unifying with the atom the engine
+# raises, and the error escaped as an uncaught LogicException — silently, on
+# the oracle axis only, because every suite passes without ever building an
+# impossible anniversary. A BARE `date` is not available -- it is bound to the
+# imported CONSTRUCTOR in this file -- but a QUOTED `'date'` is the atom in
+# every mode and needs no declaration (engine ruling 2026-09-08), so the
+# catcher names the type exactly without depending on the file's
+# `-double_quotes` setting.
+framework_term_limit_date(START_DATE, LIMIT_DATE) <- (
+    date(START_YEAR, START_MONTH, START_DAY) is START_DATE,
+    framework_term_limit_years(YEARS),
+    LIMIT_YEAR == START_YEAR + YEARS,
+    catch(LIMIT_DATE is date(LIMIT_YEAR, START_MONTH, START_DAY),
+          error(domain_error('date', _), _),
+          LIMIT_DATE is date(LIMIT_YEAR, 2, 28))
+)
+
+# =====================================================================
+# DATE SURFACE: framework_term_within_limit/3
+# Applies the four-year rule with NO exceptional-case escape.
+# =====================================================================
+framework_term_within_limit(START_DATE, END_DATE, within_four_year_limit) <- (
+    framework_term_limit_date(START_DATE, LIMIT_DATE),
+    date_on_or_before(END_DATE, LIMIT_DATE)
+)
+
+framework_term_within_limit(START_DATE, END_DATE, exceeds_four_year_limit) <- (
+    framework_term_limit_date(START_DATE, LIMIT_DATE),
+    date_after(END_DATE, LIMIT_DATE)
+)
+
+# =====================================================================
+# DATE SURFACE: call_off_award_window_status/4
+# Closed interval [START, END], both endpoints inclusive.
+# =====================================================================
+call_off_award_window_status(START_DATE, END_DATE, AWARD_DATE, award_date_within_framework_term) <- (
+    date_on_or_before(START_DATE, AWARD_DATE),
+    date_on_or_before(AWARD_DATE, END_DATE)
+)
+
+call_off_award_window_status(START_DATE, END_DATE, AWARD_DATE, award_date_outside_framework_term) <- (
+    date_before(AWARD_DATE, START_DATE)
+)
+
+call_off_award_window_status(START_DATE, END_DATE, AWARD_DATE, award_date_outside_framework_term) <- (
+    date_after(AWARD_DATE, END_DATE)
+)
+
+# =====================================================================
+# THE INPUT CHECK (ruling D80, 2026-10-20)
+# A complete, well-typed profile is part of this domain's contract
+# (profile_keys.yaml key_contract). framework_agreements_input_problem/2
+# gives the FIRST problem of a profile, or fails when it is well formed:
+#   not_ground(profile)              the profile contains an unbound variable
+#   not_a_dict(profile)              the profile is not a dict
+#   wrong_type(KEY, EXPECTED)        a PRESENT key of the wrong type: a date
+#                                    that is not date(Y, M, D) (kit date
+#                                    guard), a count that is not an integer,
+#                                    a boolean that is not exactly True or
+#                                    False, a method outside the vocabulary
+#   out_of_range(framework_operator_count, expected_at_least_one)
+#   missing_key(KEY)                 a key the law reads on this profile is
+#                                    absent
+# Total and negation-safe: groundness first, then the dict shape, then the
+# types of present keys, and only then arithmetic on values whose type is
+# known.
+#
+# WHICH KEYS ARE REQUIRED is scoped by the law, so documented "not read
+# here" cases stay decidable (profile_keys.yaml key_contract; Art 33(1)
+# third subparagraph, 33(3), 33(4), 33(5)):
+#   framework term: start and end dates; exceptional_case_duly_justified
+#     only for a term that exceeds four years.
+#   call-off: the three dates, operator count, method and the three
+#     Art 33(2) judgements always; within-limits only for a single
+#     operator; the all-terms and split flags for two or more operators;
+#     objective conditions for a multi-operator direct award; objective
+#     criteria and terms subject to reopening under a split framework; the
+#     six Art 33(5) keys only on a reopened competition.
+# The term scope is checked on its own so that, as the manifest records,
+# neither determination gates the other: a call-off key missing does not
+# stop decide_framework_term/2. The type checks apply in every scope.
+#
+# ENTRY POINTS: decide_framework_term/2 (term scope); call_off_route/2 and
+# decide_call_off/2 (call-off scope); framework_agreements_checklist/2
+# (whole profile). decide_framework_agreements/2, framework_agreements_status/2,
+# framework_agreements_decision_resolvable/1 and every queries.seam
+# predicate reach the check through those. The domain has no
+# indeterminate verdict, so a refused profile gets NO answer.
+# =====================================================================
+framework_agreements_input_problem(PROFILE, PROBLEM) <- (
+    input_problem_in_scope(whole_profile, PROFILE, PROBLEM)
+)
+
+input_problem_in_scope(SCOPE, PROFILE, PROBLEM) <- (
+    findall(CANDIDATE, input_problem_candidate(SCOPE, PROFILE, CANDIDATE), [PROBLEM, *_])
+)
+
+input_problem_candidate(_, PROFILE, not_ground(profile)) <- (
+    not ground(PROFILE)
+)
+
+input_problem_candidate(_, PROFILE, not_a_dict(profile)) <- (
+    ground(PROFILE),
+    not is_dict(PROFILE)
+)
+
+input_problem_candidate(_, PROFILE, wrong_type(KEY, EXPECTED)) <- (
+    checkable_profile(PROFILE),
+    framework_agreements_profile_key_list(KEYS),
+    KEY in KEYS,
+    get(PROFILE, KEY, VALUE),
+    profile_key_type(KEY, TYPE),
+    not value_has_type(TYPE, VALUE),
+    expected_type_name(TYPE, EXPECTED)
+)
+
+input_problem_candidate(_, PROFILE, out_of_range(framework_operator_count, expected_at_least_one)) <- (
+    checkable_profile(PROFILE),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    is_integer_value(OPERATOR_COUNT),
+    OPERATOR_COUNT < 1
+)
+
+input_problem_candidate(SCOPE, PROFILE, missing_key(KEY)) <- (
+    checkable_profile(PROFILE),
+    framework_agreements_profile_key_list(KEYS),
+    KEY in KEYS,
+    key_required(SCOPE, PROFILE, KEY),
+    not get(PROFILE, KEY, _)
+)
+
+checkable_profile(PROFILE) <- (
+    ground(PROFILE),
+    is_dict(PROFILE)
+)
+
+# The 21 keys in reporting order, with their key_contract types.
+framework_agreements_profile_key_list([framework_start_date, framework_end_date, call_off_award_date, framework_operator_count, call_off_method_key, exceptional_case_duly_justified, contracting_authority_identified_in_call_for_competition, economic_operator_party_to_framework, call_off_entails_substantial_modification, call_off_within_limits_of_framework_terms, framework_sets_out_all_terms, objective_conditions_for_determining_performer_indicated, partly_with_partly_without_reopening_stipulated, objective_criteria_for_choice_of_route_stated, terms_subject_to_reopening_specified, reopened_competition_based_on_framework_terms, capable_operators_consulted_in_writing, time_limit_sufficiently_long, tenders_submitted_in_writing, tender_contents_confidential_until_time_limit_expired, award_made_on_framework_award_criteria]),
+
+profile_key_type(framework_start_date, date_value),
+profile_key_type(framework_end_date, date_value),
+profile_key_type(call_off_award_date, date_value),
+profile_key_type(framework_operator_count, integer_value),
+profile_key_type(call_off_method_key, call_off_method_value),
+profile_key_type(exceptional_case_duly_justified, boolean_flag),
+profile_key_type(contracting_authority_identified_in_call_for_competition, boolean_flag),
+profile_key_type(economic_operator_party_to_framework, boolean_flag),
+profile_key_type(call_off_entails_substantial_modification, boolean_flag),
+profile_key_type(call_off_within_limits_of_framework_terms, boolean_flag),
+profile_key_type(framework_sets_out_all_terms, boolean_flag),
+profile_key_type(objective_conditions_for_determining_performer_indicated, boolean_flag),
+profile_key_type(partly_with_partly_without_reopening_stipulated, boolean_flag),
+profile_key_type(objective_criteria_for_choice_of_route_stated, boolean_flag),
+profile_key_type(terms_subject_to_reopening_specified, boolean_flag),
+profile_key_type(reopened_competition_based_on_framework_terms, boolean_flag),
+profile_key_type(capable_operators_consulted_in_writing, boolean_flag),
+profile_key_type(time_limit_sufficiently_long, boolean_flag),
+profile_key_type(tenders_submitted_in_writing, boolean_flag),
+profile_key_type(tender_contents_confidential_until_time_limit_expired, boolean_flag),
+profile_key_type(award_made_on_framework_award_criteria, boolean_flag),
+
+expected_type_name(date_value, expected_date),
+expected_type_name(integer_value, expected_integer),
+expected_type_name(boolean_flag, expected_boolean),
+expected_type_name(call_off_method_value, expected_call_off_method),
+
+value_has_type(date_value, VALUE) <- (is_date_value(VALUE))
+value_has_type(integer_value, VALUE) <- (is_integer_value(VALUE))
+value_has_type(boolean_flag, VALUE) <- (boolean_value(VALUE))
+value_has_type(call_off_method_value, VALUE) <- (call_off_method(VALUE))
+
+boolean_value(True),
+boolean_value(False),
+
+# An integer that is not a boolean (True/False are integers to the host).
+is_integer_value(VALUE) <- (
+    integer(VALUE),
+    not boolean_value(VALUE)
+)
+
+# A date in the sense of the kit date guard, as a test that fails instead of
+# raising. Only called on a ground value.
+is_date_value(VALUE) <- (
+    catch(must_be_date(VALUE), error(type_error(_, _), _), fail)
+)
+
+# -- required keys, by scope --
+key_required(framework_term, _, framework_start_date),
+key_required(framework_term, _, framework_end_date),
+key_required(framework_term, PROFILE, exceptional_case_duly_justified) <- (
+    term_exceeds_limit(PROFILE)
+)
+
+key_required(call_off, _, framework_start_date),
+key_required(call_off, _, framework_end_date),
+key_required(call_off, _, call_off_award_date),
+key_required(call_off, _, framework_operator_count),
+key_required(call_off, _, call_off_method_key),
+key_required(call_off, _, contracting_authority_identified_in_call_for_competition),
+key_required(call_off, _, economic_operator_party_to_framework),
+key_required(call_off, _, call_off_entails_substantial_modification),
+key_required(call_off, PROFILE, call_off_within_limits_of_framework_terms) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2
+)
+key_required(call_off, PROFILE, framework_sets_out_all_terms) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2
+)
+key_required(call_off, PROFILE, partly_with_partly_without_reopening_stipulated) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2
+)
+key_required(call_off, PROFILE, objective_conditions_for_determining_performer_indicated) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, without_reopening_competition)
+)
+key_required(call_off, PROFILE, objective_criteria_for_choice_of_route_stated) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+key_required(call_off, PROFILE, terms_subject_to_reopening_specified) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+key_required(call_off, PROFILE, KEY) <- (
+    KEY in [reopened_competition_based_on_framework_terms, capable_operators_consulted_in_writing, time_limit_sufficiently_long, tenders_submitted_in_writing, tender_contents_confidential_until_time_limit_expired, award_made_on_framework_award_criteria],
+    route_is_reopened_competition(PROFILE)
+)
+
+key_required(whole_profile, PROFILE, KEY) <- (
+    key_required(framework_term, PROFILE, KEY)
+)
+key_required(whole_profile, PROFILE, KEY) <- (
+    key_required(call_off, PROFILE, KEY)
+)
+
+operator_count_value(PROFILE, OPERATOR_COUNT) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    is_integer_value(OPERATOR_COUNT)
+)
+
+# Art 33(4)(c) and the reopening limb of 33(4)(b): the route on which the
+# six Art 33(5) conditions are read.
+route_is_reopened_competition(PROFILE) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition),
+    get(PROFILE, framework_sets_out_all_terms, False)
+)
+route_is_reopened_competition(PROFILE) <- (
+    operator_count_value(PROFILE, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition),
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+
+term_exceeds_limit(PROFILE) <- (
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    is_date_value(START_DATE),
+    is_date_value(END_DATE),
+    date_on_or_after(END_DATE, START_DATE),
+    framework_term_within_limit(START_DATE, END_DATE, exceeds_four_year_limit)
+)
+
+# =====================================================================
+# ROUTE RULE: call_off_route/2
+# Reads exactly four inputs: operator count, method, all-terms flag, split stipulation.
+# Seven disjoint clauses covering all combinations, behind the input check.
+# =====================================================================
+call_off_route(PROFILE, ROUTE) <- (
+    not input_problem_in_scope(call_off, PROFILE, _),
+    route_for_profile(PROFILE, ROUTE)
+)
+
+route_for_profile(PROFILE, single_operator_direct_award) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2,
+    get(PROFILE, call_off_method_key, without_reopening_competition)
+)
+
+route_for_profile(PROFILE, no_lawful_route) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition)
+)
+
+route_for_profile(PROFILE, multi_operator_direct_award_under_split_framework) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, without_reopening_competition),
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+
+route_for_profile(PROFILE, multi_operator_direct_award_all_terms_set_out) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, without_reopening_competition),
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, False)
+)
+
+route_for_profile(PROFILE, multi_operator_reopened_competition) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition),
+    get(PROFILE, framework_sets_out_all_terms, False)
+)
+
+route_for_profile(PROFILE, multi_operator_reopened_competition) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition),
+    get(PROFILE, framework_sets_out_all_terms, True),
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+
+route_for_profile(PROFILE, no_lawful_route) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition),
+    get(PROFILE, framework_sets_out_all_terms, True),
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, False)
+)
+
+# =====================================================================
+# FRAMEWORK TERM DEFECT FIRING
+# =====================================================================
+framework_term_defect_fires(framework_end_date_precedes_start_date, PROFILE) <- (
+    implements(eu_dir_2014_24_art_33_1),
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_before(END_DATE, START_DATE)
+)
+
+framework_term_defect_fires(framework_term_exceeds_four_years, PROFILE) <- (
+    implements(eu_dir_2014_24_art_33_1),
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_on_or_after(END_DATE, START_DATE),
+    get(PROFILE, exceptional_case_duly_justified, False),
+    framework_term_within_limit(START_DATE, END_DATE, exceeds_four_year_limit)
+)
+
+# =====================================================================
+# CALL-OFF DEFECT FIRING (17 limbs, scoped)
+# =====================================================================
+
+# Limb 1: scope ALWAYS
+call_off_defect_fires(call_off_awarded_outside_framework_term, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_2),
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    get(PROFILE, call_off_award_date, AWARD_DATE),
+    call_off_award_window_status(START_DATE, END_DATE, AWARD_DATE, award_date_outside_framework_term)
+)
+
+# Limb 2: scope ALWAYS
+call_off_defect_fires(contracting_authority_not_identified_in_call_for_competition, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_2),
+    get(PROFILE, contracting_authority_identified_in_call_for_competition, False)
+)
+
+# Limb 3: scope ALWAYS
+call_off_defect_fires(economic_operator_not_party_to_framework, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_2),
+    get(PROFILE, economic_operator_party_to_framework, False)
+)
+
+# Limb 4: scope ALWAYS (NOT restricted to single-operator; the "in particular" tail is emphasis)
+call_off_defect_fires(substantial_modification_of_framework_terms, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_2),
+    get(PROFILE, call_off_entails_substantial_modification, True)
+)
+
+# Limb 5: scope OPERATOR_COUNT < 2 ONLY (Art 33(3))
+call_off_defect_fires(call_off_outside_limits_of_framework_terms, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_3),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2,
+    get(PROFILE, call_off_within_limits_of_framework_terms, False)
+)
+
+# Limb 6: scope OPERATOR_COUNT < 2 ONLY
+call_off_defect_fires(reopening_competition_in_single_operator_framework, PROFILE, _) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2,
+    get(PROFILE, call_off_method_key, with_reopening_competition)
+)
+
+# Limb 7: scope TWO MULTI-OPERATOR DIRECT routes only
+call_off_defect_fires(direct_award_without_all_terms_set_out, PROFILE, ROUTE) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    ROUTE in [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework],
+    get(PROFILE, framework_sets_out_all_terms, False)
+)
+
+# Limb 8: scope TWO MULTI-OPERATOR DIRECT routes only
+call_off_defect_fires(objective_conditions_for_determining_performer_not_indicated, PROFILE, ROUTE) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    ROUTE in [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework],
+    get(PROFILE, objective_conditions_for_determining_performer_indicated, False)
+)
+
+# Limb 9: scope OPERATOR_COUNT >= 2 AND split stipulated
+call_off_defect_fires(objective_criteria_for_choice_of_route_not_stated, PROFILE, ROUTE) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True),
+    get(PROFILE, objective_criteria_for_choice_of_route_stated, False)
+)
+
+# Limb 10: same scope as limb 9
+call_off_defect_fires(terms_subject_to_reopening_not_specified, PROFILE, ROUTE) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True),
+    get(PROFILE, terms_subject_to_reopening_specified, False)
+)
+
+# Limb 11: scope OPERATOR_COUNT >= 2; fires where ROUTE is no_lawful_route
+call_off_defect_fires(reopening_not_available_where_framework_sets_out_all_terms, PROFILE, no_lawful_route) <- (
+    implements(eu_dir_2014_24_art_33_4),
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2
+)
+
+# Limb 12: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(reopened_competition_not_based_on_framework_terms, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, reopened_competition_based_on_framework_terms, False)
+)
+
+# Limb 13: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(capable_operators_not_all_consulted_in_writing, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, capable_operators_consulted_in_writing, False)
+)
+
+# Limb 14: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(time_limit_not_sufficiently_long, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, time_limit_sufficiently_long, False)
+)
+
+# Limb 15: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(tenders_not_submitted_in_writing, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, tenders_submitted_in_writing, False)
+)
+
+# Limb 16: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(tender_contents_opened_before_time_limit_expired, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, tender_contents_confidential_until_time_limit_expired, False)
+)
+
+# Limb 17: scope ROUTE == multi_operator_reopened_competition ONLY
+call_off_defect_fires(award_not_made_on_framework_award_criteria, PROFILE, multi_operator_reopened_competition) <- (
+    implements(eu_dir_2014_24_art_33_5),
+    get(PROFILE, award_made_on_framework_award_criteria, False)
+)
+
+# =====================================================================
+# DETERMINATION A: decide_framework_term/2
+# Four disjoint clauses covering all cases.
+# STATUS: lawful_framework_term | unlawful_framework_term
+# =====================================================================
+decide_framework_term(PROFILE, VERDICT) <- (
+    not input_problem_in_scope(framework_term, PROFILE, _),
+    framework_term_decision(PROFILE, VERDICT)
+)
+
+framework_term_decision(PROFILE, framework_term_verdict(lawful_framework_term, [], [])) <- (
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_on_or_after(END_DATE, START_DATE),
+    framework_term_within_limit(START_DATE, END_DATE, within_four_year_limit)
+)
+
+framework_term_decision(PROFILE, framework_term_verdict(lawful_framework_term, [], [])) <- (
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_on_or_after(END_DATE, START_DATE),
+    framework_term_within_limit(START_DATE, END_DATE, exceeds_four_year_limit),
+    get(PROFILE, exceptional_case_duly_justified, True)
+)
+
+framework_term_decision(PROFILE, framework_term_verdict(unlawful_framework_term, [framework_end_date_precedes_start_date], [cite(eu_dir_2014_24_art_33_1)])) <- (
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_before(END_DATE, START_DATE)
+)
+
+framework_term_decision(PROFILE, framework_term_verdict(unlawful_framework_term, [framework_term_exceeds_four_years], [cite(eu_dir_2014_24_art_33_1)])) <- (
+    get(PROFILE, framework_start_date, START_DATE),
+    get(PROFILE, framework_end_date, END_DATE),
+    date_on_or_after(END_DATE, START_DATE),
+    framework_term_within_limit(START_DATE, END_DATE, exceeds_four_year_limit),
+    get(PROFILE, exceptional_case_duly_justified, False)
+)
+
+# =====================================================================
+# DETERMINATION B: decide_call_off/2
+# Determines route, collects defects in order, assembles verdict.
+# =====================================================================
+decide_call_off(PROFILE, call_off_verdict(STATUS, ROUTE, DEFECT_IDS, CITATIONS)) <- (
+    not input_problem_in_scope(call_off, PROFILE, _),
+    route_for_profile(PROFILE, ROUTE),
+    call_off_limb_ids(LIMB_IDS),
+    findall(LIMB_ID, (LIMB_ID in LIMB_IDS, call_off_defect_fires(LIMB_ID, PROFILE, ROUTE)), DEFECT_IDS),
+    findall(CITATION, (LIMB_ID in DEFECT_IDS, call_off_citation(LIMB_ID, CITATION)), CITATIONS),
+    call_off_status(DEFECT_IDS, STATUS)
+)
+
+# =====================================================================
+# HELPER: call_off_status/2
+# =====================================================================
+call_off_status([], call_off_lawful)
+
+call_off_status(DEFECT_IDS, call_off_unlawful) <- (
+    DEFECT_IDS != []
+)
+
+# =====================================================================
+# FACADE: decide_framework_agreements/2
+# Combined verdict over both determinations. Neither gates the other.
+# =====================================================================
+decide_framework_agreements(PROFILE, framework_agreements_verdict(framework_term_unlawful, [cite(eu_dir_2014_24_art_33_1)])) <- (
+    decide_framework_term(PROFILE, framework_term_verdict(unlawful_framework_term, _, _))
+)
+
+decide_framework_agreements(PROFILE, framework_agreements_verdict(call_off_unlawful, CITATIONS)) <- (
+    decide_framework_term(PROFILE, framework_term_verdict(lawful_framework_term, _, _)),
+    decide_call_off(PROFILE, call_off_verdict(call_off_unlawful, _, _, CITATIONS))
+)
+
+decide_framework_agreements(PROFILE, framework_agreements_verdict(framework_term_lawful, [])) <- (
+    decide_framework_term(PROFILE, framework_term_verdict(lawful_framework_term, _, _)),
+    decide_call_off(PROFILE, call_off_verdict(call_off_lawful, _, _, _))
+)
+
+# =====================================================================
+# FACADE: framework_agreements_status/2 (route classification)
+# =====================================================================
+framework_agreements_status(PROFILE, ROUTE) <- (
+    call_off_route(PROFILE, ROUTE)
+)
+
+# =====================================================================
+# FACADE: framework_agreements_checklist/2
+# One item/3 row per in-scope limb (2 term + 17 call-off = up to 19 rows).
+# =====================================================================
+framework_agreements_checklist(PROFILE, CHECKLIST) <- (
+    not framework_agreements_input_problem(PROFILE, _),
+    route_for_profile(PROFILE, ROUTE),
+    framework_term_checklist(PROFILE, TERM_CHECKLIST),
+    call_off_checklist(PROFILE, ROUTE, CALL_OFF_CHECKLIST),
+    append(TERM_CHECKLIST, CALL_OFF_CHECKLIST, CHECKLIST)
+)
+
+framework_term_checklist(PROFILE, CHECKLIST) <- (
+    framework_term_limb_ids(LIMB_IDS),
+    findall(item(LIMB_ID, STATUS, CITATION), (LIMB_ID in LIMB_IDS, framework_term_citation(LIMB_ID, CITATION), framework_term_limb_status(LIMB_ID, PROFILE, STATUS)), CHECKLIST)
+)
+
+framework_term_limb_status(LIMB_ID, PROFILE, unmet(LIMB_ID)) <- (
+    framework_term_defect_fires(LIMB_ID, PROFILE)
+)
+
+framework_term_limb_status(LIMB_ID, PROFILE, met) <- (
+    not framework_term_defect_fires(LIMB_ID, PROFILE)
+)
+
+call_off_checklist(PROFILE, ROUTE, CHECKLIST) <- (
+    call_off_limb_ids(LIMB_IDS),
+    findall(item(LIMB_ID, STATUS, CITATION), (LIMB_ID in LIMB_IDS, call_off_citation(LIMB_ID, CITATION), call_off_limb_in_scope(LIMB_ID, PROFILE, ROUTE), call_off_limb_status(LIMB_ID, PROFILE, ROUTE, STATUS)), CHECKLIST)
+)
+
+# In-scope check: a limb is in scope if it can fire on this profile.
+call_off_limb_in_scope(call_off_awarded_outside_framework_term, _, _) <- (
+    True
+)
+
+call_off_limb_in_scope(contracting_authority_not_identified_in_call_for_competition, _, _) <- (
+    True
+)
+
+call_off_limb_in_scope(economic_operator_not_party_to_framework, _, _) <- (
+    True
+)
+
+call_off_limb_in_scope(substantial_modification_of_framework_terms, _, _) <- (
+    True
+)
+
+call_off_limb_in_scope(call_off_outside_limits_of_framework_terms, PROFILE, _) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2
+)
+
+call_off_limb_in_scope(reopening_competition_in_single_operator_framework, PROFILE, _) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT < 2
+)
+
+call_off_limb_in_scope(direct_award_without_all_terms_set_out, _, ROUTE) <- (
+    ROUTE in [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]
+)
+
+call_off_limb_in_scope(objective_conditions_for_determining_performer_not_indicated, _, ROUTE) <- (
+    ROUTE in [multi_operator_direct_award_all_terms_set_out, multi_operator_direct_award_under_split_framework]
+)
+
+call_off_limb_in_scope(objective_criteria_for_choice_of_route_not_stated, PROFILE, _) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+
+call_off_limb_in_scope(terms_subject_to_reopening_not_specified, PROFILE, _) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2,
+    get(PROFILE, partly_with_partly_without_reopening_stipulated, True)
+)
+
+call_off_limb_in_scope(reopening_not_available_where_framework_sets_out_all_terms, PROFILE, _) <- (
+    get(PROFILE, framework_operator_count, OPERATOR_COUNT),
+    OPERATOR_COUNT >= 2
+)
+
+call_off_limb_in_scope(reopened_competition_not_based_on_framework_terms, _, multi_operator_reopened_competition),
+call_off_limb_in_scope(capable_operators_not_all_consulted_in_writing, _, multi_operator_reopened_competition),
+call_off_limb_in_scope(time_limit_not_sufficiently_long, _, multi_operator_reopened_competition),
+call_off_limb_in_scope(tenders_not_submitted_in_writing, _, multi_operator_reopened_competition),
+call_off_limb_in_scope(tender_contents_opened_before_time_limit_expired, _, multi_operator_reopened_competition),
+call_off_limb_in_scope(award_not_made_on_framework_award_criteria, _, multi_operator_reopened_competition),
+
+call_off_limb_status(LIMB_ID, PROFILE, ROUTE, unmet(LIMB_ID)) <- (
+    call_off_defect_fires(LIMB_ID, PROFILE, ROUTE)
+)
+
+call_off_limb_status(LIMB_ID, PROFILE, ROUTE, met) <- (
+    not call_off_defect_fires(LIMB_ID, PROFILE, ROUTE)
+)
+
+# =====================================================================
+# FACADE: framework_agreements_decision_resolvable/1
+# =====================================================================
+framework_agreements_decision_resolvable(PROFILE) <- (
+    decide_framework_agreements(PROFILE, _)
+)
+
+# =====================================================================
+# FACADE: framework_agreements_status_values/1
+# =====================================================================
+framework_agreements_status_values([framework_term_lawful, framework_term_unlawful, call_off_lawful, call_off_unlawful]),

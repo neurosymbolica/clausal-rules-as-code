@@ -1,0 +1,59 @@
+-double_quotes(chars)
+# =====================================================================
+# test_properties.clausal -- structural PROPERTIES over the subject set.
+# P1 totality: every registered subject yields exactly one verdict.
+# P2 determinism: same profile always gives the same verdict.
+# Run: python -m clausal.testing eu/procurement/utilities_negotiated_without_prior_call/tests/test_properties.clausal
+# =====================================================================
+
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.utilities_negotiated_without_prior_call, [
+    decide_utilities_negotiated_without_prior_call])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.fixtures, [
+    utilities_negotiated_without_prior_call_subject,
+    utilities_negotiated_without_prior_call_profile_for])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.kernel, [
+    utilities_negotiated_verdict])
+
+# P1: totality -- every subject yields exactly one verdict
+
+test("P1 totality: every subject yields exactly one verdict") <- (
+    findall(SUBJECT, utilities_negotiated_without_prior_call_subject(SUBJECT), SUBJECT_LIST),
+    length(SUBJECT_LIST, SUBJECT_COUNT),
+    findall(SUBJECT, (
+        utilities_negotiated_without_prior_call_subject(SUBJECT),
+        utilities_negotiated_without_prior_call_profile_for(SUBJECT, PROFILE),
+        findall(VERDICT, decide_utilities_negotiated_without_prior_call(PROFILE, VERDICT), VERDICT_LIST),
+        length(VERDICT_LIST, 1)
+    ), CLASSIFIED_LIST),
+    length(CLASSIFIED_LIST, SUBJECT_COUNT)
+)
+
+# P2: determinism -- calling decide twice on the same profile gives the same result
+
+test("P2 determinism: same profile gives same verdict on repeated calls") <- (
+    findall(SUBJECT, (
+        utilities_negotiated_without_prior_call_subject(SUBJECT),
+        utilities_negotiated_without_prior_call_profile_for(SUBJECT, PROFILE),
+        findall(V1, decide_utilities_negotiated_without_prior_call(PROFILE, V1), LIST1),
+        findall(V2, decide_utilities_negotiated_without_prior_call(PROFILE, V2), LIST2),
+        LIST1 is LIST2
+    ), DETERMINISTIC_LIST),
+    findall(SUBJECT, utilities_negotiated_without_prior_call_subject(SUBJECT), ALL_SUBJECTS),
+    length(DETERMINISTIC_LIST, ALL_COUNT),
+    length(ALL_SUBJECTS, ALL_COUNT)
+)
+
+# P3: verdict structure -- every verdict is a well-formed utilities_negotiated_verdict/3
+
+test("P3 structure: every verdict is a utilities_negotiated_verdict/3 term") <- (
+    findall(SUBJECT, (
+        utilities_negotiated_without_prior_call_subject(SUBJECT),
+        utilities_negotiated_without_prior_call_profile_for(SUBJECT, PROFILE),
+        findall(VERDICT, decide_utilities_negotiated_without_prior_call(PROFILE, VERDICT), VERDICT_LIST),
+        length(VERDICT_LIST, 1),
+        utilities_negotiated_verdict(_, _, _) in VERDICT_LIST
+    ), STRUCTURED_LIST),
+    findall(SUBJECT, utilities_negotiated_without_prior_call_subject(SUBJECT), ALL_SUBJECTS),
+    length(STRUCTURED_LIST, ALL_COUNT),
+    length(ALL_SUBJECTS, ALL_COUNT)
+)

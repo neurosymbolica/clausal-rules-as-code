@@ -1,0 +1,86 @@
+-double_quotes(chars)
+# =====================================================================
+# test_input_mode.clausal -- INPUT MODE: public predicates called with the
+# result argument BOUND (verdict given, not read out).
+# Run: python -m clausal.testing eu/procurement/life_cycle_costing/tests/test_input_mode.clausal
+# =====================================================================
+-import_from(eu.procurement.life_cycle_costing.life_cycle_costing, [
+    lcc_component_admissibility,
+    lcc_mandatory_method_status,
+    lcc_union_act_listing,
+    lcc_externality_assessment,
+    lcc_method_validity_limb_status,
+    acquisition_cost,
+    environmental_externality_cost,
+    component_included,
+    component_excluded,
+    no_union_common_method,
+    directive_2009_33_ec,
+    no_union_act,
+    listed_in_annex_xiii,
+    externality_costs_assessed,
+    externality_costs_not_assessed,
+    tenderer_data_not_indicated
+])
+
+-import_from(eu.procurement.life_cycle_costing.kernel, [
+    satisfied,
+    not_satisfied,
+    no_union_common_method_mandatory,
+    union_common_method_mandatory_and_applied
+])
+
+-import_from(eu.procurement.life_cycle_costing.citations, [
+    cite,
+    eu_dir_2014_24_art_68_2
+])
+
+-import_from(eu.procurement.life_cycle_costing.fixtures, [
+    life_cycle_costing_profile_for
+])
+
+test("input mode: component_admissibility bound to included succeeds for acquisition_cost") <- (
+    lcc_component_admissibility(acquisition_cost, 1, component_included)
+)
+
+test("input mode: component_admissibility bound to excluded fails for acquisition_cost") <- (
+    not lcc_component_admissibility(acquisition_cost, 1, component_excluded)
+)
+
+test("input mode: component_admissibility bound to excluded succeeds for externality with 0") <- (
+    lcc_component_admissibility(environmental_externality_cost, 0, component_excluded)
+)
+
+test("input mode: mandatory_method_status bound to no_union succeeds") <- (
+    lcc_mandatory_method_status(no_union_common_method, 0, no_union_common_method_mandatory)
+)
+
+test("input mode: mandatory_method_status bound to applied succeeds for directive") <- (
+    lcc_mandatory_method_status(directive_2009_33_ec, 1, union_common_method_mandatory_and_applied)
+)
+
+test("input mode: union_act_listing bound to no_union_act succeeds") <- (
+    lcc_union_act_listing(no_union_common_method, no_union_act)
+)
+
+test("input mode: union_act_listing bound to listed succeeds for directive") <- (
+    lcc_union_act_listing(directive_2009_33_ec, listed_in_annex_xiii)
+)
+
+test("input mode: externality_assessment bound to not_assessed succeeds for empty list") <- (
+    lcc_externality_assessment([], externality_costs_not_assessed)
+)
+
+test("input mode: externality_assessment bound to assessed succeeds for externality present") <- (
+    lcc_externality_assessment([[environmental_externality_cost, 100, 1]], externality_costs_assessed)
+)
+
+test("input mode: limb_status bound to satisfied succeeds for compliant profile") <- (
+    life_cycle_costing_profile_for("basic_compliant", PROFILE),
+    lcc_method_validity_limb_status(tenderer_data_not_indicated, PROFILE, satisfied, _CITATION)
+)
+
+test("input mode: limb_status bound to not_satisfied fails for compliant profile") <- (
+    life_cycle_costing_profile_for("basic_compliant", PROFILE),
+    not lcc_method_validity_limb_status(tenderer_data_not_indicated, PROFILE, not_satisfied, _CITATION)
+)

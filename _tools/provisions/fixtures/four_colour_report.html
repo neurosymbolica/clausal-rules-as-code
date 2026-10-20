@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provision tracking — fixture/domain</title>
+<style>
+:root {
+  --ink: #1c2024; --dim: #57606a; --line: #d0d7de; --bg: #ffffff;
+  --panel: #f6f8fa;
+  --green: #1a7f37; --green-bg: #e9f6ec;
+  --amber: #9a6700; --amber-bg: #fdf5d3;
+  --grey: #57606a; --grey-bg: #eceff2;
+  --red: #cf222e; --red-bg: #ffeceb;
+  --contra: #8250df; --contra-bg: #f5eeff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0 1.25rem 4rem; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+}
+main, header { max-width: 68rem; margin: 0 auto; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+              "Liberation Mono", monospace; font-size: 0.87em; }
+h1 { font-size: 1.4rem; margin: 1.5rem 0 0.3rem; }
+h2 { font-size: 1.05rem; margin: 2.4rem 0 0.2rem; padding-bottom: 0.3rem;
+     border-bottom: 2px solid var(--ink); letter-spacing: 0.04em;
+     text-transform: uppercase; }
+h3 { font-size: 0.95rem; margin: 1.4rem 0 0.4rem; }
+p.note { color: var(--dim); margin: 0.35rem 0 0.9rem; }
+.badges { margin: 0.5rem 0 0; padding: 0; list-style: none; }
+.badges li { display: inline-block; margin: 0 0.4rem 0.4rem 0; padding: 0.15rem
+             0.55rem; border: 1px solid var(--line); border-radius: 999px;
+             font-size: 0.8rem; letter-spacing: 0.03em; }
+.badges li.on { border-color: var(--ink); font-weight: 700; }
+.headline { margin: 1rem 0 0.3rem; padding: 0.9rem 1.1rem; background:
+            var(--panel); border: 1px solid var(--line); border-left: 6px solid
+            var(--ink); font-size: 1.05rem; font-weight: 600; }
+.legend { display: grid; gap: 0.4rem 1.2rem;
+          grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+          margin: 0.6rem 0 0; padding: 0; list-style: none; }
+.legend li { display: flex; gap: 0.5rem; align-items: baseline;
+             padding: 0.3rem 0.4rem; border: 1px solid var(--line); }
+.pill { display: inline-block; white-space: nowrap; padding: 0.05rem 0.5rem;
+        border: 1px solid currentColor; border-radius: 3px; font-weight: 700;
+        font-size: 0.78rem; letter-spacing: 0.06em; }
+.pill .glyph { margin-right: 0.35rem; }
+.s-GREEN .pill, .s-GREEN .accent { color: var(--green); }
+.s-AMBER .pill, .s-AMBER .accent { color: var(--amber); }
+.s-GREY .pill, .s-GREY .accent { color: var(--grey); }
+.s-RED .pill, .s-RED .accent { color: var(--red); }
+.s-CONTRADICTED .pill, .s-CONTRADICTED .accent { color: var(--contra); }
+.s-GREEN .pill { background: var(--green-bg); }
+.s-AMBER .pill { background: var(--amber-bg); }
+.s-GREY .pill { background: var(--grey-bg); }
+.s-RED .pill { background: var(--red-bg); }
+.s-CONTRADICTED .pill { background: var(--contra-bg); }
+.colhead { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+           gap: 0 1.2rem; margin-top: 0.8rem; border-bottom: 2px solid
+           var(--ink); }
+.colhead div { padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700;
+               letter-spacing: 0.1em; text-transform: uppercase; }
+.unit { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+        gap: 0 1.2rem; border-bottom: 1px solid var(--line);
+        border-left: 6px solid var(--line); page-break-inside: avoid;
+        break-inside: avoid; }
+.unit.s-GREEN { border-left-color: var(--green); }
+.unit.s-AMBER { border-left-color: var(--amber); border-left-style: solid; }
+.unit.s-GREY { border-left-color: var(--grey); border-left-style: dashed; }
+.unit.s-RED { border-left-color: var(--red); border-left-style: double;
+              border-left-width: 8px; }
+.unit.s-CONTRADICTED { border-left-color: var(--contra);
+                       border-left-style: double; border-left-width: 8px;
+                       background: var(--contra-bg); }
+.pane { padding: 0.85rem 0.6rem; min-width: 0; }
+.pane.claim { border-left: 1px solid var(--line); }
+.panelabel { display: none; margin: 0 0 0.35rem; font-size: 0.7rem;
+             font-weight: 700; letter-spacing: 0.12em; color: var(--dim);
+             text-transform: uppercase; }
+.uid { margin: 0 0 0.4rem; word-break: break-all; color: var(--dim); }
+blockquote.text { margin: 0; padding: 0.15rem 0 0.15rem 0.7rem;
+                  border-left: 3px solid var(--line); white-space: pre-wrap;
+                  overflow-wrap: anywhere; }
+.claimblock { margin: 0.7rem 0 0; padding: 0.5rem 0.6rem; background:
+              var(--panel); border: 1px solid var(--line); }
+.claimblock > h4 { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700;
+                   letter-spacing: 0.1em; text-transform: uppercase;
+                   color: var(--dim); }
+dl.fields { margin: 0; display: grid; grid-template-columns: max-content
+            minmax(0, 1fr); gap: 0.2rem 0.6rem; }
+dl.fields dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+               text-transform: uppercase; color: var(--dim); }
+dl.fields dd { margin: 0; min-width: 0; white-space: pre-wrap;
+               overflow-wrap: anywhere; }
+dd.verbatim { padding-left: 0.6rem; border-left: 3px solid currentColor; }
+.contra-banner { margin: 0.4rem 0 0; padding: 0.4rem 0.6rem;
+                 border: 2px solid var(--contra); font-weight: 600; }
+.unaccounted { margin: 0.4rem 0 0; padding: 0.4rem 0.6rem;
+               border: 2px solid var(--red); font-weight: 600; }
+ul.plain { margin: 0; padding: 0; list-style: none; }
+table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 0; }
+th, td { border: 1px solid var(--line); padding: 0.35rem 0.55rem;
+         text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+th { background: var(--panel); font-size: 0.78rem; letter-spacing: 0.06em;
+     text-transform: uppercase; }
+.card { border: 1px solid var(--line); border-left: 6px solid var(--line);
+        padding: 0.7rem 0.9rem; margin: 0.7rem 0 0; page-break-inside: avoid;
+        break-inside: avoid; }
+.card.expansion { border-left-color: var(--grey); border-left-style: dashed; }
+.card.authorized { border-left-color: var(--amber); }
+.card > h4 { margin: 0 0 0.4rem; font-size: 1rem; }
+.advisory { border-left: 6px solid var(--amber); }
+.empty { color: var(--dim); font-style: italic; margin: 0.5rem 0 0; }
+footer { max-width: 68rem; margin: 3rem auto 0; padding-top: 0.8rem;
+         border-top: 1px solid var(--line); color: var(--dim);
+         font-size: 0.82rem; }
+@media (max-width: 52rem) {
+  .colhead { display: none; }
+  .unit { grid-template-columns: minmax(0, 1fr); }
+  .pane.claim { border-left: 0; border-top: 1px dashed var(--line); }
+  .panelabel { display: block; }
+  dl.fields { grid-template-columns: minmax(0, 1fr); }
+  dl.fields dt { margin-top: 0.3rem; }
+}
+@media print {
+  body { padding: 0; font-size: 11pt; }
+  .unit.s-CONTRADICTED, .pill { background: transparent !important; }
+}
+</style>
+</head>
+<body>
+<header><h1>Provision tracking — <span class="mono">fixture/domain</span></h1><ul class="badges"><li class="on">TRACED</li><li class="">NOT ENFORCED — reporting only</li></ul><p class="headline">8 units: 5 formalized, 2 deferred (1 authorized, 1 expansion), 1 unaccounted; 0 predicate(s) no_statute</p><p class="note">Headline reproduced verbatim from <code>provisions.yaml</code>. Nothing on this page is recomputed from the statute or the rulebase: the artifact is the only input, so what you review is what the gate scored.</p></header>
+<main>
+<h2>Pinned source(s)</h2><p class="note">What the operator claims was pinned, what was cut from it, and what can be checked against the original -- reviewed before any provision below, because there is no point auditing coverage of the wrong Act.</p><div class="card"><h3 class="mono">FIXTURE</h3><div class="claimblock"><h4>What it claims to be</h4><dl class="fields"><dt>celex</dt><dd class="mono">FIXTURE</dd><dt>consolidated</dt><dd>2026-01-01</dd><dt>doc_id</dt><dd class="mono">FIXTURE</dd><dt>url</dt><dd><a href="https:&#47;&#47;example.invalid/f" rel="noopener noreferrer">https:&#47;&#47;example.invalid/f</a></dd></dl></div><div class="claimblock"><h4>What can be checked</h4><dl class="fields"><dt>sha256 — this extract, enforced by the gate</dt><dd class="mono">956100de97176843f992eef0615ddf5392e357062272db1fbc176ded97eaaae0</dd></dl></div></div>
+<h2>Gate verdict</h2><p class="headline">1 problem(s) scored by the gate on the ledger this artifact was emitted from.</p><p class="note">The problem TEXT is deliberately absent from provisions.yaml: a parse failure quotes an absolute path, and a committed artifact may not depend on the machine that wrote it. Their absence here is NOT evidence that there are none — run `check_provisions.py &lt;domain&gt;` to read them.</p>
+<h2>Advisories</h2><p class="note">Advisory only. These never block and never reach an exit code — the gate cannot judge whether a deferral is sound, so it makes the degenerate PATTERN conspicuous instead of pretending to a verdict it does not have.</p><p class="empty">None.</p>
+<h2>Deferrals</h2><p class="note">A deferral is a claim that a provision is out of scope, and no gate can judge whether it is sound. What follows is therefore unverified by construction: the reason and the consequence are read against the provision's own words or not at all.</p><p class="note">Operator order: present. Its <code>deferred_set</code> authorizes <code>derogation</code>.</p><h3>Expansions — deferred beyond the order (1)</h3><p class="note">The domain excluded these, not the operator. §6 item 2: these are what a reviewer reads first, because they are the exclusions nobody ordered.</p><div class="card expansion"><h4><code>art_2a_supply</code> <span class="pill">EXPANSION</span></h4><dl class="fields"><dt>reason</dt><dd>Art 2(a) goods deferred.</dd><dt>consequence</dt><dd>Callers must model the supply of goods themselves.</dd></dl><h4>Defers</h4><ul class="plain"><li><p class="uid mono">FIXTURE#art_2__para_1__list_1__point_a</p><blockquote class="text">goods supplied for consideration;</blockquote></li></ul></div><h3>Authorized — declared in the operator&#x27;s order (1)</h3><p class="note">The operator&#x27;s `deferred_set` names these, so the exclusion was ordered rather than chosen here. The reason and consequence are still claims, and still unverified by any gate.</p><div class="card authorized"><h4><code>derogation</code> <span class="pill">AUTHORIZED</span></h4><dl class="fields"><dt>reason</dt><dd>Art 3 derogation out of scope.</dd><dt>consequence</dt><dd>Callers in derogating Member States must apply national law.</dd></dl><h4>Defers</h4><ul class="plain"><li><p class="uid mono">FIXTURE#art_3__para_1</p><blockquote class="text">Member States may derogate from Article 1.</blockquote></li></ul></div>
+<h2>Scope exclusions</h2><p class="note">An exclusion is a claim that a provision is outside this domain's scope by design — not deferred work, and never part of the backlog above. It cites provisions this domain did not pin, so no verbatim text is shown: there is nothing here to check a quotation against, only a boundary to agree or disagree with.</p><p class="note">Operator order: present, and it authorizes <strong>no exclusions</strong> — every boundary below is an expansion.</p><p class="empty">This domain declares no scope exclusions.</p>
+<h2>Operative readings</h2><p class="note">Where the law admits more than one defensible reading, this is the one this domain implements — and the one it did not. No gate can judge which is right; that is why they are declared. An unreviewed entry is an interpretation of the law that no qualified person has signed off, and this domain should not be relied on in service until it has been.</p><p class="empty">This domain declares no contested readings. That is not the same as having made none — an undeclared reading is invisible here by construction.</p>
+<h2>Exempted predicates (<code>no_statute</code>)</h2><p class="note">A declaration that a predicate has no statutory basis exempts every one of its clauses from T1 for as long as it stands. It is the one bare assertion the enforced path allows, so it is listed here in full: exempting a rulebase must be as visible as deferring a statute.</p><p class="empty">No predicate is exempted.</p>
+<h2>Legend</h2><ul class="legend"><li class="s-GREEN"><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span><span>formalized — covered by at least one cite</span></li><li class="s-AMBER"><span class="pill"><span class="glyph" aria-hidden="true">◆</span>AMBER</span><span>deferred, and the operator&#x27;s order authorized it</span></li><li class="s-GREY"><span class="pill"><span class="glyph" aria-hidden="true">◇</span>GREY</span><span>deferred as an EXPANSION — beyond the order</span></li><li class="s-RED"><span class="pill"><span class="glyph" aria-hidden="true">■</span>RED</span><span>unaccounted — neither formalized nor deferred</span></li><li class="s-CONTRADICTED"><span class="pill"><span class="glyph" aria-hidden="true">✕</span>CONTRADICTED</span><span>BOTH covered and deferred — the ledger refuses to resolve this, and so does this report</span></li></ul><p class="note">Every state carries its word as well as its colour and glyph, so nothing here depends on seeing colour.</p>
+<h2>Statute against formalization</h2><p class="note">Each provision sits beside the claim made about it. The words on the right are the record's and the register's, not a summary — compare them against the words on the left, because that comparison is the only thing that catches a citation quoting the wrong provision or a deferral whose stated consequence is not the real one.</p><div class="colhead"><div>Statute</div><div>Formalization</div></div><article class="unit s-GREEN" id="unit-0"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_1__para_1</p><blockquote class="text">The rate shall be ten per cent.</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span> <span class="note">formalized — covered by at least one cite</span></p><div class="claimblock"><h4>Formalized by</h4><dl class="fields"><dt>cite</dt><dd><code>art_1</code> &middot; via rule</dd><dt>verbatim (from that record)</dt><dd class="verbatim">The rate shall be ten per cent.</dd><dt>cited by</dt><dd><code>kernel.seam:1</code></dd></dl><dl class="fields"><dt>cite</dt><dd><code>rate_percent</code> &middot; via parameter</dd><dt>verbatim (from that record)</dt><dd class="verbatim">ten per cent</dd><dt>cited by</dt><dd>—<br><span class="note">a parameter is provenanced by its own record, not by a rule.</span></dd></dl></div></div></article><article class="unit s-GREEN" id="unit-1"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_1__para_2</p><blockquote class="text">The rate is rounded up to the next whole number.</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span> <span class="note">formalized — covered by at least one cite</span></p><div class="claimblock"><h4>Formalized by</h4><dl class="fields"><dt>cite</dt><dd><code>art_1</code> &middot; via rule</dd><dt>verbatim (from that record)</dt><dd class="verbatim">The rate shall be ten per cent.</dd><dt>cited by</dt><dd><code>kernel.seam:1</code></dd></dl></div></div></article><article class="unit s-GREY" id="unit-2"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_2__para_1__list_1__point_a</p><blockquote class="text">goods supplied for consideration;</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">◇</span>GREY</span> <span class="note">deferred as an EXPANSION — beyond the order</span></p><div class="claimblock"><h4>Deferred by</h4><dl class="fields"><dt>deferred by</dt><dd><code>art_2a_supply</code> <span class="pill">EXPANSION</span></dd><dt>reason</dt><dd>Art 2(a) goods deferred.</dd><dt>consequence</dt><dd>Callers must model the supply of goods themselves.</dd></dl></div></div></article><article class="unit s-RED" id="unit-3"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_2__para_1__list_1__point_b</p><blockquote class="text">services supplied for consideration.</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">■</span>RED</span> <span class="note">unaccounted — neither formalized nor deferred</span></p><p class="unaccounted accent">Unaccounted: no citation record covers this unit and no deferral register entry names it. Nothing in the rulebase claims it and nobody wrote down why not.</p></div></article><article class="unit s-AMBER" id="unit-4"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_3__para_1</p><blockquote class="text">Member States may derogate from Article 1.</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">◆</span>AMBER</span> <span class="note">deferred, and the operator&#x27;s order authorized it</span></p><div class="claimblock"><h4>Deferred by</h4><dl class="fields"><dt>deferred by</dt><dd><code>derogation</code> <span class="pill">AUTHORIZED</span></dd><dt>reason</dt><dd>Art 3 derogation out of scope.</dd><dt>consequence</dt><dd>Callers in derogating Member States must apply national law.</dd></dl></div></div></article><article class="unit s-GREEN" id="unit-5"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_4__para_1</p><blockquote class="text">The following transactions shall be subject to VAT:</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span> <span class="note">formalized — covered by at least one cite</span></p><div class="claimblock"><h4>Formalized by</h4><dl class="fields"><dt>cite</dt><dd><code>art_4</code> &middot; via rule</dd><dt>verbatim (from that record)</dt><dd class="verbatim">The following transactions shall be subject to VAT: the supply of goods for consideration; the supply of services for consideration.</dd><dt>cited by</dt><dd><code>kernel.seam:6</code></dd></dl></div></div></article><article class="unit s-GREEN" id="unit-6"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_4__para_1__point_a</p><blockquote class="text">the supply of goods for consideration;</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span> <span class="note">formalized — covered by at least one cite</span></p><div class="claimblock"><h4>Formalized by</h4><dl class="fields"><dt>cite</dt><dd><code>art_4</code> &middot; via rule</dd><dt>verbatim (from that record)</dt><dd class="verbatim">The following transactions shall be subject to VAT: the supply of goods for consideration; the supply of services for consideration.</dd><dt>cited by</dt><dd><code>kernel.seam:6</code></dd></dl></div></div></article><article class="unit s-GREEN" id="unit-7"><div class="pane statute"><p class="panelabel">Statute</p><p class="uid mono">FIXTURE#art_4__para_1__point_b</p><blockquote class="text">the supply of services for consideration.</blockquote></div><div class="pane claim"><p class="panelabel">Formalization</p><p><span class="pill"><span class="glyph" aria-hidden="true">●</span>GREEN</span> <span class="note">formalized — covered by at least one cite</span></p><div class="claimblock"><h4>Formalized by</h4><dl class="fields"><dt>cite</dt><dd><code>art_4</code> &middot; via rule</dd><dt>verbatim (from that record)</dt><dd class="verbatim">The following transactions shall be subject to VAT: the supply of goods for consideration; the supply of services for consideration.</dd><dt>cited by</dt><dd><code>kernel.seam:6</code></dd></dl></div></div></article>
+</main>
+<footer>Generated by <code>_tools/render_provisions.py</code> from this domain's <code>provisions.yaml</code> and nothing else. The gate does not check that a cite names the RIGHT provision, nor that a deferral is sound — those are judgment, and they are what this page is for.</footer>
+</body>
+</html>

@@ -1,0 +1,594 @@
+id: eu/procurement/shortlisting
+# `numeric`, as commissioned. `deontic` was the live alternative and the choice
+# is not obvious: the VERDICT of this domain is modal (may / must / must not),
+# which is Art 69's shape and why that domain is `deontic`. What decides it here
+# is that every one of Art 65's modalities is selected by an INTEGER COMPARISON
+# on counts of candidates -- five against the declared minimum, the declared
+# minimum against the qualified count, the invited count against the floor -- and
+# the modality is the OUTPUT of that arithmetic rather than a separate deontic
+# structure layered over it. The modal vocabulary is preserved in
+# `verdict_vocabulary` and in the four status atoms, not in the family label.
+shape_family: numeric
+kit_version: "0.1.0"
+
+# Determination-slices layout. ONE legal determination -- may this contracting
+# authority reduce the number of otherwise qualified candidates it invites, and
+# how many must it invite? -- so ONE slice: shortlisting.clausal, which owns the
+# Art 65(1) procedure gate, the two statutory minima, the eight Art 65(2) defect
+# limbs, the invitation floor, the three modal surfaces and the ten profile keys
+# it reads.
+#
+# kernel.clausal holds the ONE result-shape constructor and nothing else -- no
+# rules, no facts, no imports. Result-shape constructors are an unconditional
+# kernel category regardless of slice count; the VALUE atoms live in the slice
+# that reads them (declare-where-used), and the kernel exists for slice<->slice
+# sharing.
+modules:
+  - kernel
+  - citations
+  - parameters
+  - shortlisting
+  - queries
+  - fixtures
+
+# public_interface: bare atoms (vocabulary) + name/arity predicates, grouped by
+# what they are -- keep in sync with the `-module(...)` export headers
+# re-exported via __init__.clausal.
+#
+# THE ORDER'S public_interface IS A STRICT SUBSET OF THIS: it pins only the six
+# names the sealed oracle actually calls, read mechanically off
+# eval/score_harness.py with `auto.oracle_interface.oracle_calls` rather than
+# transcribed. This list is producer-authored and is NOT the authority for the
+# oracle interface gate.
+public_interface:
+  # -- the determination --
+  - "decide_shortlisting/2"
+  - "shortlisting_verdict/4"
+  # -- the scalar surfaces (every argument an atom or a bare integer) --
+  - "statutory_minimum_candidates/2"
+  - "shortlisting_invitation_floor/4"
+  - "shortlisting_limitation_modality/4"
+  - "shortlisting_inclusion_modality/2"
+  # -- query-taxonomy surface --
+  - "shortlisting_checklist/2"
+  # -- the D80 input check (shortlisting.clausal) and its problem vocabulary --
+  - "shortlisting_input_problem/2"
+  - "not_ground"
+  - "missing_key/1"
+  - "wrong_type/2"
+  - "wrong_value/2"
+  - "negative_count/1"
+  - "profile"
+  - "expected_dict"
+  - "expected_boolean"
+  - "expected_integer_count"
+  - "expected_procedure_type_atom"
+  # -- the four MODAL status atoms (decide_shortlisting/2 and
+  #    shortlisting_limitation_modality/4 share them) --
+  - "limitation_not_available"
+  - "limitation_permitted"
+  - "limitation_prohibited"
+  - "continuation_permitted"
+  # -- the two inclusion modality atoms --
+  - "inclusion_permitted"
+  - "inclusion_prohibited"
+  # -- the eight Art 65 defect limbs, in the order DEFECT_IDS reports them --
+  - "objective_and_non_discriminatory_criteria_not_indicated"
+  - "minimum_number_not_indicated"
+  - "declared_minimum_below_statutory_minimum"
+  - "declared_maximum_below_declared_minimum"
+  - "genuine_competition_not_ensured"
+  - "fewer_invited_than_minimum_number"
+  - "non_requesting_economic_operator_included"
+  - "candidate_without_required_capabilities_included"
+  # -- per-limb row status for the checklist --
+  # -- the CANDIDATE_STATUS input vocabulary --
+  - "requested_and_has_required_capabilities"
+  - "requested_without_required_capabilities"
+  - "did_not_request_to_participate"
+  # -- the ten profile keys --
+  - "procedure_type_key"
+  - "objective_and_non_discriminatory_criteria_indicated"
+  - "minimum_number_indicated"
+  - "declared_minimum_candidates"
+  - "declared_maximum_candidates"
+  - "qualified_candidates"
+  - "invited_candidates"
+  - "number_invited_sufficient_for_genuine_competition"
+  - "invited_include_non_requesting_economic_operators"
+  - "invited_include_candidates_without_required_capabilities"
+  # -- procedure atoms re-exported from eu.procurement.directive_2014_24.vocabulary (profile
+  #    vocabulary). HAND-MAINTAINED in __init__.clausal: auto/pkginit.py sources
+  #    re-exports only from the domain's OWN submodules, so a regeneration
+  #    silently drops these and the harness AttributeErrors on the strict
+  #    two-argument getattr that resolves them. --
+  - "restricted_procedure"
+  - "competitive_procedure_with_negotiation"
+  - "competitive_dialogue"
+  - "innovation_partnership"
+  - "open_procedure"
+  - "negotiated_procedure_without_prior_publication"
+
+# INDEPENDENCE. There is no third-party verdict oracle for Art 65 -- no CJEU
+# input->holding material on the reduction of candidate numbers that this author
+# could not have shaped -- so this domain ships NO cjeu_cases.yaml and claims NO
+# source-independent axis whatever. eval/ carries a SAME-AUTHOR Python
+# differential (score_harness.py: an internal-consistency cross-check, NOT an
+# independent oracle) plus a hand fault-injection catalog (eval/mutations.yaml).
+# FORMALIZING.md 9.5 requires the producer and the oracle to have different
+# authors; that holds here by construction (the local model authors the
+# rulebase, this agent authored the oracle) but the ORDER and the ORACLE share an
+# author, which is what `no_oracle` records.
+#
+# The order file declares `oracle.independence: tool_differential`. That is the
+# INTERFACE declaration -- what kind of thing eval/score_harness.py is -- and it
+# does not contradict this line. This is the honest classification of the
+# EVIDENCE; contract_modifications does the same.
+independence: no_oracle
+
+uses:
+  - eu.procurement.directive_2014_24.vocabulary
+scope: >-
+  EU Directive 2014/24/EU Article 65 -- reduction of the number of otherwise
+  qualified candidates to be invited to participate. ONE determination over ONE
+  procurement: may this contracting authority limit the number of candidates it
+  invites to tender or to conduct a dialogue, and how many candidates must it
+  invite? The verdict is MODAL, not boolean, and that is the point of the
+  domain: `limitation_not_available` (Art 65(1) confers the power in the
+  restricted procedure, the competitive procedure with negotiation, the
+  competitive dialogue and the innovation partnership, and in no other, so for an
+  open procedure or a negotiated procedure without prior publication there is no
+  power to exercise -- a different answer from a power exercised badly);
+  `limitation_permitted`; `limitation_prohibited` with EVERY Art 65(2) limb the
+  facts defeat, never just the first; and `continuation_permitted`, the Art 65(2)
+  third sub-paragraph PERMISSION ("may continue the procedure by inviting the
+  candidates with the required capabilities") that arises where the number of
+  candidates meeting the selection criteria and the Art 58(5) minimum levels of
+  ability falls below the minimum number. Alongside the verdict the domain
+  computes NUMBER_TO_INVITE, the Art 65 floor on the size of the shortlist, and
+  publishes three scalar surfaces: the statutory minimum keyed to procedure type
+  (five in the restricted procedure, three in the other three -- and NO SOLUTION
+  for the two procedures Art 65(1) does not name, because absent is not zero),
+  the numeric core of the limitation modality, and the Art 65(2) final-sentence
+  PROHIBITION on including economic operators that did not request to
+  participate or candidates without the required capabilities. Every evaluative
+  judgement Art 65 leaves open -- whether the number invited is sufficient to
+  ensure genuine competition -- is an ATOMIC INPUT, never derived from the
+  counts. INPUTS MUST BE COMPLETE AND WELL TYPED (D80): shortlisting_input_problem/2
+  runs before every decision; a profile that is not ground, has a key of the
+  wrong type or out of range, or (for an Art 65(1) procedure) lacks any of the
+  ten keys gets NO ANSWER, since the domain has no "cannot decide" status.
+
+sources:
+  - >-
+    Directive 2014/24/EU of the European Parliament and of the Council of 26
+    February 2014 on public procurement and repealing Directive 2004/18/EC
+    (OJ L 94, 28.3.2014), CELEX 32014L0024 -- Article 65 (reduction of the number
+    of otherwise qualified candidates to be invited to participate). PINNED at
+    ARTICLE granularity: consolidated CELEX 02014L0024-20260101,
+    sources/02014L0024-20260101-art065.fmx4.xml, sha256
+    97407c001e90251b35cbbc7490119e0aaa5e373d6e6e4a0048ab2c0be3b3be6a, 3 units,
+    cut from CL2014L0024EN0060010.0001.xml sha256
+    d732f7f9a547b315289cd7447c33f73ce63a3797ed299e4dad4ff3066e157772. See
+    sources/02014L0024-20260101-art065.meta.yaml for the cut and its four-way
+    verification.
+  - >-
+    eu.procurement.directive_2014_24 -- the Art 26 procedure-type vocabulary (imported per
+    atom, never re-declared). The Art 4 threshold table is NOT used and
+    art4_threshold/4 is deliberately NOT imported: Article 65 carries no monetary
+    threshold, no contract-type distinction and no contracting-authority-type
+    distinction, so importing either the threshold predicate or the contract-type
+    and authority-type atoms would be a dead import (imports are LEXICAL CLOSURE
+    ONLY -- no clause of this domain spells them).
+  - >-
+    NO CASE LAW. There is no CJEU authority mapping an Art 65 input to a holding
+    that this author could not have shaped, so no cjeu_cases.yaml ships and no
+    source-independent axis is claimed. See `independence:` above.
+
+query_interface:
+  3: "shortlisting_limitation_modality/4"
+  6: "statutory_minimum_candidates/2"
+  7: "shortlisting_checklist/2"
+  23: "shortlisting_invitation_floor/4"
+
+# SHORT BY CONSTRUCTION, AND IT CAN ONLY HOLD ONE ENTRY. This domain PINS its
+# statute, so `deferred_set` is machine-read: every entry must name resolvable
+# UNITS of the pinned Art 65 extract, of which there are three -- art_065 (the
+# title), parag_065.001 and parag_065.002. Everything OUTSIDE the extract
+# belongs in `excluded_set` below, which is the relation that exists for it.
+#
+# TWO REAL SCOPE LIMITS SIT INSIDE parag_065.002 AND CANNOT BE REGISTERED HERE.
+# They are recorded in this comment because there is nowhere checked to put them,
+# and that is a finding about the register schema, not an omission by this
+# domain. Both are stated again in the order's SCOPE line:
+#
+#   (a) WHICH DOCUMENT CARRIED THE INDICATION. Art 65(2) sub-para 1 requires the
+#       criteria, the minimum and (where appropriate) the maximum to be indicated
+#       "in the contract notice or in the invitation to confirm interest". This
+#       domain models WHETHER each was indicated and not WHICH document carried
+#       it -- the disjunction is genuine, so the distinction changes no Art 65
+#       outcome, but a caller must satisfy itself the indication was made in one
+#       of those two documents before setting the flag. An indication made only
+#       in the procurement documents or a later clarification would be recorded
+#       here as an indication and no defect reported.
+#
+#   (b) THE OBJECTIVITY AND NON-DISCRIMINATION OF THE PUBLISHED CRITERIA.
+#       Art 65(2) requires the criteria or rules indicated to be "objective and
+#       non-discriminatory". This domain's profile carries no criteria list at
+#       all, only whether criteria were indicated, so the limb
+#       `objective_and_non_discriminatory_criteria_not_indicated` fires on
+#       ABSENCE only and never on the quality of what was published. A caller
+#       relying on this domain for the objectivity limb gets a false green.
+#
+# WHY NOT A DEFERRAL. `_tools/provisions/ledger.py` treats a unit that is both
+# COVERED and DEFERRED on the SAME RUN as a contradiction and T2 fails it.
+# Art 65(2) is ONE unit carrying ONE run -- all three sub-paragraphs are a single
+# contiguous stretch of the document -- and the rulebase will cite that run for
+# eight defect limbs. Spec 13.20's run addressing (`<doc_id>#<eid>/<n>`) is the
+# mechanism for a partial deferral and it cannot help here: with one run, `/1` is
+# the whole unit. So a deferral of either scope limit above would be green today,
+# with no rulebase, and would turn RED the moment the first clause cites the
+# paragraph -- a register entry that is correct only while the domain is empty.
+# Prose it is, deliberately and with the reason recorded.
+deferred_set:
+  - what: article_heading
+    units: ["02014L0024-20260101#art_065"]
+    reason: >-
+      Article 65's own title, "Reduction of the number of otherwise qualified
+      candidates to be invited to participate", carries no obligation: it is the
+      document's structure, not operative law. Deferred so that every unit the
+      pinned extract defines is accounted for, rather than left silently
+      unaccounted.
+    consequence: >-
+      None. A heading states no rule, so nothing turns on it.
+
+# The scope BOUNDARY: provisions of Directive 2014/24/EU this domain does not do.
+# `cites:`, not `units:` -- each selector names a unit OUTSIDE this domain's
+# pinned extract, which is what distinguishes an exclusion from a deferral.
+# Every entry carries a NON-EMPTY consequence, because a consequence that cannot
+# be written without making a legal choice is an operative_readings entry
+# instead, not a prose fudge.
+# The scope BOUNDARY: provisions of Directive 2014/24/EU this domain does not do.
+# `cites:`, not `units:` -- each selector names a unit OUTSIDE this domain's
+# pinned extract, which is what distinguishes an exclusion from a deferral.
+# Every entry carries a NON-EMPTY consequence, because a consequence that cannot
+# be written without making a legal choice is an operative_readings entry
+# instead, not a prose fudge.
+#
+# ===================================================================
+# THE DIRECTION OF EVERY CROSS-REFERENCE, GREPPED FROM THE PINNED BYTES
+# ===================================================================
+# The commissioning brief listed Arts 58, 26, 31, 34(2) and 59(1) as this
+# Article's cross-references. Checked against the extract itself rather than
+# taken on trust, and the brief was BOTH over- and under-inclusive. The complete
+# set of cross-references IN the pinned bytes is:
+#
+#     'Article 58(5)'   and   'paragraph 2'
+#
+# and nothing else. Arts 26, 31, 34, 59, 60 and 66 do NOT appear in Article 65's
+# text at all, so the statute does not draw those boundaries FROM this side and
+# no entry below pretends it does. The reference to Art 58(5) is the one and only
+# OUTBOUND reference, and it is real.
+#
+# In the other direction -- articles that reach INTO Art 65 -- there are SEVEN,
+# recovered by walking every ARTICLE of the consolidated act for the string
+# 'Article 65': Arts 28, 29, 30, 31, 34, 56 and 59. The brief named three of
+# them. Arts 28, 29, 30 and 56 were MISSING from it and are entered below,
+# because a boundary the Directive itself draws is exactly what this register
+# is for. Art 28 matters most of the four: it is the RESTRICTED PROCEDURE, the
+# one procedure carrying the minimum of five.
+excluded_set:
+  - what: selection_criteria_and_minimum_levels_of_ability
+    cites: ["02014L0024-20260101#art_058"]
+    reason: >-
+      Art 58 is qualitative selection -- suitability to pursue the professional
+      activity, economic and financial standing, technical and professional
+      ability -- and Art 58(5) is the source of the "minimum levels of ability"
+      that Art 65(2) third sub-paragraph names. THIS IS THE ONLY OUTBOUND
+      CROSS-REFERENCE IN THE PINNED BYTES: the extract contains the literal
+      string "as referred to in Article 58(5)" and no reference to any other
+      Article. This domain never asks WHO qualifies; it takes the COUNT of those
+      who do. Formalized separately in eu/procurement/selection_criteria.
+    consequence: >-
+      `qualified_candidates` is a bare integer this domain accepts on trust. A
+      caller that applies Art 58 wrongly -- setting a disproportionate minimum
+      turnover, or admitting a candidate who fails the minimum levels of ability
+      -- feeds a wrong count, and every number this domain computes from it
+      (the invitation floor, the below-minimum continuation limb, the
+      fewer-invited defect) is then wrong, with nothing here able to detect it.
+      The error is silent and total, not partial.
+  - what: procedure_specific_invitation_regimes
+    cites: ["02014L0024-20260101#art_028", "02014L0024-20260101#art_029",
+            "02014L0024-20260101#art_030"]
+    reason: >-
+      Arts 28, 29 and 30 are the restricted procedure, the competitive procedure
+      with negotiation and the competitive dialogue. Each carries, in its own
+      words, the INBOUND hook that switches this Article on: "Contracting
+      authorities may limit the number of suitable candidates to be invited to
+      participate in the procedure in accordance with Article 65." Each also
+      governs everything else about invitation -- who may submit a tender or join
+      the dialogue, the time limits, the stages -- none of which is modelled
+      here. Art 65 supplies the NUMBER and nothing else.
+    consequence: >-
+      This domain answers "how many" and never "who", "when" or "on what
+      published basis in this particular procedure". A caller must run the
+      procedure's own Article for everything except the count: a shortlist of
+      exactly five in a restricted procedure is compliant HERE while being
+      unlawful under Art 28 for a reason this domain cannot see -- an invitation
+      issued to an operator that never submitted a request, a time limit not
+      observed, or a stage skipped. Nothing in the profile describes the
+      procedure's conduct, so no such defect can surface.
+  - what: innovation_partnership_regime
+    cites: ["02014L0024-20260101#art_031"]
+    reason: >-
+      Art 31 is the innovation partnership's own regime and carries the same
+      INBOUND hook as Arts 28-30 ("Contracting authorities may limit the number
+      of suitable candidates to be invited to participate in the procedure in
+      accordance with Article 65"). It is entered separately from them because it
+      alone creates a second, easily-confused number: Art 31(1) lets the
+      authority "set up the innovation partnership with one partner or with
+      several partners", which is a rule about PARTNERS AFTER AWARD, not about
+      candidates before invitation.
+    consequence: >-
+      A caller must not read this domain's three-candidate floor for
+      `innovation_partnership` as a floor on the number of PARTNERS. Art 65
+      constrains how many candidates are invited to participate; Art 31 expressly
+      permits a partnership with ONE partner. A package that used this domain to
+      reject a single-partner innovation partnership would be applying Art 65 to
+      a question it does not reach.
+  - what: choice_of_procedure
+    cites: ["02014L0024-20260101#art_026"]
+    reason: >-
+      Art 26 governs which procedure a contracting authority may use, and in what
+      circumstances. THE STATUTE DRAWS NO TEXTUAL LINK EITHER WAY: Art 65 does not
+      mention Art 26 and Art 26 does not mention Art 65 -- both checked against
+      the consolidated act. The boundary is conceptual, not a cross-reference,
+      and is recorded as such rather than dressed up as one. Art 65(1)'s list of
+      four procedures presupposes the choice has already been made lawfully.
+    consequence: >-
+      This domain reads `procedure_type_key` as given and never asks whether the
+      authority was entitled to run that procedure. A restricted procedure used
+      where Art 26 permitted only an open one still receives a perfectly ordinary
+      Art 65 verdict here, including a five-candidate floor that has no lawful
+      basis because the procedure itself has none.
+  - what: dynamic_purchasing_systems
+    cites: ["02014L0024-20260101#art_034"]
+    reason: >-
+      Art 34(2) second sentence reaches INTO this Article in terms: "All the
+      candidates satisfying the selection criteria shall be admitted to the
+      system, and the number of candidates to be admitted to the system shall not
+      be limited in accordance with Article 65." WHAT THAT SENTENCE DOES IS
+      ITSELF CONTESTED, and it is not this domain's question to settle: the
+      concurrently-commissioned eu/procurement/dynamic_purchasing_system domain
+      registers it as operative reading `art_34_2_number_limitation` and chooses
+      `prohibits_any_cap` (any declared maximum on admissions is defective,
+      whatever basis is named for it) over `disapplies_article_65_only`. THIS
+      DOMAIN IS CONSISTENT WITH THAT CHOICE AND DOES NOT RE-DECIDE IT: on either
+      reading, Art 65 shortlisting is unavailable in a dynamic purchasing system,
+      which is the only proposition this entry needs. The stronger chosen reading
+      only widens the exclusion.
+    consequence: >-
+      This is the sharpest edge on this domain and it is UNDETECTABLE FROM
+      INSIDE. Art 34(2) first sentence makes a DPS follow "the rules of the
+      restricted procedure", so a DPS profile is naturally spelled with
+      `procedure_type_key: restricted_procedure` -- whereupon this domain will
+      impose a five-candidate floor, permit a limitation, and report defects, all
+      of which Art 34(2) forbids. The profile carries no DPS flag and cannot be
+      given one without pinning Art 34, so a DPS procurement MUST NOT BE ROUTED
+      TO THIS DOMAIN AT ALL. Under the sibling's chosen `prohibits_any_cap`
+      reading the mis-routing is worse, not better: this domain would report a
+      declared maximum as lawful whenever it sits above the declared minimum,
+      while Art 34(2) condemns any declared maximum at all. The caller owns that
+      routing decision; nothing here can notice the mistake.
+  - what: award_stage_conditions
+    cites: ["02014L0024-20260101#art_056"]
+    reason: >-
+      Art 56(1)(b) reaches INTO this Article at the AWARD stage: a contract may be
+      awarded only where the tender "comes from a tenderer that is not excluded in
+      accordance with Article 57 and that meets the selection criteria set out by
+      the contracting authority in accordance with Article 58 and, where
+      applicable, the non-discriminatory rules and criteria referred to in Article
+      65." So Art 65 compliance is re-asked as a condition of award, on the
+      winning tenderer, after this domain has finished. This entry was NOT in the
+      commissioning brief's list and was found by grepping the act.
+    consequence: >-
+      This domain answers the Art 65 question ONCE, at the invitation stage, over
+      counts. Art 56(1)(b) asks it again at award, about ONE tenderer and about
+      the CONTENT of the published rules rather than their presence -- which is
+      the same objectivity limb this domain expressly does not model. A caller
+      that treats a `limitation_permitted` verdict here as discharging Art 56(1)(b)
+      is wrong: this domain has not looked at the winning tenderer at all, and has
+      not assessed whether the published rules were non-discriminatory.
+  - what: espd_preliminary_evidence
+    cites: ["02014L0024-20260101#art_059", "02014L0024-20260101#art_060"]
+    reason: >-
+      Arts 59-60 govern how an economic operator EVIDENCES that it meets the
+      conditions -- the European Single Procurement Document as an updated
+      self-declaration, and the means of proof. Art 59(1)(c) reaches INTO this
+      Article expressly ("where applicable, it fulfils the objective rules and
+      criteria that have been set out pursuant to Article 65"); ART 60 DOES NOT
+      MENTION ART 65 and is cited here as a scope boundary only, which is stated
+      so the register is not read as claiming a cross-reference the act does not
+      contain.
+    consequence: >-
+      `qualified_candidates` here is a count of candidates ALREADY DETERMINED to
+      meet the selection criteria; this domain inspects no evidence and revisits
+      no determination. Where the count rests on ESPD self-declarations and a
+      supporting document later contradicts one, the true count falls
+      retrospectively -- possibly from at-or-above the minimum to below it, which
+      moves the verdict from `limitation_permitted` to `continuation_permitted`
+      and changes the floor. This domain has no mechanism to revisit its answer;
+      the caller must re-run it on the corrected count.
+  - what: reduction_of_the_number_of_tenders_and_solutions
+    cites: ["02014L0024-20260101#art_066"]
+    reason: >-
+      Art 66 is the neighbouring Article in the same subsection ("Subsection 2 --
+      Reduction of numbers of candidates, tenders and solutions") and is the one
+      most easily confused with this one. NEITHER ARTICLE CITES THE OTHER --
+      checked both ways -- so the boundary is one of subject-matter: Art 66
+      reduces the number of TENDERS to be negotiated (Art 29(6)) or SOLUTIONS to
+      be discussed (Art 30(4)), by applying the AWARD criteria; Art 65 reduces the
+      number of CANDIDATES to be invited, by applying the SELECTION criteria.
+      Different object, different criteria, different stage.
+    consequence: >-
+      Art 66's own "genuine competition" sentence -- "In the final stage, the
+      number arrived at shall make for genuine competition in so far as there are
+      enough tenders, solutions or qualified candidates" -- is NOT this domain's
+      genuine_competition_not_ensured limb, and the two must not be wired to one
+      profile key. A staged negotiation that lawfully reduces tenders under Art 66
+      is outside this domain entirely: `invited_candidates` here is the number
+      invited to tender or to conduct a dialogue, counted ONCE at the invitation
+      stage, and this domain models no stages at all.
+
+operative_readings:
+  - what: art_65_2_declared_minimum_below_statutory_minimum
+    units: ["02014L0024-20260101#parag_065.002"]
+    question: >-
+      Art 65(2) first sub-paragraph obliges the contracting authority to indicate
+      the minimum number of candidates it intends to invite; the second
+      sub-paragraph fixes that minimum at five in the restricted procedure and
+      three in the other three. Where an authority indicates a minimum BELOW the
+      statutory one -- three candidates in a restricted procedure -- has it made
+      an UNLAWFUL DECLARATION, so that the limitation it has configured is
+      prohibited outright and no reduction is available at all, or merely an
+      INOPERATIVE one, so that the statutory five substitutes silently and the
+      procedure runs on lawfully at five?
+    readings:
+      - id: unlawful_declaration
+        conservative: true
+        consequence: >-
+          The declaration is a defect. STATUS is `limitation_prohibited`,
+          DEFECT_IDS carries `declared_minimum_below_statutory_minimum`, and
+          NUMBER_TO_INVITE is the FULL qualified count: with no lawful limitation
+          available, every candidate meeting the selection criteria must be
+          invited. A tenderer excluded from the shortlist has a defect to point at
+          and the authority cannot cure it by inviting five after the fact,
+          because what it published is what candidates relied on when deciding
+          whether to request to participate.
+      - id: inoperative_declaration
+        consequence: >-
+          The declaration is a nullity as to the number only. No defect is
+          reported, STATUS is whatever the corrected minimum yields, and
+          NUMBER_TO_INVITE is the STATUTORY five or three. The authority
+          shortlists five and the procedure is clean; the under-declaration
+          becomes invisible in the record, and a candidate who did not request to
+          participate because it read "minimum three" and judged its chances poor
+          has no defect to point at.
+    chosen: unlawful_declaration
+    rationale: >-
+      Art 65(2) sub-para 1's duty is to indicate the minimum number the authority
+      "intend[s] to invite", and sub-para 2 fixes what that minimum "shall be".
+      A published figure below the floor is therefore a breach of the
+      publication duty and not merely a mis-statement of a number the Directive
+      supplies anyway: the sentence's function is to let economic operators
+      decide whether to request to participate, so the harm lands before any
+      invitation is issued and substituting the correct figure afterwards cannot
+      undo it. The reading is also the CONSERVATIVE one -- it reports a defect
+      where the rival reports none -- which is the right default for a domain with
+      no controlling authority. Its cost is stated plainly: it makes an authority
+      that published three and then invited eight nonetheless defective, which the
+      rival reading would not.
+    authority: none
+    attested: ~
+  - what: art_65_2_minimum_number_referent
+    units: ["02014L0024-20260101#parag_065.002"]
+    question: >-
+      Art 65(2) third sub-paragraph: "where the number of candidates meeting the
+      selection criteria and the minimum levels of ability as referred to in
+      Article 58(5) is below THE MINIMUM NUMBER, the contracting authority may
+      continue the procedure by inviting the candidates with the required
+      capabilities." Which minimum is "the minimum number" -- the one the
+      authority INDICATED under sub-para 1 (which may be higher than the
+      statutory floor), or the STATUTORY five or three of sub-para 2?
+    readings:
+      - id: declared_minimum
+        consequence: >-
+          The continuation limb opens whenever the qualified count falls below the
+          authority's OWN published minimum. A restricted procedure that published
+          a minimum of eight and attracted six qualified candidates is in the
+          continuation limb: STATUS is `continuation_permitted`, the floor is six,
+          and inviting six is compliant. The authority is not trapped by its own
+          ambition.
+      - id: statutory_minimum
+        consequence: >-
+          The continuation limb opens only below five (or three). The same
+          procedure -- published minimum eight, six qualified -- is NOT in the
+          continuation limb, because six is at or above the statutory five, so the
+          sub-para 1 duty to invite at least the published minimum stands
+          unrelieved: the floor is eight, inviting six is
+          `fewer_invited_than_minimum_number`, and the authority must either
+          invite eight candidates it does not have or abandon the procedure.
+    chosen: declared_minimum
+    rationale: >-
+      "The minimum number" is a definite reference and its nearest antecedent is
+      the immediately preceding sentence of the SAME sub-paragraph: "The
+      contracting authorities shall invite a number of candidates at least equal
+      to the minimum number" -- which is unarguably the number indicated under
+      sub-para 1, since that is the number sub-para 1 obliges them to publish.
+      The "However" that opens the continuation sentence marks it as the exception
+      to that immediately preceding duty, so it must be measured against the same
+      figure. The rival reading also produces an absurdity the Directive plainly
+      does not intend: an authority that voluntarily set a HIGHER minimum than the
+      law requires would be worse off than one that set the floor, because the
+      relief the sentence exists to give would be unavailable to it. NOT
+      conservative-flagged: neither reading is systematically stricter -- the
+      chosen one relieves the authority more readily, the rival reports a defect
+      more readily, and which is "safer" depends on whose interest is in issue.
+    authority: none
+    attested: ~
+  - what: art_65_2_required_capabilities_set_identity
+    units: ["02014L0024-20260101#parag_065.002"]
+    question: >-
+      The continuation sentence permits the authority to continue "by inviting the
+      candidates with THE REQUIRED CAPABILITIES", and the following sentence bars
+      it from including "candidates that do not have the required capabilities".
+      Is that set the SAME as "the candidates meeting the selection criteria and
+      the minimum levels of ability as referred to in Article 58(5)" named earlier
+      in the same sentence, or a NARROWER set -- those who, over and above meeting
+      the Art 58 selection criteria, are actually capable of performing this
+      contract?
+    readings:
+      - id: coextensive
+        consequence: >-
+          One number describes the candidate pool. The profile carries a single
+          `qualified_candidates` key, the continuation floor is that count, and
+          "shall not include candidates that do not have the required
+          capabilities" is the same bar as "did not meet the selection criteria",
+          expressed from the other side. The prohibition adds nothing to the
+          arithmetic and exists to stop the authority topping up a short
+          shortlist with candidates it has already rejected.
+      - id: narrower
+        conservative: true
+        consequence: >-
+          Two numbers describe the pool, and the INPUT CONTRACT changes: the
+          profile would need a second key, the count of candidates with the
+          required capabilities, always at most `qualified_candidates`. The
+          continuation floor would be that smaller count, and the authority would
+          hold a residual capability judgement over and above Art 58 that it could
+          exercise to shrink the shortlist further -- which is exactly the
+          "unrestricted freedom of choice" the Directive elsewhere forbids, but
+          which this sentence's separate wording arguably contemplates.
+    chosen: coextensive
+    rationale: >-
+      The sentence's own subject is "the number of candidates meeting the
+      selection criteria and the minimum levels of ability as referred to in
+      Article 58(5)"; "the candidates with the required capabilities" appears in
+      the SAME sentence as the thing the authority may invite, and reading it as a
+      different set would give the authority a selection power the Directive
+      confers nowhere and would let it defeat Art 65's minima by declaring
+      candidates capable-but-not-capable-enough. Art 58(5) is precisely where the
+      "required conditions of participation ... expressed as minimum levels of
+      ability" live, which makes the two phrases two names for one Art 58 test.
+      STATED PLAINLY BECAUSE IT MATTERS FOR THE MEASUREMENT: this choice is made
+      in the INPUT CONTRACT, not in a rule. The rejected reading needs a profile
+      key this domain does not have, so NO perturbation over this domain's input
+      space can discriminate between the two -- the sealed oracle's rival-reading
+      battery covers the other two readings and CANNOT cover this one. The only
+      discriminator is the profile-key set itself.
+    authority: none
+    attested: ~
+
+# ARMED 2026-09-05: 3 units, 0 unaccounted, after the marker convention was
+# added to this domain (define, export, import, mark). The ratchet blocks on
+# COVERAGE; T1 is annotation debt, reported not gated.
+provision_tracking: enforced

@@ -1,0 +1,292 @@
+# =====================================================================
+# test_robustness.seam -- robustness tests for the AMLR Art 52(1)
+# beneficial-ownership threshold domain: the decision predicate
+# amlr_bo_decision/2 (and assess_amlr_bo/3, which wraps it), plus the raw
+# chain-level verdict amlr_bo_status/2.
+#
+# What a robust answer looks like here. The decision vocabulary is
+# eligible / ineligible / indeterminate (NOTES.md section 4). For a missing
+# or ill-typed input the acceptable outcomes are `indeterminate`, no answer
+# (NOTES.md section 4: "A present ownership_chains value that is not a list
+# of lists of numbers gives no answer"), or a deliberate ISO error from a
+# guard. The domain has no input guards, so any error that comes back is
+# incidental (a crash). A definite `eligible` or `ineligible` is a
+# fails-open defect.
+#
+# Tests whose names start with FAILS OPEN, CRASH or KNOWN DEFECT are minimal
+# reproductions of a defect and are expected to fail until the rulebase is
+# fixed. Do not weaken them.
+#
+# Not included: a profile whose ownership_chains value is an unbound
+# variable ({ownership_chains: _}), and amlr_bo_status/2 with unbound
+# chains. Both do not terminate (the kit's aggregate_over/3 enumerates
+# lists for the unbound value), which would hang this whole file; they are
+# reported separately rather than written as tests.
+# =====================================================================
+
+-double_quotes(chars)
+-import_from(eu.aml.amlr_beneficial_ownership_threshold, [
+    amlr_bo_decision, amlr_bo_status, assess_amlr_bo, amlr_bo_effective_holding,
+    amlr_bo_subject, amlr_bo_profile_for, amlr_bo_assess,
+    eligible, ineligible, indeterminate, ownership_chains])
+-import_from(formalize_lib, [assessment, item, unknown])
+-import_from(eu.aml.amlr_beneficial_ownership_threshold.beneficial_ownership, [
+    amlr_bo_input_problem, required_ownership_threshold,
+    not_ground, not_a_profile, missing_key, not_a_list, empty_chain,
+    wrong_type, out_of_range, expected_integer])
+-import_from(eu.aml.amlr_beneficial_ownership_threshold, [
+    amlr_bo_checklist, amlr_bo_what_if, amlr_bo_gap_to_threshold])
+
+# no_definite_decision(PROFILE): amlr_bo_decision/2 gives neither eligible
+# nor ineligible. An error raised inside propagates and fails the test as a
+# crash.
+no_definite_decision(PROFILE) <- (
+    findall(D, amlr_bo_decision(PROFILE, D), DECISIONS),
+    not in_(eligible, DECISIONS),
+    not in_(ineligible, DECISIONS)
+)
+
+# no_definite_status(CHAINS): the same for the raw amlr_bo_status/2.
+no_definite_status(CHAINS) <- (
+    findall(S, amlr_bo_status(CHAINS, S), STATUSES),
+    not in_(eligible, STATUSES),
+    not in_(ineligible, STATUSES)
+)
+
+exactly_one_decision(PROFILE) <- (
+    findall(D, amlr_bo_decision(PROFILE, D), DECISIONS),
+    length(DECISIONS, 1)
+)
+
+# =====================================================================
+# Controls: the valid starting profiles still give their pinned answers
+# (fixtures.seam person_direct_30pct and person_chain_50x49pct_below).
+# =====================================================================
+test("control: direct 30 percent is eligible") <- (
+    amlr_bo_decision({ownership_chains: [[3000]]}, eligible)
+)
+test("control: 50 x 49.99 chain is ineligible") <- (
+    amlr_bo_decision({ownership_chains: [[5000, 4999]]}, ineligible)
+)
+
+# =====================================================================
+# 1. Dropping the one required input, ownership_chains (profile_keys.yaml;
+#    INTERFACE-SPEC.md Profile Contract: required, no default).
+# =====================================================================
+test("missing ownership_chains: indeterminate, exactly once") <- (
+    amlr_bo_decision({}, indeterminate),
+    exactly_one_decision({})
+)
+test("ownership_chains misspelled as another key: indeterminate") <- (
+    amlr_bo_decision({'ownership': [[3000]]}, indeterminate)
+)
+
+# =====================================================================
+# 2. Wrong types.
+# =====================================================================
+# --- the known issue: an empty chain counts as 100 percent -------------
+# bo_chain_holding([], 10000) in beneficial_ownership.seam is the base
+# case of the chain product, so a chain with no levels at all multiplies
+# out to 10000 bp. NOTES.md section 2 records this ("A chain written as an
+# empty list counts as a 100 % holding"), but a chain with no levels states
+# no ownership, so it must not produce a definite beneficial-owner answer.
+test("KNOWN DEFECT: an empty ownership chain [[]] is counted as 100 percent and yields a definite decision") <- (
+    no_definite_decision({ownership_chains: [[]]})
+)
+test("KNOWN DEFECT: an empty chain beside a 10 percent chain lifts the person over the threshold") <- (
+    no_definite_decision({ownership_chains: [[1000], []]})
+)
+test("KNOWN DEFECT: amlr_bo_status counts an empty chain [[]] as 100 percent") <- (
+    no_definite_status([[]])
+)
+test("KNOWN DEFECT: assess_amlr_bo reports a definite decision for an empty chain [[]]") <- (
+    assess_amlr_bo("subject", {ownership_chains: [[]]}, RESULT),
+    RESULT is assessment(_, DECISION, _),
+    DECISION is indeterminate
+)
+
+# --- ownership_chains not a list of lists ------------------------------
+# The kit's aggregate_over/3 (query_combinators.seam) iterates with in_/2
+# and drops any member whose chain product fails, so a value that is not a
+# list of lists sums to 0 and is reported ineligible. This contradicts
+# NOTES.md section 4, which says such a value "gives no answer".
+test("FAILS OPEN: ownership_chains given as a number yields ineligible") <- (
+    no_definite_decision({ownership_chains: 3000})
+)
+test("FAILS OPEN: ownership_chains given as an atom yields ineligible") <- (
+    no_definite_decision({ownership_chains: 'thirty'})
+)
+test("FAILS OPEN: ownership_chains given as a string yields ineligible") <- (
+    no_definite_decision({ownership_chains: "3000"})
+)
+test("FAILS OPEN: ownership_chains given as the boolean atom true yields ineligible") <- (
+    no_definite_decision({ownership_chains: 'true'})
+)
+test("FAILS OPEN: ownership_chains given as a flat list of numbers yields ineligible") <- (
+    no_definite_decision({ownership_chains: [3000]})
+)
+test("FAILS OPEN: amlr_bo_status on chains given as an atom yields ineligible") <- (
+    no_definite_status('thirty')
+)
+
+# --- a level of a chain not a number -----------------------------------
+# The chain product RESULT == LEVEL * TAIL / 10000 in beneficial_ownership.seam
+# raises a CLP domain_error(clpz_expression, _) on these; that is not a guard.
+test("CRASH: a chain level given as a string raises a CLP domain error") <- (
+    no_definite_decision({ownership_chains: [["3000"]]})
+)
+test("CRASH: a string on the second level of a chain raises a CLP domain error") <- (
+    no_definite_decision({ownership_chains: [[5000, "5000"]]})
+)
+test("CRASH: a chain level given as an atom raises a CLP domain error") <- (
+    no_definite_decision({ownership_chains: [['thirty']]})
+)
+test("CRASH: a chain level given as a list raises a CLP domain error") <- (
+    no_definite_decision({ownership_chains: [[[3000]]]})
+)
+test("CRASH: a chain level given as the boolean atom true raises a CLP domain error") <- (
+    no_definite_decision({ownership_chains: [['true']]})
+)
+
+# --- the profile itself not a dict --------------------------------------
+test("profile given as an atom: no definite decision") <- (
+    no_definite_decision('profile')
+)
+test("profile given as a list: no definite decision") <- (
+    no_definite_decision([])
+)
+test("profile given as a number: no definite decision") <- (
+    no_definite_decision(42)
+)
+
+# =====================================================================
+# 3. The empty profile, and the empty list of chains.
+#    {} is pinned above (indeterminate). An empty LIST of chains is by
+#    design ineligible: NOTES.md section 2, "An empty list of chains gives
+#    0", and beneficial_ownership.seam's aggregation comment, "empty CHAINS
+#    -> 0". It is evidence of no ownership, not a missing input.
+# =====================================================================
+test("empty profile: indeterminate, no crash") <- (
+    no_definite_decision({})
+)
+test("empty list of chains (by design, NOTES section 2): ineligible, exactly once") <- (
+    amlr_bo_decision({ownership_chains: []}, ineligible),
+    exactly_one_decision({ownership_chains: []}),
+    amlr_bo_effective_holding([], 0)
+)
+
+# =====================================================================
+# 4. Exactly one answer for every fixture profile (fixtures.seam).
+# =====================================================================
+test("exactly one decision: every fixture subject") <- (
+    findall(S, amlr_bo_subject(S), SUBJECTS),
+    length(SUBJECTS, 3),
+    findall(S,
+            ( in_(S, SUBJECTS),
+              amlr_bo_profile_for(S, P),
+              exactly_one_decision(P) ),
+            SINGLE),
+    length(SINGLE, 3)
+)
+test("exactly one assessment: every fixture subject") <- (
+    findall(S, amlr_bo_subject(S), SUBJECTS),
+    findall(S,
+            ( in_(S, SUBJECTS),
+              findall(R, amlr_bo_assess(S, R), RESULTS),
+              length(RESULTS, 1) ),
+            SINGLE),
+    length(SINGLE, 3)
+)
+
+# =====================================================================
+# Boundary values at the 2500 bp line (parameters.seam bo_threshold; Art
+# 52(1) "25 % or more", inclusive).
+# =====================================================================
+test("boundary: 2499 bp is ineligible") <- (
+    amlr_bo_decision({ownership_chains: [[2499]]}, ineligible)
+)
+test("boundary: 2500 bp is eligible") <- (
+    amlr_bo_decision({ownership_chains: [[2500]]}, eligible)
+)
+test("boundary: 2501 bp is eligible") <- (
+    amlr_bo_decision({ownership_chains: [[2501]]}, eligible)
+)
+test("boundary: parallel chains 1000 + 1499 bp is ineligible") <- (
+    amlr_bo_decision({ownership_chains: [[1000], [1499]]}, ineligible)
+)
+
+# =====================================================================
+# 5. The input check (added with the D80 fix, 2026-10-20). Each problem
+#    term of amlr_bo_input_problem/2 is reported for a minimal profile, a
+#    valid profile has none, the problem is the reason in the checklist
+#    item, and the unbound cases that used to hang now terminate.
+# =====================================================================
+test("input check: a valid profile has no problem") <- (
+    findall(P, amlr_bo_input_problem({ownership_chains: [[5000, 4999], [3000]]}, P), [])
+)
+test("input check: exactly one problem term is reported") <- (
+    findall(P, amlr_bo_input_problem({ownership_chains: [[], ['thirty'], [-1]]}, P), PROBLEMS),
+    length(PROBLEMS, 1)
+)
+test("input check reports not_ground for an unbound ownership_chains value") <- (
+    amlr_bo_input_problem({ownership_chains: _}, not_ground)
+)
+test("input check reports not_ground for an unbound level inside a chain") <- (
+    amlr_bo_input_problem({ownership_chains: [[5000, _]]}, not_ground)
+)
+test("input check reports not_a_profile for an atom profile") <- (
+    amlr_bo_input_problem('profile', not_a_profile)
+)
+test("input check reports missing_key for the empty profile") <- (
+    amlr_bo_input_problem({}, missing_key(ownership_chains))
+)
+test("input check reports not_a_list for ownership_chains given as a number") <- (
+    amlr_bo_input_problem({ownership_chains: 3000}, not_a_list(ownership_chains))
+)
+test("input check reports not_a_list for a chain given as a number") <- (
+    amlr_bo_input_problem({ownership_chains: [3000]}, not_a_list(3000))
+)
+test("input check reports empty_chain for [[]]") <- (
+    amlr_bo_input_problem({ownership_chains: [[]]}, empty_chain)
+)
+test("input check reports wrong_type expected_integer for a string level") <- (
+    amlr_bo_input_problem({ownership_chains: [["3000"]]}, wrong_type("3000", expected_integer))
+)
+test("input check reports out_of_range for a negative level") <- (
+    amlr_bo_input_problem({ownership_chains: [[-1]]}, out_of_range(-1))
+)
+test("input check reports out_of_range above 10000 basis points") <- (
+    amlr_bo_input_problem({ownership_chains: [[10001]]}, out_of_range(10001))
+)
+test("input check accepts the range ends 0 and 10000 basis points") <- (
+    findall(P, amlr_bo_input_problem({ownership_chains: [[0], [10000]]}, P), [])
+)
+test("the checklist item names the problem as its unknown reason") <- (
+    amlr_bo_checklist({ownership_chains: [[]]}, CHECKLIST),
+    CHECKLIST is [item(required_ownership_threshold, unknown([empty_chain]), _)]
+)
+test("an unbound ownership_chains value is indeterminate and terminates (formerly did not terminate)") <- (
+    amlr_bo_decision({ownership_chains: _}, indeterminate),
+    exactly_one_decision({ownership_chains: _})
+)
+test("amlr_bo_status with unbound chains is indeterminate and terminates (formerly did not terminate)") <- (
+    findall(S, amlr_bo_status(_, S), [indeterminate])
+)
+test("an unbound profile is indeterminate") <- (
+    amlr_bo_decision(_, indeterminate)
+)
+test("a level above 100 percent is indeterminate") <- (
+    amlr_bo_decision({ownership_chains: [[20000]]}, indeterminate)
+)
+test("a negative level is indeterminate") <- (
+    amlr_bo_decision({ownership_chains: [[-5000], [8000]]}, indeterminate)
+)
+test("effective holding: an empty chain gives no total") <- (
+    findall(T, amlr_bo_effective_holding([[]], T), [])
+)
+test("gap to threshold: an empty chain gives no gap") <- (
+    findall(G, amlr_bo_gap_to_threshold([[]], G), [])
+)
+test("what-if: a profile given as an atom gives no answer and no error") <- (
+    findall(C, amlr_bo_what_if('profile', [[3000]], C), [])
+)

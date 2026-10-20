@@ -1,0 +1,285 @@
+# =====================================================================
+# kit.deadline_lib  —  Reusable DEADLINE / TIMING wrapper (query type #15)
+#
+# A thin, domain-agnostic temporal layer over the RELATIONAL date_time
+# API (timedelta/3, date_add/3) — the same date model the planner threads
+# through advance_world. It projects a duty's deadline from a trigger date
+# plus a period, and classifies a completion (or "pending") against that
+# deadline.
+#
+# Two result families, kept separate on purpose (per the #15 analysis):
+#   * PROJECTION  — deadline/4: "when is it due?" (pure date arithmetic).
+#   * STATUS      — deadline_status/6: "did I meet it?" (met/overdue/upcoming).
+# Planning (#11) and obligation-surfacing call the projection directly;
+# the status verdict is the user-facing "have I missed it?" form.
+#
+# GENERIC: the engine is fully domain-independent — the period (in days),
+# the trigger date, and the completion/reference dates are all caller
+# inputs. NORM_ID is carried only as a label/citation handle. A domain
+# supplies the period from its own obligation_duration facts.
+# =====================================================================
+
+-import_from(date_time, [timedelta, date_add, date_sub, date_diff, weekday])
+-import_from(kit.date_guard, [must_be_date])
+
+-module(deadline_lib, [
+    # ── Projection: deadline = trigger + period(days) ────────────────
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+
+    # ── Date ORDERING, named so the source says what it means ───────
+    date_before(EARLIER, LATER),
+    date_after(LATER, EARLIER),
+    date_on_or_before(EARLIER, LATER),
+    date_on_or_after(LATER, EARLIER),
+    # ── Boolean primitive: is EVENT on or before DEADLINE? ───────────
+    within_deadline(EVENT_DATE, DEADLINE_DATE),
+
+    # ── Status verdict: met | overdue | upcoming ─────────────────────
+    deadline_status(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, COMPLETION_DATE, REF_DATE, STATUS),
+
+    # ── Convenience: days remaining until deadline from a ref date ───
+    days_until_deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, REF_DATE, DAYS),
+
+    # ── Calendar-day primitives ─────────────────────────────────────
+    next_day(DATE, NEXT_DATE),
+    prev_day(DATE, PREVIOUS_DATE),
+    month_last_day(YEAR, MONTH, LAST_DAY),
+
+    # ── Weekday arithmetic — WEEKENDS ONLY, read add_business_days ──
+    add_business_days(DATE, DAYS, RESULT),
+    business_day_step(DATE, DAYS, RESULT),
+
+    # ── Month-period reckoning, ANCHOR-EXCLUSIVE ────────────────────
+    deadline_months_after(ANCHOR_DATE, MONTHS, DEADLINE_DATE),
+    deadline_months_result(YEAR, MONTH, DAY, LAST_DAY, RESULT)
+])
+# date(Y, M, D) is a TERM (built and matched here, never called): declared, not imported, so
+# the module stays Python-free for a Clausal Prolog importer (engine python_bridges rule).
+-private([date(Y, M, D)])
+-double_quotes(chars)
+
+
+# =====================================================================
+# SECTION 1 — DEADLINE PROJECTION (pure, relational date arithmetic)
+# =====================================================================
+# deadline/4: DEADLINE_DATE = TRIGGER_DATE + PERIOD_DAYS. Bidirectional in
+# principle (date_add is relational); used forward here. NORM_ID is just a
+# carried label so callers can keep provenance alongside the date.
+
+deadline(_NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE) <- (
+    timedelta(PERIOD_DAYS, 0, DURATION),
+    date_add(TRIGGER_DATE, DURATION, DEADLINE_DATE)
+)
+
+
+# =====================================================================
+# SECTION 2 — within_deadline/2 (the boolean timing primitive)
+# =====================================================================
+# True iff EVENT_DATE is on or before DEADLINE_DATE (inclusive end — the
+# usual statutory reading "by the deadline"). Comparison is over native
+# Python date objects, so no Julian-day hand-rolling.
+
+# =====================================================================
+# DATE ORDERING — named predicates, NOT bare `<` and NOT bare `@<`
+# =====================================================================
+# `EARLIER < LATER` on two dates is the construct that produces the ISO
+# export's `type_error(evaluable, date/3)`: infix `<` lowers to arithmetic
+# comparison, and ISO then tries to EVALUATE date(Y, M, D).
+#
+# The lowering that works is standard order, `@<`. But `@<` IS NOT A DATE
+# COMPARISON — it orders by TERM STRUCTURE (functor name, then arity, then
+# args left to right) and only coincides with chronology while both sides are
+# date/3 with integer components. Measured divergences in Scryer:
+#
+#   date(2026,1,2) @< datetime(2025,1,1,0,0,0)   true  — chronologically FALSE
+#   date(2026,1,2) @< date(2025,1,1,0)           true  — chronologically FALSE
+#   date(2026,1,2) and date(2026,1,2.0)          ORDERED, not equal — same day
+#
+# The third needs no exotic term: it is the ISO 7.2.1 tiebreak, so a float
+# component silently makes two identical dates two distinct terms.
+#
+# So the ruling (2026-09-09) is a NAMED predicate rather than `@<`
+# at the call site: the name says "is this before that", the body carries the
+# spelling that exports, and the caveat lives here once instead of at every
+# site. A reader who sees `date_before/2` cannot mistake it for term ordering.
+# BODIES USE THE QUOTED CANONICAL FORMS. `'@<'` is the ONLY possible spelling
+# for standard order in Clausal source — bare infix `@<` is not valid Python and
+# never parses — and the translator gained canonical lowering on 2026-09-09
+# (engine ecd6bef1), so these now export as `A @< B` instead of refusing.
+#
+# Infix `<` was what produced the ISO export's `type_error(evaluable, date/3)`:
+# it lowers to arithmetic comparison, and ISO then tries to EVALUATE date(Y,M,D).
+#
+# GUARDED (2026-10-02): each ordering first checks BOTH operands with
+# kit.date_guard's must_be_date/1, which RAISES unless the operand is a ground
+# date(Y, M, D) with integer components -- exactly the domain on which standard
+# order IS chronology, so the divergences above (a datetime, a 4-argument date,
+# a float component) now raise instead of ordering by term structure. RAISING,
+# not failing, is load-bearing: callers negate these, and a guard that FAILED on a
+# non-date would make `not date_on_or_before(...)` SUCCEED -- a silent verdict
+# where Clausal's typed `<=` raised.
+date_before(EARLIER, LATER) <- (
+    must_be_date(EARLIER), must_be_date(LATER), '@<'(EARLIER, LATER) )
+date_after(LATER, EARLIER) <- (
+    must_be_date(LATER), must_be_date(EARLIER), '@<'(EARLIER, LATER) )
+date_on_or_before(EARLIER, LATER) <- (
+    must_be_date(EARLIER), must_be_date(LATER), '@=<'(EARLIER, LATER) )
+date_on_or_after(LATER, EARLIER) <- (
+    must_be_date(LATER), must_be_date(EARLIER), '@=<'(EARLIER, LATER) )
+
+within_deadline(EVENT_DATE, DEADLINE_DATE) <- (
+    date_on_or_before(EVENT_DATE, DEADLINE_DATE)
+)
+
+
+# =====================================================================
+# SECTION 3 — deadline_status/6 (met | overdue | upcoming)
+# =====================================================================
+# COMPLETION_DATE is either a real date (the duty was discharged then) or
+# the atom "pending" (not yet done; classify against REF_DATE = "now").
+#
+#   real date, on/before deadline   → "met"
+#   real date, after deadline       → "overdue"
+#   "pending", ref on/before deadline → "upcoming"
+#   "pending", ref after deadline     → "overdue"
+#
+# Four disjoint clauses (completed-vs-pending by the "pending" guard;
+# within-vs-after by date_on_or_before / date_after). Cut-free, exactly one solution.
+
+deadline_status(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, COMPLETION_DATE, _REF, STATUS) <- (
+    COMPLETION_DATE is not "pending",
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+    date_on_or_before(COMPLETION_DATE, DEADLINE_DATE),
+    STATUS is "met"
+)
+deadline_status(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, COMPLETION_DATE, _REF, STATUS) <- (
+    COMPLETION_DATE is not "pending",
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+    date_after(COMPLETION_DATE, DEADLINE_DATE),
+    STATUS is "overdue"
+)
+deadline_status(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, "pending", REF_DATE, STATUS) <- (
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+    date_on_or_before(REF_DATE, DEADLINE_DATE),
+    STATUS is "upcoming"
+)
+deadline_status(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, "pending", REF_DATE, STATUS) <- (
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+    date_after(REF_DATE, DEADLINE_DATE),
+    STATUS is "overdue"
+)
+
+
+# =====================================================================
+# SECTION 4 — days_until_deadline/5 (signed slack from a reference date)
+# =====================================================================
+# DAYS = DEADLINE_DATE - REF_DATE in whole days (negative once overdue).
+# date_diff gives a timedelta; timedelta/3 DECOMPOSES it relationally.
+#
+# Was `DAYS is ++DELTA.days`. The `++` Python-interop escape has no ISO form,
+# so it was this file's ONE untranslatable construct — and because the exporter
+# vendors a kit library BY TRANSLATION, that single line stopped deadline_lib
+# being staged at all. Any domain importing it therefore failed G1 with
+# "unresolvable use_module target: kit.deadline_lib", which blocked the whole
+# date-ordering migration. timedelta/3 reads the same .days/.seconds fields.
+
+days_until_deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, REF_DATE, DAYS) <- (
+    deadline(NORM_ID, PERIOD_DAYS, TRIGGER_DATE, DEADLINE_DATE),
+    date_diff(DEADLINE_DATE, REF_DATE, DELTA),
+    timedelta(DAYS, _, DELTA)
+)
+
+
+# =====================================================================
+# SECTION 5 — CALENDAR-DAY, WEEKDAY AND MONTH-PERIOD ARITHMETIC
+# =====================================================================
+# EXTRACTED 2026-09-01 from au/corps_act_disclosure/deadline.clausal, which
+# was the only definer. Moved here on the operator's instruction that legal
+# date arithmetic should live where it can be found and reused already
+# tested, rather than be re-derived per domain. The clause bodies are
+# byte-identical to the domain's; only their home changed.
+#
+# READ THIS BEFORE REUSING add_business_days/3.
+# ---------------------------------------------------------------------
+# IT SKIPS SATURDAYS AND SUNDAYS ONLY. IT DOES NOT KNOW ABOUT PUBLIC
+# HOLIDAYS. Under Acts Interpretation Act 1901 (Cth) s 2G a business day is
+# "not a Saturday, a Sunday or a public holiday", so this implements TWO OF
+# THE THREE. In its origin domain that gap is a declared scope boundary —
+# au/corps_act_disclosure/ASSURANCE.md hands public holidays to the lawyer,
+# and EXTRACTED-KNOWLEDGE.md records "only Sat/Sun skipped".
+#
+# That documentation does NOT travel with an import. A jurisdiction whose
+# business days exclude holidays will get a deadline that is too EARLY, in
+# the direction that makes a filing late. Either supply a holiday-aware
+# predicate or state the same scope boundary in your own assurance record —
+# do not assume the name covers it. The name says "business days" because
+# the statute does; the code says weekends.
+
+next_day(DATE, NEXT_DATE) <- (
+    timedelta(1, 0, ONE_DAY),
+    date_add(DATE, ONE_DAY, NEXT_DATE)
+)
+
+prev_day(DATE, PREVIOUS_DATE) <- (
+    timedelta(1, 0, ONE_DAY),
+    date_sub(DATE, ONE_DAY, PREVIOUS_DATE)
+)
+
+# month_last_day/3: the last calendar day of YEAR-MONTH, found by stepping
+# back one day from the first of the following month — no month-length table
+# and no leap rule to restate.
+month_last_day(YEAR, MONTH, LAST_DAY) <- (
+    NEXT_MONTH == MONTH % 12 + 1,
+    NEXT_YEAR == YEAR + MONTH // 12,
+    FIRST_OF_NEXT is date(NEXT_YEAR, NEXT_MONTH, 1),
+    prev_day(FIRST_OF_NEXT, LAST_OF_THIS),
+    date(_, _, LAST_DAY) is LAST_OF_THIS
+)
+
+add_business_days(DATE, 0, DATE),
+
+add_business_days(DATE, DAYS, RESULT) <- (
+    DAYS > 0, next_day(DATE, NEXT_DATE), business_day_step(NEXT_DATE, DAYS, RESULT)
+)
+
+# weekday/2 is 0=Monday .. 6=Sunday, so W <= 4 is Mon-Fri (counts down) and
+# W >= 5 is Sat/Sun (skipped without consuming a day).
+business_day_step(DATE, DAYS, RESULT) <- (
+    weekday(DATE, W), W <= 4, REMAINING == DAYS - 1, add_business_days(DATE, REMAINING, RESULT)
+)
+
+business_day_step(DATE, DAYS, RESULT) <- (
+    weekday(DATE, W), W >= 5, add_business_days(DATE, DAYS, RESULT)
+)
+
+# deadline_months_after/3 — THE LAST DAY OF A PERIOD OF N MONTHS RECKONED
+# FROM THE DAY AFTER THE ANCHOR (Acts Interpretation Act 1901 s 36: the
+# start day is excluded). This is NOT "add N months", which is not a
+# well-defined operation, and the name must not be shortened to suggest it.
+#
+# IT IS DELIBERATELY NOT INVERTIBLE:
+#     2026-01-28 / -29 / -30 / -31  +1 month  ->  all four give 2026-02-28
+#     2026-01-31 -> 2026-02-28 -> 2026-01-31   round-trips
+#     2026-01-28 -> 2026-02-28 -> 2026-01-31   DOES NOT
+# Four anchors collapse onto one period end. Correct for a DEADLINE — a
+# period ending 28 February is the same deadline however it was reached —
+# and silent data loss for anything that must recover the anchor.
+deadline_months_after(ANCHOR_DATE, MONTHS, DEADLINE_DATE) <- (
+    next_day(ANCHOR_DATE, START),               # s 36: exclude the anchor day
+    date(START_YEAR, START_MONTH, START_DAY) is START,
+    TOTAL == (START_MONTH - 1) + MONTHS,
+    TARGET_YEAR == START_YEAR + TOTAL // 12,
+    TARGET_MONTH == TOTAL % 12 + 1,
+    month_last_day(TARGET_YEAR, TARGET_MONTH, LAST_DAY),
+    deadline_months_result(TARGET_YEAR, TARGET_MONTH, START_DAY, LAST_DAY, DEADLINE_DATE)
+)
+
+# the corresponding day exists in the target month -> period ends the day before
+deadline_months_result(YEAR, MONTH, DAY, LAST_DAY, RESULT) <- (
+    DAY <= LAST_DAY, CORRESPONDING is date(YEAR, MONTH, DAY), prev_day(CORRESPONDING, RESULT)
+)
+
+# it does not (e.g. 31 January + 1 month) -> clamp to the month's last day
+deadline_months_result(YEAR, MONTH, DAY, LAST_DAY, RESULT) <- (
+    DAY > LAST_DAY, RESULT is date(YEAR, MONTH, LAST_DAY)
+)

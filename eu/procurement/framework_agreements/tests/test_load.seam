@@ -1,0 +1,82 @@
+-double_quotes(chars)
+-private([label])
+# Run: cd <corpus root> && python -m clausal.testing \
+#      eu/procurement/framework_agreements/tests/test_load.clausal
+-import_from(eu.procurement.framework_agreements.kernel, [
+    framework_term_verdict,
+    call_off_verdict,
+    framework_agreements_verdict,
+    satisfied,
+    not_satisfied,
+    overall,
+    as_of_date
+])
+
+-import_from(eu.procurement.framework_agreements.citations, [
+    cite,
+    citation,
+    eu_dir_2014_24_art_33_1,
+    eu_dir_2014_24_art_33_2,
+    eu_dir_2014_24_art_33_3,
+    eu_dir_2014_24_art_33_4,
+    eu_dir_2014_24_art_33_5
+])
+
+-import_from(eu.procurement.framework_agreements.parameters, [
+    framework_term_limit_years,
+    parameter_source
+])
+
+test("kernel verdict atoms are pairwise distinct") <- (
+    not satisfied is not_satisfied,
+    not satisfied is overall,
+    not satisfied is as_of_date,
+    not not_satisfied is overall,
+    not not_satisfied is as_of_date,
+    not overall is as_of_date
+)
+
+test("framework_term_verdict builds and destructures") <- (
+    VERDICT is framework_term_verdict(satisfied, [], []),
+    VERDICT is framework_term_verdict(STATUS, DEFECT_IDS, CITATIONS),
+    STATUS is satisfied,
+    DEFECT_IDS is [],
+    CITATIONS is []
+)
+
+test("call_off_verdict builds and destructures") <- (
+    VERDICT is call_off_verdict(satisfied, overall, [], []),
+    VERDICT is call_off_verdict(STATUS, ROUTE, DEFECT_IDS, CITATIONS),
+    STATUS is satisfied,
+    ROUTE is overall,
+    DEFECT_IDS is [],
+    CITATIONS is []
+)
+
+test("framework_agreements_verdict builds and destructures") <- (
+    VERDICT is framework_agreements_verdict(satisfied, []),
+    VERDICT is framework_agreements_verdict(STATUS, CITATIONS),
+    STATUS is satisfied,
+    CITATIONS is []
+)
+
+test("cite constructor builds a ground term") <- (
+    C is cite(eu_dir_2014_24_art_33_1)
+)
+
+test("real citation record resolves with non-empty label") <- (
+    citation(eu_dir_2014_24_art_33_1, METADATA),
+    get(METADATA, label, LABEL),
+    LABEL is not ""
+)
+
+test("parameter framework_term_limit_years resolves to 4") <- (
+    framework_term_limit_years(YEARS),
+    YEARS == 4
+)
+
+test("parameter_source record resolves for framework_term_limit_years") <- (
+    parameter_source("framework_term_limit_years", METADATA),
+    get(METADATA, label, LABEL),
+    LABEL is not ""
+)

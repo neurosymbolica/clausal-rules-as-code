@@ -1,0 +1,73 @@
+-double_quotes(chars)
+# =====================================================================
+# test_properties.clausal -- structural PROPERTIES over the subject set:
+# totality (every profile yields exactly one verdict) and determinism
+# (repeated evaluation gives the same answer).
+# =====================================================================
+-import_from(eu.procurement.shortlisting.shortlisting, [
+    decide_shortlisting,
+    shortlisting_status
+])
+
+-import_from(eu.procurement.shortlisting.fixtures, [
+    shortlisting_subject,
+    shortlisting_profile_for
+])
+
+-import_from(eu.procurement.shortlisting.kernel, [shortlisting_verdict])
+
+has_verdict(SUBJECT) <- (
+    shortlisting_subject(SUBJECT),
+    shortlisting_profile_for(SUBJECT, PROFILE),
+    once(decide_shortlisting(PROFILE, _))
+)
+
+test("P1 totality: every subject classifies") <- (
+    findall(SUBJECT, shortlisting_subject(SUBJECT), SUBJECT_LIST),
+    length(SUBJECT_LIST, SUBJECT_COUNT),
+    findall(SUBJECT, has_verdict(SUBJECT), CLASSIFIED_SUBJECT_LIST),
+    length(CLASSIFIED_SUBJECT_LIST, SUBJECT_COUNT)
+)
+
+deterministic(SUBJECT) <- (
+    shortlisting_profile_for(SUBJECT, PROFILE),
+    findall(STATUS, decide_shortlisting(PROFILE, shortlisting_verdict(STATUS, _, _, _)), STATUS_LIST),
+    length(STATUS_LIST, 1)
+)
+
+test("P2 determinism: each subject yields exactly one status") <- (
+    findall(SUBJECT, shortlisting_subject(SUBJECT), SUBJECT_LIST),
+    length(SUBJECT_LIST, SUBJECT_COUNT),
+    findall(SUBJECT, deterministic(SUBJECT), DETERMINISTIC_LIST),
+    length(DETERMINISTIC_LIST, SUBJECT_COUNT)
+)
+
+# Invariant: NUMBER_TO_INVITE is always a non-negative integer
+non_negative_floor(SUBJECT) <- (
+    shortlisting_profile_for(SUBJECT, PROFILE),
+    decide_shortlisting(PROFILE, shortlisting_verdict(_STATUS, _DEFECTS, NUMBER_TO_INVITE, _CITATIONS)),
+    NUMBER_TO_INVITE >= 0
+)
+
+test("P3 invariant: number_to_invite is always non-negative") <- (
+    findall(SUBJECT, shortlisting_subject(SUBJECT), SUBJECT_LIST),
+    length(SUBJECT_LIST, SUBJECT_COUNT),
+    findall(SUBJECT, non_negative_floor(SUBJECT), VALID_LIST),
+    length(VALID_LIST, SUBJECT_COUNT)
+)
+
+# Invariant: DEFECT_IDS and CITATIONS have the same length
+parallel_lists(SUBJECT) <- (
+    shortlisting_profile_for(SUBJECT, PROFILE),
+    decide_shortlisting(PROFILE, shortlisting_verdict(_STATUS, DEFECT_IDS, _NUMBER, CITATIONS)),
+    length(DEFECT_IDS, DEFECT_COUNT),
+    length(CITATIONS, CITATION_COUNT),
+    DEFECT_COUNT == CITATION_COUNT
+)
+
+test("P4 invariant: defect_ids and citations are parallel") <- (
+    findall(SUBJECT, shortlisting_subject(SUBJECT), SUBJECT_LIST),
+    length(SUBJECT_LIST, SUBJECT_COUNT),
+    findall(SUBJECT, parallel_lists(SUBJECT), PARALLEL_LIST),
+    length(PARALLEL_LIST, SUBJECT_COUNT)
+)

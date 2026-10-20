@@ -1,0 +1,302 @@
+# =====================================================================
+# kit.rolling_window  —  Rolling look-back window / distinct-day-count
+# primitives (EXTRACTION-CANDIDATES `rolling_window_day_count`, B5.1).
+#
+# Design: clausify-domains/docs/superpowers/factoring/
+#   2026-07-19-rolling-window-kit-primitive-design.md  (probe-verified
+#   29/29; bodies below lifted verbatim from the probe).
+#
+# Sightings collapsed (see design §1/§9): eu/schengen_90_180 (S1, B9),
+# eu/schengen_90_180_max_stay (S2), eu/labour/posted_workers_long_term_
+# trigger (S3), eu/state_aid/de_minimis_cumulation (S4, layer-0 only).
+#
+# Interval type at the kit boundary: plain list pairs [[Y,M,D],[Y,M,D]]
+# (entry, exit) — NO domain functors (stay/2 etc. stay domain-side with a
+# thin adapter; design §8.3). Reference dates are [Y,M,D] triples; real
+# date terms are built internally via date/4, so leap years and month
+# lengths are exact by construction (NOTES §NC5).
+#
+# Calendar-edge conventions (design §6.2 — each constructor pins ONE
+# statutory convention; day-windows and year-windows do NOT unify):
+#   * day-window  [REF−(N−1), REF]  inclusive/inclusive, REF is one of
+#     the N days (Reg 610/2013 Art 1(1) K2.2 + EC calculator K3.2);
+#   * year-window (REF−N years [Feb-29→Feb-28 clamp], REF]  EXCLUSIVE
+#     start, inclusive end (de_minimis convention, preserved byte-for-
+#     byte — a grant ON the clamped start day is excluded).
+#
+# Malformed-input policy (design §6.3): layer-2 wrappers are FAIL-LOUD
+# (guarded by intervals_wf/1 — an invalid calendar date yields NO
+# solution); raw layer-1 interval_offsets/3 keeps findall-internal skip
+# semantics for byte-strict preservation where demanded. Inverted
+# intervals (exit < entry) are well-formed-but-empty: contribute 0 days,
+# query succeeds (all sightings agree).
+#
+# Modes: all predicates are forward (+,…,+,−) semidet and check-mode
+# (+,…,+,+); none are generative. remaining_from_limit has disjoint
+# guards (<= / >) — exactly one solution. Cut-free, kit house style.
+# No bare atoms exposed (nothing beyond predicate names to re-import
+# for functor identity). Clausal-only behavioral-lib — NO .pl twin,
+# NOT in the kit_version.sh hash (precedent: deadline_lib, planner_lib,
+# query_combinators; design §4).
+# =====================================================================
+
+-import_from(date_time, [date_between, days_between])
+
+-module(rolling_window, [
+    # ── layer 0: window-bound constructors (the calendar-edge policy lives HERE) ──
+    last_n_days_low(N, LOW_OFFSET),                     # LOW = 1 − N; window [REF+LOW, REF] has exactly N days
+    years_lookback_start(REF_YMD, YEARS, START_YMD),    # calendar anniversary; Feb-29 → Feb-28 clamp
+    within_years_lookback(EVENT_YMD, REF_YMD, YEARS),   # half-open (START, REF] membership (de_minimis convention)
+
+    # ── layer 1: presence-day machinery ──
+    intervals_wf(INTERVALS),                            # every endpoint is a valid calendar [Y,M,D]
+    interval_offsets(INTERVALS, REF_YMD, OFFSETS),      # multiset of presence-day offsets (PRESENCE − REF, days)
+    offsets_within(OFFSETS, LOW, HIGH, IN_WINDOW),      # inclusive both bounds
+    distinct_count(ITEMS, N),                           # sort (dedupe) + length
+
+    # ── layer 2: statutory collapses ──
+    window_days_used(INTERVALS, REF_YMD, WINDOW_DAYS, USED),  # |⋃ intervals ∩ [REF−(W−1), REF]|
+    distinct_days_total(INTERVALS, DAYS),                     # unwindowed distinct-day union
+    remaining_from_limit(USED, LIMIT, REMAINING)              # max(0, LIMIT − USED), clamped
+])
+# date(Y, M, D) is a TERM (built and matched here, never called): declared, not imported, so
+# the module stays Python-free for a Clausal Prolog importer (engine python_bridges rule).
+-private([date(Y, M, D)])
+-double_quotes(chars)
+
+-strict_atoms
+
+
+# =====================================================================
+# SECTION 0 — WINDOW-BOUND CONSTRUCTORS (day-window bound)
+# =====================================================================
+# last_n_days_low/2: the inclusive low offset of an N-day window ending
+# on the reference day. LOW = 1 − N (180 → −179), so the window
+# [REF+LOW, REF] contains exactly N calendar days and REF is one of
+# them (K2.2). Derived, never hardcoded — retires the S1 dead-constant/
+# hardcode divergence (constants window_inclusive_offset(179) vs the
+# inline -179).
+
+last_n_days_low(N, LOW) <- (LOW == 1 - N)
+
+
+# =====================================================================
+# SECTION 1 — PRESENCE-DAY MACHINERY
+# =====================================================================
+# interval_offsets/3: the multiset of presence-day offsets (in days,
+# PRESENCE − REF, past days <= 0 — engine sign convention of
+# days_between/3) over a list of [[Y,M,D],[Y,M,D]] entry/exit pairs.
+# date_between/3 enumerates [Start, End] INCLUSIVE of both endpoints
+# ("entry and exit days both count", K3.2) and yields nothing when
+# Start > End (inverted interval ⇒ 0 days, for free). Raw layer:
+# a malformed endpoint makes date/4 fail INSIDE the findall — that
+# interval is silently skipped (S2-compatible; wrap with intervals_wf/1
+# for fail-loud, as the layer-2 collapses do).
+
+# 2026-09-01 date migration. `day_of/2` normalises EITHER accepted form to a
+# real date object, so this no longer destructures a triple in its own head and
+# a caller may pass the standard `date(Y, M, D)` term. The two clauses are
+# DISJOINT -- `date(_, _, _) is V` succeeds only for a real date, a `[Y, M, D]`
+# pattern unifies only with a list -- so a malformed value still matches
+# NEITHER and keeps failing, which is what the layer-2 collapses rely on.
+# DELETE the triple clause once no consumer passes one.
+# `ground(V)` FIRST and it is load-bearing: `date(_, _, _) is V` on an UNBOUND
+# V does not TEST anything, it BINDS V to a date pattern, so an unbound REF
+# would sail past the guard and only surface far downstream as
+# `days_between/3 was called with _DatePattern`. That is the exact
+# silent-collapse failure these guards were written to stop. Caught by
+# test_rolling_window's LOUD-d.
+# 2026-09-01, ruling "fail fast and loudly": the triple clause now
+# CONSTRUCTS through the date/3 term, so a calendrically-invalid endpoint
+# ([2024, 2, 30]) RAISES domain_error where ymd_date/4 used to FAIL. The old
+# behaviour let a malformed interval be skipped silently inside a findall and a
+# caller could not tell that from an empty window. Unreachable within the
+# declared raw_input_contract either way (max_stay.clausal §6.3 / DIFFERENTIAL
+# E2), so no scored case changes -- but out of contract it is now loud.
+day_of(V, V) <- (ground(V), date(_, _, _) is V)
+day_of([Y, M, D], DAY) <- (DAY is date(Y, M, D))
+
+interval_offsets(INTERVALS, REF, OFFSETS) <- (
+    day_of(REF, REFERENCE_DAY),
+    findall(OFFSET, (
+        in_([START, EXIT], INTERVALS),
+        day_of(START, START_DAY),
+        day_of(EXIT, EXIT_DAY),
+        date_between(START_DAY, EXIT_DAY, PRESENCE_DAY),
+        days_between(PRESENCE_DAY, REFERENCE_DAY, OFFSET)
+    ), OFFSETS)
+)
+
+# offsets_within/4: keep the offsets inside [LOW, HIGH], both bounds
+# INCLUSIVE. The shifted historical window of the max_stay sim is
+# expressed as offsets_within(OFFS, WINDOW_LOW, -1, _) — on integers
+# `< 0` ⇔ `<= −1`, so strictly-past windows need no extra convention.
+
+offsets_within(OFFSETS, LOW, HIGH, IN_WINDOW) <- (
+    findall(OFFSET, (in_(OFFSET, OFFSETS), OFFSET >= LOW, OFFSET <= HIGH), IN_WINDOW)
+)
+
+# distinct_count/2: distinct-day union count — Clausal sort/2 dedupes
+# (K4.1 "unique in-window calendar days"), then length.
+
+distinct_count(ITEMS, N) <- (sort(ITEMS, DISTINCT), length(DISTINCT, N))
+
+# intervals_wf/1: every endpoint is a valid calendar [Y,M,D] (date/4
+# succeeds). The layer-2 wrappers guard on this — invalid dates ⇒ no
+# solution (fail-loud, matches S1/S3 and the corpus no-oracle ethos).
+# interval_wf/1 and has_malformed_interval/1 are INTERNAL (unexported).
+
+interval_wf([START, EXIT]) <- (day_of(START, _), day_of(EXIT, _))
+has_malformed_interval(INTERVALS) <- (
+    in_(ITEM, INTERVALS),
+    not interval_wf(ITEM)
+)
+intervals_wf(INTERVALS) <- (not has_malformed_interval(INTERVALS))
+
+# ── SHAPE guards (fail-LOUD via throw, distinct from calendar-wf above) ──
+# intervals_wf/1 answers "is every endpoint a valid CALENDAR date?" — a
+# well-shaped but calendrically-invalid triple ([2024,2,30]) is a NO
+# SOLUTION there, by design (§6.3), and that stays untouched.
+#
+# The guards below answer a PRIOR question the silent-fail collapse hid
+# for three call levels (todo/goal-level-wrong-value-…-2026-08-02.md): is
+# the argument even the RIGHT SHAPE? A date OBJECT passed where REF_YMD
+# wants a [Y,M,D] triple, or an interval endpoint that is an UNBOUND
+# variable, never reaches intervals_wf as a "malformed date" — it makes
+# date/4 (or the offset arithmetic) fail logically inside a findall, the
+# findall collapses to [], and the producer sees only a wrong verdict
+# three levels up. So these raise (throw/1 → surfaces as a "raised" goal
+# in the test report, the loud channel) naming the argument and the
+# expected shape. interval_shape_wf/ymd_triple_wf/has_ill_shaped_interval
+# are INTERNAL (unexported); guard_* are the layer-2 entry points.
+
+# ymd_triple_wf/1: a GROUND list of exactly three integers. Deliberately
+# shape-only — it does NOT check calendar validity (that is intervals_wf's
+# job and must keep its no-solution semantics). A date object fails
+# is_list here; an unbound element fails ground/1.
+ymd_triple_wf(YMD) <- (
+    ground(YMD), is_list(YMD), length(YMD, 3),
+    YMD is [Y, M, D], integer(Y), integer(M), integer(D)
+)
+
+# day_wf/1: the SHAPE check the guards below use. A real `date(Y, M, D)` is now
+# an ACCEPTED shape -- the guards were written when it was the defect (their
+# message still named "a date object" as the thing to reject), and the date
+# migration inverts that. Disjoint clauses: a value cannot be both a list and a
+# datetime.date, so `not day_wf(V)` stays a clean negation.
+day_wf(V) <- (ymd_triple_wf(V))
+day_wf(V) <- (ground(V), date(_, _, _) is V)
+
+# interval_shape_wf/1: a ground [ENTRY, EXIT] pair of ymd triples.
+interval_shape_wf(IV) <- (
+    ground(IV), is_list(IV), length(IV, 2),
+    IV is [ENTRY, EXIT], day_wf(ENTRY), day_wf(EXIT)
+)
+
+# guard_ref_ymd/1: raise a located error unless REF is a ground [Y,M,D]
+# integer triple. The message names REF_YMD and the expected shape, so
+# the "raised" goal in the report points straight at the bad call.
+guard_ref_ymd(REF) <- (day_wf(REF))
+guard_ref_ymd(REF) <- (
+    not day_wf(REF),
+    throw("window_days_used/distinct_days_total: REF must be a date(Y, M, D) term or a ground [Y,M,D] integer triple (got neither, e.g. a term with unbound variables)")
+)
+
+# guard_intervals_shape/1: raise unless every interval is a ground
+# [[Y,M,D],[Y,M,D]] pair. Fires on the second measured shape: an interval
+# term carrying an UNBOUND endpoint variable.
+has_ill_shaped_interval(INTERVALS) <- (
+    in_(IV, INTERVALS),
+    not interval_shape_wf(IV)
+)
+guard_intervals_shape(INTERVALS) <- (not has_ill_shaped_interval(INTERVALS))
+guard_intervals_shape(INTERVALS) <- (
+    has_ill_shaped_interval(INTERVALS),
+    throw("window_days_used/distinct_days_total: INTERVALS must be a list of ground [ENTRY, EXIT] pairs, each endpoint a date(Y, M, D) term or a [Y,M,D] integer triple (an endpoint is non-ground or neither shape)")
+)
+
+
+# =====================================================================
+# SECTION 2 — STATUTORY COLLAPSES (layer 2)
+# =====================================================================
+# window_days_used/4: USED = |⋃ intervals ∩ [REF−(W−1), REF]| — the
+# distinct presence-day count inside the W-day look-back window ending
+# on (and including) REF. K2.1: pure offset arithmetic over consecutive
+# calendar days, never anniversary-based; K3.3: the filter clips per
+# presence-day, so a stay straddling the window boundary contributes
+# only its in-window days. Single clause — no verdict-enumeration
+# hazard. The 90-day LIMIT compare stays DOMAIN-side (K1: the kit only
+# counts).
+
+window_days_used(INTERVALS, REF_YMD, WINDOW_DAYS, USED) <- (
+    guard_ref_ymd(REF_YMD),
+    guard_intervals_shape(INTERVALS),
+    intervals_wf(INTERVALS),
+    interval_offsets(INTERVALS, REF_YMD, OFFSETS),
+    last_n_days_low(WINDOW_DAYS, LOW),
+    offsets_within(OFFSETS, LOW, 0, IN_WINDOW),
+    distinct_count(IN_WINDOW, USED)
+)
+
+# distinct_days_total/2: unwindowed distinct-day union over all history
+# (posted_workers S3 shape). Any fixed epoch gives identical counts
+# (epoch-ordinal ↔ offset bijection); kit_epoch/1 is INTERNAL.
+
+kit_epoch([2000, 1, 1]),
+
+distinct_days_total(INTERVALS, DAYS) <- (
+    guard_intervals_shape(INTERVALS),
+    intervals_wf(INTERVALS),
+    kit_epoch(EPOCH),
+    interval_offsets(INTERVALS, EPOCH, OFFSETS),
+    distinct_count(OFFSETS, DAYS)
+)
+
+# remaining_from_limit/3: REMAINING = max(0, LIMIT − USED). Disjoint
+# guards (<= / >) — cut-free, exactly one solution.
+
+remaining_from_limit(USED, LIMIT, REMAINING) <- (
+    USED <= LIMIT,
+    REMAINING == LIMIT - USED
+)
+remaining_from_limit(USED, LIMIT, REMAINING) <- (
+    USED > LIMIT,
+    REMAINING is 0
+)
+
+
+# =====================================================================
+# SECTION 3 — YEAR-ANNIVERSARY LOOK-BACK (layer 0, de_minimis shape)
+# =====================================================================
+# years_lookback_start/3: START = REF minus YEARS calendar years,
+# clamped Feb-29 → Feb-28 when no exact anniversary exists ("any period
+# of three years", Reg 2023/2831 Art 3(2) — window length in days
+# varies ~1095/1096 by construction, not a bug). Disjoint clauses via
+# the is_feb_29 guard (INTERNAL) — deterministic, one solution.
+
+is_feb_29(2, 29),
+years_lookback_start([REF_YEAR, 2, 29], YEARS, [START_YEAR, 2, 28]) <- (
+    START_YEAR == REF_YEAR - YEARS
+)
+years_lookback_start([REF_YEAR, REF_MONTH, REF_DAY], YEARS, [START_YEAR, REF_MONTH, REF_DAY]) <- (
+    [REF_MONTH, REF_DAY] is not [2, 29],     # ground month/day: dif (was not is_feb_29)
+    START_YEAR == REF_YEAR - YEARS
+)
+
+# within_years_lookback/3: HALF-OPEN (START, REF] membership — event
+# strictly AFTER the (possibly clamped) start day, on or before REF.
+# Composed subtlety, pinned by the suite: half-open + clamp means an
+# event ON the clamped start day (2025-02-28 for REF 2028-02-29, 3y)
+# is EXCLUDED — matches de_minimis behavior byte-for-byte.
+
+within_years_lookback([EVENT_Y, EVENT_M, EVENT_D], REF_YMD, YEARS) <- (
+    years_lookback_start(REF_YMD, YEARS, [START_Y, START_M, START_D]),
+    START_DAY is date(START_Y, START_M, START_D),
+    REF_YMD is [REF_Y, REF_M, REF_D],
+    REFERENCE_DAY is date(REF_Y, REF_M, REF_D),
+    EVENT_DAY is date(EVENT_Y, EVENT_M, EVENT_D),
+    days_between(REFERENCE_DAY, EVENT_DAY, DAYS_BEFORE_REF),
+    DAYS_BEFORE_REF >= 0,
+    days_between(EVENT_DAY, START_DAY, DAYS_AFTER_START),
+    DAYS_AFTER_START > 0
+)

@@ -1,0 +1,178 @@
+# Gate configuration for eu/procurement/shortlisting, AND the profile-key
+# contract. It is both, and the second half is the part the six wave-1
+# eu/procurement domains all omit.
+#
+# WHY THE `keys:` BLOCK IS HERE. `gen_interface_catalog` only picks up a key set
+# when a profile_keys*.yaml both names this rulebase in `rulebase:` AND carries a
+# `keys:` mapping; otherwise it returns an empty set SILENTLY, `profile:` lands
+# as `null` in the interface catalog, and the code-vs-YAML drift check is skipped
+# entirely. A missing key contract is not an error anywhere; it is an ABSENT
+# contract, which is worse, because nothing reports its absence.
+#
+# ============================================================================
+# WHY `keys:` IS FLAT AND SITS LAST, AND WHY THE DETAIL IS IN `key_contract:`
+#
+# `auto.oracle_interface._profile_key_names` reads this file with a LINE SCANNER,
+# not a YAML parser. It starts at the first line matching `^keys\s*:` and
+# captures EVERY subsequent indented `identifier:` until the first dedent
+# (`^\s+([A-Za-z_]\w*)\s*:`), and `oracle_calls` folds whatever it returns into
+# the oracle's required-name set at arity 0. A NESTED `keys:` block therefore
+# makes the gate demand the package export atoms named `type`, `note`, `source`,
+# `unit`; a folded prose scalar indented under it donates whole words like
+# `INPUT` the same way.
+#
+# So: `keys:` is a FLAT name -> one-line string mapping, it is the LAST
+# top-level block in the file, and every value sits on the SAME LINE as its key
+# so no continuation line can be mistaken for one. The typed contract lives in
+# `key_contract:` above it, which the scanner never reaches. Do not re-nest
+# `keys:`, and do not add a block after it. VERIFY the recovered set is exactly
+# the ten names below rather than assuming it.
+# ============================================================================
+#
+# WHY `rulebase:` POINTS AT THE DETERMINATION SLICE. It must name a file that
+# HOLDS CLAUSE HEADS. Pinning `__init__.clausal` makes the G1 differential
+# unfailable by construction -- materializing the old `__init__` to a temp path
+# leaves its `-import_from` siblings resolving against the CURRENT worktree, so
+# the "old" side runs today's decision logic. Pinning an atoms-only
+# `kernel.clausal` measures nothing for the same reason in reverse.
+rulebase: shortlisting.clausal
+
+# G1's differential surface. ONE determination, ONE decision predicate, so the
+# shape resolver has a single candidate -- but the checklist predicate is
+# declared anyway rather than guessed. `shortlisting_limb_status` is the
+# (LIMB_ID, PROFILE, STATUS, CITATION) checklist over the eight Art 65 defect
+# limbs; a requirement-set comparison catches a change to ONE limb's status or
+# citation even where the top-level modal verdict is unchanged, which a headline
+# self-differential on `decide_shortlisting/2` would not.
+requirement_pred: shortlisting_limb_status
+
+# THE TYPED KEY CONTRACT. Ten keys, no more and no fewer; every one a BARE ATOM
+# in the rulebase, never a string literal (R8: `get(P, "qualified_candidates", V)`
+# with a string key can never match an atom-keyed DictTerm, so the read
+# SOFT-FAILS and the clause falls through to the next branch with no error
+# anywhere).
+#
+# `type` vocabulary used below:
+#   atom   a bare atom drawn from the stated closed vocabulary
+#   bool   a native True/False -- never the strings "true"/"false", never 1/0
+#   value  a plain non-negative INTEGER COUNT OF CANDIDATES
+#
+# THERE IS NO MIXED FLAG CONVENTION IN THIS DOMAIN, and that is itself the
+# contract: every boolean below is a NATIVE True/False and there is no 1/0
+# integer judgement anywhere, because there are no nested records. There is also
+# no money and no date: no euro-cents, no [Y, M, D] triple, no percentage, no
+# basis points, and no division anywhere, so no rounding convention exists to
+# state or to get wrong.
+#
+# ENFORCED (D80, 2026-10-20): shortlisting_input_problem/2 checks this contract
+# before any decision. Inputs must be complete (ground) and of the types below;
+# a bad profile gets no answer. For the open procedure and the negotiated
+# procedure without prior publication only procedure_type_key is required.
+key_contract:
+  procedure_type_key:
+    type: atom
+    vocabulary: [restricted_procedure, competitive_procedure_with_negotiation,
+                 competitive_dialogue, innovation_partnership, open_procedure,
+                 negotiated_procedure_without_prior_publication]
+    imported_from: eu.procurement.directive_2014_24.vocabulary
+    art: "65(1)"
+    detail: >-
+      The Art 26 procedure vocabulary, imported from the family backbone and
+      never re-declared. Art 65(1) names FOUR of these six; the other two carry
+      no power to limit candidate numbers at all, which is a different answer
+      from a power exercised badly.
+  objective_and_non_discriminatory_criteria_indicated:
+    type: bool
+    art: "65(2) first sub-paragraph"
+    detail: >-
+      Whether the authority indicated, in the contract notice or in the
+      invitation to confirm interest, the objective and non-discriminatory
+      criteria or rules it intends to apply. This domain does not ask WHICH of
+      the two documents carried it, and does not assess whether the criteria
+      published were in fact objective and non-discriminatory -- that judgement
+      is not modelled here at all.
+  minimum_number_indicated:
+    type: bool
+    art: "65(2) first sub-paragraph"
+    detail: >-
+      Whether the authority indicated the minimum number of candidates it
+      intends to invite. Separate from declared_minimum_candidates: a figure can
+      be held internally and not published, and the duty is to INDICATE it.
+  declared_minimum_candidates:
+    type: value
+    unit_of_measure: integer count of candidates
+    art: "65(2) first sub-paragraph"
+    detail: >-
+      The minimum number the authority indicated. 0 where none was indicated.
+      Art 65(2) sub-para 2 makes a figure below the statutory five (restricted)
+      or three (the other three procedures) a defect -- see the registered
+      operative reading art_65_2_declared_minimum_below_statutory_minimum for
+      what that defect does.
+  declared_maximum_candidates:
+    type: value
+    unit_of_measure: integer count of candidates
+    art: "65(2) first sub-paragraph"
+    detail: >-
+      The maximum number, which Art 65(2) requires only "where appropriate". 0
+      means NO MAXIMUM WAS DECLARED and is not a maximum of zero; that sentinel
+      is why the maximum-below-minimum limb is guarded on a positive value.
+  qualified_candidates:
+    type: value
+    unit_of_measure: integer count of candidates
+    art: "65(1), 65(2) third sub-paragraph"
+    detail: >-
+      The number of candidates meeting the selection criteria and the minimum
+      levels of ability referred to in Art 58(5). ONE count, not two: see the
+      registered operative reading art_65_2_required_capabilities_set_identity,
+      which reads "the candidates with the required capabilities" in the
+      continuation limb as the SAME set. This domain never inspects a candidate;
+      it takes the count Art 58 produced.
+  invited_candidates:
+    type: value
+    unit_of_measure: integer count of candidates
+    art: "65(2) third sub-paragraph"
+    detail: >-
+      How many candidates the authority proposes to invite to tender or to
+      conduct a dialogue.
+  number_invited_sufficient_for_genuine_competition:
+    type: bool
+    art: "65(2) second sub-paragraph, final sentence"
+    atomic_input: true
+    detail: >-
+      "In any event the number of candidates invited shall be sufficient to
+      ensure genuine competition." An OPEN-TEXTURED OVERLAY sitting on top of a
+      hard numeric floor, and an ATOMIC INPUT here: it is NEVER derived from
+      invited_candidates, from qualified_candidates or from either minimum, and
+      no crisp test for it is invented. Modelling it as unreachable was
+      considered and rejected -- it would silently drop an operative sentence of
+      the pinned unit while the ledger showed the unit covered.
+  invited_include_non_requesting_economic_operators:
+    type: bool
+    art: "65(2) third sub-paragraph, final sentence"
+    detail: >-
+      Whether the set the authority proposes to invite includes economic
+      operators that did not request to participate. "Shall not include" is an
+      absolute PROHIBITION, not a factor to weigh.
+  invited_include_candidates_without_required_capabilities:
+    type: bool
+    art: "65(2) third sub-paragraph, final sentence"
+    detail: >-
+      Whether it includes candidates that do not have the required capabilities.
+      The second limb of the same prohibition, kept separate so a package that
+      implements one and drops the other is caught.
+
+# THE KEY SET ITSELF. Flat, one line per key, LAST block in the file. See the
+# banner above before editing: everything indented below this line that looks
+# like `identifier:` is read by a line scanner as a profile key the package must
+# export.
+keys:
+  procedure_type_key: "Art 65(1) procedure-type atom, from eu.procurement.directive_2014_24.vocabulary"
+  objective_and_non_discriminatory_criteria_indicated: "Art 65(2) sub-para 1, boolean"
+  minimum_number_indicated: "Art 65(2) sub-para 1, boolean"
+  declared_minimum_candidates: "Art 65(2) sub-para 1, integer count of candidates, zero when none was indicated"
+  declared_maximum_candidates: "Art 65(2) sub-para 1, integer count of candidates, zero meaning no maximum declared"
+  qualified_candidates: "Art 65(1) and 65(2) sub-para 3, integer count of candidates meeting the selection criteria and the Art 58(5) minimum levels of ability"
+  invited_candidates: "Art 65(2) sub-para 3, integer count of candidates the authority proposes to invite"
+  number_invited_sufficient_for_genuine_competition: "Art 65(2) sub-para 2 final sentence, boolean, an atomic input"
+  invited_include_non_requesting_economic_operators: "Art 65(2) sub-para 3 final sentence, boolean"
+  invited_include_candidates_without_required_capabilities: "Art 65(2) sub-para 3 final sentence, boolean"

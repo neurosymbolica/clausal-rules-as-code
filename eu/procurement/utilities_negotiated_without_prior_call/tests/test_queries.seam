@@ -1,0 +1,100 @@
+-double_quotes(chars)
+# =====================================================================
+# test_queries.clausal -- PROPERTY tests for the query layer.
+# One test per query-taxonomy predicate registered in manifest.yaml
+# query_interface: #7 justification, #16 what-if, #23 calculation.
+# Run: python -m clausal.testing eu/procurement/utilities_negotiated_without_prior_call/tests/test_queries.clausal
+# =====================================================================
+
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.queries, [
+    utilities_negotiated_without_prior_call_profile_keys,
+    utilities_negotiated_without_prior_call_what_if])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.utilities_negotiated_without_prior_call, [
+    utilities_negotiated_without_prior_call_checklist,
+    utilities_negotiated_without_prior_call_unmet_count])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.fixtures, [
+    utilities_negotiated_without_prior_call_profile_for])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.kernel, [
+    use_lawful, use_unlawful])
+-import_from(eu.procurement.utilities_negotiated_without_prior_call.utilities_negotiated_without_prior_call, [
+    initial_conditions_not_substantially_altered,
+    pleaded_ground_key,
+    contract_type_key])
+-import_from(eu.procurement.directive_2014_24.vocabulary, [services])
+
+# --- #7 justification: checklist carries cite(...) provenance per item ---
+
+test("justification: a_lawful checklist has two items both met") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    length(CHECKLIST, 2)
+)
+
+test("justification: d_lawful checklist has three items") <- (
+    utilities_negotiated_without_prior_call_profile_for("d_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    length(CHECKLIST, 3)
+)
+
+test("justification: e_lawful checklist includes type-gate item") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_checklist(PROFILE, CHECKLIST),
+    length(CHECKLIST, 3)
+)
+
+# --- #23 calculation: unmet-condition count ---
+
+test("calculation: a_lawful has zero unmet conditions") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_unmet_count(PROFILE, 0)
+)
+
+test("calculation: a_near_miss has exactly one unmet condition") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_near_miss", PROFILE),
+    utilities_negotiated_without_prior_call_unmet_count(PROFILE, 1)
+)
+
+test("calculation: d_near_miss has exactly one unmet condition") <- (
+    utilities_negotiated_without_prior_call_profile_for("d_near_miss", PROFILE),
+    utilities_negotiated_without_prior_call_unmet_count(PROFILE, 1)
+)
+
+test("calculation: e_near_miss (type-gate) has at least one unmet") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_near_miss", PROFILE),
+    utilities_negotiated_without_prior_call_unmet_count(PROFILE, COUNT),
+    COUNT >= 1
+)
+
+# --- #16 what-if: override one key, re-decide ---
+
+test("what_if: flipping initial_conditions to false makes a_lawful unlawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_what_if(PROFILE, initial_conditions_not_substantially_altered, false, use_unlawful)
+)
+
+test("what_if: flipping initial_conditions to true restores a_near_miss to lawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("a_near_miss", PROFILE),
+    utilities_negotiated_without_prior_call_what_if(PROFILE, initial_conditions_not_substantially_altered, true, use_lawful)
+)
+
+test("what_if: overriding contract_type to services on e_lawful makes it unlawful") <- (
+    utilities_negotiated_without_prior_call_profile_for("e_lawful", PROFILE),
+    utilities_negotiated_without_prior_call_what_if(PROFILE, contract_type_key, services, use_unlawful)
+)
+
+# --- enumeration: profile keys ---
+
+test("profile keys: pleaded_ground_key is in the declared key list") <- (
+    utilities_negotiated_without_prior_call_profile_keys(KEYS),
+    pleaded_ground_key in KEYS
+)
+
+test("profile keys: contract_type_key is in the declared key list") <- (
+    utilities_negotiated_without_prior_call_profile_keys(KEYS),
+    contract_type_key in KEYS
+)
+
+test("profile keys: the list has 27 entries") <- (
+    utilities_negotiated_without_prior_call_profile_keys(KEYS),
+    length(KEYS, 27)
+)

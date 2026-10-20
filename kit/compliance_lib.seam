@@ -1,0 +1,159 @@
+# =====================================================================
+# kit.compliance_lib  —  Reusable COMPLIANCE-CHECK engine (query type #13)
+#
+# The single-action form of the planner's permitted/2 deontic gate, wired
+# to a REAL deontic-verdict closure rather than the engine's default-permit
+# stub. Given a proposed (BEARER, ACTION) in a WORLD, it collects every
+# applicable norm, resolves them through the deny-overrides modality
+# lattice (forbidden > required > permitted), names which norm(s) fired,
+# and — when forbidden — surfaces the contrary-to-duty / repair norm.
+#
+# This is what makes the planner's permitted/2 gate NON-STUB: a domain's
+# permitted/2 simply calls permitted_action/6 here (see the demo), so a
+# forbidden action never enters a plan, and the same engine answers the
+# stand-alone "may I do X?" query via compliance_check/7.
+#
+# GENERIC vs DOMAIN: this module is the ~80%-generic engine — the modality
+# lattice, the fired-norm collector, the CTD/repair collector, and the
+# open/closed-world fallthrough. The domain supplies, as TWO closures:
+#   APPLIES : (BEARER, ACTION, WORLD, NORM_ID, MODALITY, OBLIGATION)
+#             — true once per applicable norm; the domain's toy/real
+#               deontic rulebase, checking conditions against the WORLD.
+#   REPAIR  : (NORM_ID, CTD_NORM_ID)
+#             — the contrary-to-duty repair link for a violated norm.
+# Closures are direct positional args, forwarded into findall/call_goal
+# (never reconstructed). MODALITY atoms and norm-ids are domain strings;
+# the engine adds no vocabulary of its own.
+# =====================================================================
+
+-private([])
+
+# APPLIES is called with 6 extra args (BEARER, ACTION, WORLD, NORM_ID, MODALITY,
+# OBLIGATION), REPAIR with 2 (NORM_ID, CTD): resolve them in the CALLER's module.
+-meta_predicate(applicable_norms(6, '?', '?', '?', '?'), collect_ctd('?', '?', 2, '?'), compliance_check(6, 2, '?', '?', '?', '?', '?'), permitted_action(6, 2, '?', '?', '?', '?'))
+
+-module(compliance_lib, [
+    # (NORM_ID, MODALITY) pair carrier — exported so importers/tests can
+    # pattern-match the FIRED list and the applicable-norm set.
+    nm(NORM_ID, MODALITY),
+
+    # ── Modality lattice (deny-overrides), CWA-parameterised ─────────
+    resolve_modality(NORM_MODALITIES, COMBINING_WORLD, MODALITY),
+
+    # ── Applicable-norm collection ───────────────────────────────────
+    applicable_norms(APPLIES, BEARER, ACTION, WORLD, NORM_MODALITIES),
+    fired_norms(NORM_MODALITIES, MODALITY, FIRED),
+    collect_ctd(FIRED, MODALITY, REPAIR, CTD),
+
+    # ── Top-level verdict ────────────────────────────────────────────
+    compliance_check(APPLIES, REPAIR, COMBINING_WORLD, BEARER, ACTION, WORLD, VERDICT),
+    verdict(BEARER, ACTION, MODALITY, FIRED, CTD),
+
+    # ── Planner gate helper (the permitted/2 wiring point) ───────────
+    permitted_action(APPLIES, REPAIR, COMBINING_WORLD, BEARER, ACTION, WORLD)
+])
+-double_quotes(chars)
+-import_from(kit.formalize_lib, [not_member, member_matching])
+
+
+# =====================================================================
+# SECTION 1 — MODALITY LATTICE (deny-overrides; cut-free disjoint guards)
+# =====================================================================
+# NORM_MODALITIES is a ground list of nm(NORM_ID, MODALITY) (from findall),
+# so the `not in_` guards were sound NAF over ground data. Precedence:
+# forbidden > required > permitted. Membership was once-wrapped (semidet) so
+# N applicable norms of the same modality yield ONE verdict, not N.
+# 2026-09-29: NEGATION-FREE. member_matching/2 finds the FIRST norm of a
+# modality (one verdict, no once/1); not_member/2 states "none" positively.
+# Empty set → the domain's combining-world default: "closed" fails closed
+# (forbidden), "open" leaves the action not_applicable.
+
+resolve_modality(NORM_MODALITIES, _, MODALITY) <- (
+    member_matching(nm(_, "forbidden"), NORM_MODALITIES),
+    MODALITY is "forbidden"
+)
+resolve_modality(NORM_MODALITIES, _, MODALITY) <- (
+    not_member(nm(_, "forbidden"), NORM_MODALITIES),
+    member_matching(nm(_, "required"), NORM_MODALITIES),
+    MODALITY is "required"
+)
+resolve_modality(NORM_MODALITIES, _, MODALITY) <- (
+    not_member(nm(_, "forbidden"), NORM_MODALITIES),
+    not_member(nm(_, "required"), NORM_MODALITIES),
+    member_matching(nm(_, "permitted"), NORM_MODALITIES),
+    MODALITY is "permitted"
+)
+resolve_modality([], COMBINING_WORLD, MODALITY) <- (
+    COMBINING_WORLD is "closed",
+    MODALITY is "forbidden"
+)
+resolve_modality([], COMBINING_WORLD, MODALITY) <- (
+    COMBINING_WORLD is "open",
+    MODALITY is "not_applicable"
+)
+
+
+# =====================================================================
+# SECTION 2 — APPLICABLE-NORM COLLECTION
+# =====================================================================
+# Ask the domain's APPLIES closure for every norm that covers this
+# (BEARER, ACTION, WORLD). sort/2 dedups (ISO semantics) so a norm that
+# the closure can prove two ways contributes a single nm/2 pair.
+
+applicable_norms(APPLIES, BEARER, ACTION, WORLD, NORM_MODALITIES) <- (
+    findall(
+        nm(NORM_ID, MODALITY),
+        call_goal(APPLIES, BEARER, ACTION, WORLD, NORM_ID, MODALITY, _OBLIGATION),
+        RAW
+    ),
+    sort(RAW, NORM_MODALITIES)
+)
+
+# fired_norms: the norm-ids whose modality equals the RESOLVED modality —
+# the "which norm fired" provenance. Empty for not_applicable.
+fired_norms(NORM_MODALITIES, MODALITY, FIRED) <- (
+    findall(NORM_ID, in_(nm(NORM_ID, MODALITY), NORM_MODALITIES), FIRED)
+)
+
+# collect_ctd: only a forbidden verdict triggers contrary-to-duty repair.
+# Gather the repair norm of every fired (violated) norm. Disjoint on the
+# MODALITY scalar — cut-free.
+collect_ctd(FIRED, MODALITY, REPAIR, CTD) <- (
+    MODALITY is "forbidden",
+    findall(C, (in_(NORM_ID, FIRED), call_goal(REPAIR, NORM_ID, C)), CTD)
+)
+collect_ctd(_, MODALITY, _, CTD) <- (
+    MODALITY is not "forbidden",
+    CTD is []
+)
+
+
+# =====================================================================
+# SECTION 3 — TOP-LEVEL VERDICT
+# =====================================================================
+# verdict(BEARER, ACTION, MODALITY, FIRED, CTD)
+#   MODALITY : "forbidden" | "required" | "permitted" | "not_applicable"
+#   FIRED    : norm-ids that produced MODALITY (provenance)
+#   CTD      : repair/contrary-to-duty norm-ids (non-empty only if forbidden)
+
+compliance_check(APPLIES, REPAIR, COMBINING_WORLD, BEARER, ACTION, WORLD, VERDICT) <- (
+    applicable_norms(APPLIES, BEARER, ACTION, WORLD, NORM_MODALITIES),
+    resolve_modality(NORM_MODALITIES, COMBINING_WORLD, MODALITY),
+    fired_norms(NORM_MODALITIES, MODALITY, FIRED),
+    collect_ctd(FIRED, MODALITY, REPAIR, CTD),
+    VERDICT is verdict(BEARER, ACTION, MODALITY, FIRED, CTD)
+)
+
+
+# =====================================================================
+# SECTION 4 — PLANNER GATE HELPER (makes permitted/2 non-stub)
+# =====================================================================
+# A domain's permitted/2 calls this: an action is permitted to enter a
+# plan iff its resolved modality is anything other than "forbidden"
+# (permitted, required, and — under open world — not_applicable all pass).
+
+permitted_action(APPLIES, REPAIR, COMBINING_WORLD, BEARER, ACTION, WORLD) <- (
+    compliance_check(APPLIES, REPAIR, COMBINING_WORLD, BEARER, ACTION, WORLD,
+                     verdict(_, _, MODALITY, _, _)),
+    MODALITY is not "forbidden"
+)

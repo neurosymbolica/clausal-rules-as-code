@@ -1,0 +1,260 @@
+id: eu/procurement/time_limits
+shape_family: numeric
+kit_version: "0.1.0"
+# modules: the on-disk .clausal module set (determination-slices layout,
+# 2026-08-07) -- the single source of truth for the file set, in DAG order.
+modules:
+  - kernel
+  - citations
+  - parameters
+  - time_limits
+  - queries
+  - fixtures
+
+# public_interface: bare atoms (vocabulary) + name/arity predicates, grouped
+# per submodule -- keep in sync with the -module(...) export headers re-exported
+# via __init__.clausal. NOTE: __init__.clausal is hand-maintained, not
+# regenerated: pkginit sources only the domain's own submodules and would drop
+# the five eu.procurement.directive_2014_24.vocabulary procedure atoms at the end of this list.
+public_interface:
+  # -- kernel.clausal --
+  - "time_limits_verdict/4"
+  # -- time_limits.clausal (vocabulary) --
+  - "minimum_days_prescribed"
+  - "no_minimum_prescribed"
+  - "stage_not_applicable"
+  - "n_a"
+  - "overall"
+  - "procedure_type_key"
+  - "stage_key"
+  - "prior_information_notice_published"
+  - "electronic_submission_accepted"
+  - "state_of_urgency_substantiated"
+  - "observed_time_limit_days"
+  - "meets_prescribed_minimum"
+  - "shorter_than_prescribed_minimum"
+  - "observed_days_not_supplied"
+  - "no_prescribed_minimum_to_meet"
+  - "receipt_of_tenders"
+  - "receipt_of_participation_requests"
+  - "baseline_minimum"
+  - "with_prior_information_notice"
+  - "with_electronic_submission"
+  - "under_state_of_urgency"
+  # -- time_limits.clausal (statutory value facts) --
+  - "time_limits_status_values/1"
+  - "time_limits_conformity_values/1"
+  - "time_limits_stage_values/1"
+  - "time_limits_reduction_condition_values/1"
+  - "minimum_time_limit_days/5"
+  - "no_minimum_prescribed_for/3"
+  - "stage_not_provided_for/3"
+  # -- citations.clausal --
+  - "cite/1"
+  - "citation/2"
+  - "eu_dir_2014_24_art_27"
+  - "eu_dir_2014_24_art_28"
+  - "eu_dir_2014_24_art_29"
+  - "eu_dir_2014_24_art_30"
+  - "eu_dir_2014_24_art_31"
+  # -- time_limits.clausal (the determination) --
+  - "decide_time_limits/2"
+  - "time_limits_status/2"
+  - "minimum_days/2"
+  - "time_limits_conformity/2"
+  - "observed_days_conformity/3"
+  - "applicable_reduction_condition/2"
+  - "candidate_time_limit/3"
+  # -- time_limits.clausal (checklist facade) --
+  - "time_limits_checklist/2"
+  - "time_limits_decision_resolvable/1"
+  # -- time_limits.clausal (the input check, ruling D80) --
+  - "time_limits_input_problem/2"
+  - "time_limits_input_acceptable/1"
+  - "not_ground"
+  - "not_a_dict"
+  - "missing_key/1"
+  - "wrong_value/2"
+  - "wrong_type/2"
+  - "negative_count/1"
+  - "expected_procedure_type"
+  - "expected_stage"
+  - "expected_boolean"
+  - "expected_integer"
+  # -- queries.clausal --
+  - "time_limits_profile_keys/1"
+  - "time_limits_what_if/4"
+  - "time_limits_enumerate/4"
+  - "time_limits_floor/3"
+  # -- fixtures.clausal --
+  - "time_limits_subject/1"
+  - "time_limits_profile_for/2"
+  - "time_limits_assess/2"
+  # -- procedure-type atoms re-exported from _common (profile vocabulary) --
+  - "open_procedure"
+  - "restricted_procedure"
+  - "competitive_procedure_with_negotiation"
+  - "competitive_dialogue"
+  - "innovation_partnership"
+
+# Independence classification: the decision layer has no third-party verdict
+# oracle (eval/ carries a same-author differential), but every day figure in
+# time_limits.clausal is externally anchored to the published tables of
+# Directive 2014/24/EU Arts 27-31 (EUR-Lex, CELEX 32014L0024).
+independence: no_oracle
+
+uses:
+  - eu.procurement.directive_2014_24.vocabulary
+scope: "EU Directive 2014/24/EU Articles 27-31 -- the minimum-time-limit decision
+  surface for the five competitive procedures. Given a procedure type, a stage
+  (receipt of tenders / receipt of requests to participate), and three
+  circumstance flags (prior information notice published per Art 27(2)/28(3);
+  electronic tender submission accepted per Art 22(1) with Art 27(4)/28(5);
+  state of urgency duly substantiated per Art 27(3)/28(6)), returns the minimum
+  lawful time limit in days plus the article citation(s). Given additionally the
+  day count the notice ACTUALLY allowed (observed_time_limit_days), returns
+  whether that limit meets the prescribed minimum -- the CONFORMITY slot of the
+  verdict. An unsupplied day count is reported as such and is never compliance;
+  where the Directive prescribes no minimum there is nothing to meet, and that
+  too is said rather than left blank. Reductions do not
+  compound beyond the published figures: each reduced figure targets one
+  specific paragraph's base, so the lawful minimum is the least applicable
+  published figure. Out of scope: Art 28(4) sub-central mutual-agreement tender
+  deadlines (needs contracting-authority-type + agreement inputs); Art 47
+  general adequacy duties and extension duties (Art 47(3)); the invitation-stage
+  deadlines of competitive dialogue / innovation partnership (no prescribed day
+  table -- reported as no_minimum_prescribed); the negotiated procedure without
+  prior publication (no call for competition, hence no time-limit table);
+  computing a concrete calendar deadline date from a dispatch date (a date
+  helper would reuse kit.dates -- not exposed here). Inputs must be complete
+  (ground) and well typed: time_limits_input_problem/2 names the first problem
+  (unbound variable, missing procedure or stage, unknown value, a present flag
+  that is not exactly True or False, a day count that is not a non-negative
+  integer), and every entry point then gives no answer. An absent flag still
+  means the reduction does not apply."
+
+sources:
+  - "Directive 2014/24/EU of the European Parliament and of the Council of 26 February 2014
+    on public procurement (OJ L 94, 28.3.2014), CELEX 32014L0024 -- Art 27 (open procedure),
+    Art 28 (restricted procedure), Art 29 (competitive procedure with negotiation),
+    Art 30 (competitive dialogue), Art 31 (innovation partnership)"
+  - "eu.procurement.directive_2014_24.vocabulary -- procedure-type vocabulary (Art 26), imported, not re-declared"
+
+query_interface:
+  2: "time_limits_status/2"      # status verdict: prescribed / no minimum / stage n-a
+  4: "time_limits_enumerate/4"   # enumeration: the full published day table
+  6: "time_limits_floor/3"       # threshold/floor: least published figure per (procedure, stage)
+  7: "time_limits_checklist/2"   # justification: checklist row with status + citations
+  16: "time_limits_what_if/4"    # what_if: re-evaluate under an overridden key
+
+# ── deferred_set (2026-08-29) ────────────────────────────────────────────────
+# The four exclusions _orders/time-limits.yaml authorizes, absent until now.
+# One binds to a pinned unit; three lie outside this domain's extract (Arts
+# 27-31) and carry `instrument:` per spec 13.22.
+deferred_set:
+- what: subcentral_mutual_agreement_deadline
+  units:
+  - 02014L0024-20260101#parag_028.004
+  reason: >-
+    Art 28(4) lets a sub-central contracting authority set the tender deadline by mutual
+    agreement with the candidates invited, in place of the Art 28(2) minimum. The order
+    excludes it because the profile carries neither the contracting-authority type nor
+    the agreement input the branch needs.
+  consequence: >-
+    A sub-central authority that HAS reached such an agreement is governed by the agreed
+    deadline, not by the minimum this domain reports. The verdict here is the
+    Directive's floor for the general case, and a caller in that position must not read
+    it as binding.
+- what: conduct_of_negotiation_dialogue_and_partnership
+  units:
+  - 02014L0024-20260101#parag_029.002
+  - 02014L0024-20260101#parag_029.003
+  - 02014L0024-20260101#parag_029.004
+  - 02014L0024-20260101#parag_029.006
+  - 02014L0024-20260101#parag_030.002
+  - 02014L0024-20260101#parag_030.003
+  - 02014L0024-20260101#parag_030.004
+  - 02014L0024-20260101#parag_030.005
+  - 02014L0024-20260101#parag_030.006
+  - 02014L0024-20260101#parag_030.007
+  - 02014L0024-20260101#parag_030.008
+  - 02014L0024-20260101#parag_031.002
+  - 02014L0024-20260101#parag_031.003
+  - 02014L0024-20260101#parag_031.005
+  - 02014L0024-20260101#parag_031.006
+  - 02014L0024-20260101#parag_031.007
+  reason: >-
+    Arts 29(2)-(4) and (6), 30(2)-(8) and 31(2)-(3) and (5)-(7) govern the CONDUCT and
+    STRUCTURE of the competitive procedure with negotiation, the competitive dialogue
+    and the innovation partnership: who may tender, the duty to negotiate, staging,
+    confidentiality, prizes to dialogue participants, partnership phasing and its
+    proportionality. Not one of them prescribes a day count. This domain's entire
+    input surface is (procedure, stage, three circumstance flags, observed days) and
+    its outputs are a minimum day count, a status and a conformity, so none of these
+    provisions is reachable by it (ruling 2026-09-08).
+  consequence: >-
+    A conforming verdict from this domain says the day counts clear the Arts 27-31
+    floors. It says NOTHING about whether the negotiation or dialogue was lawfully
+    conducted, staged or concluded; a caller must apply those provisions itself.
+- what: article_heading
+  units:
+  - 02014L0024-20260101#art_027
+  - 02014L0024-20260101#art_028
+  - 02014L0024-20260101#art_029
+  - 02014L0024-20260101#art_030
+  - 02014L0024-20260101#art_031
+  reason: >-
+    The five article titles carry no obligation: document structure, not operative
+    law. Deferred rather than bound so that this domain reads the same way as every
+    other in the campaign (ruling 2026-09-08).
+  consequence: >-
+    None. A heading states no rule, so nothing turns on it.
+- what: general_adequacy_and_extension_duties
+  units:
+  - 02014L0024-20260101#parag_029.005
+  - 02014L0024-20260101#parag_029.007
+  - 02014L0024-20260101#parag_031.004
+  instrument: >-
+    Directive 2014/24/EU Art 47(1)-(3) (setting adequate time limits, and extending them
+    where information is late or the documents change) -- same instrument, outside this
+    domain's pinned Arts 27-31 extract
+  reason: >-
+    Art 47 imposes a standalone duty to set ADEQUATE time limits and to EXTEND them in
+    named circumstances. That is a separate deontic determination from the minimum-days
+    tables the order scopes here.
+  consequence: >-
+    THE SHARP EDGE. Meeting the minimum in Arts 27-31 does NOT discharge Art 47: a limit
+    can clear the floor and still be inadequate to the complexity of the procurement, or
+    require extension because site visits were needed or documents changed late. A
+    `minimum_days_prescribed` verdict is a floor, never a finding that the limit set was
+    lawful.
+- what: calendar_deadline_computation
+  units: []
+  instrument: >-
+    Regulation (EEC, Euratom) No 1182/71 determining the rules applicable to periods,
+    dates and time limits -- a different instrument, not pinned by this domain
+  reason: >-
+    This domain reports a minimum DAY COUNT. Turning that count plus a dispatch date
+    into a calendar deadline is governed by the periods-and-dates Regulation -- which
+    day the period starts, how weekends and public holidays fall, when it expires -- and
+    the order scopes it out.
+  consequence: >-
+    A caller must do the calendar arithmetic itself under Reg 1182/71. The commonest
+    error this prevents is assuming the period starts on the dispatch date; it does not.
+- what: negotiated_without_publication
+  units: []
+  instrument: >-
+    Directive 2014/24/EU Art 32 (negotiated procedure without prior publication) -- same
+    instrument, outside this pinned extract, and formalized separately as
+    eu/procurement/negotiated_without_publication
+  reason: >-
+    Art 32 dispenses with the call for competition altogether, so there is no
+    time-limit table to apply. Sibling determination.
+  consequence: >-
+    Where Art 32 is made out, no minimum from this domain applies. A caller must settle
+    the Art 32 question first; asking this domain for a deadline presupposes a call for
+    competition exists.
+
+# ARMED 2026-09-08: 43 units, 18 formalized, 25 deferred, 0 unaccounted. The
+# ratchet blocks on COVERAGE; T1 is annotation debt, reported not gated.
+provision_tracking: enforced

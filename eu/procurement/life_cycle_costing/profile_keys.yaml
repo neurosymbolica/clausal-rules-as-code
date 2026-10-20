@@ -1,0 +1,200 @@
+# Gate configuration for eu/procurement/life_cycle_costing, AND the profile-key
+# contract. It is both, and the second half is the part the six existing
+# eu/procurement domains all omit (`gen_interface_catalog` records
+# `profile: null` for every one of them, and `_index/conformance-report.yaml`
+# carries `IC-13: fail` as a result).
+#
+# ============================================================================
+# WHY `keys:` IS FLAT AND SITS LAST, AND WHY THE DETAIL IS IN `key_contract:`
+#
+# `auto.oracle_interface._profile_key_names` reads this file with a LINE
+# SCANNER, not a YAML parser -- deliberately, so per-key legal commentary
+# cannot leak into a producer-visible gate message. It starts at the first line
+# matching `^keys\s*:` and captures EVERY subsequent indented `identifier:`
+# line until the first dedent (`^\s+([A-Za-z_]\w*)\s*:`), and `oracle_calls`
+# folds whatever it returns into the oracle's required-name set at ARITY 0.
+#
+# MEASURED ON THE WAVE-2 SIBLING, 2026-08-20: a NESTED `keys:` block had its
+# SUB-KEYS captured as profile keys -- `type`, `note`, `source`, `unit`,
+# `vocabulary`, `element`, `element_types` -- and even `INPUT`, out of the
+# phrase "An ATOMIC INPUT: whether ..." inside an indented folded scalar, which
+# the scanner read as another `identifier:` line. At P3c `gate_oracle_interface`
+# would then have demanded the producer export all eight as atoms.
+#
+# So: `keys:` is a FLAT name -> one-line string mapping, it is the LAST
+# top-level block in the file, and every value sits on the SAME LINE as its key
+# so no continuation line can be mistaken for one. The typed contract lives in
+# `key_contract:` above it, which the scanner never reaches. Do not re-nest
+# `keys:`, and do not add a block after it.
+# ============================================================================
+#
+# WHY `rulebase:` POINTS AT A DETERMINATION SLICE. It must name a file that
+# HOLDS CLAUSE HEADS. Pinning `__init__.clausal` makes the G1 differential
+# unfailable by construction -- materializing the old `__init__` to a temp path
+# leaves its `-import_from` siblings resolving against the CURRENT worktree, so
+# the "old" side runs today's decision logic and the two sides agree because
+# they are the same code. Pinning an atoms-only `kernel.clausal` measures
+# nothing for the same reason in reverse.
+rulebase: life_cycle_costing.clausal
+
+# G1's differential surface. This domain publishes THREE decision predicates,
+# one per determination, so the shape resolver has three candidates and refuses
+# to guess -- which is why the choice is declared rather than inferred.
+# `lcc_method_validity_limb_status` is the (LIMB_ID, PROFILE, STATUS, CITATION)
+# checklist over the nine Art 68 validity limbs; a requirement-set comparison
+# catches a change to ONE limb's status, ONE limb's gate or ONE limb's citation
+# even where the headline verdict is unchanged, which a self-differential on
+# `decide_lcc_method_validity/2` would not.
+#
+# NOTE FOR STAGE 05: the Art 68(3) displacement determination and the
+# computation are NOT covered by this surface. `decide_lcc_mandatory_method/2`
+# and `decide_lcc_computation/2` are scored by eval/score_harness.py and by
+# nothing else here. Do not read a green G1 as covering all three thirds.
+requirement_pred: lcc_method_validity_limb_status
+
+# THE TYPED KEY CONTRACT. Twelve keys, no more and no fewer; every one a BARE
+# ATOM in the rulebase, never a string literal (R8: `get(P, "cost_components",
+# V)` with a string key can never match an atom-keyed DictTerm, so the read
+# SOFT-FAILS and the clause falls through to the next branch with no error
+# anywhere).
+#
+# `type` vocabulary used below:
+#   atom   a bare atom drawn from the stated closed vocabulary
+#   bool   a native True/False -- never the strings "true"/"false", never 1/0
+#   list   a list; `element` states the element shape, which is the part NO
+#          GATE CHECKS and the part one evaluation run lost 75 cases to
+#
+# NOTE THE MIXED FLAG CONVENTION, which is deliberate and must not be
+# generalised one way over the other: profile-level flags are native BOOLEANS;
+# the per-component legal judgement INSIDE a component record is an INTEGER
+# 1/0, so a component record stays homogeneously atom-and-integer.
+#
+# AND NOTE THE MIXED POLARITY, which is the statute's own. Eight of the nine
+# Art 68(2) flags are POSITIVE ("is accessible", "can be provided"); exactly one
+# -- externality_method_unduly_favours_or_disadvantages_operators -- is
+# NEGATIVE, because Art 68(2)(a) s.2 says the method "shall NOT unduly favour or
+# disadvantage certain economic operators". A rulebase that generalises one
+# polarity over the other inverts exactly one limb.
+#
+# ENFORCED (D80, 2026-10-20): life_cycle_costing_input_problem/3 checks this
+# contract before any determination. Inputs must be complete (ground) and of the
+# types below; a bad profile gives lcc_indeterminate from the computation and no
+# answer from the other entry points. Keys a closed gate makes irrelevant may be
+# absent (see the check's banner in life_cycle_costing.clausal).
+key_contract:
+  cost_components:
+    type: list
+    element: "[COST_CATEGORY, AMOUNT_EUR_CENTS, MONETARY_VALUE_DETERMINABLE_AND_VERIFIED]"
+    element_types: [atom, value, value]
+    art: "68(1)(a)-(b)"
+    detail: >-
+      The cost components the contracting authority's life-cycle costing
+      approach declares, in its own order. AMOUNT_EUR_CENTS is integer
+      euro-cents. The third element is an INTEGER 1/0, not a boolean, and it is
+      READ ONLY for a component whose category is
+      environmental_externality_cost -- Art 68(1)(b)'s "provided their monetary
+      value can be determined and verified" proviso attaches to point (b) alone.
+      THE LIST MAY BE EMPTY, and an empty list is not a degenerate case: it
+      means this procurement uses no life-cycle costing approach, so Art 68
+      imposes nothing on it.
+  tenderer_data_indicated_in_procurement_documents:
+    type: bool
+    art: "68(2) first alinea"
+    detail: >-
+      Whether the procurement documents indicate the data to be provided by the
+      tenderers.
+  costing_method_indicated_in_procurement_documents:
+    type: bool
+    art: "68(2) first alinea"
+    detail: >-
+      Whether the procurement documents indicate the method the contracting
+      authority will use to determine the life-cycle costs from that data. A
+      separate object of the same duty, and separately reportable.
+  externality_method_criteria_objectively_verifiable:
+    type: bool
+    art: "68(2)(a) first sentence"
+    atomic_input: true
+    detail: >-
+      Whether the externality-costing method is based on objectively verifiable
+      criteria. Open-textured; no crisp test is invented here.
+  externality_method_criteria_non_discriminatory:
+    type: bool
+    art: "68(2)(a) first sentence"
+    atomic_input: true
+    detail: >-
+      Whether those criteria are non-discriminatory. The second element of the
+      same sentence, and a distinct limb.
+  externality_method_established_for_repeated_or_continuous_application:
+    type: bool
+    art: "68(2)(a) second sentence"
+    detail: >-
+      Whether the method was established for repeated or continuous application.
+      This is the CONDITION on Art 68(2)(a) s.2, not a limb: an established
+      method cannot breach that sentence however it behaves.
+  externality_method_unduly_favours_or_disadvantages_operators:
+    type: bool
+    polarity: negative
+    art: "68(2)(a) second sentence"
+    atomic_input: true
+    detail: >-
+      NEGATIVE POLARITY. True means the method DOES unduly favour or
+      disadvantage certain economic operators, which is the defect. Every other
+      flag in this contract is positive.
+  externality_method_accessible_to_all_interested_parties:
+    type: bool
+    art: "68(2)(b)"
+    detail: "Whether the method is accessible to all interested parties."
+  externality_data_obtainable_with_reasonable_effort:
+    type: bool
+    art: "68(2)(c) first limb"
+    atomic_input: true
+    detail: >-
+      Whether the required data can be provided with reasonable effort by
+      normally diligent economic operators. Both "reasonable effort" and
+      "normally diligent" are open-textured and are handed to the caller.
+  externality_data_obtainable_by_third_country_gpa_operators:
+    type: bool
+    art: "68(2)(c) including-clause"
+    atomic_input: true
+    detail: >-
+      The same question asked of economic operators from third countries party
+      to the GPA or to other international agreements binding the Union. A
+      separate key because Art 68(2)(c) expressly extends the class, and a
+      method can be reasonable for domestic operators and not for those.
+  union_common_method_act_key:
+    type: atom
+    vocabulary: [directive_2009_33_ec, other_union_act, no_union_common_method]
+    art: "68(3)"
+    detail: >-
+      The Union legislative act that has made a common life-cycle-costing method
+      mandatory for this contract's subject-matter, or no_union_common_method.
+      `directive_2009_33_ec` is the ONE act the pinned Annex XIII names;
+      `other_union_act` is such an act that Annex XIII does not name, which is
+      the cell the declaratory and constitutive readings of Annex XIII separate
+      on. WHETHER an act makes a method mandatory for this contract is an
+      ATOMIC INPUT: it lives in the other instrument, not in Art 68.
+  union_common_method_applied:
+    type: bool
+    art: "68(3) first sentence"
+    detail: >-
+      Whether the contracting authority applied that common method. Read only
+      where an act exists; no_union_common_method with this True is incoherent
+      input and fails closed.
+
+# THE KEY SET ITSELF. Flat, one line per key, LAST block in the file. See the
+# banner above before editing: everything indented below this line that looks
+# like `identifier:` is read by a line scanner as a profile key the package
+# must export as an arity-0 atom.
+keys:
+  cost_components: "Art 68(1) declared cost components, a list of three-element records"
+  tenderer_data_indicated_in_procurement_documents: "Art 68(2) first alinea, boolean"
+  costing_method_indicated_in_procurement_documents: "Art 68(2) first alinea, boolean"
+  externality_method_criteria_objectively_verifiable: "Art 68(2)(a) first sentence, boolean, an atomic input"
+  externality_method_criteria_non_discriminatory: "Art 68(2)(a) first sentence, boolean, an atomic input"
+  externality_method_established_for_repeated_or_continuous_application: "Art 68(2)(a) second sentence, boolean, the condition on that sentence"
+  externality_method_unduly_favours_or_disadvantages_operators: "Art 68(2)(a) second sentence, boolean, NEGATIVE polarity, an atomic input"
+  externality_method_accessible_to_all_interested_parties: "Art 68(2)(b), boolean"
+  externality_data_obtainable_with_reasonable_effort: "Art 68(2)(c) first limb, boolean, an atomic input"
+  externality_data_obtainable_by_third_country_gpa_operators: "Art 68(2)(c) including-clause, boolean, an atomic input"
+  union_common_method_act_key: "Art 68(3) Union act atom, one of three"
+  union_common_method_applied: "Art 68(3) first sentence, boolean"

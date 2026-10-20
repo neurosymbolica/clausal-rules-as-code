@@ -1,0 +1,96 @@
+-double_quotes(chars)
+# =====================================================================
+# test_negative_controls.clausal -- NEGATIVE CONTROLS.
+# For each reduction route: a POSITIVE case paired with a near-miss
+# NEGATIVE control (one flag changed -> different day count), proving the
+# route is LOAD-BEARING and the tempting-but-wrong figure is NOT produced.
+# The compounding controls pin the key legal subtlety: each reduction
+# targets one paragraph's base figure, so reductions never compound
+# below the published figures.
+# Run: python -m clausal.testing eu/procurement/time_limits/tests/test_negative_controls.clausal
+# =====================================================================
+-import_from(eu.procurement.time_limits.time_limits, [
+    minimum_days, time_limits_status,
+    minimum_days_prescribed,
+    prior_information_notice_published,
+    electronic_submission_accepted,
+    state_of_urgency_substantiated])
+-import_from(eu.procurement.time_limits.fixtures, [
+    time_limits_profile_for])
+-import_from(eu.procurement.time_limits.queries, [
+    time_limits_what_if])
+-strict_atoms
+
+# ---- prior-information-notice route is load-bearing (open: 35 vs 15) --
+test("open: notice route positive (15) vs negative control without notice (35)") <- (
+    time_limits_profile_for("open_tenders_prior_information_notice", PROFILE),
+    minimum_days(PROFILE, 15),
+    time_limits_what_if(PROFILE, prior_information_notice_published, False, 35)
+)
+
+# ---- electronic-submission route is load-bearing (open: 30 vs 35) -----
+test("open: electronic route positive (30) vs negative control without it (35)") <- (
+    time_limits_profile_for("open_tenders_electronic_submission", PROFILE),
+    minimum_days(PROFILE, 30),
+    time_limits_what_if(PROFILE, electronic_submission_accepted, False, 35)
+)
+
+# ---- urgency route is load-bearing (open: 15 vs 35) -------------------
+test("open: urgency route positive (15) vs negative control without urgency (35)") <- (
+    time_limits_profile_for("open_tenders_urgency", PROFILE),
+    minimum_days(PROFILE, 15),
+    time_limits_what_if(PROFILE, state_of_urgency_substantiated, False, 35)
+)
+
+# ---- NO COMPOUNDING: notice + electronic is 15, never 10 --------------
+# Art 27(4)'s 5-day reduction targets only the Art 27(1) 35-day base;
+# it does not further reduce the Art 27(2) 15-day figure.
+test("open: notice + electronic is exactly 15 -- the compounded 10 is rejected") <- (
+    time_limits_profile_for("open_tenders_prior_notice_and_electronic", PROFILE),
+    minimum_days(PROFILE, 15),
+    not minimum_days(PROFILE, 10)
+)
+
+# ---- NO COMPOUNDING (restricted): notice + electronic is 10, never 5 --
+test("restricted: notice + electronic tenders are exactly 10 -- 5 is rejected") <- (
+    time_limits_profile_for("restricted_tenders_prior_information_notice", PROFILE),
+    time_limits_what_if(PROFILE, electronic_submission_accepted, True, 10),
+    not time_limits_what_if(PROFILE, electronic_submission_accepted, True, 5)
+)
+
+# ---- restricted tenders: each reduced figure vs its neighbours --------
+test("restricted tenders: electronic route positive (25) rejects 30 and 20") <- (
+    time_limits_profile_for("restricted_tenders_electronic_submission", PROFILE),
+    minimum_days(PROFILE, 25),
+    not minimum_days(PROFILE, 30),
+    not minimum_days(PROFILE, 20)
+)
+
+# ---- urgency does NOT reach competitive dialogue ----------------------
+# Art 30 provides no accelerated variant; the Art 28(6) reductions are
+# not cross-applied to competitive dialogue (contrast Art 29(1)).
+test("dialogue requests: urgency claim leaves the minimum at 30 -- 15 is rejected") <- (
+    time_limits_profile_for("dialogue_requests_urgency_claimed", PROFILE),
+    minimum_days(PROFILE, 30),
+    not minimum_days(PROFILE, 15)
+)
+
+# ---- urgency DOES reach competitive procedure with negotiation --------
+# (the pairing control for the dialogue case above: Art 29(1) cross-applies
+# Art 28(3) to (6), so the same urgency claim reduces the CWN request stage)
+test("negotiation requests: the same urgency claim reduces 30 to 15") <- (
+    time_limits_profile_for("negotiation_requests_urgency", PROFILE),
+    minimum_days(PROFILE, 15),
+    time_limits_what_if(PROFILE, state_of_urgency_substantiated, False, 30)
+)
+
+# ---- baseline subjects produce only the prescribed status -------------
+test("baseline subjects never leak a reduced figure") <- (
+    time_limits_profile_for("open_tenders_baseline", OPEN_PROFILE),
+    not minimum_days(OPEN_PROFILE, 15),
+    not minimum_days(OPEN_PROFILE, 30),
+    time_limits_profile_for("restricted_tenders_baseline", RESTRICTED_PROFILE),
+    not minimum_days(RESTRICTED_PROFILE, 10),
+    not minimum_days(RESTRICTED_PROFILE, 25),
+    time_limits_status(RESTRICTED_PROFILE, minimum_days_prescribed)
+)

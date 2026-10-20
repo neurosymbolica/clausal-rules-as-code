@@ -1,0 +1,148 @@
+-double_quotes(chars)
+# =====================================================================
+# test_negative_controls.clausal -- NEGATIVE CONTROLS.
+# For each major route: a POSITIVE case paired with a near-miss NEGATIVE
+# control (one required condition changed -> different verdict), proving
+# the route is LOAD-BEARING.
+# Run: python -m clausal.testing eu/procurement/life_cycle_costing/tests/test_negative_controls.clausal
+# =====================================================================
+-import_from(eu.procurement.life_cycle_costing.life_cycle_costing, [
+    decide_lcc_method_validity,
+    decide_lcc_mandatory_method,
+    decide_lcc_computation,
+    lcc_method_validity_limb_status,
+    lcc_component_admissibility,
+    lcc_externality_assessment,
+    acquisition_cost,
+    environmental_externality_cost,
+    tenderer_data_not_indicated,
+    costing_method_not_indicated,
+    externality_cost_monetary_value_not_determinable,
+    undue_favour_or_disadvantage_of_economic_operators,
+    component_included,
+    component_excluded,
+    externality_costs_assessed,
+    externality_costs_not_assessed,
+    mandatory_union_common_method_not_applied
+])
+
+-import_from(eu.procurement.life_cycle_costing.kernel, [
+    lcc_method_validity_verdict,
+    lcc_mandatory_method_verdict,
+    lcc_computation_verdict,
+    valid_lcc_method,
+    invalid_lcc_method,
+    union_common_method_mandatory_and_applied,
+    union_common_method_mandatory_and_not_applied,
+    no_union_common_method_mandatory,
+    lcc_computed,
+    lcc_no_costs_declared,
+    lcc_indeterminate,
+    satisfied,
+    not_satisfied
+])
+
+-import_from(eu.procurement.life_cycle_costing.citations, [
+    cite,
+    eu_dir_2014_24_art_68_2,
+    eu_dir_2014_24_art_68_3
+])
+
+-import_from(eu.procurement.life_cycle_costing.fixtures, [
+    life_cycle_costing_profile_for
+])
+
+# Route 1: outer gate -- empty list is valid regardless of flags
+test("NC1 positive: empty list with all flags True yields valid") <- (
+    life_cycle_costing_profile_for("no_lcc_approach", PROFILE),
+    decide_lcc_method_validity(PROFILE, lcc_method_validity_verdict(valid_lcc_method, [], []))
+)
+
+test("NC1 near-miss: empty list with one flag False STILL yields valid (gate voids all)") <- (
+    life_cycle_costing_profile_for("no_lcc_approach_flag_false", PROFILE),
+    decide_lcc_method_validity(PROFILE, lcc_method_validity_verdict(valid_lcc_method, [], []))
+)
+
+# Route 2: basic first-alinea limb -- tenderer data
+test("NC2 positive: tenderer data indicated yields satisfied") <- (
+    life_cycle_costing_profile_for("basic_compliant", PROFILE),
+    lcc_method_validity_limb_status(tenderer_data_not_indicated, PROFILE, satisfied, _CITATION)
+)
+
+test("NC2 near-miss: tenderer data NOT indicated yields not_satisfied") <- (
+    life_cycle_costing_profile_for("basic_tenderer_missing", PROFILE),
+    lcc_method_validity_limb_status(tenderer_data_not_indicated, PROFILE, not_satisfied, _CITATION)
+)
+
+# Route 3: externality gate -- no externality category means gate closed
+test("NC3 positive: no externality category yields satisfied (gate closed)") <- (
+    life_cycle_costing_profile_for("basic_compliant", PROFILE),
+    lcc_method_validity_limb_status(externality_cost_monetary_value_not_determinable, PROFILE, satisfied, _CITATION)
+)
+
+test("NC3 near-miss: externality present with determinable=0 yields not_satisfied") <- (
+    life_cycle_costing_profile_for("externality_not_determinable", PROFILE),
+    lcc_method_validity_limb_status(externality_cost_monetary_value_not_determinable, PROFILE, not_satisfied, _CITATION)
+)
+
+# Route 4: undue favour -- established method cannot breach
+test("NC4 positive: established method with undue=True still yields satisfied") <- (
+    life_cycle_costing_profile_for("externality_established", PROFILE),
+    lcc_method_validity_limb_status(undue_favour_or_disadvantage_of_economic_operators, PROFILE, satisfied, _CITATION)
+)
+
+test("NC4 near-miss: not established + undue=True yields not_satisfied") <- (
+    life_cycle_costing_profile_for("externality_undue_favour", PROFILE),
+    lcc_method_validity_limb_status(undue_favour_or_disadvantage_of_economic_operators, PROFILE, not_satisfied, _CITATION)
+)
+
+# Route 5: mandatory method -- applied vs not applied
+test("NC5 positive: directive applied yields no defect") <- (
+    life_cycle_costing_profile_for("mandatory_applied", PROFILE),
+    decide_lcc_mandatory_method(PROFILE, lcc_mandatory_method_verdict(union_common_method_mandatory_and_applied, [], []))
+)
+
+test("NC5 near-miss: directive NOT applied yields defect") <- (
+    life_cycle_costing_profile_for("mandatory_not_applied", PROFILE),
+    decide_lcc_mandatory_method(PROFILE, lcc_mandatory_method_verdict(union_common_method_mandatory_and_not_applied, [mandatory_union_common_method_not_applied], [cite(eu_dir_2014_24_art_68_3)]))
+)
+
+# Route 6: computation -- positive vs negative amount
+test("NC6 positive: zero amount yields lcc_computed with total 0") <- (
+    life_cycle_costing_profile_for("zero_amount", PROFILE),
+    decide_lcc_computation(PROFILE, lcc_computation_verdict(lcc_computed, 0, []))
+)
+
+test("NC6 near-miss: negative amount yields lcc_indeterminate") <- (
+    life_cycle_costing_profile_for("negative_amount", PROFILE),
+    decide_lcc_computation(PROFILE, lcc_computation_verdict(lcc_indeterminate, 0, []))
+)
+
+# Route 7: component admissibility -- externality determinable vs not
+test("NC7 positive: externality with determinable=1 is included") <- (
+    lcc_component_admissibility(environmental_externality_cost, 1, component_included)
+)
+
+test("NC7 near-miss: externality with determinable=0 is excluded") <- (
+    lcc_component_admissibility(environmental_externality_cost, 0, component_excluded)
+)
+
+# Route 8: externality assessment gate
+test("NC8 positive: list with externality yields assessed") <- (
+    lcc_externality_assessment([[environmental_externality_cost, 100, 1]], externality_costs_assessed)
+)
+
+test("NC8 near-miss: list without externality yields not_assessed") <- (
+    lcc_externality_assessment([[acquisition_cost, 100, 1]], externality_costs_not_assessed)
+)
+
+# Route 9: multi-defect ordering -- two first-alinea defects in pinned statutory order
+test("NC9 positive: two first-alinea defects reported in pinned order") <- (
+    life_cycle_costing_profile_for("two_first_alinea_defects", PROFILE),
+    decide_lcc_method_validity(PROFILE, lcc_method_validity_verdict(invalid_lcc_method, [tenderer_data_not_indicated, costing_method_not_indicated], [cite(eu_dir_2014_24_art_68_2), cite(eu_dir_2014_24_art_68_2)]))
+)
+
+test("NC9 near-miss: only one first-alinea defect when costing method is indicated") <- (
+    life_cycle_costing_profile_for("basic_tenderer_missing", PROFILE),
+    decide_lcc_method_validity(PROFILE, lcc_method_validity_verdict(invalid_lcc_method, [tenderer_data_not_indicated], [cite(eu_dir_2014_24_art_68_2)]))
+)

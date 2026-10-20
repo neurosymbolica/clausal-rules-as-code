@@ -1,0 +1,259 @@
+# Gate configuration for eu/procurement/framework_agreements, AND the
+# profile-key contract. It is both, and the second half is the part the six
+# pre-Wave-2 eu/procurement domains all omit.
+#
+# WHY THE `keys:` BLOCK IS HERE. `gen_interface_catalog` only picks up a key set
+# when a profile_keys*.yaml both names this rulebase in `rulebase:` AND carries a
+# `keys:` mapping; otherwise it returns an empty set SILENTLY, `profile:` lands
+# as `null` in the interface catalog, and the code-vs-YAML drift check is skipped
+# entirely. That is how `_index/conformance-report.yaml` records
+# `IC-13: fail -- "profile: null -- no gen:keys block"` for all six of them. A
+# missing key contract is not an error anywhere; it is an ABSENT contract, which
+# is worse, because nothing reports its absence.
+#
+# ============================================================================
+# WHY `keys:` IS FLAT AND SITS LAST, AND WHY THE DETAIL IS IN `key_contract:`
+#
+# `auto.oracle_interface._profile_key_names` reads this file with a LINE SCANNER,
+# not a YAML parser -- deliberately, so per-key legal commentary cannot leak into
+# a producer-visible gate message. It starts at the first line matching
+# `^keys\s*:` and captures EVERY subsequent indented `identifier:` until the
+# first dedent (`_PROFILE_KEY_RE = ^\s+([A-Za-z_][A-Za-z0-9_]*)\s*:`).
+#
+# So a NESTED `keys:` block donates its SUB-KEYS to the oracle's required-name
+# set at arity 0, and a folded scalar donates any word it begins a line with:
+# the Wave-2 Art 67 domain measured exactly that, and `audit-orders` demanded the
+# package export atoms named `type`, `note`, `source`, `unit`, `vocabulary`,
+# `element`, `element_types` and `INPUT`.
+#
+# The fix is structural, not cosmetic: `keys:` is a FLAT name -> one-line string
+# mapping, it is the LAST top-level block in the file, and every value sits on
+# the SAME LINE as its key so no continuation line can be mistaken for one. The
+# typed contract lives in `key_contract:` above it, which the scanner never
+# reaches. Do not re-nest `keys:`, and do not add a block after it.
+# ============================================================================
+#
+# WHY `rulebase:` POINTS AT A DETERMINATION SLICE. It must name a file that HOLDS
+# CLAUSE HEADS. Pinning `__init__.clausal` makes the G1 differential unfailable
+# by construction -- materializing the old `__init__` to a temp path leaves its
+# `-import_from` siblings resolving against the CURRENT worktree, so the "old"
+# side runs today's decision logic and the two sides agree because they are the
+# same code. Pinning an atoms-only `kernel.clausal` measures nothing for the same
+# reason in reverse: no clause head, no decision.
+rulebase: framework_agreements.clausal
+
+# G1's differential surface. This domain publishes TWO decision predicates, one
+# per determination, so the shape resolver would have two candidates and refuses
+# to guess between them -- which is why the choice is declared rather than
+# inferred. `call_off_limb_status` is the (LIMB_ID, PROFILE, STATUS, CITATION)
+# checklist over the seventeen Art 33(2)-(5) call-off limbs; a requirement-set
+# comparison catches a change to ONE limb's status, SCOPE or citation even where
+# the top-level verdict is unchanged, which a headline self-differential on
+# `decide_call_off/2` would not. Scope is what goes wrong in this article, and a
+# scope change is exactly the thing that leaves the headline verdict alone on
+# most profiles.
+#
+# NOTE FOR STAGE 05: the FRAMEWORK TERM determination is NOT covered by this
+# surface. `decide_framework_term/2` is scored by eval/score_harness.py and by
+# nothing else here. Do not read a green G1 as covering both halves.
+requirement_pred: call_off_limb_status
+
+# THE TYPED KEY CONTRACT. Twenty-one keys, no more and no fewer; every one a BARE
+# ATOM in the rulebase, never a string literal (R8: `get(P, "criteria", V)` with
+# a string key can never match an atom-keyed DictTerm, so the read SOFT-FAILS and
+# the clause falls through to the next branch with no error anywhere).
+#
+# `type` vocabulary used below:
+#   atom   a bare atom drawn from the stated closed vocabulary
+#   bool   a native True/False -- never the strings "true"/"false", never 1/0
+#   value  an integer
+#   date   a date(YEAR, MONTH, DAY) term with three integers, as the kit date
+#          guard (must_be_date/1) accepts it -- never an ISO string, never a
+#          [YEAR, MONTH, DAY] list.
+#
+# INPUTS MUST BE COMPLETE (ruling D80, 2026-10-20): a profile that is
+# not a ground dict, a present key of the wrong type, an operator count below 1,
+# or an absent key the law reads on that profile's route gets no answer;
+# framework_agreements_input_problem/2 names the first problem.
+#
+# THERE IS NO MIXED FLAG CONVENTION HERE, and that is itself the contract:
+# EVERY judgement in this profile is a profile-level native BOOLEAN. This domain
+# carries no record lists, so it has no per-record integer 1/0 judgements and no
+# place for one. A clause testing `1` against any key below cannot unify.
+key_contract:
+  framework_start_date:
+    type: date
+    art: "33(1) third subparagraph"
+    detail: >-
+      The day the framework agreement's term begins. The four-year limit is
+      measured from here, and the call-off award window opens here.
+  framework_end_date:
+    type: date
+    art: "33(1) third subparagraph"
+    detail: >-
+      The last day of the term the framework agreement AS CONCLUDED declares --
+      not the last lawful day. An over-long framework declares an over-long end
+      date and that is what makes its term unlawful.
+  exceptional_case_duly_justified:
+    type: bool
+    art: "33(1) third subparagraph"
+    atomic_input: true
+    detail: >-
+      Whether this is an exceptional case duly justified, in particular by the
+      subject of the framework agreement. Art 33(1) supplies no test for it --
+      "in particular by the subject" is an example, not a criterion -- so it is
+      an ATOMIC INPUT and no crisp test is invented here.
+  call_off_award_date:
+    type: date
+    art: "33(1) second subparagraph, 33(2)"
+    detail: >-
+      The day the contract based on the framework agreement is AWARDED. Not the
+      day its performance begins and not the day it ends: this domain carries no
+      call-off performance dates at all, because on the chosen reading nothing in
+      Art 33 turns on them.
+  framework_operator_count:
+    type: value
+    art: "33(3), 33(4) chapeau"
+    detail: >-
+      How many economic operators the framework agreement was concluded with. An
+      integer of at least 1. Exactly 1 selects the Art 33(3) single-operator
+      regime; 2 or more selects Art 33(4). The boundary is the statutory switch.
+  call_off_method_key:
+    type: atom
+    vocabulary: [without_reopening_competition, with_reopening_competition]
+    art: "33(4)(a)-(c)"
+    detail: >-
+      How the contracting authority proposes to make THIS call-off. It is what
+      the authority is doing, not what it is entitled to do: whether Art 33(4)
+      authorises it is the determination.
+  contracting_authority_identified_in_call_for_competition:
+    type: bool
+    art: "33(2) second subparagraph"
+    detail: >-
+      Whether the contracting authority making this call-off was clearly
+      identified for that purpose in the call for competition or the invitation
+      to confirm interest.
+  economic_operator_party_to_framework:
+    type: bool
+    art: "33(2) second subparagraph"
+    detail: >-
+      Whether the economic operator receiving this call-off is party to the
+      framework agreement AS CONCLUDED.
+  call_off_entails_substantial_modification:
+    type: bool
+    art: "33(2) third subparagraph"
+    atomic_input: true
+    detail: >-
+      Whether the call-off entails a substantial modification to the terms laid
+      down in the framework agreement. An ATOMIC INPUT: see manifest.yaml
+      operative_readings[substantial_modification_limb_and_article_72] for the
+      choice not to run the Art 72(4) substantiality limbs here.
+  call_off_within_limits_of_framework_terms:
+    type: bool
+    art: "33(3) first subparagraph"
+    detail: >-
+      Whether the call-off is within the limits of the terms laid down in the
+      framework agreement. Read ONLY where the agreement was concluded with a
+      single economic operator; Art 33(3) says so in terms.
+  framework_sets_out_all_terms:
+    type: bool
+    art: "33(4)(a), (b), (c)"
+    detail: >-
+      Whether the framework agreement sets out ALL the terms governing the
+      provision of the works, services and supplies concerned. This is the fact
+      that separates point (a)/(b) from point (c).
+  objective_conditions_for_determining_performer_indicated:
+    type: bool
+    art: "33(4)(a)"
+    detail: >-
+      Whether the objective conditions for determining which of the operators
+      party to the framework agreement shall perform were indicated in the
+      procurement documents for the framework agreement.
+  partly_with_partly_without_reopening_stipulated:
+    type: bool
+    art: "33(4)(b) first sentence"
+    detail: >-
+      Whether the contracting authorities stipulated in the procurement documents
+      the possibility of performing the framework partly without and partly with
+      reopening of competition. This is the fact that selects the Art 33(4)(b)
+      split regime.
+  objective_criteria_for_choice_of_route_stated:
+    type: bool
+    art: "33(4)(b) second sentence"
+    detail: >-
+      Whether the objective criteria governing the choice between a reopening and
+      a direct award on the framework's terms were set out in the procurement
+      documents.
+  terms_subject_to_reopening_specified:
+    type: bool
+    art: "33(4)(b) third sentence"
+    detail: >-
+      Whether the procurement documents specify which terms may be subject to
+      reopening of competition.
+  reopened_competition_based_on_framework_terms:
+    type: bool
+    art: "33(5) chapeau"
+    detail: >-
+      Whether the reopened competition is based on the same terms as applied for
+      the award of the framework agreement and, where necessary, more precisely
+      formulated terms.
+  capable_operators_consulted_in_writing:
+    type: bool
+    art: "33(5)(a)"
+    detail: >-
+      Whether, for this contract, the contracting authority consulted in writing
+      ALL the economic operators capable of performing it.
+  time_limit_sufficiently_long:
+    type: bool
+    art: "33(5)(b)"
+    atomic_input: true
+    detail: >-
+      Whether the time limit fixed is sufficiently long to allow tenders to be
+      submitted, taking into account the complexity of the subject-matter and the
+      time needed to send in tenders. An ATOMIC INPUT: Art 33(5)(b) names the
+      factors and fixes no number, so this domain invents none.
+  tenders_submitted_in_writing:
+    type: bool
+    art: "33(5)(c)"
+    detail: "Whether the tenders were submitted in writing."
+  tender_contents_confidential_until_time_limit_expired:
+    type: bool
+    art: "33(5)(c)"
+    detail: >-
+      Whether the tenders' content was kept unopened until the stipulated time
+      limit for reply expired. The second conjunct of the same sentence as the
+      preceding key, and separate from it.
+  award_made_on_framework_award_criteria:
+    type: bool
+    art: "33(5)(d)"
+    detail: >-
+      Whether the contract was awarded to the tenderer submitting the best tender
+      on the basis of the award criteria set out in the procurement documents for
+      the framework agreement.
+
+# THE KEY SET ITSELF. Flat, one line per key, LAST block in the file. See the
+# banner above before editing: everything indented below this line that looks
+# like `identifier:` is read by a line scanner as a profile key the package must
+# export.
+keys:
+  framework_start_date: "Art 33(1), a date(Y, M, D) term"
+  framework_end_date: "Art 33(1), a date(Y, M, D) term, the term as concluded"
+  exceptional_case_duly_justified: "Art 33(1), boolean, an atomic input"
+  call_off_award_date: "Art 33(1)-(2), a date(Y, M, D) term, the award day"
+  framework_operator_count: "Art 33(3)/(4), integer at least 1"
+  call_off_method_key: "Art 33(4), one of the two call-off method atoms"
+  contracting_authority_identified_in_call_for_competition: "Art 33(2) second subparagraph, boolean"
+  economic_operator_party_to_framework: "Art 33(2) second subparagraph, boolean"
+  call_off_entails_substantial_modification: "Art 33(2) third subparagraph, boolean, an atomic input"
+  call_off_within_limits_of_framework_terms: "Art 33(3), boolean, read only for a single-operator framework"
+  framework_sets_out_all_terms: "Art 33(4)(a)-(c), boolean"
+  objective_conditions_for_determining_performer_indicated: "Art 33(4)(a), boolean"
+  partly_with_partly_without_reopening_stipulated: "Art 33(4)(b), boolean"
+  objective_criteria_for_choice_of_route_stated: "Art 33(4)(b), boolean"
+  terms_subject_to_reopening_specified: "Art 33(4)(b), boolean"
+  reopened_competition_based_on_framework_terms: "Art 33(5) chapeau, boolean"
+  capable_operators_consulted_in_writing: "Art 33(5)(a), boolean"
+  time_limit_sufficiently_long: "Art 33(5)(b), boolean, an atomic input"
+  tenders_submitted_in_writing: "Art 33(5)(c), boolean"
+  tender_contents_confidential_until_time_limit_expired: "Art 33(5)(c), boolean"
+  award_made_on_framework_award_criteria: "Art 33(5)(d), boolean"

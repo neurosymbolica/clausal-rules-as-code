@@ -1,0 +1,107 @@
+# Statute pin for eu/procurement/framework_agreements (stage 00a pin-statute).
+#
+# ARTICLE granularity, not division. The smallest document-native element that
+# covers this domain's determination is <ARTICLE IDENTIFIER="033">. The smallest
+# containing DIVISION is CHAPTER II "Techniques and instruments for electronic
+# and aggregated procurement" (Arts 033-039, 82 units), of which only 13 are
+# Article 33: pinning the chapter would leave 69 units -- Art 34 dynamic
+# purchasing systems and Art 35 electronic auctions (BOTH separate Wave-3
+# domains, commissioned concurrently), Art 36 electronic catalogues, Art 37
+# central purchasing bodies, Art 38 occasional joint procurement and Art 39
+# procurement involving contracting authorities from different Member States --
+# permanently RED in this domain's ledger. That is the failure the
+# contract_modifications pathfinder measured on CHAPTER IV (44 units, 19 out of
+# scope) and the reason article granularity was settled (pipeline f2780ea;
+# _pins/SUBTREE-MAP.md "Pathfinder result", 2026-08-19). Here the ratio is worse
+# than the pathfinder's: 69 of 82.
+doc_id: 02014L0024-20260101
+celex: 02014L0024
+consolidated: "2026-01-01"
+format: fmx4
+# TWO URLS BECAUSE THEY ANSWER DIFFERENT QUESTIONS. The celex form is the stable
+# entry point and is what to re-fetch from; the cellar form is what that redirect
+# actually resolved to on the date below, so a future re-fetch landing somewhere
+# else is visible rather than silent.
+url: "http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4"
+resolved_url: "http://publications.europa.eu/resource/cellar/385cb957-f086-11f0-8d3c-01aa75ed71a1.0007.01/DOC_1"
+fetched: 2026-08-20
+file: 02014L0024-20260101-art033.fmx4.xml
+sha256: "707fc3dab41b3e351529cb3f331ceef7addaab9fb8a798aaa46c08ab67845b29"
+
+# THE EXTRACT IS DECLARED, NOT IMPLIED. The pin above covers the extract's bytes;
+# these fields make the CUT itself reproducible and falsifiable -- re-fetch the
+# source, check its hash, re-cut the same element, compare.
+#
+# THE CUT IS DECLARED BY `root`, AND `root` IS CHECKED. `units.extract_roots()`
+# reads which element the pinned BYTES actually start at and refuses a sidecar
+# claiming otherwise, so this is falsifiable rather than merely asserted. The
+# old `extract.division:` key is REFUSED outright rather than read as a synonym:
+# it named a KIND of element, `root` names an element. `element:` and
+# `identifier:` are read by nothing and are not written here.
+extract:
+  root: art_033
+  heading: "Article 33 - Framework agreements"
+  articles: ["033"]
+  units: 13          # art_033 title + 5 PARAG + 3 NP points (033.004 a-c) + 4 NP points (033.005 a-d)
+  source_file: CL2014L0024EN0060010.0001.xml
+  source_sha256: "d732f7f9a547b315289cd7447c33f73ce63a3797ed299e4dad4ff3066e157772"
+  method: >
+    The single <ARTICLE IDENTIFIER="033"> of the consolidated act, cut whole,
+    with a PI-PRESERVING PARSER --
+    ET.XMLParser(target=ET.TreeBuilder(insert_pis=True, insert_comments=True)).
+    THAT IS NOT A DETAIL: the default ElementTree TreeBuilder SILENTLY DROPS
+    processing instructions, and this span carries one (<?PAGE NO='44'?>). The
+    consolidated act carries 217 of them across three targets -- PAGE, CLG.MDFO
+    and CLG.MDFC -- and the CLG.MDF* pair are the consolidation
+    modification-open/close markers that a repealed-or-modified-text guard
+    reads. Dropping them destroys that evidence silently; measured at 8.3% of
+    units on another instrument by the layer owner. This extract's span carries
+    no CLG.MDF* marker, but it is cut the safe way regardless. An
+    ARTICLE carries the document's own IDENTIFIER, so this is a boundary the
+    document draws itself, not an article range chosen by hand. Re-parented under
+    the original CONS.ACT > CONS.DOC > ENACTING.TERMS chain with INFO.CONSLEG and
+    BIB.INSTANCE kept, so the extract is a well-formed, self-identifying Formex
+    document rather than a detached fragment. The enclosing DIVISION shells
+    (TITLE II > CHAPTER II) are NOT carried: their TITLEs would each become a
+    unit of this domain's ledger that no rule of this domain will ever cover,
+    and the chapter title would slug into every unit id below it.
+  verified: >
+    Checked 2026-08-20, four ways, not asserted. (1) The full source document was
+    fetched at the URL above via its 303 redirect to
+    .../cellar/385cb957-f086-11f0-8d3c-01aa75ed71a1.0007.01/DOC_1 (application/zip,
+    122991 bytes, zip sha256 37e13bbe2cb5481f6a946317397d5aba6ec64ac591f5da9bbbf4a1340a0d19dd)
+    and its inner CL2014L0024EN0060010.0001.xml hashes to source_sha256 above,
+    matching the hash independently recorded in the Wave-2 Art 67 pin and in
+    _pins/SUBTREE-MAP.md. (2) The extracted <ARTICLE IDENTIFIER="033"> subtree
+    serialises byte-identically to the same element in the full source, and its
+    normalised text (4800 characters) is identical. (3) Parsed with the real
+    reader (_tools/provisions/units.py Formex profile): 13 units, art_033 through
+    point_033.005_d, every unit in scope, zero out-of-scope units, zero problems;
+    extract_roots() on the pinned bytes returns exactly ['art_033'], which is what
+    extract.root above declares. (4) Cross-checked unit-for-unit against a CONTROL
+    cut of the enclosing DIVISION (CHAPTER II "Techniques and instruments for
+    electronic and aggregated procurement", extract_roots() ['division_chapter_ii'],
+    82 units, 11 processing instructions, cut the same PI-preserving way): all 13
+    Article 33 units resolve in both with IDENTICAL run text,
+    and the control carries 69 units this domain would never cover. The full act
+    itself cannot be parsed end-to-end today -- the reader refuses it on a
+    duplicate ANNEX I id from the bilingual FR/NL Belgian authorities table --
+    which is why the control cut, not the whole document, is the comparison basis.
+  processing_instructions: >
+    ONE, preserved and checked: <?PAGE NO='44'?>, inside the Art 33 span. The
+    reader (_tools/provisions/units.py) IGNORES it -- verified, not assumed: all
+    13 units parse with run text identical to the PI-less cut, and no unit's text
+    contains "44" or "PAGE". So preserving it costs the ledger nothing and keeps
+    the page-boundary evidence in the pinned bytes where a later guard can read
+    it. The CONTROL cut of CHAPTER II carries 11 PIs on the same basis.
+  runs: >
+    EVERY ONE OF THE 13 UNITS HAS EXACTLY ONE RUN, measured, not assumed. That
+    matters for this article specifically: parag_033.001, parag_033.002 and
+    parag_033.003 each carry SEVERAL <ALINEA> subparagraphs (the four-year rule
+    is the third subparagraph of 33(1); the closed-parties rule and the
+    no-substantial-modification rule are the second and third of 33(2)), and the
+    Formex reader joins them into ONE run per PARAG. So a `<doc>#parag_033.001/2`
+    run selector does NOT address the definition sentence separately -- it is out
+    of range. Deferrals and citations in this domain therefore address WHOLE
+    PARAG units, and a citation's `verbatim` that quotes one subparagraph is a
+    substring of its unit's single run, never a join across runs.

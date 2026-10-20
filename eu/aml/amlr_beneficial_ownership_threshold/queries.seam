@@ -1,0 +1,136 @@
+# =====================================================================
+# queries.clausal -- QUERY-COMBINATOR layer (Q1 wave: #5/#6/#8/#9/#16/#24)
+#
+# PURELY ADDITIVE (no decision/requirements/computation sibling edited --
+# those three collapsed into beneficial_ownership.clausal in the Wave C
+# re-slice, 2026-08-07, with their clause bodies unchanged).
+# Wires kit query_combinators over the UNTOUCHED rulebase surface:
+#   amlr_bo_diff/3            #5 comparison / #16 what-if (delta rows)
+#   amlr_bo_what_if/3         #16 what-if (hypothetical ownership change)
+#   amlr_bo_direct_boundary/1 #6 threshold / #24 sensitivity (cliff located
+#                             EMPIRICALLY by verdict flip, not read from the
+#                             constant -- the test asserts located == declared)
+#   amlr_bo_gap_to_threshold/2 #8 counterfactual / #9-numeric / #24 margin:
+#                             the SMALLEST additional direct holding (integer
+#                             bp, a new parallel chain) that flips the person
+#                             to beneficial owner
+#   (amlr_bo_minimal_unsatisfiable_subset/2, #9 minimal-cause via kit find_minimal_unsatisfiable_subset, lives in the
+#    private overlay private.eu.aml.amlr_beneficial_ownership_threshold.queries, D67)
+#
+# MODULE IDENTITY: diff_checklists reads checklist rows STRUCTURALLY
+# (functor/3 + arg/3), so amlr_bo_checklist/2 output (bare-formalize_lib
+# item/3 rows) is consumed DIRECTLY -- no kit-side re-evaluation needed
+# (unlike the first adopter th/visa, which predates the identity-robust
+# combinators). find_minimal_unsatisfiable_subset/failing_ids evaluate requirement/4 through kit
+# eval_requirements; the required-id atoms pass through structurally unchanged.
+#
+# BOUNDARY SCANS are TWO-STAGE (coarse 100-bp units over the full 0..100%
+# range, then fine 1-bp steps inside the flipped 100-bp window): ~125 probes
+# instead of a 10 000-step sweep, with NO prior knowledge of where the
+# boundary sits. The two stages are inlined per predicate because a shared
+# helper would have to thread the probe closure through a nested closure
+# (closures lose callable arity when nested in a compound -- kit header).
+# Integer-bp probes only; the underlying aggregate may be an exact rational
+# (e.g. 24.995%), which the scan handles for free: the flip happens at the
+# first INTEGER bp top-up that reaches the threshold (ceil semantics).
+# =====================================================================
+
+-module(queries, [
+    amlr_bo_diff(PROFILE_A, PROFILE_B, CHANGED),
+    amlr_bo_what_if(PROFILE, HYP_CHAINS, CHANGED),
+    amlr_bo_direct_boundary(BOUNDARY_BPS),
+    amlr_bo_gap_to_threshold(CHAINS, GAP_BPS)
+])
+-double_quotes(chars)
+
+-import_from(eu.aml.amlr_beneficial_ownership_threshold.beneficial_ownership, [
+    eligible, ineligible, ownership_chains,
+    amlr_bo_checklist, amlr_bo_status])
+-import_from(query_combinators, [
+    diff_checklists, changed_deltas, flip_scan])
+
+-strict_atoms
+
+
+# =====================================================================
+# amlr_bo_diff/3 -- #5 comparison / #16 what-if support
+# =====================================================================
+# The requirement rows that CHANGED between two profiles, as
+# delta(REQ_ID, STATUS_A, STATUS_B) terms (kit delta vocabulary). Both
+# checklists are the rulebase's own amlr_bo_checklist/2 output, consumed
+# directly by the identity-robust kit diff (see header). Deterministic;
+# CHANGED is [] when the two profiles agree on every requirement.
+amlr_bo_diff(PROFILE_A, PROFILE_B, CHANGED) <- (
+    amlr_bo_checklist(PROFILE_A, CL_A),
+    amlr_bo_checklist(PROFILE_B, CL_B),
+    diff_checklists(CL_A, CL_B, DELTAS),
+    changed_deltas(DELTAS, CHANGED)
+)
+
+
+# =====================================================================
+# amlr_bo_what_if/3 -- #16 what-if: hypothetical ownership change
+# =====================================================================
+# Re-evaluate PROFILE under the hypothesis that the person's ownership
+# chains become HYP_CHAINS, reporting the changed requirement rows.
+# The hypothetical profile is a dict override ({**PROFILE, ...}); the
+# stored PROFILE is never mutated. Also covers the missing-evidence
+# channel: an absent ownership_chains key diffs unknown([...]) -> met/unmet.
+# D80: the dict override needs a ground dict PROFILE; anything else gives no
+# answer here (the checklist of each side carries the input check itself).
+amlr_bo_what_if(PROFILE, HYP_CHAINS, CHANGED) <- (
+    ground(PROFILE),
+    is_dict(PROFILE),
+    amlr_bo_diff(PROFILE, {**PROFILE, ownership_chains: HYP_CHAINS}, CHANGED)
+)
+
+
+# =====================================================================
+# amlr_bo_direct_boundary/1 -- #6 threshold / #24 sensitivity (the cliff)
+# =====================================================================
+# The direct-holding level at which a sole-chain holder FLIPS to beneficial
+# owner, located empirically by sweeping the holding and watching
+# amlr_bo_status/2 flip -- not by reading bo_threshold. Two-stage scan:
+# coarse in 100-bp (1%) units over the full 0..10000 bp range, then fine in
+# 1-bp steps inside the flipped window. Art 52(1) "25 % or more" is
+# INCLUSIVE, so the flip lands ON the threshold: 2500 bp.
+amlr_bo_direct_boundary(BOUNDARY_BPS) <- (
+    flip_scan(0, 100,
+        ((U, V) <- (
+            BPS == U * 100,
+            amlr_bo_status([[BPS]], V))),
+        COARSE_UNITS),
+    FINE_LO == (COARSE_UNITS - 1) * 100,
+    FINE_HI == COARSE_UNITS * 100,
+    flip_scan(FINE_LO, FINE_HI,
+        ((B, V) <- amlr_bo_status([[B]], V)),
+        BOUNDARY_BPS)
+)
+
+
+# =====================================================================
+# amlr_bo_gap_to_threshold/2 -- #8 counterfactual (minimal flip change)
+# =====================================================================
+# The smallest additional DIRECT holding (integer bp, modelled as one new
+# parallel chain [[GAP_BPS]] added to CHAINS) that makes the person a
+# beneficial owner. 0 when CHAINS already qualifies. Because the Art 52(1)
+# aggregate can be an exact rational (e.g. 50% x 49.99% = 24.995%), the gap
+# is NOT "threshold minus holding" in integer arithmetic -- the empirical
+# scan yields the correct ceiling (24.995% needs +1 bp, not +0). Disjoint
+# guards on the current verdict keep the predicate deterministic.
+amlr_bo_gap_to_threshold(CHAINS, 0) <- (
+    amlr_bo_status(CHAINS, eligible)
+)
+amlr_bo_gap_to_threshold(CHAINS, GAP_BPS) <- (
+    amlr_bo_status(CHAINS, ineligible),
+    flip_scan(0, 100,
+        ((U, V) <- (
+            TOP == U * 100,
+            amlr_bo_status([[TOP], *CHAINS], V))),
+        COARSE_UNITS),
+    FINE_LO == (COARSE_UNITS - 1) * 100,
+    FINE_HI == COARSE_UNITS * 100,
+    flip_scan(FINE_LO, FINE_HI,
+        ((B, V) <- amlr_bo_status([[B], *CHAINS], V)),
+        GAP_BPS)
+)

@@ -1,0 +1,127 @@
+-double_quotes(chars)
+# =====================================================================
+# test_queries.clausal -- exercise every query combinator exported by
+# queries.clausal.
+# Run: python -m clausal.testing eu/procurement/framework_agreements/tests/test_queries.clausal
+# =====================================================================
+-import_from(eu.procurement.framework_agreements.queries, [
+    framework_agreements_profile_keys,
+    framework_agreements_what_if,
+    framework_agreements_route_status,
+    framework_agreements_enumerate_defects,
+    framework_agreements_term_boundary,
+    framework_agreements_threshold_status
+])
+
+-import_from(eu.procurement.framework_agreements.framework_agreements, [
+    framework_start_date,
+    framework_end_date,
+    call_off_award_date,
+    framework_operator_count,
+    call_off_method_key,
+    exceptional_case_duly_justified,
+    call_off_entails_substantial_modification,
+    call_off_within_limits_of_framework_terms,
+    framework_sets_out_all_terms,
+    single_operator_direct_award,
+    multi_operator_direct_award_all_terms_set_out,
+    multi_operator_reopened_competition,
+    no_lawful_route,
+    within_four_year_limit,
+    exceeds_four_year_limit,
+    call_off_lawful,
+    call_off_unlawful
+])
+
+-import_from(eu.procurement.framework_agreements.kernel, [framework_agreements_verdict])
+
+-import_from(eu.procurement.framework_agreements.fixtures, [
+    framework_agreements_profile_for
+])
+
+-import_from(date_time, [date])
+
+# --- #4 enumeration: profile keys ---
+test("profile keys: returns exactly 21 keys") <- (
+    framework_agreements_profile_keys(PROFILE_KEYS),
+    length(PROFILE_KEYS, 21)
+)
+
+test("profile keys: framework_start_date is present") <- (
+    framework_agreements_profile_keys(PROFILE_KEYS),
+    framework_start_date in PROFILE_KEYS
+)
+
+test("profile keys: framework_operator_count is present") <- (
+    framework_agreements_profile_keys(PROFILE_KEYS),
+    framework_operator_count in PROFILE_KEYS
+)
+
+# --- #3 status determination: route ---
+test("route status: single-operator profile yields single_operator_direct_award") <- (
+    framework_agreements_profile_for("single_op_lawful", PROFILE),
+    framework_agreements_route_status(PROFILE, single_operator_direct_award)
+)
+
+test("route status: multi-direct-all profile yields multi_operator_direct_award_all_terms_set_out") <- (
+    framework_agreements_profile_for("multi_direct_all_lawful", PROFILE),
+    framework_agreements_route_status(PROFILE, multi_operator_direct_award_all_terms_set_out)
+)
+
+test("route status: no-route profile yields no_lawful_route") <- (
+    framework_agreements_profile_for("no_route_single_reopen", PROFILE),
+    framework_agreements_route_status(PROFILE, no_lawful_route)
+)
+
+# --- #4 enumeration: defects ---
+test("enumerate defects: lawful profile has empty defect list") <- (
+    framework_agreements_profile_for("single_op_lawful", PROFILE),
+    framework_agreements_enumerate_defects(PROFILE, DEFECTS),
+    DEFECTS is []
+)
+
+test("enumerate defects: outside-term profile has a non-empty defect list") <- (
+    framework_agreements_profile_for("single_op_outside_term", PROFILE),
+    framework_agreements_enumerate_defects(PROFILE, DEFECTS),
+    DEFECTS != []
+)
+
+# --- #6 threshold: boundary date ---
+test("term boundary: 2024-01-01 start yields 2028-01-01 limit") <- (
+    framework_agreements_term_boundary(date(2024, 1, 1), date(2028, 1, 1))
+)
+
+test("term boundary: 2024-02-29 start yields 2028-02-29 limit (leap)") <- (
+    framework_agreements_term_boundary(date(2024, 2, 29), date(2028, 2, 29))
+)
+
+# The case the leap test above does NOT reach: 2028 IS a leap year, so the
+# anniversary exists and the clamp never runs. 2100 is a century non-leap year,
+# so 2096-02-29 + 4y has no anniversary and `date/3` raises -- this is the only
+# test in the domain that exercises the recovery in framework_term_limit_date/2.
+# Without it the clamp can be disarmed with every suite still green, which is
+# exactly what happened when the -double_quotes(chars) flip turned the catcher's
+# `"date"` from an atom into a string (fixed 85d369c6, tightened to `'date'`).
+test("term boundary: 2096-02-29 start CLAMPS to 2100-02-28 (century non-leap)") <- (
+    framework_agreements_term_boundary(date(2096, 2, 29), date(2100, 2, 28))
+)
+
+# --- #6 threshold: status classification ---
+test("threshold status: exactly 4 years is within limit") <- (
+    framework_agreements_threshold_status(date(2024, 1, 1), date(2028, 1, 1), within_four_year_limit)
+)
+
+test("threshold status: 4 years plus 1 day exceeds limit") <- (
+    framework_agreements_threshold_status(date(2024, 1, 1), date(2028, 1, 2), exceeds_four_year_limit)
+)
+
+# --- what-if ---
+test("what_if: flipping exceptional_case_duly_justified to True makes an over-long term lawful") <- (
+    framework_agreements_profile_for("term_exceeds", PROFILE),
+    framework_agreements_what_if(PROFILE, exceptional_case_duly_justified, True, framework_agreements_verdict(_, _))
+)
+
+test("what_if: flipping call_off_entails_substantial_modification to True makes a lawful call-off unlawful") <- (
+    framework_agreements_profile_for("single_op_lawful", PROFILE),
+    framework_agreements_what_if(PROFILE, call_off_entails_substantial_modification, True, framework_agreements_verdict(_, _))
+)

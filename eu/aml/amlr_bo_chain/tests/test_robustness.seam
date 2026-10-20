@@ -1,0 +1,306 @@
+# =====================================================================
+# test_robustness.seam -- robustness tests for the AMLR Art 52(1)
+# ownership-chain determination ubo_status/4 (and the public predicates
+# that answer through it).
+#
+# What a robust answer looks like here. ubo_status/4 has only two verdicts,
+# `eligible` and `ineligible`; the domain has no `indeterminate` (NOTES.md
+# section 3). So when an input is missing or of the wrong type, the only
+# acceptable outcomes are: no answer at all (fail closed), or a deliberate
+# ISO error from a guard. The domain has no input guards, so any error that
+# comes back is incidental (a crash). A definite `eligible` or `ineligible`
+# for a missing or ill-typed input is a fails-open defect.
+#
+# Tests whose names start with FAILS OPEN or CRASH are minimal reproductions
+# of a defect and are expected to fail until the rulebase is fixed. Do not
+# weaken them.
+#
+# Not tested here, by design:
+#   - cyclic holdings: NOTES.md section 2 says "The ownership graph must have
+#     no cycles. A cycle is not detected." (a cycle does not terminate);
+#   - percentages below 0 or above 10 000 and over-issued entities: NOTES.md
+#     section 4 makes these the caller's checks (bad_link/1, over_issued/1),
+#     "Neither check is applied by ubo_status/4".
+# =====================================================================
+
+-double_quotes(chars)
+-import_from(eu.aml.amlr_bo_chain, [
+    ubo_status, effective_ownership, bo_chain_justification,
+    bo_chain_what_if_holding])
+-import_from(eu.aml.amlr_bo_chain.ownership_interest, [eligible, ineligible])
+-import_from(eu.aml.amlr_bo_chain.ownership_interest, [
+    bo_chain_input_problem, not_ground, not_a_list, malformed_edge, wrong_type,
+    out_of_range, self_holding, cyclic_holdings, holdings, person, entity,
+    expected_name, expected_integer])
+-import_from(eu.aml.amlr_bo_chain, [
+    bo_chain_qualifying_holders, bo_chain_direct_vs_effective, bo_chain_set_holding])
+
+# ---------------------------------------------------------------------
+# Fixture graphs ([HOLDER, HELD, PERCENT_IN_BASIS_POINTS] edges). The first
+# five are the graphs tests/test_queries.seam pins; copied here because test
+# files cannot import each other's facts.
+# ---------------------------------------------------------------------
+# 50% x 50% chain: exactly 25.00% -> beneficial owner (pinned eligible)
+graph_chain([["alice", "h1", 5000], ["h1", "target", 5000]]),
+# 50% x 49.99% chain: 24.995% -> not a beneficial owner (pinned ineligible)
+graph_sub_basis_point([["alice", "h1", 5000], ["h1", "target", 4999]]),
+# 10% direct + 50% x 30% chain = 25%
+graph_parallel([["alice", "target", 1000], ["alice", "h1", 5000],
+                ["h1", "target", 3000]]),
+# chain + unrelated holders bob 30% and carol 20%
+graph_multiple_holders([["alice", "h1", 5000], ["h1", "target", 5000],
+                        ["bob", "target", 3000], ["carol", "target", 2000]]),
+# duplicate parallel direct stakes 25% + 26%
+graph_duplicate_edges([["alice", "target", 2500], ["alice", "target", 2600]]),
+
+# no_definite_verdict(HOLDINGS, PERSON, ENTITY): ubo_status/4 gives neither
+# eligible nor ineligible. An error raised inside propagates and fails the
+# test as a crash (there is no guard whose error would count as a refusal).
+no_definite_verdict(HOLDINGS, PERSON, ENTITY) <- (
+    findall(V, ubo_status(HOLDINGS, PERSON, ENTITY, V), VERDICTS),
+    not in_(eligible, VERDICTS),
+    not in_(ineligible, VERDICTS)
+)
+
+exactly_one_verdict(HOLDINGS, PERSON, ENTITY) <- (
+    findall(V, ubo_status(HOLDINGS, PERSON, ENTITY, V), VERDICTS),
+    length(VERDICTS, 1)
+)
+
+# =====================================================================
+# Controls: the valid starting profiles still give their pinned answers.
+# =====================================================================
+test("control: the 50 x 50 chain is eligible") <- (
+    graph_chain(G), ubo_status(G, "alice", "target", eligible)
+)
+test("control: the 50 x 49.99 chain is ineligible") <- (
+    graph_sub_basis_point(G), ubo_status(G, "alice", "target", ineligible)
+)
+
+# =====================================================================
+# 1. Dropping each required input (an argument left unbound). Every one of
+#    HOLDINGS, PERSON and ENTITY is required; none has a legal default.
+# =====================================================================
+test("CRASH: holdings left unbound raises a Python RecursionError instead of failing or refusing") <- (
+    no_definite_verdict(_, "alice", "target")
+)
+test("FAILS OPEN: person left unbound yields a definite verdict") <- (
+    graph_chain(G), no_definite_verdict(G, _, "target")
+)
+test("FAILS OPEN: entity left unbound yields a definite verdict") <- (
+    graph_chain(G), no_definite_verdict(G, "alice", _)
+)
+
+# =====================================================================
+# 2. Wrong types.
+# =====================================================================
+# --- holdings not a list of edges ---
+test("FAILS OPEN: holdings given as an atom yields ineligible") <- (
+    no_definite_verdict('holdings', "alice", "target")
+)
+test("FAILS OPEN: holdings given as a number yields ineligible") <- (
+    no_definite_verdict(5000, "alice", "target")
+)
+test("FAILS OPEN: holdings given as a string yields ineligible") <- (
+    no_definite_verdict("alice target 5000", "alice", "target")
+)
+test("FAILS OPEN: an edge given as an atom is silently skipped and yields ineligible") <- (
+    no_definite_verdict(['edge'], "alice", "target")
+)
+test("FAILS OPEN: an edge with two elements instead of three is silently skipped and yields ineligible") <- (
+    no_definite_verdict([["alice", "target"]], "alice", "target")
+)
+
+# --- the percentage of an edge not a number ---
+# The arithmetic in ownership_interest.seam (C == PCT, C == PCT * SUB / 10000)
+# raises a CLP domain_error(clpz_expression, _) on these; that is not a guard.
+test("CRASH: a percentage given as a string raises a CLP domain error") <- (
+    no_definite_verdict([["alice", "target", "3000"]], "alice", "target")
+)
+test("CRASH: a percentage given as an atom raises a CLP domain error") <- (
+    no_definite_verdict([["alice", "target", 'thirty']], "alice", "target")
+)
+test("CRASH: a percentage given as a list raises a CLP domain error") <- (
+    no_definite_verdict([["alice", "target", [3000]]], "alice", "target")
+)
+test("CRASH: a percentage given as the boolean atom true raises a CLP domain error") <- (
+    no_definite_verdict([["alice", "target", 'true']], "alice", "target")
+)
+test("CRASH: a string percentage on the second level of a chain raises a CLP domain error") <- (
+    no_definite_verdict([["alice", "h1", 5000], ["h1", "target", "5000"]],
+                        "alice", "target")
+)
+
+# --- person or entity not a name ---
+test("FAILS OPEN: person given as a number yields ineligible") <- (
+    graph_chain(G), no_definite_verdict(G, 42, "target")
+)
+test("FAILS OPEN: entity given as a number yields ineligible") <- (
+    graph_chain(G), no_definite_verdict(G, "alice", 7)
+)
+
+# --- the derived public predicates inherit the same answer ---
+test("FAILS OPEN: justification for holdings given as an atom gives a definite verdict") <- (
+    findall(V, bo_chain_justification('holdings', "alice", "target", V, _), VERDICTS),
+    not in_(eligible, VERDICTS),
+    not in_(ineligible, VERDICTS)
+)
+test("CRASH: what-if with a string as the new percentage raises a CLP domain error") <- (
+    graph_chain(G),
+    findall(V, bo_chain_what_if_holding(G, "h1", "target", "5000",
+                                        "alice", "target", V), VERDICTS),
+    not in_(eligible, VERDICTS),
+    not in_(ineligible, VERDICTS)
+)
+
+# =====================================================================
+# 3. The empty profile. By design (ownership_interest.seam header, lines
+#    33-35: "an empty list is evidenced 0 bp -> ineligible"; NOTES.md
+#    section 3: "A person with no holdings at all has 0 and is ineligible"):
+#    an empty holdings list is evidence of no ownership, not missing input.
+# =====================================================================
+test("empty holdings (by design, NOTES section 3): ineligible, exactly once") <- (
+    ubo_status([], "alice", "target", ineligible),
+    exactly_one_verdict([], "alice", "target")
+)
+test("empty holdings: effective ownership is 0") <- (
+    effective_ownership([], "alice", "target", 0)
+)
+
+# =====================================================================
+# 4. Exactly one answer for every fixture graph and every holder in it.
+# =====================================================================
+test("exactly one verdict: chain graph, alice") <- (
+    graph_chain(G), exactly_one_verdict(G, "alice", "target")
+)
+test("exactly one verdict: sub-basis-point chain, alice") <- (
+    graph_sub_basis_point(G), exactly_one_verdict(G, "alice", "target")
+)
+test("exactly one verdict: parallel graph, alice") <- (
+    graph_parallel(G), exactly_one_verdict(G, "alice", "target")
+)
+test("exactly one verdict: parallel graph, intermediate h1") <- (
+    graph_parallel(G), exactly_one_verdict(G, "h1", "target")
+)
+test("exactly one verdict: multiple holders, alice") <- (
+    graph_multiple_holders(G), exactly_one_verdict(G, "alice", "target")
+)
+test("exactly one verdict: multiple holders, bob") <- (
+    graph_multiple_holders(G), exactly_one_verdict(G, "bob", "target")
+)
+test("exactly one verdict: multiple holders, carol") <- (
+    graph_multiple_holders(G), exactly_one_verdict(G, "carol", "target")
+)
+test("exactly one verdict: duplicate edges, alice") <- (
+    graph_duplicate_edges(G), exactly_one_verdict(G, "alice", "target")
+)
+test("exactly one verdict: a person absent from the graph") <- (
+    graph_chain(G), exactly_one_verdict(G, "zed", "target")
+)
+
+# =====================================================================
+# Boundary values at the 2500 basis point line (Art 52(1) "25 % or more",
+# inclusive), direct and through a two-level chain.
+# =====================================================================
+test("boundary: 2499 bp direct is ineligible") <- (
+    ubo_status([["alice", "target", 2499]], "alice", "target", ineligible)
+)
+test("boundary: 2500 bp direct is eligible") <- (
+    ubo_status([["alice", "target", 2500]], "alice", "target", eligible)
+)
+test("boundary: 2501 bp direct is eligible") <- (
+    ubo_status([["alice", "target", 2501]], "alice", "target", eligible)
+)
+test("boundary: 50% x 50.02% chain (2501 bp) is eligible") <- (
+    ubo_status([["alice", "h1", 5000], ["h1", "target", 5002]],
+               "alice", "target", eligible)
+)
+
+# =====================================================================
+# 5. The input check (added with the D80 fix, 2026-10-20). Each problem
+#    term of bo_chain_input_problem/4 is reported for a minimal input, a
+#    valid input has no problem, and the cases that used to hang or that
+#    NOTES left to the caller now give no verdict.
+# =====================================================================
+test("input check: a valid graph has no problem") <- (
+    graph_chain(G),
+    findall(P, bo_chain_input_problem(G, "alice", "target", P), []),
+    graph_multiple_holders(G2),
+    findall(P2, bo_chain_input_problem(G2, "bob", "target", P2), [])
+)
+test("input check: exactly one problem term is reported") <- (
+    findall(P, bo_chain_input_problem('holdings', 42, 7, P), PROBLEMS),
+    length(PROBLEMS, 1)
+)
+test("input check reports not_ground for unbound holdings") <- (
+    bo_chain_input_problem(_, "alice", "target", not_ground)
+)
+test("input check reports not_ground for an unbound percentage inside an edge") <- (
+    bo_chain_input_problem([["alice", "target", _]], "alice", "target", not_ground)
+)
+test("input check reports not_a_list for holdings given as an atom") <- (
+    bo_chain_input_problem('holdings', "alice", "target", not_a_list(holdings))
+)
+test("input check reports malformed_edge for a two-element edge") <- (
+    bo_chain_input_problem([["alice", "target"]], "alice", "target",
+                           malformed_edge(["alice", "target"]))
+)
+test("input check reports wrong_type expected_name for a numeric holder") <- (
+    bo_chain_input_problem([[1, "target", 3000]], "alice", "target",
+                           wrong_type([1, "target", 3000], expected_name))
+)
+test("input check reports wrong_type expected_integer for a string percentage") <- (
+    bo_chain_input_problem([["alice", "target", "3000"]], "alice", "target",
+                           wrong_type(["alice", "target", "3000"], expected_integer))
+)
+test("input check reports out_of_range for a negative percentage") <- (
+    bo_chain_input_problem([["alice", "target", -1]], "alice", "target",
+                           out_of_range(["alice", "target", -1]))
+)
+test("input check reports out_of_range above 10000 basis points") <- (
+    bo_chain_input_problem([["alice", "target", 10001]], "alice", "target",
+                           out_of_range(["alice", "target", 10001]))
+)
+test("input check accepts the range ends 0 and 10000 basis points") <- (
+    findall(P, bo_chain_input_problem([["alice", "h1", 0], ["h1", "target", 10000]],
+                                      "alice", "target", P), [])
+)
+test("input check reports self_holding for an entity holding itself") <- (
+    bo_chain_input_problem([["h1", "h1", 5000]], "alice", "target",
+                           self_holding(["h1", "h1", 5000]))
+)
+test("input check reports cyclic_holdings for a two-entity cycle") <- (
+    bo_chain_input_problem([["h1", "h2", 5000], ["h2", "h1", 5000]], "alice", "target",
+                           cyclic_holdings(_))
+)
+test("input check reports wrong_type for a numeric person") <- (
+    graph_chain(G),
+    bo_chain_input_problem(G, 42, "target", wrong_type(person, expected_name))
+)
+test("input check reports wrong_type for a numeric entity") <- (
+    graph_chain(G),
+    bo_chain_input_problem(G, "alice", 7, wrong_type(entity, expected_name))
+)
+test("a cyclic graph gives no verdict and terminates (formerly did not terminate)") <- (
+    no_definite_verdict([["alice", "h1", 5000], ["h1", "h2", 5000],
+                         ["h2", "h1", 5000], ["h1", "target", 5000]],
+                        "alice", "target")
+)
+test("an out-of-range percentage gives no verdict") <- (
+    no_definite_verdict([["alice", "target", 20000]], "alice", "target")
+)
+test("a negative percentage gives no verdict") <- (
+    no_definite_verdict([["alice", "target", -5000], ["alice", "target", 8000]],
+                        "alice", "target")
+)
+test("qualifying holders: holdings given as an atom gives no list") <- (
+    findall(Q, bo_chain_qualifying_holders('holdings', "target", Q), [])
+)
+test("direct vs effective: a string percentage gives no answer and no error") <- (
+    findall(D, bo_chain_direct_vs_effective([["alice", "target", "3000"]],
+                                            "alice", "target", D, _), [])
+)
+test("set holding: an out-of-range new percentage gives no hypothetical graph") <- (
+    graph_chain(G),
+    findall(X, bo_chain_set_holding(G, "h1", "target", 10001, X), [])
+)

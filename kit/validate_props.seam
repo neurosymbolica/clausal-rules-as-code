@@ -1,0 +1,373 @@
+# =====================================================================
+# validate_props.clausal -- reusable verification PROPERTIES (Clausify kit).
+# Clausal port of kit/validate_props.pl. Cut-free, ->-free, ALL_CAPS vars.
+#
+# SHAPE-NEUTRALITY CONTRACT (preserved from the .pl original):
+#   SHAPE-NEUTRAL (any result shape):
+#     run_prop/3, prop_totality/3, prop_determinism/3,
+#     prop_consistency/4, prop_citation_complete/3, prop_boundary_coverage/2
+#   CHECKLIST-SHAPED only (assessment(_,_,[item(ID,Status,Cite)])):
+#     Callers using checklist domains pass the appropriate closures to the
+#     shape-neutral predicates -- see test_validate_props.clausal for examples.
+#
+# PROPERTY STATUS:
+#   P1 Totality             -- WORKING  prop_totality/3
+#   P2 Determinism          -- WORKING  prop_determinism/3
+#   P3 Consistency          -- WORKING  prop_consistency/4
+#   P4 Boundary Coverage    -- WORKING  prop_boundary_coverage/2 (discipline helper)
+#   P5 Citation Completeness-- WORKING  prop_citation_complete/3
+#   P6 Missing-Key Coverage -- WORKING prop_missing_key_coverage/3
+#   P7 Monotonicity         -- WORKING prop_monotone/5
+#   P8 No-Antinomy          -- TODO (defeasibility family only; see stub below)
+#
+# VACUOUS PROPERTIES:
+#   If the engine architecture guarantees a property (e.g. single-solution
+#   engine guarantees determinism), call:
+#       declare_vacuous("determinism")
+#   from the domain harness. Never write bare vacuous_property facts.
+#
+# CALL CONVENTIONS for closure-based generators:
+#   SUBJ_GEN:  1-arg closure  (SUB) <- domain_subject(SUB)
+#   ASSESS_GEN: 2-arg closure (SUB, R) <- assess_domain(SUB, R)
+#   REQ_GEN:   4-arg closure  (ID, PROFILE, STATUS, CITE) <- requirement(...)
+#   See each predicate's doc comment for the expected closure shape.
+# =====================================================================
+
+# Goal arguments are resolved in the CALLER's module (Scryer meta_predicate):
+# the integer is the number of extra args this library's call_goal/N appends.
+# run_props/1 takes a LIST of goals, which no meta spec can qualify -- a caller
+# must pass module-qualified goals (M:G) there.
+-meta_predicate(run_prop('?', '?', 1), prop_totality(1, 2, '?'), prop_determinism(1, 2, '?'), prop_consistency(4, '?', '?', '?'), prop_citation_complete(2, 2, '?'), prop_missing_key_coverage(4, '?', '?'))
+
+-module(validate_props, [
+    run_prop(LABEL, NAME, COLLECTOR),
+    run_props(PROP_LIST),
+    prop_totality(SUBJ_GEN, ASSESS_GEN, LABEL),
+    prop_determinism(SUBJ_GEN, ASSESS_GEN, LABEL),
+    prop_consistency(REQ_GEN, REQ_IDS, SUBJECTS, LABEL),
+    prop_citation_complete(RESULT_GEN, CITE_EXTRACTOR, LABEL),
+    prop_boundary_coverage(ORACLE_CASES, LABEL),
+    prop_missing_key_coverage(REQ_GEN, KEYS, LABEL),
+    prop_monotone(AXIS_KEY, RESULT_KEY, DIRECTION, POINTS, LABEL),
+    declare_vacuous(NAME),
+    bad_citation(C)
+])
+-double_quotes(chars)
+
+# profile_get and unknown imported from formalize_lib for P6 (unknown term matching)
+# and P7 (attribute-list key extraction). No other formalize_lib predicates needed here.
+-import_from(formalize_lib, [profile_get, unknown])
+
+# vacuous_property/1: dynamic; sentinal "__init__" bootstraps the predicate.
+# Use declare_vacuous/1 to add entries -- never write bare facts in domain files.
+-dynamic(vacuous_property/1)
+vacuous_property("__init__"),
+
+# =====================================================================
+# SHARED HELPERS
+# =====================================================================
+
+# declare_vacuous(+NAME): the supported way to flag a property as guaranteed
+# by engine architecture. Call from the domain harness section.
+declare_vacuous(NAME) <- (assertz(vacuous_property(NAME)))
+
+# bad_citation(C): succeeds when C is an invalid (empty, "none", or unground) citation.
+bad_citation(""),
+bad_citation("none"),
+bad_citation(C) <- (not ground(C))
+
+# report_prop(LABEL, NAME, VIOLS): log property outcome. ALWAYS SUCCEEDS.
+# Three disjoint-guard clauses:
+#   (a) VIOLS empty + NAME vacuous -> print [VACUOUS]
+#   (b) VIOLS empty + NAME not vacuous -> print PASS
+#   (c) VIOLS non-empty -> print FAIL
+report_prop(LABEL, NAME, VIOLS) <- (
+    sort(VIOLS, SORTED),
+    SORTED is [],
+    vacuous_property(NAME),
+    write_text("  ----  [VACUOUS] "),
+    writeln_text(LABEL)
+)
+report_prop(LABEL, NAME, VIOLS) <- (
+    sort(VIOLS, SORTED),
+    SORTED is [],
+    not vacuous_property(NAME),
+    write_text("  PASS  "),
+    writeln_text(LABEL)
+)
+report_prop(LABEL, _, VIOLS) <- (
+    sort(VIOLS, SORTED),
+    not (SORTED is []),
+    write_text("  FAIL  "),
+    write_text(LABEL),
+    write_text(" -- "),
+    print_term(SORTED)
+)
+
+# run_prop(+LABEL, +NAME, +COLLECTOR): generic property runner.
+# COLLECTOR is a 1-arg closure: call_goal(COLLECTOR, VIOL) generates one
+# violation term per solution.  Passes if COLLECTOR finds none.
+# Shape-neutral: non-checklist domains plug their own collectors here.
+# NOTE: run_prop ALWAYS SUCCEEDS (uses report_prop for accounting).
+run_prop(LABEL, NAME, COLLECTOR) <- (
+    findall(V, call_goal(COLLECTOR, V), VIOLS),
+    report_prop(LABEL, NAME, VIOLS)
+)
+
+# run_props(+PROP_LIST): call each property predicate in PROP_LIST in order.
+# Each element is a closure that takes no arguments.
+run_props([]),
+run_props([P, *PS]) <- (
+    call_goal(P),
+    run_props(PS)
+)
+
+# has_assessment(ASSESS_GEN, SUB): helper; succeeds iff ASSESS_GEN yields
+# at least one result for SUB.
+has_assessment(ASSESS_GEN, SUB) <- call_goal(ASSESS_GEN, SUB, _)
+
+# =====================================================================
+# P1 -- TOTALITY (shape-neutral)
+# =====================================================================
+# prop_totality(SUBJ_GEN, ASSESS_GEN, LABEL):
+#   SUBJ_GEN:   1-arg closure yielding subjects: (S) <- domain_subject(S)
+#   ASSESS_GEN: 2-arg closure: (S, R) <- assess_domain(S, R)
+#   LABEL:      atom/string naming this property instance (e.g. "totality")
+#
+# Succeeds iff every subject produced by SUBJ_GEN yields >= 1 result from
+# ASSESS_GEN.  Fails (after printing FAIL) when any subject is not covered.
+
+prop_totality(SUBJ_GEN, ASSESS_GEN, LABEL) <- (
+    findall(SUB,
+            ( call_goal(SUBJ_GEN, SUB),
+              not has_assessment(ASSESS_GEN, SUB) ),
+            VIOLS),
+    report_prop("totality: every subject assessable", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# P2 -- DETERMINISM (shape-neutral)
+# =====================================================================
+# prop_determinism(SUBJ_GEN, ASSESS_GEN, LABEL):
+#   Same closure shapes as prop_totality.
+#   Succeeds iff every subject produces EXACTLY ONE result.
+#   Violations: [SUB, N] pairs where N != 1.
+#
+# NOTE: Under a single-solution Clausal engine, this property is
+# architecture-guaranteed.  Declare with declare_vacuous("determinism")
+# to record it as vacuous without counting it.
+
+prop_determinism(SUBJ_GEN, ASSESS_GEN, LABEL) <- (
+    findall([SUB, N],
+            ( call_goal(SUBJ_GEN, SUB),
+              findall(_, call_goal(ASSESS_GEN, SUB, _), SOLS),
+              length(SOLS, N),
+              N != 1 ),
+            VIOLS),
+    report_prop("determinism: exactly one assessment per subject", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# P3 -- CONSISTENCY (no conflicting status per requirement per input)
+# =====================================================================
+# prop_consistency(REQ_GEN, REQ_IDS, SUBJECTS, LABEL):
+#   REQ_GEN:  4-arg closure: (ID, PROFILE, STATUS, CITE) <- requirement(ID, PROFILE, STATUS, CITE)
+#   REQ_IDS:  list of requirement IDs to check (e.g. ["req_age", "req_income"])
+#   SUBJECTS: list of profiles (or subject keys if lookup_profile is used)
+#             -- the caller passes the PROFILE directly (not a subject key).
+#             See test_validate_props.clausal for the profile-list pattern.
+#   LABEL:    property instance name.
+#
+# Violations: [ID, PROFILE, STATUSES] triples where sort(STATUSES) has >= 2 elements.
+# Succeeds iff no conflicting-status violations are found.
+#
+# Must-carry flag: every rulebase with requirement/4 or category_rule/3 clauses.
+
+prop_consistency(REQ_GEN, REQ_IDS, PROFILES, LABEL) <- (
+    findall([ID, PROFILE, STATUSES],
+            ( in_(ID, REQ_IDS),
+              in_(PROFILE, PROFILES),
+              findall(S, call_goal(REQ_GEN, ID, PROFILE, S, _), RAW),
+              sort(RAW, STATUSES),
+              length(STATUSES, N), N > 1 ),
+            VIOLS),
+    report_prop("consistency: no conflicting status per requirement", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# P4 -- BOUNDARY COVERAGE (discipline helper)
+# =====================================================================
+# prop_boundary_coverage(ORACLE_CASES, LABEL):
+#   ORACLE_CASES: list of [DIRECTION, VALUE] pairs where DIRECTION is one of
+#                 "below", "at", "above".
+#                 E.g. [["below", 17], ["at", 18], ["above", 19]]
+#   LABEL:        property instance name.
+#
+# Checks that the oracle suite covers all three boundary directions for a
+# given threshold.  The domain author constructs ORACLE_CASES by:
+#   - including one ["below", T-1] case
+#   - including one ["at", T] case  (confirms statutory <= vs <)
+#   - including one ["above", T+1] case
+# and quoting the statutory phrase in an oracle comment.
+#
+# This predicate tests COVERAGE of the oracle suite, not the results.
+# The actual boundary behaviour is tested by running the oracle cases.
+#
+# Succeeds iff all three directions are covered.
+# Must-carry flag: every numeric-threshold rulebase.
+
+prop_boundary_coverage(ORACLE_CASES, LABEL) <- (
+    findall(DIR,
+            ( in_(DIR, ["below", "at", "above"]),
+              not in_([DIR, _], ORACLE_CASES) ),
+            MISSING),
+    report_prop("boundary coverage: below/at/above covered", LABEL, MISSING),
+    MISSING is []
+)
+
+# =====================================================================
+# P5 -- CITATION COMPLETENESS (shape-neutral)
+# =====================================================================
+# prop_citation_complete(RESULT_GEN, CITE_EXTRACTOR, LABEL):
+#   RESULT_GEN:     2-arg closure: (SUBJECT, RESULT) <- assess_domain(SUBJECT, RESULT)
+#   CITE_EXTRACTOR: 2-arg closure: (RESULT, CITE) <- extract_cite(RESULT, CITE)
+#                   The extractor is allowed to be multi-solution (one per item
+#                   in a checklist result).
+#   LABEL:          property instance name.
+#
+# Violations: [SUBJECT, CITE] pairs where CITE is empty, "none", or unground.
+# Succeeds iff every result item carries a non-empty, non-"none" citation.
+#
+# CHECKLIST shape: use the following extractor closure:
+#   (R, C) <- (R is assessment(_, _, CL), in_(item(_, _, C), CL))
+# (Requires item/3 and assessment/3 imported from formalize_lib.)
+#
+# NON-CHECKLIST shapes: write a shape-specific extractor closure.
+#
+# Must-carry flag: every rulebase.
+
+prop_citation_complete(RESULT_GEN, CITE_EXTRACTOR, LABEL) <- (
+    findall([SUB, C],
+            ( call_goal(RESULT_GEN, SUB, R),
+              call_goal(CITE_EXTRACTOR, R, C),
+              bad_citation(C) ),
+            VIOLS),
+    report_prop("citation completeness: every result cited", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# P6 -- MISSING-KEY COVERAGE (runtime form)
+# =====================================================================
+# prop_missing_key_coverage(REQ_GEN, KEYS, LABEL):
+#   REQ_GEN: 4-arg closure: (ID, PROFILE, STATUS, CITE) <- requirement(...)
+#   KEYS:    list of attribute key strings that requirements are expected to check.
+#            For each KEY, at least one requirement must return unknown([KEY])
+#            (or a superset) when called with a profile that lacks KEY.
+#   LABEL:   property instance name.
+#
+# Runtime form: drives REQ_GEN with the empty profile []; checks that each
+# KEY in KEYS is covered by at least one requirement returning unknown(KS)
+# where KEY in KS. Full static introspection of which keys a given requirement
+# checks is infeasible in pure Clausal (no source analysis at runtime); this
+# runtime form directly tests the open-world-assumption (unknown([K])) branch.
+#
+# Violations: keys for which NO requirement produces unknown(KS) containing
+# that key when called with an empty profile.
+
+# key_unknown_covered(REQ_GEN, KEY): succeeds iff REQ_GEN yields unknown(KS)
+# (with KEY in KS) for at least one requirement ID on the empty profile [].
+key_unknown_covered(REQ_GEN, KEY) <- (
+    call_goal(REQ_GEN, _, [], STATUS, _),
+    STATUS is unknown(KS),
+    in_(KEY, KS)
+)
+
+prop_missing_key_coverage(REQ_GEN, KEYS, LABEL) <- (
+    findall(KEY,
+            ( in_(KEY, KEYS),
+              not key_unknown_covered(REQ_GEN, KEY) ),
+            VIOLS),
+    report_prop("missing-key coverage: each key absent yields unknown", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# P7 -- MONOTONICITY
+# =====================================================================
+# prop_monotone(AXIS_KEY, RESULT_KEY, DIRECTION, POINTS, LABEL):
+#   AXIS_KEY:   attribute key whose values define the ordering axis.
+#   RESULT_KEY: attribute key whose values must progress monotonically.
+#   DIRECTION:  "nondecreasing" | "nonincreasing" | "increasing" | "decreasing"
+#   POINTS:     list of attribute-list profiles, each carrying AXIS_KEY and RESULT_KEY.
+#               Profiles use the formalize_lib attribute/2 shape: [attribute(K,V), ...].
+#               The predicate sorts by AXIS_KEY internally (no pre-sort required).
+#   LABEL:      property instance name.
+#
+# Port of kit/matrix_properties.py check_property (monotonic_nondecreasing /
+# monotonic_increasing kinds). Sorts POINTS by AXIS_KEY, then collects every
+# adjacent pair whose RESULT values violate DIRECTION.
+#
+# Violations: [[A_VAL, B_VAL, A_RES, B_RES]] quads for each violating pair.
+# Succeeds iff no adjacent-pair violation is found.
+
+# adjacent_pairs(+LIST, -PAIRS): collect successive [A, B] pairs from LIST.
+# Returns [] for lists of length 0 or 1.
+adjacent_pairs([], []),
+adjacent_pairs([_], []),
+adjacent_pairs([A, B, *REST], [[A, B], *PAIRS]) <- (
+    adjacent_pairs([B, *REST], PAIRS)
+)
+
+# sort_points_by(+POINTS, +KEY, -SORTED):
+# Sort a list of attribute-list profiles by their KEY attribute value (ascending).
+# Uses msort to preserve duplicates (points at the same axis value are kept).
+sort_points_by(POINTS, KEY, SORTED) <- (
+    findall([VAL, PT],
+            ( in_(PT, POINTS),
+              profile_get(PT, KEY, VAL) ),
+            KEYED_UNSORTED),
+    msort(KEYED_UNSORTED, KEYED_SORTED),
+    findall(PT, in_([_, PT], KEYED_SORTED), SORTED)
+)
+
+# monotone_violated(+DIRECTION, +A_RES, +B_RES):
+# Succeeds when B_RES (value AFTER A_RES on the sorted axis) violates DIRECTION.
+# "nondecreasing": B must be >= A  (violation: B < A)
+# "nonincreasing": B must be <= A  (violation: B > A)
+# "increasing":    B must be >  A  (violation: B <= A, i.e. equal or decreasing)
+# "decreasing":    B must be <  A  (violation: B >= A, i.e. equal or increasing)
+monotone_violated("nondecreasing", A_RES, B_RES) <- (B_RES < A_RES)
+monotone_violated("nonincreasing", A_RES, B_RES) <- (B_RES > A_RES)
+monotone_violated("increasing", A_RES, B_RES) <- (B_RES <= A_RES)
+monotone_violated("decreasing", A_RES, B_RES) <- (B_RES >= A_RES)
+
+prop_monotone(AXIS_KEY, RESULT_KEY, DIRECTION, POINTS, LABEL) <- (
+    sort_points_by(POINTS, AXIS_KEY, SORTED),
+    adjacent_pairs(SORTED, PAIRS),
+    findall([A_VAL, B_VAL, A_RES, B_RES],
+            ( in_([A_PT, B_PT], PAIRS),
+              profile_get(A_PT, AXIS_KEY, A_VAL),
+              profile_get(B_PT, AXIS_KEY, B_VAL),
+              profile_get(A_PT, RESULT_KEY, A_RES),
+              profile_get(B_PT, RESULT_KEY, B_RES),
+              monotone_violated(DIRECTION, A_RES, B_RES) ),
+            VIOLS),
+    report_prop("monotonicity", LABEL, VIOLS),
+    VIOLS is []
+)
+
+# =====================================================================
+# TODO STUBS -- not yet implemented; carry them so callers know they exist.
+# =====================================================================
+
+# P8 -- NO-ANTINOMY (NEEDS-BUILD; defeasibility family only)
+# No two requirements produce "met" and unmet(_) on the same subject without
+# an explicit defeater clause.
+# When built: prop_no_antinomy(REQ_GEN, SUBJECTS, DEFEATER_GEN, LABEL)
+#
+# TODO: implement after deontic-skeleton is finalised.
+# Not required for eligibility, classification, or numeric families.
