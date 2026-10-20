@@ -123,7 +123,7 @@ you can write to:
 Their per-domain results will be listed in `_index/STATUS.md` from the next release.
 
 The adversarial red-team report for a domain is available on request: email
-mikeamycoder@gmail.com, naming the domain.
+mike.amy@neurosymbolic.solutions, naming the domain.
 
 ## Contributing
 
