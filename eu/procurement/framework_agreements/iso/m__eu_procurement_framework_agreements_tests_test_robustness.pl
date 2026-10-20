@@ -1,0 +1,374 @@
+:- module(m__eu_procurement_framework_agreements_tests_test_robustness, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_dicts, [dict_pairs/2, get/3]).
+:- use_module(library(clpz)).
+:- use_module(m__eu_procurement_framework_agreements_framework_agreements, [decide_framework_term/2, decide_call_off/2, decide_framework_agreements/2]).
+:- use_module(m__eu_procurement_framework_agreements_fixtures, [framework_agreements_subject/1, framework_agreements_profile_for/2]).
+:- use_module(m__eu_procurement_framework_agreements_framework_agreements, [framework_agreements_input_problem/2]).
+:- use_module(query_combinators, [override_key/4]).
+
+outcome(Goal, Template, Out) :-
+    catch(findall(Template, call(Goal), Out), Error, Out = caught(Error)).
+
+refusal([]).
+refusal(caught(error(_, must_be_date(_)))).
+
+term_refused(Profile) :-
+    outcome(decide_framework_term(Profile, V), V, Out),
+    refusal(Out).
+
+call_off_refused(Profile) :-
+    outcome(decide_call_off(Profile, V), V, Out),
+    refusal(Out).
+
+combined_refused(Profile) :-
+    outcome(decide_framework_agreements(Profile, V), V, Out),
+    refusal(Out).
+
+without_key(Subject, Key, Profile) :-
+    framework_agreements_profile_for(Subject, Base),
+    remove_key(Key, Base, Profile).
+
+remove_key(Key, Dict, NewDict) :-
+    get(Dict, Key, _),
+    dict_pairs(Dict, Pairs),
+    findall(Other - Value, (member(Other - Value, Pairs), dif(Other, Key)), Kept),
+    dict_pairs(NewDict, Kept).
+
+with_value(Subject, Key, Value, Profile) :-
+    framework_agreements_profile_for(Subject, Base),
+    override_key(Base, Key, Value, Profile).
+
+call_off_refused_without(Subject, Key) :-
+    without_key(Subject, Key, Profile),
+    call_off_refused(Profile).
+
+call_off_refused_with(Subject, Key, Value) :-
+    with_value(Subject, Key, Value, Profile),
+    call_off_refused(Profile).
+
+term_refused_with(Subject, Key, Value) :-
+    with_value(Subject, Key, Value, Profile),
+    term_refused(Profile).
+
+exactly_one_answer(Profile) :-
+    findall(V1, decide_framework_term(Profile, V1), L1),
+    length(L1, 1),
+    findall(V2, decide_call_off(Profile, V2), L2),
+    length(L2, 1),
+    findall(V3, decide_framework_agreements(Profile, V3), L3),
+    length(L3, 1).
+
+dated_profile(Start, End, Award, Profile) :-
+    framework_agreements_profile_for("single_op_lawful", Base),
+    override_key(Base, framework_start_date, Start, P1),
+    override_key(P1, framework_end_date, End, P2),
+    override_key(P2, call_off_award_date, Award, Profile).
+
+term_verdict_for(Start, End, Verdict) :-
+    dated_profile(Start, End, date(2025, 6, 15), Profile),
+    findall(V, decide_framework_term(Profile, V), [Verdict]).
+
+call_off_status_for(Start, End, Award, Status) :-
+    dated_profile(Start, End, Award, Profile),
+    findall(S, decide_call_off(Profile, call_off_verdict(S, _, _, _)), [Status]).
+
+test('control: single_op_lawful is a lawful single-operator call-off under a lawful term') :-
+    framework_agreements_profile_for("single_op_lawful", P),
+    decide_call_off(P, call_off_verdict(call_off_lawful, single_operator_direct_award, [], [])),
+    decide_framework_term(P, framework_term_verdict(lawful_framework_term, [], [])),
+    decide_framework_agreements(P, framework_agreements_verdict(framework_term_lawful, [])).
+test('control: multi_direct_all_lawful, multi_direct_split_lawful and multi_reopen_lawful are lawful call-offs') :-
+    framework_agreements_profile_for("multi_direct_all_lawful", P1),
+    decide_call_off(P1, call_off_verdict(call_off_lawful, _, [], [])),
+    framework_agreements_profile_for("multi_direct_split_lawful", P2),
+    decide_call_off(P2, call_off_verdict(call_off_lawful, _, [], [])),
+    framework_agreements_profile_for("multi_reopen_lawful", P3),
+    decide_call_off(P3, call_off_verdict(call_off_lawful, multi_operator_reopened_competition, [], [])).
+test('control: term_exceeds is an unlawful framework term') :-
+    framework_agreements_profile_for("term_exceeds", P),
+    decide_framework_term(P, framework_term_verdict(unlawful_framework_term, [framework_term_exceeds_four_years], _)).
+test('term: missing framework_start_date is refused') :-
+    without_key("single_op_lawful", framework_start_date, P),
+    term_refused(P).
+test('term: missing framework_end_date is refused') :-
+    without_key("single_op_lawful", framework_end_date, P),
+    term_refused(P).
+test('term: missing exceptional_case_duly_justified on an over-long term is refused') :-
+    without_key("term_exceeds", exceptional_case_duly_justified, P),
+    term_refused(P).
+test('call-off: missing framework_start_date gives no lawful call-off (award window unknown)') :-
+    call_off_refused_without("single_op_lawful", framework_start_date).
+test('call-off: missing framework_end_date gives no lawful call-off (award window unknown)') :-
+    call_off_refused_without("single_op_lawful", framework_end_date).
+test('call-off: missing call_off_award_date gives no lawful call-off (award window unknown)') :-
+    call_off_refused_without("single_op_lawful", call_off_award_date).
+test('call-off: missing framework_operator_count is refused') :-
+    call_off_refused_without("single_op_lawful", framework_operator_count).
+test('call-off: missing call_off_method_key is refused') :-
+    call_off_refused_without("single_op_lawful", call_off_method_key).
+test('call-off: missing contracting_authority_identified_in_call_for_competition gives no lawful call-off') :-
+    call_off_refused_without("single_op_lawful", contracting_authority_identified_in_call_for_competition).
+test('call-off: missing economic_operator_party_to_framework gives no lawful call-off') :-
+    call_off_refused_without("single_op_lawful", economic_operator_party_to_framework).
+test('call-off: missing call_off_entails_substantial_modification gives no lawful call-off') :-
+    call_off_refused_without("single_op_lawful", call_off_entails_substantial_modification).
+test('call-off: missing call_off_within_limits_of_framework_terms on a single-operator framework gives no lawful call-off') :-
+    call_off_refused_without("single_op_lawful", call_off_within_limits_of_framework_terms).
+test('call-off: missing partly_with_partly_without_reopening_stipulated on a multi-operator direct award is refused') :-
+    call_off_refused_without("multi_direct_all_lawful", partly_with_partly_without_reopening_stipulated).
+test('call-off: missing framework_sets_out_all_terms on a multi-operator direct award gives no lawful call-off') :-
+    call_off_refused_without("multi_direct_all_lawful", framework_sets_out_all_terms).
+test('call-off: missing objective_conditions_for_determining_performer_indicated on a multi-operator direct award gives no lawful call-off') :-
+    call_off_refused_without("multi_direct_all_lawful", objective_conditions_for_determining_performer_indicated).
+test('call-off: missing objective_criteria_for_choice_of_route_stated under a split framework gives no lawful call-off') :-
+    call_off_refused_without("multi_direct_split_lawful", objective_criteria_for_choice_of_route_stated).
+test('call-off: missing terms_subject_to_reopening_specified under a split framework gives no lawful call-off') :-
+    call_off_refused_without("multi_direct_split_lawful", terms_subject_to_reopening_specified).
+test('call-off: missing framework_sets_out_all_terms on a reopened competition is refused') :-
+    call_off_refused_without("multi_reopen_lawful", framework_sets_out_all_terms).
+test('call-off: missing reopened_competition_based_on_framework_terms on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", reopened_competition_based_on_framework_terms).
+test('call-off: missing capable_operators_consulted_in_writing on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", capable_operators_consulted_in_writing).
+test('call-off: missing time_limit_sufficiently_long on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", time_limit_sufficiently_long).
+test('call-off: missing tenders_submitted_in_writing on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", tenders_submitted_in_writing).
+test('call-off: missing tender_contents_confidential_until_time_limit_expired on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", tender_contents_confidential_until_time_limit_expired).
+test('call-off: missing award_made_on_framework_award_criteria on a reopened competition gives no lawful call-off') :-
+    call_off_refused_without("multi_reopen_lawful", award_made_on_framework_award_criteria).
+test('combined: missing contracting_authority_identified_in_call_for_competition gives no combined verdict') :-
+    without_key("single_op_lawful", contracting_authority_identified_in_call_for_competition, P),
+    combined_refused(P).
+test('combined: missing call_off_award_date gives no combined verdict') :-
+    without_key("single_op_lawful", call_off_award_date, P),
+    combined_refused(P).
+test('combined: missing framework_start_date is refused') :-
+    without_key("single_op_lawful", framework_start_date, P),
+    combined_refused(P).
+test('by design: exceptional_case_duly_justified absent from a term within four years still gives a lawful term') :-
+    without_key("single_op_lawful", exceptional_case_duly_justified, P),
+    findall(V, decide_framework_term(P, V), [framework_term_verdict(lawful_framework_term, [], [])]).
+test('by design: the six Art 33(5) keys absent from a single-operator direct award still give a lawful call-off') :-
+    framework_agreements_profile_for("single_op_lawful", Base),
+    remove_key(reopened_competition_based_on_framework_terms, Base, P1),
+    remove_key(capable_operators_consulted_in_writing, P1, P2),
+    remove_key(time_limit_sufficiently_long, P2, P3),
+    remove_key(tenders_submitted_in_writing, P3, P4),
+    remove_key(tender_contents_confidential_until_time_limit_expired, P4, P5),
+    remove_key(award_made_on_framework_award_criteria, P5, P),
+    findall(V, decide_call_off(P, V), [call_off_verdict(call_off_lawful, single_operator_direct_award, [], [])]).
+test('by design: call_off_within_limits_of_framework_terms absent from a multi-operator direct award still gives a lawful call-off') :-
+    without_key("multi_direct_all_lawful", call_off_within_limits_of_framework_terms, P),
+    findall(V, decide_call_off(P, V), [call_off_verdict(call_off_lawful, multi_operator_direct_award_all_terms_set_out, [], [])]).
+test('by design: an over-long term is reported unlawful by the facade even with framework_operator_count missing') :-
+    without_key("term_exceeds", framework_operator_count, P),
+    findall(V, decide_framework_agreements(P, V), [framework_agreements_verdict(framework_term_unlawful, [cite(eu_dir_2014_24_art_33_1)])]).
+test('operator count as an atom is refused, not a type_error from the < comparison') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, 'three').
+test('operator count as a string is refused, not a type_error from the < comparison') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, "3").
+test('operator count as a list is refused, not a type_error from the < comparison') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, [3]).
+test('operator count as a boolean is refused, not a type_error from the < comparison') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, true).
+test('operator count as a float is refused, not routed as a single-operator framework') :-
+    call_off_refused_with("multi_direct_all_lawful", framework_operator_count, 1.5).
+test('operator count zero is not an integer of at least 1 and is refused, not routed as a single-operator framework') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, 0).
+test('operator count negative is refused, not routed as a single-operator framework') :-
+    call_off_refused_with("single_op_lawful", framework_operator_count, -1).
+test('call-off method outside the vocabulary is refused') :-
+    call_off_refused_with("single_op_lawful", call_off_method_key, 'direct_award').
+test('call-off method as a string is refused') :-
+    call_off_refused_with("single_op_lawful", call_off_method_key, "without_reopening_competition").
+test('call-off method as a number is refused') :-
+    call_off_refused_with("single_op_lawful", call_off_method_key, 1).
+test('contracting_authority_identified_in_call_for_competition as the string false is refused, not read as satisfied') :-
+    call_off_refused_with("single_op_lawful", contracting_authority_identified_in_call_for_competition, "false").
+test('contracting_authority_identified_in_call_for_competition as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("single_op_lawful", contracting_authority_identified_in_call_for_competition, 0).
+test('contracting_authority_identified_in_call_for_competition as an atom is refused, not read as satisfied') :-
+    call_off_refused_with("single_op_lawful", contracting_authority_identified_in_call_for_competition, 'no').
+test('economic_operator_party_to_framework as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("single_op_lawful", economic_operator_party_to_framework, 0).
+test('call_off_entails_substantial_modification as the string true is refused, not read as no modification') :-
+    call_off_refused_with("single_op_lawful", call_off_entails_substantial_modification, "true").
+test('call_off_within_limits_of_framework_terms as an atom is refused, not read as satisfied') :-
+    call_off_refused_with("single_op_lawful", call_off_within_limits_of_framework_terms, 'no').
+test('framework_sets_out_all_terms as the string false on a direct award is refused, not read as satisfied') :-
+    call_off_refused_with("multi_direct_all_lawful", framework_sets_out_all_terms, "false").
+test('objective_conditions_for_determining_performer_indicated as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("multi_direct_all_lawful", objective_conditions_for_determining_performer_indicated, 0).
+test('partly_with_partly_without_reopening_stipulated as the integer 0 is refused') :-
+    call_off_refused_with("multi_direct_all_lawful", partly_with_partly_without_reopening_stipulated, 0).
+test('objective_criteria_for_choice_of_route_stated as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("multi_direct_split_lawful", objective_criteria_for_choice_of_route_stated, 0).
+test('terms_subject_to_reopening_specified as the string false is refused, not read as satisfied') :-
+    call_off_refused_with("multi_direct_split_lawful", terms_subject_to_reopening_specified, "false").
+test('framework_sets_out_all_terms as an atom on a reopened competition is refused') :-
+    call_off_refused_with("multi_reopen_lawful", framework_sets_out_all_terms, 'no').
+test('reopened_competition_based_on_framework_terms as an atom is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", reopened_competition_based_on_framework_terms, 'no').
+test('capable_operators_consulted_in_writing as the string false is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", capable_operators_consulted_in_writing, "false").
+test('time_limit_sufficiently_long as the string no is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", time_limit_sufficiently_long, "no").
+test('tenders_submitted_in_writing as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", tenders_submitted_in_writing, 0).
+test('tender_contents_confidential_until_time_limit_expired as the integer 0 is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", tender_contents_confidential_until_time_limit_expired, 0).
+test('award_made_on_framework_award_criteria as a list is refused, not read as satisfied') :-
+    call_off_refused_with("multi_reopen_lawful", award_made_on_framework_award_criteria, [false]).
+test('exceptional_case_duly_justified as the string true on an over-long term is refused') :-
+    term_refused_with("term_exceeds", exceptional_case_duly_justified, "true").
+test('exceptional_case_duly_justified as the integer 1 on an over-long term is refused') :-
+    term_refused_with("term_exceeds", exceptional_case_duly_justified, 1).
+test('framework_start_date as a [Y, M, D] list is refused by the date guard') :-
+    term_refused_with("single_op_lawful", framework_start_date, [2024, 1, 1]),
+    call_off_refused_with("single_op_lawful", framework_start_date, [2024, 1, 1]).
+test('framework_end_date as an ISO string is refused by the date guard') :-
+    term_refused_with("single_op_lawful", framework_end_date, "2027-01-01"),
+    call_off_refused_with("single_op_lawful", framework_end_date, "2027-01-01").
+test('framework_end_date as a number is refused by the date guard') :-
+    term_refused_with("single_op_lawful", framework_end_date, 20270101).
+test('call_off_award_date as a [Y, M, D] list is refused by the date guard') :-
+    call_off_refused_with("single_op_lawful", call_off_award_date, [2025, 6, 15]).
+test('call_off_award_date as an atom is refused by the date guard') :-
+    call_off_refused_with("single_op_lawful", call_off_award_date, 'today').
+test('call_off_award_date as an ISO string is refused by the date guard') :-
+    call_off_refused_with("single_op_lawful", call_off_award_date, "2025-06-15").
+test('empty profile is refused by all three decision predicates') :-
+    dict_pairs(Empty, []),
+    term_refused(Empty),
+    call_off_refused(Empty),
+    combined_refused(Empty).
+test('a profile given as an atom is refused by all three decision predicates') :-
+    term_refused('profile'),
+    call_off_refused('profile'),
+    combined_refused('profile').
+test('a profile given as a list is refused by all three decision predicates') :-
+    term_refused([framework_operator_count]),
+    call_off_refused([framework_operator_count]),
+    combined_refused([framework_operator_count]).
+test('one answer: every fixture subject gives exactly one answer from each decision predicate') :-
+    findall(S, framework_agreements_subject(S), Subjects),
+    length(Subjects, Count),
+    Count #> 0,
+    findall(S, (framework_agreements_subject(S), framework_agreements_profile_for(S, P), exactly_one_answer(P)), Good),
+    length(Good, Count).
+test('one answer: single_op_lawful') :-
+    framework_agreements_profile_for("single_op_lawful", P),
+    exactly_one_answer(P).
+test('one answer: multi_reopen_short_time') :-
+    framework_agreements_profile_for("multi_reopen_short_time", P),
+    exactly_one_answer(P).
+test('one answer: no_route_multi_all_nosplit') :-
+    framework_agreements_profile_for("no_route_multi_all_nosplit", P),
+    exactly_one_answer(P).
+test('one answer: term_justified') :-
+    framework_agreements_profile_for("term_justified", P),
+    exactly_one_answer(P).
+test('one answer: end date before start date') :-
+    dated_profile(date(2024, 1, 1), date(2023, 12, 31), date(2025, 6, 15), P),
+    exactly_one_answer(P).
+test('four-year limit: end one day before the fourth anniversary is lawful') :-
+    term_verdict_for(date(2024, 1, 1), date(2027, 12, 31), framework_term_verdict(lawful_framework_term, [], [])).
+test('four-year limit: end on the fourth anniversary is lawful') :-
+    term_verdict_for(date(2024, 1, 1), date(2028, 1, 1), framework_term_verdict(lawful_framework_term, [], [])).
+test('four-year limit: end one day after the fourth anniversary is unlawful') :-
+    term_verdict_for(date(2024, 1, 1), date(2028, 1, 2), framework_term_verdict(unlawful_framework_term, [framework_term_exceeds_four_years], _)).
+test('four-year limit: start 29 February 2096, end 28 February 2100 is lawful') :-
+    term_verdict_for(date(2096, 2, 29), date(2100, 2, 28), framework_term_verdict(lawful_framework_term, [], [])).
+test('four-year limit: start 29 February 2096, end 1 March 2100 is unlawful') :-
+    term_verdict_for(date(2096, 2, 29), date(2100, 3, 1), framework_term_verdict(unlawful_framework_term, [framework_term_exceeds_four_years], _)).
+test('four-year limit: start 29 February 2024, end 29 February 2028 (a leap year) is lawful') :-
+    term_verdict_for(date(2024, 2, 29), date(2028, 2, 29), framework_term_verdict(lawful_framework_term, [], [])).
+test('term: end date equal to start date is lawful') :-
+    term_verdict_for(date(2024, 1, 1), date(2024, 1, 1), framework_term_verdict(lawful_framework_term, [], [])).
+test('term: end date one day before start date is unlawful with the precedes defect') :-
+    term_verdict_for(date(2024, 1, 1), date(2023, 12, 31), framework_term_verdict(unlawful_framework_term, [framework_end_date_precedes_start_date], _)).
+test('award window: award on the start date is lawful') :-
+    call_off_status_for(date(2024, 1, 1), date(2027, 1, 1), date(2024, 1, 1), call_off_lawful).
+test('award window: award one day before the start date is unlawful') :-
+    call_off_status_for(date(2024, 1, 1), date(2027, 1, 1), date(2023, 12, 31), call_off_unlawful).
+test('award window: award on the end date is lawful') :-
+    call_off_status_for(date(2024, 1, 1), date(2027, 1, 1), date(2027, 1, 1), call_off_lawful).
+test('award window: award one day after the end date is unlawful') :-
+    call_off_status_for(date(2024, 1, 1), date(2027, 1, 1), date(2027, 1, 2), call_off_unlawful).
+test('operator count 1 is the single-operator route') :-
+    with_value("multi_direct_all_lawful", framework_operator_count, 1, P),
+    findall(R, decide_call_off(P, call_off_verdict(_, R, _, _)), [single_operator_direct_award]).
+test('operator count 2 is the multi-operator route') :-
+    with_value("single_op_lawful", framework_operator_count, 2, P),
+    findall(R, decide_call_off(P, call_off_verdict(_, R, _, _)), [multi_operator_direct_award_all_terms_set_out]).
+test('problem: no fixture profile has an input problem') :-
+    findall(S, (framework_agreements_subject(S), framework_agreements_profile_for(S, P), framework_agreements_input_problem(P, _)), Bad),
+    Bad = [].
+test('problem: an unbound value is reported as not_ground(profile) and refused by every decision predicate') :-
+    with_value("single_op_lawful", contracting_authority_identified_in_call_for_competition, _, P),
+    problem_is(P, not_ground(profile)),
+    term_refused(P),
+    call_off_refused(P),
+    combined_refused(P).
+test('problem: an unbound profile is refused by every decision predicate') :-
+    term_refused(_),
+    call_off_refused(_),
+    combined_refused(_).
+test('problem: a profile given as an atom is reported as not_a_dict(profile)') :-
+    problem_is('profile', not_a_dict(profile)).
+test('problem: a missing key is reported as missing_key(KEY)') :-
+    without_key("single_op_lawful", call_off_award_date, P),
+    problem_is(P, missing_key(call_off_award_date)).
+test('problem: a date as a list is reported as wrong_type(KEY, expected_date)') :-
+    with_value("single_op_lawful", call_off_award_date, [2025, 6, 15], P),
+    problem_is(P, wrong_type(call_off_award_date, expected_date)).
+test('problem: an operator count as a string is reported as wrong_type(framework_operator_count, expected_integer)') :-
+    with_value("single_op_lawful", framework_operator_count, "3", P),
+    problem_is(P, wrong_type(framework_operator_count, expected_integer)).
+test('problem: an operator count as a boolean is reported as wrong_type(framework_operator_count, expected_integer)') :-
+    with_value("single_op_lawful", framework_operator_count, true, P),
+    problem_is(P, wrong_type(framework_operator_count, expected_integer)).
+test('problem: operator count zero is reported as out_of_range(framework_operator_count, expected_at_least_one)') :-
+    with_value("single_op_lawful", framework_operator_count, 0, P),
+    problem_is(P, out_of_range(framework_operator_count, expected_at_least_one)).
+test('problem: a boolean as the integer 0 is reported as wrong_type(KEY, expected_boolean)') :-
+    with_value("single_op_lawful", economic_operator_party_to_framework, 0, P),
+    problem_is(P, wrong_type(economic_operator_party_to_framework, expected_boolean)).
+test('problem: a boolean as the integer 1 is reported as wrong_type(KEY, expected_boolean)') :-
+    with_value("single_op_lawful", economic_operator_party_to_framework, 1, P),
+    problem_is(P, wrong_type(economic_operator_party_to_framework, expected_boolean)).
+test('problem: a method outside the vocabulary is reported as wrong_type(call_off_method_key, expected_call_off_method)') :-
+    with_value("single_op_lawful", call_off_method_key, 'direct_award', P),
+    problem_is(P, wrong_type(call_off_method_key, expected_call_off_method)).
+test('problem: a present out-of-scope key of the wrong type is still refused') :-
+    with_value("single_op_lawful", time_limit_sufficiently_long, "yes", P),
+    problem_is(P, wrong_type(time_limit_sufficiently_long, expected_boolean)),
+    call_off_refused(P).
+test('problem: only the first of several problems is reported') :-
+    framework_agreements_profile_for("single_op_lawful", Base),
+    remove_key(call_off_award_date, Base, P1),
+    override_key(P1, framework_operator_count, "3", P),
+    problem_is(P, wrong_type(framework_operator_count, expected_integer)).
+test('problem: a missing call-off key does not stop the framework term decision (neither determination gates the other)') :-
+    without_key("single_op_lawful", contracting_authority_identified_in_call_for_competition, P),
+    findall(V, decide_framework_term(P, V), [framework_term_verdict(lawful_framework_term, [], [])]),
+    call_off_refused(P).
+
+problem_is(Profile, Expected) :-
+    findall(P, framework_agreements_input_problem(Profile, P), Problems),
+    Problems = [Expected].
+
+cp_test_names(['control: single_op_lawful is a lawful single-operator call-off under a lawful term', 'control: multi_direct_all_lawful, multi_direct_split_lawful and multi_reopen_lawful are lawful call-offs', 'control: term_exceeds is an unlawful framework term', 'term: missing framework_start_date is refused', 'term: missing framework_end_date is refused', 'term: missing exceptional_case_duly_justified on an over-long term is refused', 'call-off: missing framework_start_date gives no lawful call-off (award window unknown)', 'call-off: missing framework_end_date gives no lawful call-off (award window unknown)', 'call-off: missing call_off_award_date gives no lawful call-off (award window unknown)', 'call-off: missing framework_operator_count is refused', 'call-off: missing call_off_method_key is refused', 'call-off: missing contracting_authority_identified_in_call_for_competition gives no lawful call-off', 'call-off: missing economic_operator_party_to_framework gives no lawful call-off', 'call-off: missing call_off_entails_substantial_modification gives no lawful call-off', 'call-off: missing call_off_within_limits_of_framework_terms on a single-operator framework gives no lawful call-off', 'call-off: missing partly_with_partly_without_reopening_stipulated on a multi-operator direct award is refused', 'call-off: missing framework_sets_out_all_terms on a multi-operator direct award gives no lawful call-off', 'call-off: missing objective_conditions_for_determining_performer_indicated on a multi-operator direct award gives no lawful call-off', 'call-off: missing objective_criteria_for_choice_of_route_stated under a split framework gives no lawful call-off', 'call-off: missing terms_subject_to_reopening_specified under a split framework gives no lawful call-off', 'call-off: missing framework_sets_out_all_terms on a reopened competition is refused', 'call-off: missing reopened_competition_based_on_framework_terms on a reopened competition gives no lawful call-off', 'call-off: missing capable_operators_consulted_in_writing on a reopened competition gives no lawful call-off', 'call-off: missing time_limit_sufficiently_long on a reopened competition gives no lawful call-off', 'call-off: missing tenders_submitted_in_writing on a reopened competition gives no lawful call-off', 'call-off: missing tender_contents_confidential_until_time_limit_expired on a reopened competition gives no lawful call-off', 'call-off: missing award_made_on_framework_award_criteria on a reopened competition gives no lawful call-off', 'combined: missing contracting_authority_identified_in_call_for_competition gives no combined verdict', 'combined: missing call_off_award_date gives no combined verdict', 'combined: missing framework_start_date is refused', 'by design: exceptional_case_duly_justified absent from a term within four years still gives a lawful term', 'by design: the six Art 33(5) keys absent from a single-operator direct award still give a lawful call-off', 'by design: call_off_within_limits_of_framework_terms absent from a multi-operator direct award still gives a lawful call-off', 'by design: an over-long term is reported unlawful by the facade even with framework_operator_count missing', 'operator count as an atom is refused, not a type_error from the < comparison', 'operator count as a string is refused, not a type_error from the < comparison', 'operator count as a list is refused, not a type_error from the < comparison', 'operator count as a boolean is refused, not a type_error from the < comparison', 'operator count as a float is refused, not routed as a single-operator framework', 'operator count zero is not an integer of at least 1 and is refused, not routed as a single-operator framework', 'operator count negative is refused, not routed as a single-operator framework', 'call-off method outside the vocabulary is refused', 'call-off method as a string is refused', 'call-off method as a number is refused', 'contracting_authority_identified_in_call_for_competition as the string false is refused, not read as satisfied', 'contracting_authority_identified_in_call_for_competition as the integer 0 is refused, not read as satisfied', 'contracting_authority_identified_in_call_for_competition as an atom is refused, not read as satisfied', 'economic_operator_party_to_framework as the integer 0 is refused, not read as satisfied', 'call_off_entails_substantial_modification as the string true is refused, not read as no modification', 'call_off_within_limits_of_framework_terms as an atom is refused, not read as satisfied', 'framework_sets_out_all_terms as the string false on a direct award is refused, not read as satisfied', 'objective_conditions_for_determining_performer_indicated as the integer 0 is refused, not read as satisfied', 'partly_with_partly_without_reopening_stipulated as the integer 0 is refused', 'objective_criteria_for_choice_of_route_stated as the integer 0 is refused, not read as satisfied', 'terms_subject_to_reopening_specified as the string false is refused, not read as satisfied', 'framework_sets_out_all_terms as an atom on a reopened competition is refused', 'reopened_competition_based_on_framework_terms as an atom is refused, not read as satisfied', 'capable_operators_consulted_in_writing as the string false is refused, not read as satisfied', 'time_limit_sufficiently_long as the string no is refused, not read as satisfied', 'tenders_submitted_in_writing as the integer 0 is refused, not read as satisfied', 'tender_contents_confidential_until_time_limit_expired as the integer 0 is refused, not read as satisfied', 'award_made_on_framework_award_criteria as a list is refused, not read as satisfied', 'exceptional_case_duly_justified as the string true on an over-long term is refused', 'exceptional_case_duly_justified as the integer 1 on an over-long term is refused', 'framework_start_date as a [Y, M, D] list is refused by the date guard', 'framework_end_date as an ISO string is refused by the date guard', 'framework_end_date as a number is refused by the date guard', 'call_off_award_date as a [Y, M, D] list is refused by the date guard', 'call_off_award_date as an atom is refused by the date guard', 'call_off_award_date as an ISO string is refused by the date guard', 'empty profile is refused by all three decision predicates', 'a profile given as an atom is refused by all three decision predicates', 'a profile given as a list is refused by all three decision predicates', 'one answer: every fixture subject gives exactly one answer from each decision predicate', 'one answer: single_op_lawful', 'one answer: multi_reopen_short_time', 'one answer: no_route_multi_all_nosplit', 'one answer: term_justified', 'one answer: end date before start date', 'four-year limit: end one day before the fourth anniversary is lawful', 'four-year limit: end on the fourth anniversary is lawful', 'four-year limit: end one day after the fourth anniversary is unlawful', 'four-year limit: start 29 February 2096, end 28 February 2100 is lawful', 'four-year limit: start 29 February 2096, end 1 March 2100 is unlawful', 'four-year limit: start 29 February 2024, end 29 February 2028 (a leap year) is lawful', 'term: end date equal to start date is lawful', 'term: end date one day before start date is unlawful with the precedes defect', 'award window: award on the start date is lawful', 'award window: award one day before the start date is unlawful', 'award window: award on the end date is lawful', 'award window: award one day after the end date is unlawful', 'operator count 1 is the single-operator route', 'operator count 2 is the multi-operator route', 'problem: no fixture profile has an input problem', 'problem: an unbound value is reported as not_ground(profile) and refused by every decision predicate', 'problem: an unbound profile is refused by every decision predicate', 'problem: a profile given as an atom is reported as not_a_dict(profile)', 'problem: a missing key is reported as missing_key(KEY)', 'problem: a date as a list is reported as wrong_type(KEY, expected_date)', 'problem: an operator count as a string is reported as wrong_type(framework_operator_count, expected_integer)', 'problem: an operator count as a boolean is reported as wrong_type(framework_operator_count, expected_integer)', 'problem: operator count zero is reported as out_of_range(framework_operator_count, expected_at_least_one)', 'problem: a boolean as the integer 0 is reported as wrong_type(KEY, expected_boolean)', 'problem: a boolean as the integer 1 is reported as wrong_type(KEY, expected_boolean)', 'problem: a method outside the vocabulary is reported as wrong_type(call_off_method_key, expected_call_off_method)', 'problem: a present out-of-scope key of the wrong type is still refused', 'problem: only the first of several problems is reported', 'problem: a missing call-off key does not stop the framework term decision (neither determination gates the other)']).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

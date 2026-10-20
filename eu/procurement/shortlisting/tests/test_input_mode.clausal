@@ -1,0 +1,55 @@
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND.
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% status, defect-limb, profile-key, procedure, inclusion and problem atoms,
+% shortlisting_verdict/4, cite/1, item/3 -- have no counterpart: atoms and
+% compound terms need no import. Only predicates are imported.)
+:- module(test_input_mode, []).
+:- use_module(eu/procurement/shortlisting/shortlisting, [
+    shortlisting_status/2,
+    statutory_minimum_candidates/2,
+    shortlisting_inclusion_modality/2]).
+:- use_module(eu/procurement/shortlisting/fixtures, [shortlisting_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complement (ruling 2026-10-20) of the seam's `not shortlisting_status(PROFILE, S)`:
+% the given status is not among the answers -- findall/3 plus the kit's dif-based
+% not_member/2, so a broken rule that gave BOTH answers still fails the test.
+shortlisting_status_never(Profile, Status) :-
+    findall(Found, shortlisting_status(Profile, Found), FoundStatuses),
+    not_member(Status, FoundStatuses).
+
+test('input mode: status holds with the verdict bound') :-
+    shortlisting_profile_for("restricted_all_clear", Profile),
+    shortlisting_status(Profile, limitation_permitted).
+
+test('input mode: the wrong bound status is rejected') :-
+    shortlisting_profile_for("restricted_all_clear", Profile),
+    shortlisting_status_never(Profile, limitation_prohibited).
+
+test('input mode: statutory minimum for restricted is 5') :-
+    statutory_minimum_candidates(restricted_procedure, 5).
+
+test('input mode: statutory minimum for CPWN is 3') :-
+    statutory_minimum_candidates(competitive_procedure_with_negotiation, 3).
+
+test('input mode: statutory minimum has no solution for open procedure') :-
+    findall(Minimum, statutory_minimum_candidates(open_procedure, Minimum), []).
+
+test('input mode: inclusion modality for requested and capable is permitted') :-
+    shortlisting_inclusion_modality(requested_and_has_required_capabilities, inclusion_permitted).
+
+test('input mode: inclusion modality for non-requesting is prohibited') :-
+    shortlisting_inclusion_modality(did_not_request_to_participate, inclusion_prohibited).
+
+test('input mode: open procedure status is limitation_not_available') :-
+    shortlisting_profile_for("open_procedure", Profile),
+    shortlisting_status(Profile, limitation_not_available).
+
+test('input mode: continuation profile yields continuation_permitted') :-
+    shortlisting_profile_for("restricted_continuation", Profile),
+    shortlisting_status(Profile, continuation_permitted).
+
+:- end_module(test_input_mode).

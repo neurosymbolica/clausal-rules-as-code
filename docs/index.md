@@ -34,29 +34,33 @@ leaving them out, and the scope of each domain is narrow on purpose. See
 
 The minimum time limit in an open procedure, from Directive 2014/24/EU Article 27:
 
-```python
-# Art 27(1) subpara 2: base minimum 35 days from contract-notice dispatch.
+```prolog
+% Art 27(1) subpara 2: base minimum 35 days from contract-notice dispatch.
 minimum_time_limit_days(open_procedure, receipt_of_tenders,
-    baseline_minimum, 35, cite(eu_dir_2014_24_art_27)) <- (
-    implements(eu_dir_2014_24_art_27)
-),
-# Art 27(2): prior information notice published 35 days - 12 months before
-# the contract notice -> minimum may be shortened to 15 days.
+    baseline_minimum, 35, cite(eu_dir_2014_24_art_27)) :-
+    implements(eu_dir_2014_24_art_27).
+% Art 27(2): prior information notice published 35 days - 12 months before
+% the contract notice -> minimum may be shortened to 15 days.
 minimum_time_limit_days(open_procedure, receipt_of_tenders,
-    with_prior_information_notice, 15, cite(eu_dir_2014_24_art_27)) <- (
-    implements(eu_dir_2014_24_art_27)
-),
+    with_prior_information_notice, 15, cite(eu_dir_2014_24_art_27)) :-
+    implements(eu_dir_2014_24_art_27).
 ```
 
 The citation `eu_dir_2014_24_art_27` is a record holding the exact words of the Directive,
 checked character for character against a pinned copy of the consolidated text from EUR-Lex:
 
-```python
-citation(eu_dir_2014_24_art_27, {
-  label:    "Directive 2014/24/EU, Article 27 (Open procedure)",
-  ref:      "http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4",
-  verbatim: "The minimum time limit for the receipt of tenders shall be 35 days from the date on which the contract notice was sent."
-}),
+```prolog
+citation(eu_dir_2014_24_art_27, [
+    label-'Directive 2014/24/EU, Article 27 (Open procedure)',
+    ref-'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4',
+    verbatim-'The minimum time limit for the receipt of tenders shall be 35 days from the date on which the contract notice was sent.',
+    units-['02014L0024-20260101#parag_027.001',
+           '02014L0024-20260101#parag_027.002',
+           '02014L0024-20260101#point_027.002_a',
+           '02014L0024-20260101#point_027.002_b',
+           '02014L0024-20260101#parag_027.003',
+           '02014L0024-20260101#parag_027.004']
+]).
 ```
 
 Each answer the domain gives carries the citations that produced it, so a reader can go from any

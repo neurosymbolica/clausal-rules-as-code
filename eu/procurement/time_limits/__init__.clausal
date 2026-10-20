@@ -1,0 +1,88 @@
+% eu.procurement.time_limits/__init__.clausal -- thin package init.
+% Re-exports the domain's PUBLIC surface from its named submodules.
+% Keep in sync with manifest.yaml public_interface.
+%
+% Determination-slices re-slice (2026-08-07): the export NAME SET is unchanged
+% (compat contract -- it still equals manifest.yaml public_interface exactly);
+% only the SOURCE submodule moved. schema -> kernel (time_limits_verdict) and
+% -> time_limits (the status/day-slot/checklist-id/profile-key/stage/
+% reduction-condition atoms); constants + computation + decision ->
+% time_limits, the single determination slice.
+%
+% HAND-MAINTAINED, deliberately: auto/pkginit.py sources re-exports only from
+% the domain's OWN submodules, so a regeneration silently DROPS the five
+% eu.procurement.directive_2014_24.vocabulary procedure atoms at the bottom of this file. They are
+% in manifest.yaml public_interface, tests/test_public_interface.clausal
+% imports two of them from this package root, and eval/score_harness.py
+% resolves all five through it via getattr. Verified by dry-running
+% pkginit.render() against the pre-change tree: 44 names, not 49.
+%
+% Clausal Prolog: a .clausal module exports PREDICATES only, so this facade
+% re-exports the 26 predicates of the seam surface. The seam surface's VALUE
+% ATOMS (status, day-slot, checklist-id, profile-key, stage, reduction-condition,
+% conformity, problem vocabularies; the five citation keys; the five
+% eu.procurement.directive_2014_24.vocabulary procedure atoms) and its data
+% constructors (time_limits_verdict/4, cite/1, missing_key/1, wrong_value/2,
+% wrong_type/2, negative_count/1) need no export and no import in Clausal
+% Prolog, so they have no entry below.
+:- module(time_limits, [
+    citation/2,
+    time_limits_status_values/1,
+    time_limits_conformity_values/1,
+    time_limits_stage_values/1,
+    time_limits_reduction_condition_values/1,
+    minimum_time_limit_days/5,
+    no_minimum_prescribed_for/3,
+    stage_not_provided_for/3,
+    decide_time_limits/2,
+    time_limits_status/2,
+    minimum_days/2,
+    time_limits_conformity/2,
+    observed_days_conformity/3,
+    applicable_reduction_condition/2,
+    candidate_time_limit/3,
+    time_limits_checklist/2,
+    time_limits_decision_resolvable/1,
+    time_limits_input_problem/2,
+    time_limits_input_acceptable/1,
+    time_limits_profile_keys/1,
+    time_limits_what_if/4,
+    time_limits_enumerate/4,
+    time_limits_floor/3,
+    time_limits_subject/1,
+    time_limits_profile_for/2,
+    time_limits_assess/2
+]).
+:- use_module(eu/procurement/time_limits/time_limits, [
+    time_limits_status_values/1,
+    time_limits_conformity_values/1,
+    time_limits_stage_values/1,
+    time_limits_reduction_condition_values/1,
+    minimum_time_limit_days/5,
+    no_minimum_prescribed_for/3,
+    stage_not_provided_for/3,
+    decide_time_limits/2,
+    time_limits_status/2,
+    minimum_days/2,
+    time_limits_conformity/2,
+    observed_days_conformity/3,
+    applicable_reduction_condition/2,
+    candidate_time_limit/3,
+    time_limits_checklist/2,
+    time_limits_decision_resolvable/1,
+    time_limits_input_problem/2,
+    time_limits_input_acceptable/1]).
+:- use_module(eu/procurement/time_limits/citations, [citation/2]).
+:- use_module(eu/procurement/time_limits/queries, [
+    time_limits_profile_keys/1, time_limits_what_if/4,
+    time_limits_enumerate/4, time_limits_floor/3]).
+:- use_module(eu/procurement/time_limits/fixtures, [
+    time_limits_subject/1, time_limits_profile_for/2, time_limits_assess/2]).
+% Re-export the procedure-type atoms from common that form the profile
+% vocabulary (the valid values for procedure_type_key). The Python eval
+% harness resolves them through this package surface.
+% (Clausal Prolog: open_procedure, restricted_procedure,
+% competitive_procedure_with_negotiation, competitive_dialogue and
+% innovation_partnership are atoms; there is nothing to re-export.)
+
+:- end_module(time_limits).

@@ -1,0 +1,71 @@
+% (Clausal Prolog: the seam imports of the value atoms eligible, ineligible and
+% indeterminate, and of date from date_time, have no counterpart: atoms and
+% compound terms need no import. Only predicates are imported.)
+:- module(test_public_interface, []).
+:- use_module(library(clpz)).
+:- use_module(eu/state_aid/de_minimis_cumulation, [de_minimis_ceiling/1, de_minimis_aid_in_window/3,
+    de_minimis_verdict/3]).
+
+% ── de_minimis_ceiling/1 ──────────────────────────────────────────────────
+
+test('ceiling is 30000000 euro-cents') :-
+    de_minimis_ceiling(C),
+    C #= 30000000.
+
+test('DET ceiling') :-
+    findall(C, de_minimis_ceiling(C), L),
+    length(L, 1).
+
+% ── de_minimis_aid_in_window/3 ────────────────────────────────────────────
+
+test('aid sums only grants within 3-year window') :-
+    de_minimis_aid_in_window(
+        [[date(2023, 1, 1), 5000000], [date(2022, 1, 1), 10000000], [date(2020, 1, 1), 20000000]],
+        date(2024, 1, 1),
+        Total
+    ),
+    Total #= 15000000.
+
+test('aid with empty grants list is zero') :-
+    de_minimis_aid_in_window([], date(2024, 1, 1), Total),
+    Total #= 0.
+
+test('grant on ref date itself is included') :-
+    de_minimis_aid_in_window([[date(2024, 1, 1), 7000000]], date(2024, 1, 1), Total),
+    Total #= 7000000.
+
+test('DET aid in window') :-
+    findall(T, de_minimis_aid_in_window([[date(2023, 1, 1), 5000000]], date(2024, 1, 1), T), L),
+    length(L, 1).
+
+% ── de_minimis_verdict/3 ─────────────────────────────────────────────────
+
+test('verdict eligible when total under limit') :-
+    de_minimis_verdict(
+        [[date(2023, 1, 1), 5000000], [date(2022, 1, 1), 10000000]],
+        date(2024, 1, 1),
+        V
+    ),
+    V = eligible.
+
+test('verdict eligible when total equals ceiling') :-
+    de_minimis_verdict(
+        [[date(2023, 1, 1), 30000000]],
+        date(2024, 1, 1),
+        V
+    ),
+    V = eligible.
+
+test('verdict ineligible when total over ceiling') :-
+    de_minimis_verdict(
+        [[date(2023, 1, 1), 20000000], [date(2022, 6, 1), 15000000]],
+        date(2024, 1, 1),
+        V
+    ),
+    V = ineligible.
+
+test('DET verdict') :-
+    findall(V, de_minimis_verdict([[date(2023, 1, 1), 5000000]], date(2024, 1, 1), V), L),
+    length(L, 1).
+
+:- end_module(test_public_interface).

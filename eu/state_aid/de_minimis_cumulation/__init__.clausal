@@ -1,0 +1,40 @@
+% eu.state_aid.de_minimis_cumulation/__init__.clausal -- thin package init (determination-slices
+% module layout, Wave C 2026-08-07; mirrors the eu.gdpr / _tools/migrate_namespace.py pattern).
+% Re-exports the domain's PUBLIC surface from its named submodules so a consumer writes
+% -import_from(eu.state_aid.de_minimis_cumulation, [...]) while the logic lives in the well-named
+% submodules. Direct submodule imports remain valid. Regenerate; do not hand-edit.
+%
+% Export NAME SET is UNCHANGED from the pre-reslice __init__.clausal (compat contract:
+% 12 names, diff empty); only the source modules changed -- schema + constants +
+% computation + decision -> cumulation (this domain's one determination slice; there is
+% no kernel.clausal, see that file's header for why).
+%
+% HAND-MAINTAINED, DELIBERATELY. auto/pkginit.render() narrows the facade to
+% manifest.yaml's public_interface once the manifest is authored, and this domain's
+% public_interface (9 predicate entries) does not list the bare atoms eligible /
+% ineligible / indeterminate. Dry-run against the PRE-reslice tree confirms pkginit
+% already dropped all three, and BOTH test files import them from the package root
+% (tests/test_public_interface.clausal:1-2, tests/test_queries.clausal:27-32), so a
+% regenerated init would have broken them. Not caused by the re-slice; pre-existing.
+%
+% Clausal Prolog: a .clausal module exports PREDICATES only, so this facade
+% re-exports the 8 predicates of the seam's 12 names. The bare atoms eligible,
+% ineligible and indeterminate and the data constructor ref_comparison/4 need
+% no export and no import in Clausal Prolog, so they have no entry below.
+:- module(de_minimis_cumulation, [
+    de_minimis_ceiling/1,
+    de_minimis_aid_in_window/3,
+    de_minimis_verdict/3,
+    de_minimis_compare_refs/4,
+    de_minimis_gap_to_ineligible/3,
+    de_minimis_headroom/3,
+    de_minimis_qualifying_grants/3,
+    de_minimis_what_if/4
+]).
+:- use_module(eu/state_aid/de_minimis_cumulation/cumulation, [
+    de_minimis_ceiling/1, de_minimis_aid_in_window/3, de_minimis_verdict/3]).
+:- use_module(eu/state_aid/de_minimis_cumulation/queries, [
+    de_minimis_compare_refs/4, de_minimis_gap_to_ineligible/3, de_minimis_headroom/3,
+    de_minimis_qualifying_grants/3, de_minimis_what_if/4]).
+
+:- end_module(de_minimis_cumulation).

@@ -1,0 +1,73 @@
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: result argument UNBOUND,
+% enumerate all solutions, verify exactly one.
+% Run: python -m clausal.testing eu/procurement/framework_agreements/tests/test_output_mode.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS (routes, statuses, limb ids,
+% profile keys, method atoms, citation keys), of the data constructors
+% framework_term_verdict/3, call_off_verdict/4, framework_agreements_verdict/2
+% and cite/1, and of date/3 have no counterpart: atoms and compound terms need
+% no import. Only predicates are imported.)
+:- module(test_output_mode, []).
+:- use_module(eu/procurement/framework_agreements/framework_agreements, [
+    call_off_route/2,
+    framework_term_limit_date/2,
+    framework_term_within_limit/3,
+    call_off_award_window_status/4,
+    decide_call_off/2]).
+:- use_module(eu/procurement/framework_agreements/fixtures, [framework_agreements_profile_for/2]).
+
+test('output mode: single-operator profile yields exactly one route') :-
+    framework_agreements_profile_for("single_op_lawful", Profile),
+    findall(Route, call_off_route(Profile, Route), Routes),
+    Routes = [single_operator_direct_award].
+
+test('output mode: multi-operator direct-all profile yields exactly one route') :-
+    framework_agreements_profile_for("multi_direct_all_lawful", Profile),
+    findall(Route, call_off_route(Profile, Route), Routes),
+    Routes = [multi_operator_direct_award_all_terms_set_out].
+
+test('output mode: multi-operator split profile yields exactly one route') :-
+    framework_agreements_profile_for("multi_direct_split_lawful", Profile),
+    findall(Route, call_off_route(Profile, Route), Routes),
+    Routes = [multi_operator_direct_award_under_split_framework].
+
+test('output mode: multi-operator reopened profile yields exactly one route') :-
+    framework_agreements_profile_for("multi_reopen_lawful", Profile),
+    findall(Route, call_off_route(Profile, Route), Routes),
+    Routes = [multi_operator_reopened_competition].
+
+test('output mode: no-route profile yields exactly one route') :-
+    framework_agreements_profile_for("no_route_single_reopen", Profile),
+    findall(Route, call_off_route(Profile, Route), Routes),
+    Routes = [no_lawful_route].
+
+test('output mode: framework_term_limit_date yields a triple') :-
+    framework_term_limit_date(date(2024, 1, 1), date(2028, 1, 1)).
+
+test('output mode: framework_term_limit_date 29-Feb clamp') :-
+    framework_term_limit_date(date(2024, 2, 29), date(2028, 2, 29)).
+
+test('output mode: within_limit for exactly 4 years') :-
+    findall(Status, framework_term_within_limit(date(2024, 1, 1), date(2028, 1, 1), Status), Statuses),
+    Statuses = [within_four_year_limit].
+
+test('output mode: exceeds for 4 years plus 1 day') :-
+    findall(Status, framework_term_within_limit(date(2024, 1, 1), date(2028, 1, 2), Status), Statuses),
+    Statuses = [exceeds_four_year_limit].
+
+test('output mode: award window status is unique') :-
+    findall(Status, call_off_award_window_status(date(2024, 1, 1), date(2027, 1, 1), date(2025, 6, 15), Status), Statuses),
+    Statuses = [award_date_within_framework_term].
+
+test('output mode: decide_call_off yields exactly one verdict for lawful profile') :-
+    framework_agreements_profile_for("single_op_lawful", Profile),
+    findall(Verdict, decide_call_off(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+test('output mode: decide_call_off yields exactly one verdict for unlawful profile') :-
+    framework_agreements_profile_for("single_op_outside_term", Profile),
+    findall(Verdict, decide_call_off(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+:- end_module(test_output_mode).

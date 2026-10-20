@@ -1,0 +1,60 @@
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing eu/procurement/framework_agreements/tests/test_input_mode.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of the route and status ATOMS and of
+% date/3 have no counterpart: atoms and compound terms need no import. Only
+% predicates are imported.)
+:- module(test_input_mode, []).
+:- use_module(eu/procurement/framework_agreements/framework_agreements, [
+    framework_agreements_status/2,
+    call_off_route/2,
+    framework_term_within_limit/3,
+    call_off_award_window_status/4]).
+:- use_module(eu/procurement/framework_agreements/fixtures, [
+    framework_agreements_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complements (ruling 2026-10-20) of the seam's `not Goal`: the given
+% value is not among Goal's answers -- findall/3 plus the kit's dif-based
+% not_member/2, so a broken rule that gave BOTH answers still fails the test.
+framework_agreements_status_never(Profile, Route) :-
+    findall(Found, framework_agreements_status(Profile, Found), FoundRoutes),
+    not_member(Route, FoundRoutes).
+framework_term_within_limit_never(StartDate, EndDate, Status) :-
+    findall(Found, framework_term_within_limit(StartDate, EndDate, Found), FoundStatuses),
+    not_member(Status, FoundStatuses).
+call_off_award_window_status_never(StartDate, EndDate, AwardDate, Status) :-
+    findall(Found, call_off_award_window_status(StartDate, EndDate, AwardDate, Found), FoundStatuses),
+    not_member(Status, FoundStatuses).
+
+test('input mode: single-operator route holds with the verdict bound') :-
+    framework_agreements_profile_for("single_op_lawful", Profile),
+    framework_agreements_status(Profile, single_operator_direct_award).
+
+test('input mode: wrong bound route is rejected') :-
+    framework_agreements_profile_for("single_op_lawful", Profile),
+    framework_agreements_status_never(Profile, multi_operator_reopened_competition).
+
+test('input mode: multi-operator direct route holds with the verdict bound') :-
+    framework_agreements_profile_for("multi_direct_all_lawful", Profile),
+    framework_agreements_status(Profile, multi_operator_direct_award_all_terms_set_out).
+
+test('input mode: no_lawful_route holds for single-operator reopening') :-
+    framework_agreements_profile_for("no_route_single_reopen", Profile),
+    framework_agreements_status(Profile, no_lawful_route).
+
+test('input mode: within_four_year_limit holds for a 3-year term') :-
+    framework_term_within_limit(date(2024, 1, 1), date(2027, 1, 1), within_four_year_limit).
+
+test('input mode: exceeds_four_year_limit is rejected for a 3-year term') :-
+    framework_term_within_limit_never(date(2024, 1, 1), date(2027, 1, 1), exceeds_four_year_limit).
+
+test('input mode: award date within term holds') :-
+    call_off_award_window_status(date(2024, 1, 1), date(2027, 1, 1), date(2025, 6, 15), award_date_within_framework_term).
+
+test('input mode: award date outside term is rejected for an in-term date') :-
+    call_off_award_window_status_never(date(2024, 1, 1), date(2027, 1, 1), date(2025, 6, 15), award_date_outside_framework_term).
+
+:- end_module(test_input_mode).

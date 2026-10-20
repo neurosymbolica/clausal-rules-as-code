@@ -13,7 +13,7 @@ reading it relies on explicit, testable and easy to review.
 | Which provisions are formalized, and by which rule? | the side-by-side report, `provisions.yaml` |
 | Which provisions were left out, why, and what follows from that for a user? | `manifest.yaml`, `deferred_set` and `excluded_set`; the report |
 | Where the text admits more than one reading, which was chosen? | `manifest.yaml`, `operative_readings` |
-| What must the user supply, and what happens if they do not? | `SIGNATURE.md`, `INTERFACE-SPEC.md`, `profile_keys.yaml` |
+| What must the user supply, and what happens if they do not? | `SIGNATURE.md`, `profile_keys.yaml` |
 | Does the domain answer the worked cases correctly? | `tests/` |
 
 ## Judgement stays with people

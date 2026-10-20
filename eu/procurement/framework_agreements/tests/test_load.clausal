@@ -1,0 +1,66 @@
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/procurement/framework_agreements/tests/test_load.clausal
+% (Clausal Prolog: the seam imports of the kernel constructors and placeholder
+% atoms, cite/1 and the five citation key atoms have no counterpart: atoms and
+% compound terms need no import. Only predicates are imported.)
+:- module(test_load, []).
+:- use_module(library(clpz)).
+:- use_module(eu/procurement/framework_agreements/kernel).
+:- use_module(eu/procurement/framework_agreements/citations, [citation/2]).
+:- use_module(eu/procurement/framework_agreements/parameters, [
+    framework_term_limit_years/1,
+    parameter_source/2]).
+
+test('kernel verdict atoms are pairwise distinct') :-
+    dif(satisfied, not_satisfied),
+    dif(satisfied, overall),
+    dif(satisfied, as_of_date),
+    dif(not_satisfied, overall),
+    dif(not_satisfied, as_of_date),
+    dif(overall, as_of_date).
+
+test('framework_term_verdict builds and destructures') :-
+    Verdict = framework_term_verdict(satisfied, [], []),
+    Verdict = framework_term_verdict(Status, DefectIds, Citations),
+    Status = satisfied,
+    DefectIds = [],
+    Citations = [].
+
+test('call_off_verdict builds and destructures') :-
+    Verdict = call_off_verdict(satisfied, overall, [], []),
+    Verdict = call_off_verdict(Status, Route, DefectIds, Citations),
+    Status = satisfied,
+    Route = overall,
+    DefectIds = [],
+    Citations = [].
+
+test('framework_agreements_verdict builds and destructures') :-
+    Verdict = framework_agreements_verdict(satisfied, []),
+    Verdict = framework_agreements_verdict(Status, Citations),
+    Status = satisfied,
+    Citations = [].
+
+test('cite constructor builds a ground term') :-
+    C = cite(eu_dir_2014_24_art_33_1),
+    ground(C).
+
+% (Clausal Prolog: a citation and a parameter_source record are label-ref-
+% verbatim PAIR LISTS of quoted atoms, not dicts, so the label is read with
+% member/2 and "non-empty" is dif/2 from the empty atom.)
+test('real citation record resolves with non-empty label') :-
+    citation(eu_dir_2014_24_art_33_1, Metadata),
+    member(label-Label, Metadata),
+    dif(Label, '').
+
+test('parameter framework_term_limit_years resolves to 4') :-
+    framework_term_limit_years(Years),
+    Years #= 4.
+
+% (Clausal Prolog: the parameter_source key is the atom the Prolog parameter
+% checker requires, not the seam's string.)
+test('parameter_source record resolves for framework_term_limit_years') :-
+    parameter_source(framework_term_limit_years, Metadata),
+    member(label-Label, Metadata),
+    dif(Label, '').
+
+:- end_module(test_load).

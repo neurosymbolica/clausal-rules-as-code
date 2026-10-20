@@ -1,0 +1,37 @@
+% =====================================================================
+% fixtures.clausal -- (Wave B decomposition; clause bodies byte-identical
+% to the pre-split monolith; decision-preserving).
+% =====================================================================
+
+% (Clausal Prolog: the seam import of the ownership_chains key ATOM has no
+% counterpart -- atoms need no import. A profile dict is built with
+% dict_pairs/2: Clausal Prolog has no dict literal.)
+:- module(fixtures, [
+    amlr_bo_subject/1,
+    amlr_bo_profile_for/2,
+    amlr_bo_assess/2
+]).
+
+:- use_module(eu/aml/amlr_beneficial_ownership_threshold/beneficial_ownership, [
+    assess_amlr_bo/3]).
+
+amlr_bo_subject("person_direct_30pct").
+
+amlr_bo_subject("person_chain_50x49pct_below").
+
+amlr_bo_subject("person_missing_chains").
+
+amlr_bo_profile_for("person_direct_30pct", Profile) :-
+    dict_pairs(Profile, [ownership_chains-[[3000]]]).
+
+amlr_bo_profile_for("person_chain_50x49pct_below", Profile) :-
+    dict_pairs(Profile, [ownership_chains-[[5000, 4999]]]).
+
+amlr_bo_profile_for("person_missing_chains", Profile) :-
+    dict_pairs(Profile, []).
+
+amlr_bo_assess(Subject, Result) :-
+    amlr_bo_profile_for(Subject, Profile),
+    assess_amlr_bo(Subject, Profile, Result).
+
+:- end_module(fixtures).

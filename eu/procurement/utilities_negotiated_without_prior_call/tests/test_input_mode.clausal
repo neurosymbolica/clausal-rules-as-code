@@ -1,0 +1,57 @@
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing eu/procurement/utilities_negotiated_without_prior_call/tests/test_input_mode.clausal
+% =====================================================================
+% (Clausal Prolog: the seam imports of value ATOMS and data constructors --
+% verdict, ground, profile-key, condition-flag, citation-key and procedure
+% atoms, utilities_negotiated_verdict/3, cite/1 -- have no counterpart: atoms
+% and compound terms need no import. Only predicates are imported.)
+:- module(test_input_mode, []).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/utilities_negotiated_without_prior_call, [
+    utilities_negotiated_without_prior_call_status/2]).
+:- use_module(eu/procurement/utilities_negotiated_without_prior_call/fixtures, [
+    utilities_negotiated_without_prior_call_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+% Positive complement (ruling 2026-10-20) of the seam's `not Goal`: the given
+% status is not among the status projection's answers -- findall/3 plus the
+% kit's dif-based not_member/2, so a broken rule that gave BOTH answers still
+% fails the test.
+utilities_negotiated_without_prior_call_status_never(Profile, Status) :-
+    findall(Found, utilities_negotiated_without_prior_call_status(Profile, Found), FoundStatuses),
+    not_member(Status, FoundStatuses).
+
+test('input mode: a_lawful profile yields use_lawful when bound') :-
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_lawful).
+
+test('input mode: a_lawful profile rejects use_unlawful') :-
+    utilities_negotiated_without_prior_call_profile_for("a_lawful", Profile),
+    utilities_negotiated_without_prior_call_status_never(Profile, use_unlawful).
+
+test('input mode: a_near_miss profile yields use_unlawful when bound') :-
+    utilities_negotiated_without_prior_call_profile_for("a_near_miss", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_unlawful).
+
+test('input mode: a_near_miss profile rejects use_lawful') :-
+    utilities_negotiated_without_prior_call_profile_for("a_near_miss", Profile),
+    utilities_negotiated_without_prior_call_status_never(Profile, use_lawful).
+
+test('input mode: e_lawful (supplies) yields use_lawful') :-
+    utilities_negotiated_without_prior_call_profile_for("e_lawful", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_lawful).
+
+test('input mode: e_near_miss (works type-gate) yields use_unlawful') :-
+    utilities_negotiated_without_prior_call_profile_for("e_near_miss", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_unlawful).
+
+test('input mode: j_lawful (services) yields use_lawful') :-
+    utilities_negotiated_without_prior_call_profile_for("j_lawful", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_lawful).
+
+test('input mode: j_near_miss (supplies type-gate) yields use_unlawful') :-
+    utilities_negotiated_without_prior_call_profile_for("j_near_miss", Profile),
+    utilities_negotiated_without_prior_call_status(Profile, use_unlawful).
+
+:- end_module(test_input_mode).

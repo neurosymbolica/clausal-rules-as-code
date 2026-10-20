@@ -1,0 +1,358 @@
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/procurement/time_limits.
+%
+% Subjects (expected minimum days in parentheses):
+%   open_tenders_baseline                       : open, no reductions (35)
+%   open_tenders_prior_information_notice       : open, PIN published (15)
+%   open_tenders_electronic_submission          : open, e-submission (30)
+%   open_tenders_urgency                        : open, urgency (15)
+%   open_tenders_prior_notice_and_electronic    : open, PIN + e-submission (15,
+%                                                 NOT 10 -- reductions do not compound)
+%   open_participation_requests                 : open, request stage (stage_not_applicable)
+%   restricted_requests_baseline                : restricted requests (30)
+%   restricted_requests_urgency                 : restricted requests, urgency (15)
+%   restricted_tenders_baseline                 : restricted tenders (30)
+%   restricted_tenders_prior_information_notice : restricted tenders, PIN (10)
+%   restricted_tenders_electronic_submission    : restricted tenders, e-submission (25)
+%   restricted_tenders_urgency                  : restricted tenders, urgency (10)
+%   negotiation_requests_urgency                : CWN requests, urgency (15)
+%   negotiation_tenders_electronic_submission   : CWN initial tenders, e-submission (25)
+%   dialogue_requests_baseline                  : competitive dialogue requests (30)
+%   dialogue_requests_urgency_claimed           : competitive dialogue requests,
+%                                                 urgency flag True -- STILL 30 (no
+%                                                 accelerated variant exists for CD)
+%   dialogue_tenders                            : competitive dialogue tenders
+%                                                 (no_minimum_prescribed)
+%   partnership_requests_baseline               : innovation partnership requests (30)
+%   partnership_tenders                         : innovation partnership tenders
+%                                                 (no_minimum_prescribed)
+%
+% CONFORMITY SUBJECTS. The nineteen above carry no observed_time_limit_days, so
+% every one of them is `observed_days_not_supplied` -- which is the ordinary
+% state of a record nobody has read the deadline off, and the state that must
+% never look like compliance. The five below supply it:
+%   open_tenders_baseline_allowing_20           : min 35, allowed 20 -> SHORT
+%   open_tenders_baseline_allowing_34           : min 35, allowed 34 -> SHORT
+%                                                 (one day short is still short)
+%   open_tenders_baseline_allowing_35           : min 35, allowed 35 -> MEETS
+%                                                 (Art 27(1) "shall be 35 days":
+%                                                 an inclusive floor)
+%   open_tenders_prior_notice_allowing_20       : min 15, allowed 20 -> MEETS
+%                                                 (the pairing control for the
+%                                                 first: the SAME 20 days is a
+%                                                 breach at the 35-day base and
+%                                                 lawful under Art 27(2), so the
+%                                                 reduction is load-bearing for
+%                                                 conformity and not only for
+%                                                 the figure)
+%   dialogue_tenders_allowing_20                : Art 30 prescribes no tender
+%                                                 minimum -> the day count is
+%                                                 supplied and the verdict is
+%                                                 still no_prescribed_minimum_to_meet
+% =====================================================================
+
+:- module(fixtures, [
+    time_limits_subject/1,
+    time_limits_profile_for/2,
+    time_limits_assess/2
+]).
+
+% Imports are LEXICAL CLOSURE ONLY: every name below is spelled in a profile
+% dict of this file (or, for decide_time_limits/2, in the wrapper's body).
+% time_limits_verdict/3 is NOT imported -- time_limits_assess/2's second
+% argument is a bare variable here. tests/test_public_interface.clausal does
+% query it with a literal time_limits_verdict(_, _, _) term, but that is a
+% sibling .clausal file which imports the constructor itself and resolves it
+% in its OWN scope; it is not the rule-3 harness case. Deletion verified
+% against the full test battery and the oracle.
+% (Clausal Prolog: the procedure, profile-key and stage ATOMS the seam imported
+% need no import, and a profile is a dict built from Key-Value pairs with
+% dict_pairs/2; only decide_time_limits/2 is imported.)
+:- use_module(eu/procurement/time_limits/time_limits, [decide_time_limits/2]).
+
+% ---- Subject registry ------------------------------------------------
+time_limits_subject("open_tenders_baseline").
+time_limits_subject("open_tenders_prior_information_notice").
+time_limits_subject("open_tenders_electronic_submission").
+time_limits_subject("open_tenders_urgency").
+time_limits_subject("open_tenders_prior_notice_and_electronic").
+time_limits_subject("open_participation_requests").
+time_limits_subject("restricted_requests_baseline").
+time_limits_subject("restricted_requests_urgency").
+time_limits_subject("restricted_tenders_baseline").
+time_limits_subject("restricted_tenders_prior_information_notice").
+time_limits_subject("restricted_tenders_electronic_submission").
+time_limits_subject("restricted_tenders_urgency").
+time_limits_subject("negotiation_requests_urgency").
+time_limits_subject("negotiation_tenders_electronic_submission").
+time_limits_subject("dialogue_requests_baseline").
+time_limits_subject("dialogue_requests_urgency_claimed").
+time_limits_subject("dialogue_tenders").
+time_limits_subject("partnership_requests_baseline").
+time_limits_subject("partnership_tenders").
+time_limits_subject("open_tenders_baseline_allowing_20").
+time_limits_subject("open_tenders_baseline_allowing_34").
+time_limits_subject("open_tenders_baseline_allowing_35").
+time_limits_subject("open_tenders_prior_notice_allowing_20").
+time_limits_subject("dialogue_tenders_allowing_20").
+
+% ---- Profiles --------------------------------------------------------
+
+% Open procedure (Art 27), receipt of tenders: base 35 days.
+time_limits_profile_for("open_tenders_baseline", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 27(2): PIN published -> 15 days.
+time_limits_profile_for("open_tenders_prior_information_notice", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-true,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 27(4): electronic submission -> 35 - 5 = 30 days.
+time_limits_profile_for("open_tenders_electronic_submission", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-true,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 27(3): substantiated urgency -> 15 days.
+time_limits_profile_for("open_tenders_urgency", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true
+    ]).
+
+% PIN + electronic submission -> 15 days, NOT 10: Art 27(4)'s 5-day
+% reduction targets only the Art 27(1) 35-day base.
+time_limits_profile_for("open_tenders_prior_notice_and_electronic", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-true,
+        electronic_submission_accepted-true,
+        state_of_urgency_substantiated-false
+    ]).
+
+% The open procedure is single-stage: no participation-request stage.
+time_limits_profile_for("open_participation_requests", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Restricted procedure (Art 28), requests to participate: base 30 days.
+time_limits_profile_for("restricted_requests_baseline", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 28(6)(a): urgency -> requests 15 days.
+time_limits_profile_for("restricted_requests_urgency", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true
+    ]).
+
+% Restricted procedure (Art 28), tenders: base 30 days.
+time_limits_profile_for("restricted_tenders_baseline", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 28(3): PIN published -> tenders 10 days.
+time_limits_profile_for("restricted_tenders_prior_information_notice", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-true,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 28(5): electronic submission -> 30 - 5 = 25 days.
+time_limits_profile_for("restricted_tenders_electronic_submission", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-true,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Art 28(6)(b): urgency -> tenders 10 days.
+time_limits_profile_for("restricted_tenders_urgency", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-restricted_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true
+    ]).
+
+% CWN (Art 29): urgency -> requests 15 days (Art 28(6)(a) via 29(1)).
+time_limits_profile_for("negotiation_requests_urgency", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_procedure_with_negotiation,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true
+    ]).
+
+% CWN (Art 29): electronic submission -> initial tenders 25 days
+% (Art 28(5) via 29(1)).
+time_limits_profile_for("negotiation_tenders_electronic_submission", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_procedure_with_negotiation,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-true,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Competitive dialogue (Art 30): requests 30 days.
+time_limits_profile_for("dialogue_requests_baseline", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_dialogue,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Competitive dialogue with an urgency claim: STILL 30 days -- Art 30
+% provides no accelerated variant (the Art 28(6) reductions are not
+% cross-applied to competitive dialogue).
+time_limits_profile_for("dialogue_requests_urgency_claimed", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_dialogue,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-true
+    ]).
+
+% Competitive dialogue tenders: no prescribed minimum day count.
+time_limits_profile_for("dialogue_tenders", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_dialogue,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Innovation partnership (Art 31): requests 30 days.
+time_limits_profile_for("partnership_requests_baseline", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-innovation_partnership,
+        stage_key-receipt_of_participation_requests,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% Innovation partnership tenders: no prescribed minimum day count.
+time_limits_profile_for("partnership_tenders", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-innovation_partnership,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false
+    ]).
+
+% ---- Conformity subjects: the observed day count IS supplied ---------
+
+% Art 27(1) minimum 35, notice allowed 20: a real Arts 27-31 breach.
+time_limits_profile_for("open_tenders_baseline_allowing_20", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-20
+    ]).
+
+% One day short of the Art 27(1) figure is short.
+time_limits_profile_for("open_tenders_baseline_allowing_34", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-34
+    ]).
+
+% Exactly the Art 27(1) figure complies: "shall be 35 days" is an inclusive floor.
+time_limits_profile_for("open_tenders_baseline_allowing_35", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-35
+    ]).
+
+% The SAME 20 days, lawful this time: Art 27(2) shortens the minimum to 15.
+time_limits_profile_for("open_tenders_prior_notice_allowing_20", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-open_procedure,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-true,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-20
+    ]).
+
+% Art 30 prescribes no tender-stage minimum: supplying the day count cannot
+% turn "the Directive fixes no figure here" into a finding of compliance.
+time_limits_profile_for("dialogue_tenders_allowing_20", Profile) :-
+    dict_pairs(Profile, [
+        procedure_type_key-competitive_dialogue,
+        stage_key-receipt_of_tenders,
+        prior_information_notice_published-false,
+        electronic_submission_accepted-false,
+        state_of_urgency_substantiated-false,
+        observed_time_limit_days-20
+    ]).
+
+% ---- Convenience wrapper ---------------------------------------------
+time_limits_assess(Subject, Result) :-
+    time_limits_profile_for(Subject, Profile),
+    decide_time_limits(Profile, Result).
+
+:- end_module(fixtures).

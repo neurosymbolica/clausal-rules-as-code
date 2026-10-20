@@ -1,0 +1,14 @@
+:- module(m__eu_procurement_framework_agreements_citations, [implements/1, citation/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+citation(eu_dir_2014_24_art_33_1, [label - 'Directive 2014/24/EU, Article 33(1) -- four-year limit on the term of a framework agreement', ref - 'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4', verbatim - 'The term of a framework agreement shall not exceed four years, save in exceptional cases duly justified, in particular by the subject of the framework agreement.', units - ['02014L0024-20260101#parag_033.001']]).
+citation(eu_dir_2014_24_art_33_2, [label - 'Directive 2014/24/EU, Article 33(2) -- call-offs: identified parties, no substantial modification', ref - 'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4', verbatim - 'Contracts based on a framework agreement may under no circumstances entail substantial modifications to the terms laid down in that framework agreement, in particular in the case referred to in paragraph 3.', units - ['02014L0024-20260101#parag_033.002']]).
+citation(eu_dir_2014_24_art_33_3, [label - 'Directive 2014/24/EU, Article 33(3) -- single-operator framework: award within the limits of its terms', ref - 'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4', verbatim - 'Where a framework agreement is concluded with a single economic operator, contracts based on that agreement shall be awarded within the limits of the terms laid down in the framework agreement.', units - ['02014L0024-20260101#parag_033.003']]).
+citation(eu_dir_2014_24_art_33_4, [label - 'Directive 2014/24/EU, Article 33(4) and points (a) to (c) -- the three routes for a multi-operator framework', ref - 'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4', verbatim - 'Where a framework agreement is concluded with more than one economic operator, that framework agreement shall be performed in one of the following ways:', units - ['02014L0024-20260101#parag_033.004', '02014L0024-20260101#point_033.004_a', '02014L0024-20260101#point_033.004_b', '02014L0024-20260101#point_033.004_c']]).
+citation(eu_dir_2014_24_art_33_5, [label - 'Directive 2014/24/EU, Article 33(5) and points (a) to (d) -- procedure for a reopened competition', ref - 'http://publications.europa.eu/resource/celex/02014L0024-20260101.ENG.fmx4', verbatim - 'The competitions referred to in points (b) and (c) of paragraph 4 shall be based on the same terms as applied for the award of the framework agreement and, where necessary, more precisely formulated terms', units - ['02014L0024-20260101#parag_033.005', '02014L0024-20260101#point_033.005_a', '02014L0024-20260101#point_033.005_b', '02014L0024-20260101#point_033.005_c', '02014L0024-20260101#point_033.005_d']]).
+
+implements(Key) :-
+    citation(Key, _).
