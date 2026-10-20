@@ -10,9 +10,8 @@ answer one legal question each: <em>is this person a beneficial owner?</em>, <em
 minimum time limit for receipt of tenders?</em>, <em>does this aid stay under the de minimis
 ceiling?</em> Every rule names the provision it implements, every quotation is checked against
 the official text, and every domain says what it deliberately does not cover. The rules are
-written in Clausal Prolog, a cut-free subset of the ISO Prolog standard: each rule can be read and
-checked on its own, and the programs are meant to run on any standard Prolog engine, not only
-ours.</p>
+written in Clausal Prolog, a restricted subset of ISO Prolog meant to run on standard Prolog
+engines.</p>
 
 <div class="facts" markdown>
 <div><strong>8</strong><span>EU domains in this release</span></div>
