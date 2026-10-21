@@ -1,4 +1,4 @@
-:- module(m__eu_procurement_time_limits___init__, []).
+:- module(m__eu_procurement_time_limits___init__, [root_export/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
@@ -7,3 +7,10 @@
 :- use_module(m__eu_procurement_time_limits_citations, [citation/2]).
 :- use_module(m__eu_procurement_time_limits_queries, [time_limits_profile_keys/1, time_limits_what_if/4, time_limits_enumerate/4, time_limits_floor/3]).
 :- use_module(m__eu_procurement_time_limits_fixtures, [time_limits_subject/1, time_limits_profile_for/2, time_limits_assess/2]).
+
+root_export(electronic_submission_accepted).
+root_export(prior_information_notice_published).
+root_export(procedure_type_key).
+root_export(stage_key).
+root_export(state_of_urgency_substantiated).
+root_export(time_limits_verdict).

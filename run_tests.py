@@ -4,11 +4,11 @@
     pip install clausal              # the engine (Clausal Prolog)
     python run_tests.py              # every domain
     python run_tests.py eu/aml       # one jurisdiction or area
-    python run_tests.py eu/procurement/time_limits/tests/test_queries.seam
+    python run_tests.py eu/procurement/time_limits/tests/test_queries.clausal
 
 Each test file runs in its own process with `python -m clausal.testing`, with the
-repository root and kit/ on the module path (domains import `kit.<module>` and
-each other by dotted name). Prints one line per file and a total, and exits 1 if
+repository root and kit/ on the module path (domains import `kit/<module>` and
+each other by path). Prints one line per file and a total, and exits 1 if
 any file has a failing test or does not finish within --timeout seconds.
 """
 import argparse

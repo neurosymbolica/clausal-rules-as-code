@@ -1,4 +1,4 @@
-:- module(m__eu_aml_amlr_beneficial_ownership_threshold___init__, []).
+:- module(m__eu_aml_amlr_beneficial_ownership_threshold___init__, [root_export/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
@@ -7,3 +7,6 @@
 :- use_module(m__eu_aml_amlr_beneficial_ownership_threshold_fixtures, [amlr_bo_assess/2, amlr_bo_subject/1, amlr_bo_profile_for/2]).
 :- use_module(m__eu_aml_amlr_beneficial_ownership_threshold_queries, [amlr_bo_diff/3, amlr_bo_what_if/3, amlr_bo_direct_boundary/1, amlr_bo_gap_to_threshold/2]).
 :- use_module(m__eu_aml_amlr_beneficial_ownership_threshold_citations, [citation/2]).
+
+root_export(ownership_chains).
+root_export(required_ownership_threshold).
