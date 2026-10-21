@@ -1,4 +1,4 @@
-:- module(m__eu_procurement_utilities_negotiated_without_prior_call___init__, []).
+:- module(m__eu_procurement_utilities_negotiated_without_prior_call___init__, [root_export/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
@@ -7,3 +7,51 @@
 :- use_module(m__eu_procurement_utilities_negotiated_without_prior_call_utilities_negotiated_without_prior_call, [decide_utilities_negotiated_without_prior_call/2, utilities_negotiated_without_prior_call_checklist/2, utilities_negotiated_without_prior_call_status/2, utilities_negotiated_without_prior_call_unmet_count/2, utilities_negotiated_without_prior_call_input_problem/2, utilities_negotiated_without_prior_call_input_acceptable/1]).
 :- use_module(m__eu_procurement_utilities_negotiated_without_prior_call_queries, [utilities_negotiated_without_prior_call_profile_keys/1, utilities_negotiated_without_prior_call_what_if/4]).
 :- use_module(m__eu_procurement_utilities_negotiated_without_prior_call_fixtures, [utilities_negotiated_without_prior_call_assess/2, utilities_negotiated_without_prior_call_profile_for/2, utilities_negotiated_without_prior_call_subject/1]).
+
+root_export(absence_of_competition_not_artificially_narrowed).
+root_export(additional_deliveries_by_original_supplier).
+root_export(art_50_a_no_suitable_tenders).
+root_export(art_50_b_research_contract).
+root_export(art_50_c_sole_operator).
+root_export(art_50_d_extreme_urgency).
+root_export(art_50_e_additional_deliveries).
+root_export(art_50_f_repetition).
+root_export(art_50_g_commodity_market).
+root_export(art_50_h_bargain_purchase).
+root_export(art_50_i_advantageous_winding_up).
+root_export(art_50_j_design_contest).
+root_export(award_does_not_prejudice_competitive_award_of_subsequent_contracts).
+root_export(awarded_to_contest_winner_or_all_winners_invited).
+root_export(bargain_opportunity_available_for_very_short_time).
+root_export(basic_project_indicated_extent_and_conditions).
+root_export(change_of_supplier_would_cause_technical_incompatibility).
+root_export(competition_absent_for_technical_reasons).
+root_export(contract_follows_directive_design_contest).
+root_export(contract_purely_for_research_experiment_study_or_development).
+root_export(contract_type_key).
+root_export(extreme_urgency_time_limits_cannot_be_met).
+root_export(initial_conditions_not_substantially_altered).
+root_export(n_a).
+root_export(no_reasonable_alternative_or_substitute).
+root_export(no_suitable_tenders_or_requests_received).
+root_export(not_for_securing_profit_or_recovering_research_costs).
+root_export(only_particular_operator_can_perform).
+root_export(original_contract_followed_article_44_1_procedure).
+root_export(particularly_advantageous_conditions_from_winding_up_or_liquidator).
+root_export(pleaded_ground_key).
+root_export(possible_use_of_this_procedure_disclosed_at_first_tender).
+root_export(price_considerably_lower_than_normal_market_prices).
+root_export(protection_of_exclusive_rights).
+root_export(repetition_conforms_to_basic_project).
+root_export(services).
+root_export(sole_operator_reason_key).
+root_export(supplier_winding_up_or_in_insolvency_procedure).
+root_export(supplies).
+root_export(supplies_quoted_and_purchased_on_commodity_market).
+root_export(unique_artistic_work_or_performance).
+root_export(urgency_events_unforeseeable_by_contracting_entity).
+root_export(urgency_not_attributable_to_contracting_entity).
+root_export(use_lawful).
+root_export(use_unlawful).
+root_export(utilities_negotiated_verdict).
+root_export(works).

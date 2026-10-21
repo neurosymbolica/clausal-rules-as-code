@@ -9,7 +9,7 @@
 % standard order. The two agree for atom keys (every profile key in the
 % corpus); they differ for mixed or numeric keys ([10, 9] vs [9, 10]).
 % Cut-free, ->-free.
-:- module(clausal_dicts, [dict_pairs/2, get/3, get/4, dict_keys/2]).
+:- module(clausal_dicts, [dict_pairs/2, get/3, get/4, dict_keys/2, is_dict_t/2]).
 :- use_module(library(dif)).
 :- use_module(library(lists)).
 
@@ -48,3 +48,17 @@ dict_keys(D, Ks) :- dicts_attrs_pairs(D, P), dicts_keys_of(P, K0), sort(K0, Ks).
 
 dicts_keys_of([], []).
 dicts_keys_of([K-_|T], [K|T2]) :- dicts_keys_of(T, T2).
+
+% is_dict_t(+Term, ?T): reified dict test (engine round 3, the dif_t/3 convention).
+% T = true when Term is a dict, T = false when it is not; an unbound Term is an
+% instantiation error, and a T other than true or false fails. KNOWN GAP, the
+% same one dict_keys/2 above has: here a dict IS an attribute list, so the empty
+% dict and [] are one term, and is_dict_t([], true) holds; the engine keeps them
+% apart ([] is not a dict there). A ground non-dict the corpus passes -- an atom,
+% a number, a string, a list that is not all attribute/2 -- answers false on both.
+is_dict_t(D, _) :- var(D), throw(error(instantiation_error, is_dict_t/2)).
+is_dict_t(D, true) :- nonvar(D), dicts_is_attrs(D).
+is_dict_t(D, false) :- nonvar(D), \+ dicts_is_attrs(D).
+
+dicts_is_attrs([]).
+dicts_is_attrs([A|T]) :- nonvar(A), A = attribute(_, _), nonvar(T), dicts_is_attrs(T).

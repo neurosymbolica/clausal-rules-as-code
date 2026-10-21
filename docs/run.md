@@ -11,6 +11,19 @@ python run_tests.py               # every domain's tests
 python run_tests.py eu/procurement/time_limits   # one domain
 ```
 
+The same tests on an independent ISO Prolog engine, through the plain ISO Prolog generated
+into each domain's `iso/` folder. Install [Scryer Prolog](https://www.scryer.pl) or
+[Trealla Prolog](https://github.com/trealla-prolog/trealla), then:
+
+```sh
+python run_iso_tests.py scryer /path/to/scryer-prolog
+python run_iso_tests.py trealla /path/to/tpl
+python run_iso_tests.py trealla /path/to/tpl eu/procurement/time_limits   # one domain
+```
+
+All three engines pass the same 1,218 tests (tested with Clausal Prolog 1.0.0, Scryer Prolog
+v0.10.0-137-g9acba77a and Trealla Prolog v2.92.3).
+
 The public checks for one domain:
 
 ```sh
