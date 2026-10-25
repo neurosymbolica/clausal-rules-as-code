@@ -454,6 +454,10 @@ test('input check reports not_ground for a profile holding an unbound variable')
 
 test('input check reports wrong_type(profile, expected_dict) for a profile that is not a dict') :-
     shortlisting_input_problem([procedure_type_key], wrong_type(profile, expected_dict)).
+% The profile given as the empty LIST is not a dict on every engine: in the ISO export the empty
+% DICT is '{}', so [] is a list there too, and exactly one problem is reported.
+test('input check reports wrong_type(profile, expected_dict), once, for a profile given as the empty list') :-
+    findall(P, shortlisting_input_problem([], P), [wrong_type(profile, expected_dict)]).
 
 test('input check reports missing_key for an Art 65(2) key of a restricted procedure') :-
     profile_without(invited_candidates, Profile),

@@ -4,8 +4,9 @@
 :- use_module(library(lists), [member/2]).
 :- use_module(library(dif), [dif/2]).
 :- use_module('clausal_profiles', [tri_get/3]).
-:- use_module('clausal_profiles', [is_dict/1]).
-:- use_module('clausal_profiles', [dict_keys/2]).
+:- use_module('clausal_kit_dicts', [is_dict/1]).
+:- use_module('clausal_dicts', [get/3]).
+:- use_module('clausal_kit_dicts', [dict_keys/2]).
 :- use_module('clausal_hof', [call_goal/2]).
 :- use_module('clausal_hof', [call_goal/3]).
 :- use_module('clausal_hof', [call_goal/5]).
@@ -24,7 +25,7 @@
 
 profile_get(PROFILE, KEY, VALUE) :-
     is_dict(PROFILE),
-    profile_get(PROFILE, KEY, VALUE).
+    get(PROFILE, KEY, VALUE).
 
 profile_get([HEAD|_], KEY, VALUE) :-
     HEAD = attribute(KEY, VALUE).
@@ -191,7 +192,7 @@ usable_nonpositive(PROFILE, KEY) :-
 
 usable_nonpositive(PROFILE, KEY) :-
     is_dict(PROFILE),
-    profile_get(PROFILE, KEY, VALUE),
+    get(PROFILE, KEY, VALUE),
     VALUE =< 0.
 
 usable_nonpositive([], _).

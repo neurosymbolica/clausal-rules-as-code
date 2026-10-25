@@ -3,7 +3,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_dicts, [dict_keys/2, get/3]).
+:- use_module(clausal_dicts, [dict_keys/2, get/3, is_dict_t/2]).
 :- use_module(library(clpz)).
 :- use_module(m__eu_procurement_framework_agreements_citations, [implements/1]).
 :- use_module(deadline_lib, [date_before/2, date_after/2, date_on_or_before/2, date_on_or_after/2]).
@@ -124,7 +124,7 @@ input_problem_candidate(_, Profile, not_ground(profile)) :-
     term_variables(Profile, [_|_]).
 input_problem_candidate(_, Profile, not_a_dict(profile)) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 input_problem_candidate(_, Profile, wrong_type(Key, Expected)) :-
     checkable_profile(Profile),
     framework_agreements_profile_key_list(Keys),

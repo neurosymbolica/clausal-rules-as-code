@@ -16,11 +16,10 @@
 %    about the atoms.
 %
 % 2. A quantity as a TRANSFER TERM. `quantity(Magnitude, unit(Ratio, Dims))`,
-%    per the engine lane's transfer-form design (2026-09-16 §4). That is a
+%    following the engine's quantity transfer form. That is a
 %    compound term a predicate CAN unpack, so this half is real code.
 %
-% REFERENCE SEMANTICS, handed over verbatim by the engine lane because this
-% file is outside their information barrier: "For a Prolog with no units,
+% REFERENCE SEMANTICS, taken verbatim from the engine: "For a Prolog with no units,
 % Number is the magnitude scaled to the standard unit for those dimensions,
 % i.e. Magnitude x Ratio with the unit discarded."
 %

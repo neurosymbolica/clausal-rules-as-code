@@ -605,6 +605,10 @@ test('input check reports not_ground for a profile holding an unbound variable')
 
 test('input check reports wrong_type(profile, expected_dict) for a profile that is not a dict') :-
     life_cycle_costing_input_problem(computation, [cost_components], wrong_type(profile, expected_dict)).
+% The profile given as the empty LIST is not a dict on every engine: in the ISO export the empty
+% DICT is '{}', so [] is a list there too, and exactly one problem is reported.
+test('input check reports wrong_type(profile, expected_dict), once, for a profile given as the empty list') :-
+    findall(P, life_cycle_costing_input_problem(computation, [], P), [wrong_type(profile, expected_dict)]).
 
 test('input check reports missing_key for a missing first-alinea flag') :-
     profile_without("externality_compliant", tenderer_data_indicated_in_procurement_documents, Profile),

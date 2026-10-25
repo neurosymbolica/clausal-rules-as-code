@@ -3,7 +3,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_dicts, [dict_keys/2, get/3]).
+:- use_module(clausal_dicts, [dict_keys/2, get/3, is_dict_t/2]).
 :- use_module(library(clpz)).
 :- use_module(m__eu_procurement_shortlisting_citations, [implements/1]).
 :- use_module(formalize_lib, [profile_get/3, profile_lacks/2, not_member/2]).
@@ -188,7 +188,7 @@ shortlisting_input_problems(Profile, [not_ground]) :-
     term_variables(Profile, [_|_]).
 shortlisting_input_problems(Profile, [wrong_type(profile, expected_dict)]) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 shortlisting_input_problems(Profile, Problems) :-
     ground(Profile),
     dict_keys(Profile, _),

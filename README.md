@@ -45,7 +45,7 @@ versions of the law; see `NOTICE`.
 ## Running it
 
 ```sh
-pip install clausal pyyaml            # the engine (Clausal Prolog), and YAML for the tools
+pip install 'clausal>=1.2.0' pyyaml   # the engine (Clausal Prolog), and YAML for the tools
 python run_tests.py                   # every domain's tests
 python run_tests.py eu/aml            # one jurisdiction or area
 ```

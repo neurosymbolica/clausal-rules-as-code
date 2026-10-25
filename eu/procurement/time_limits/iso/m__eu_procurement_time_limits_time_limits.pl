@@ -3,7 +3,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_dicts, [dict_keys/2, get/3]).
+:- use_module(clausal_dicts, [dict_keys/2, get/3, is_dict_t/2]).
 :- use_module(clausal_lists_extra, [min_list/2]).
 :- use_module(library(clpz)).
 :- use_module(m__eu_procurement_time_limits_citations, [implements/1]).
@@ -106,7 +106,7 @@ input_problem_in_order(Profile, not_ground) :-
     term_variables(Profile, [_|_]).
 input_problem_in_order(Profile, not_a_dict) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 input_problem_in_order(Profile, missing_key(procedure_type_key)) :-
     ground(Profile),
     dict_keys(Profile, _),

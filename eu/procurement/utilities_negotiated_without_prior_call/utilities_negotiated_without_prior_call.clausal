@@ -79,7 +79,8 @@
 %   not an atom     -> non_atom/1 (compound, number, or a non-empty dict)
 %   not recognised  -> differs_from_every/2 (dif/2 from every listed value)
 %   not boolean     -> dif(Value, true), dif(Value, false)
-% One negation is left: `\+ dict_keys(Profile, _)` for not_a_dict (see there).
+% The last negation, `\+ dict_keys(Profile, _)`, is now is_dict_t(Profile, false)
+% (see not_a_dict). No negation is left.
 
 utilities_negotiated_without_prior_call_input_problem(Profile, Problem) :-
     findall(Found, input_problem_in_order(Profile, Found), [Problem|_]).
@@ -88,15 +89,14 @@ utilities_negotiated_without_prior_call_input_acceptable(Profile) :-
 
 input_problem_in_order(Profile, not_ground) :-
     term_variables(Profile, [_|_]).
-% The one negation left in this module. There is no positive "is not a dict"
-% type test that holds on both targets: on the Clausal engine a dict is
-% neither atomic nor compound, while in the ISO export a dict IS a compound
-% (an attribute(Key, Value) list), so any complement written from atomic/1 and
-% compound/1 would refuse every real profile on one of the two. ground(Profile)
-% is proved first, so the test runs over a ground term and cannot flounder.
+% "Not a dict" is the engine's reified dict test, is_dict_t/2 (engine round 3),
+% supplied in the ISO export by the dict companion. No complement written from
+% atomic/1 and compound/1 would do: on the Clausal engine a dict is neither,
+% while in the ISO export a dict IS a compound (an attribute(Key, Value) list).
+% ground(Profile) is proved first, so the test runs over a ground term.
 input_problem_in_order(Profile, not_a_dict) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 input_problem_in_order(Profile, missing_key(pleaded_ground_key)) :-
     ground(Profile), dict_keys(Profile, _),
     profile_lacks(Profile, pleaded_ground_key).

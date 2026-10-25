@@ -3,7 +3,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_dicts, [dict_keys/2, get/3]).
+:- use_module(clausal_dicts, [dict_keys/2, get/3, is_dict_t/2]).
 :- use_module(m__eu_procurement_utilities_negotiated_without_prior_call_citations, [implements/1]).
 :- use_module(formalize_lib, [profile_get/3, profile_lacks/2, and_status/2]).
 
@@ -17,7 +17,7 @@ input_problem_in_order(Profile, not_ground) :-
     term_variables(Profile, [_|_]).
 input_problem_in_order(Profile, not_a_dict) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 input_problem_in_order(Profile, missing_key(pleaded_ground_key)) :-
     ground(Profile),
     dict_keys(Profile, _),

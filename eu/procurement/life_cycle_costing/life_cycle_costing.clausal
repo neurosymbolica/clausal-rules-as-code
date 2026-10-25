@@ -62,11 +62,9 @@
 %   not <input problem>              -> the problem list is [] (findall/3)
 %   once((member(C, L), C = [env, _, _])) -> lcc_contains_externality/1, which
 %                                       is deterministic by disjoint clauses.
-% ONE negation is left: `\+ dict_keys(Profile, _)` for wrong_type(profile,
-% expected_dict). The engine's dict is neither atomic nor compound, while the
-% ISO export's dict is an attribute(Key, Value) list (and the empty dict is
-% []), so no positive type test names "not a dict" on both; it needs a reified
-% dict test from the engine and the dict shim.
+% The last negation, `\+ dict_keys(Profile, _)`, is now is_dict_t(Profile, false):
+% the engine's reified dict test (engine round 3), supplied in the ISO export
+% by the dict companion. No negation is left.
 % =====================================================================
 :- module(life_cycle_costing, [
     decide_lcc_method_validity/2,
@@ -471,7 +469,7 @@ lcc_input_problems(_Determination, Profile, [not_ground]) :-
 
 lcc_input_problems(_Determination, Profile, [wrong_type(profile, expected_dict)]) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 
 lcc_input_problems(Determination, Profile, Problems) :-
     ground(Profile),

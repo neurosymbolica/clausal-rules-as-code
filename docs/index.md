@@ -16,7 +16,7 @@ engines.</p>
 
 <div class="facts" markdown>
 <div><strong>8</strong><span>EU domains in this release</span></div>
-<div><strong>1,187</strong><span>tests, all passing</span></div>
+<div><strong>1,193</strong><span>tests, all passing</span></div>
 <div><strong>121</strong><span>statute units tracked: 65 formalized, 56 left out with a stated reason</span></div>
 <div><strong>EUPL-1.2</strong><span>open source, the EU's own licence</span></div>
 </div>

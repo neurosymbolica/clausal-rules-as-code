@@ -3,7 +3,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_dicts, [dict_keys/2, dict_pairs/2, get/3]).
+:- use_module(clausal_dicts, [dict_keys/2, dict_pairs/2, get/3, is_dict_t/2]).
 :- use_module(clausal_lists_extra, [is_list/1]).
 :- use_module(library(clpz)).
 :- use_module(m__eu_aml_amlr_beneficial_ownership_threshold_citations, [implements/1]).
@@ -156,7 +156,7 @@ input_problem_candidate(Profile, not_ground) :-
     term_variables(Profile, [_|_]).
 input_problem_candidate(Profile, not_a_profile) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 input_problem_candidate(Profile, missing_key(ownership_chains)) :-
     ground(Profile),
     dict_keys(Profile, _),

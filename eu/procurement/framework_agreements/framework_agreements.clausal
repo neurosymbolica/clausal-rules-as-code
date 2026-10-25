@@ -306,11 +306,9 @@ call_off_award_window_status(StartDate, EndDate, AwardDate, award_date_outside_f
 %   not get(P, KEY, _)               -> profile_lacks(P, KEY)        (kit, dif-based)
 %   not boolean_value(V)             -> (gone: true/false are atoms, so integer/1
 %                                        alone already refuses a boolean)
-% ONE negation is left: `\+ dict_keys(Profile, _)` for not_a_dict. The engine's
-% dict is neither atomic nor compound, while the ISO export's dict is an
-% attribute(Key, Value) list, which IS compound, so no positive type test
-% names "not a dict" on both; it needs a reified dict test from the engine
-% and the dict shim.
+% The last negation, `\+ dict_keys(Profile, _)`, is now is_dict_t(Profile, false):
+% the engine's reified dict test (engine round 3), supplied in the ISO export
+% by the dict companion. No negation is left.
 % =====================================================================
 framework_agreements_input_problem(Profile, Problem) :-
     input_problem_in_scope(whole_profile, Profile, Problem).
@@ -329,7 +327,7 @@ input_problem_candidate(_, Profile, not_ground(profile)) :-
 
 input_problem_candidate(_, Profile, not_a_dict(profile)) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 
 input_problem_candidate(_, Profile, wrong_type(Key, Expected)) :-
     checkable_profile(Profile),

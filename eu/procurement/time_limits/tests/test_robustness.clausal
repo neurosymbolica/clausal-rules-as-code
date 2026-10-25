@@ -380,6 +380,10 @@ test('input check reports an unbound variable as not_ground') :-
     time_limits_input_problem(Profile, not_ground).
 test('input check reports a profile that is not a dict') :-
     time_limits_input_problem(not_a_procedure, not_a_dict).
+% The profile given as the empty LIST is not a dict on every engine: in the ISO export the empty
+% DICT is '{}', so [] is a list there too, and exactly one problem is reported.
+test('input check reports not_a_dict, once, for a profile given as the empty list') :-
+    findall(P, time_limits_input_problem([], P), [not_a_dict]).
 test('input check reports a missing procedure type first on the empty profile') :-
     dict_pairs(Profile, []),
     findall(Problem, time_limits_input_problem(Profile, Problem), [missing_key(procedure_type_key)]).

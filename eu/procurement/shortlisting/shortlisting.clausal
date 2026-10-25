@@ -350,11 +350,9 @@ shortlisting_profile_keys([procedure_type_key, objective_and_non_discriminatory_
 %   not integer(V)                   -> not_an_integer/1
 %   not is_article_65_procedure(T)   -> is_outside_article_65_procedure/1
 %   not shortlisting_input_problem   -> shortlisting_input_acceptable/1
-% ONE negation is left: `\+ dict_keys(Profile, _)` for "not a dict". The
-% engine's dict is neither atomic nor compound, while the ISO export's dict is
-% an attribute(Key, Value) list, which IS compound, so no positive type test
-% names "not a dict" on both; it needs a reified dict test from the engine and
-% the dict shim.
+% The last negation, `\+ dict_keys(Profile, _)`, is now is_dict_t(Profile, false):
+% the engine's reified dict test (engine round 3), supplied in the ISO export
+% by the dict companion. No negation is left.
 shortlisting_input_problem(Profile, Problem) :-
     shortlisting_input_problems(Profile, [Problem|_]).
 
@@ -366,7 +364,7 @@ shortlisting_input_problems(Profile, [not_ground]) :-
 
 shortlisting_input_problems(Profile, [wrong_type(profile, expected_dict)]) :-
     ground(Profile),
-    \+ dict_keys(Profile, _).
+    is_dict_t(Profile, false).
 
 shortlisting_input_problems(Profile, Problems) :-
     ground(Profile),
