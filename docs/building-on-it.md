@@ -9,8 +9,7 @@ further is fairly clear, and most of it is work that needs people other than pro
 - A method that takes a legal question from a commissioning specification to an accepted,
   tested formalization, with every step checked.
 - Domains from three different areas of EU law (anti-money-laundering, state aid, public
-  procurement) and one of UK law (British citizenship), showing that the method is not tied to
-  one kind of rule or one legal system.
+  procurement), showing that the method is not tied to one kind of rule.
 - Tooling that anyone can run: tests, citation and parameter checks, provision tracking and the
   side-by-side reports.
 - An open licence and an open engine.

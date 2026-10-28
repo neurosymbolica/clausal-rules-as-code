@@ -7,8 +7,7 @@ on, and start from any sentence of the pinned law and see what the domain did wi
 
 Each domain's `sources/` folder holds the extract of the official text it implements, as
 published by the Publications Office of the European Union: Formex 4 XML (the format of the
-Official Journal) or XHTML from EUR-Lex. The UK domain's extracts are Akoma Ntoso XML from
-legislation.gov.uk. Beside each extract, a small record states:
+Official Journal) or XHTML from EUR-Lex. Beside each extract, a small record states:
 
 - the CELEX number, and for a consolidated text the consolidation date;
 - the URL it was fetched from and the date it was fetched;
@@ -38,7 +37,7 @@ ledger (`provisions.yaml`) accounts for every one of them as:
   article that the extract cross-refers to).
 
 A unit that is none of these is **unaccounted**, and in every domain of this release the check
-fails if any unit is unaccounted. Today the count is zero in all nine.
+fails if any unit is unaccounted. Today the count is zero in all eight.
 
 ## The side-by-side report
 
@@ -55,4 +54,3 @@ scored.
 - [What is the minimum time limit for receipt (Art 27-31)?](reports/eu-procurement-time_limits.html)
 - [May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)?](reports/eu-procurement-utilities_negotiated_without_prior_call.html)
 - [How much de minimis aid has an undertaking received in the rolling three-year window, and is it under the ceiling (Regulation (EU) 2023/2831)?](reports/eu-state_aid-de_minimis_cumulation.html)
-- [Is this person a British citizen on a given date under the British Nationality Act 1981 (as enacted), and if not, which registration or naturalisation route is open, and from when?](reports/uk-british_nationality_act_1981.html)

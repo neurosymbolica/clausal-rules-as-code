@@ -21,7 +21,7 @@ python run_iso_tests.py trealla /path/to/tpl
 python run_iso_tests.py trealla /path/to/tpl eu/procurement/time_limits   # one domain
 ```
 
-All three engines pass the same 1,381 tests (tested with Clausal Prolog 1.2.0, Scryer Prolog
+All three engines pass the same 1,224 tests (tested with Clausal Prolog 1.2.0, Scryer Prolog
 v0.10.0-137-g9acba77a and Trealla Prolog v2.92.3).
 
 The public checks for one domain:

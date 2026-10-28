@@ -3,21 +3,21 @@ hide:
   - navigation
 ---
 
-# Law as executable, tested, traceable logic
+# EU law as executable, tested, traceable logic
 
-<p class="hero">This repository holds EU and UK legal provisions written as small logic programs that
+<p class="hero">This repository holds EU legal provisions written as small logic programs that
 answer one legal question each: <em>is this person a beneficial owner?</em>, <em>what is the
 minimum time limit for receipt of tenders?</em>, <em>does this aid stay under the de minimis
-ceiling?</em>, <em>is this person a British citizen on a given date?</em> Each domain covers one narrowly scoped question, drawn from one or a few
+ceiling?</em> Each domain covers one narrowly scoped question, drawn from one or a few
 articles; none is a complete formalization of a statute. Every rule names the provision it implements, every quotation is checked against
 the official text, and every domain says what it deliberately does not cover. The rules are
 written in [Clausal Prolog](https://clausal.pl), a restricted subset of ISO Prolog meant to run on standard Prolog
 engines.</p>
 
 <div class="facts" markdown>
-<div><strong>9</strong><span>domains in this release (8 EU, 1 UK)</span></div>
-<div><strong>1,350</strong><span>tests, all passing</span></div>
-<div><strong>358</strong><span>statute units tracked: 188 formalized, 170 left out with a stated reason</span></div>
+<div><strong>8</strong><span>EU domains in this release</span></div>
+<div><strong>1,193</strong><span>tests, all passing</span></div>
+<div><strong>121</strong><span>statute units tracked: 65 formalized, 56 left out with a stated reason</span></div>
 <div><strong>EUPL-1.2</strong><span>open source, the EU's own licence</span></div>
 </div>
 

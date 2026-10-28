@@ -47,7 +47,7 @@ They are not resolved by the program. Where the law leaves room ("duly substanti
 effort"), the domain either takes that judgement as an input supplied by the person using it, or
 defers the provision with a stated reason. Where a provision admits more than one reading, the
 domain's manifest records the readings considered, the one chosen and whether the choice is the
-more conservative one (four of the nine domains in this release record such readings, eighteen
+more conservative one (four of the eight domains in this release record such readings, eighteen
 in all), so that the choice is visible rather than buried in code.
 
 ## What does a domain do with incomplete or wrong input?

@@ -21,7 +21,7 @@ Documentation, with every domain, its checks and its side-by-side statute report
 
 ## This is a preview
 
-This release holds nine domains, eight EU and one UK, chosen because they pass every check in this
+This first release holds eight EU domains, chosen because they pass every check in this
 repository (see `_index/STATUS.md`), including robustness tests that feed each decision missing, mistyped and incomplete
 inputs (a bad input must be refused or answered "indeterminate", never guessed):
 
@@ -35,7 +35,6 @@ inputs (a bad input must be refused or answered "indeterminate", never guessed):
 | `eu/procurement/shortlisting` | May the authority limit the number of candidates, and to how many (Art 65)? |
 | `eu/procurement/time_limits` | What is the minimum time limit for receipt (Art 27-31)? |
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
-| `uk/british_nationality_act_1981` | Is this person a British citizen on a given date under the British Nationality Act 1981 (as enacted), and if not, which registration or naturalisation route is open, and from when? |
 
 `eu/procurement/directive_2014_24/` is the shared vocabulary the procurement domains
 import. More domains follow as they pass the same checks.
