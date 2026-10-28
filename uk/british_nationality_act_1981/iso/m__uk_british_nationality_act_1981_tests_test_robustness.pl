@@ -1,0 +1,147 @@
+:- module(m__uk_british_nationality_act_1981_tests_test_robustness, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_dicts, [dict_pairs/2]).
+:- use_module(m__uk_british_nationality_act_1981_citizenship, [british_citizenship_status/3]).
+:- use_module(m__uk_british_nationality_act_1981_registration, [british_citizenship_registration/4]).
+:- use_module(m__uk_british_nationality_act_1981_naturalisation, [british_citizenship_naturalisation/4]).
+:- use_module(m__uk_british_nationality_act_1981_input_check, [british_nationality_input_problems/3]).
+:- use_module(m__uk_british_nationality_act_1981_fixtures, [british_nationality_profile_for/2]).
+
+status_is(Profile, Date, Expected) :-
+    findall(Status, british_citizenship_status(Profile, Date, Status), Statuses),
+    Statuses == [Expected].
+
+problems_are(Determination, Profile, Expected) :-
+    findall(Problems, british_nationality_input_problems(Determination, Profile, Problems), Answers),
+    Answers == [Expected].
+
+valid(Profile) :-
+    british_nationality_profile_for(born_in_united_kingdom_to_citizen_mother, Profile).
+
+with(Key, Value, Profile) :-
+    valid(Profile0),
+    dict_pairs(Profile0, Pairs0),
+    without_key(Pairs0, Key, Pairs1),
+    dict_pairs(Profile, [Key - Value|Pairs1]).
+
+without(Key, Profile) :-
+    valid(Profile0),
+    dict_pairs(Profile0, Pairs0),
+    without_key(Pairs0, Key, Pairs1),
+    dict_pairs(Profile, Pairs1).
+
+without_key([], _, []).
+without_key([Key - _|Pairs], Key, Pairs).
+without_key([Other - Value|Pairs], Key, [Other - Value|Rest]) :-
+    dif(Other, Key),
+    without_key(Pairs, Key, Rest).
+
+test('control: the valid profile has no problems and a decided status') :-
+    valid(Profile),
+    problems_are(citizenship, Profile, []),
+    findall(S, british_citizenship_status(Profile, date(2020, 1, 1), S), Statuses),
+    Statuses = [Status],
+    Status = british_citizen(_, _).
+test('missing date_of_birth') :-
+    without(date_of_birth, Profile),
+    problems_are(citizenship, Profile, [missing_key(date_of_birth)]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('missing place_of_birth') :-
+    without(place_of_birth, Profile),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('an impossible date of birth (30 February)') :-
+    with(date_of_birth, date(1990, 2, 30), Profile),
+    problems_are(citizenship, Profile, [wrong_type(date_of_birth, date)]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('a date of birth as an ISO string atom, not date/3') :-
+    with(date_of_birth, '1990-05-05', Profile),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('a date with a non-integer component') :-
+    with(date_of_birth, date(1990, may, 5), Profile),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('place_of_birth outside its vocabulary') :-
+    with(place_of_birth, england, Profile),
+    problems_are(citizenship, Profile, [wrong_type(place_of_birth, one_of([united_kingdom, outside_united_kingdom]))]).
+test('an unbound value') :-
+    with(born_legitimate, _, Profile),
+    problems_are(citizenship, Profile, [not_ground(born_legitimate)]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('a misspelt key is refused, not read as its default') :-
+    with(born_legitimite, false, Profile),
+    problems_are(citizenship, Profile, [unknown_key(born_legitimite)]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('boolean given as a string') :-
+    with(born_legitimate, "false", Profile),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('a problem inside the mother\'s profile is reported inside in/2') :-
+    dict_pairs(Mother, [date_of_birth - date(1960, 13, 1), place_of_birth - united_kingdom]),
+    with(mother, Mother, Profile),
+    problems_are(citizenship, Profile, [in(mother, wrong_type(date_of_birth, date))]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('a mother given as an atom, not a profile') :-
+    with(mother, british_citizen, Profile),
+    problems_are(citizenship, Profile, [in(mother, not_a_profile)]).
+test('a period that ends before it begins') :-
+    with(absences_from_united_kingdom, [period(date(2001, 1, 1), date(2000, 1, 1))], Profile),
+    problems_are(citizenship, Profile, [wrong_type(absences_from_united_kingdom, period)]).
+test('periods not given as a list') :-
+    with(absences_from_united_kingdom, period(date(2000, 1, 1), date(2001, 1, 1)), Profile),
+    problems_are(citizenship, Profile, [wrong_type(absences_from_united_kingdom, list_of(period))]).
+test('a partial list of periods') :-
+    with(absences_from_united_kingdom, [period(date(2000, 1, 1), date(2001, 1, 1))|_], Profile),
+    problems_are(citizenship, Profile, [not_ground(absences_from_united_kingdom)]).
+test('an unknown exemption kind') :-
+    with(immigration_exemptions, [exemption(section_9, date(2000, 1, 1), ongoing)], Profile),
+    problems_are(citizenship, Profile, [wrong_type(immigration_exemptions, exemption)]).
+test('a registration under a provision not formalised') :-
+    with(registrations, [registration(section_5, date(2000, 1, 1))], Profile),
+    problems_are(citizenship, Profile, [wrong_type(registrations, registration)]).
+test('an adopter with a bad profile') :-
+    dict_pairs(Adopter, [place_of_birth - united_kingdom]),
+    with(adoption_orders, [adoption_order(date(2008, 3, 3), court_in_united_kingdom, [Adopter])], Profile),
+    problems_are(citizenship, Profile, [in(adoption_orders, missing_key(date_of_birth))]).
+test('the profile is not a dict') :-
+    status_is([date_of_birth - date(1990, 1, 1)], date(2020, 1, 1), indeterminate).
+test('an empty dict is a profile with both required keys missing') :-
+    dict_pairs(Profile, []),
+    problems_are(citizenship, Profile, [missing_key(date_of_birth), missing_key(place_of_birth)]),
+    status_is(Profile, date(2020, 1, 1), indeterminate).
+test('an empty list of periods is well formed') :-
+    with(absences_from_united_kingdom, [], Profile),
+    problems_are(citizenship, Profile, []).
+test('the profile is unbound') :-
+    status_is(_, date(2020, 1, 1), indeterminate).
+test('the date asked about is unbound') :-
+    valid(Profile),
+    status_is(Profile, _, indeterminate).
+test('the date asked about is not a date') :-
+    valid(Profile),
+    status_is(Profile, '2020-01-01', indeterminate).
+test('registration: an unbound application date') :-
+    valid(Profile),
+    findall(R, british_citizenship_registration(Profile, section_1_3, _, R), Rs),
+    Rs == [assessment(indeterminate, [])].
+test('registration: an unknown provision has no answer') :-
+    valid(Profile),
+    findall(R, british_citizenship_registration(Profile, section_5, date(2000, 1, 1), R), Rs),
+    Rs == [].
+test('naturalisation requires its three judgement keys; citizenship does not') :-
+    valid(Profile),
+    problems_are(naturalisation, Profile, [missing_key(good_character), missing_key(sufficient_knowledge_of_language), missing_key(intention_after_naturalisation)]),
+    findall(R, british_citizenship_naturalisation(Profile, section_6_1, date(2015, 1, 1), R), Rs),
+    Rs == [assessment(indeterminate, [])].
+test('several problems are all reported, in contract order') :-
+    dict_pairs(Profile, [place_of_birth - mars, colour - blue]),
+    problems_are(citizenship, Profile, [missing_key(date_of_birth), wrong_type(place_of_birth, one_of([united_kingdom, outside_united_kingdom])), unknown_key(colour)]).
+
+cp_test_names(['control: the valid profile has no problems and a decided status', 'missing date_of_birth', 'missing place_of_birth', 'an impossible date of birth (30 February)', 'a date of birth as an ISO string atom, not date/3', 'a date with a non-integer component', 'place_of_birth outside its vocabulary', 'an unbound value', 'a misspelt key is refused, not read as its default', 'boolean given as a string', 'a problem inside the mother\'s profile is reported inside in/2', 'a mother given as an atom, not a profile', 'a period that ends before it begins', 'periods not given as a list', 'a partial list of periods', 'an unknown exemption kind', 'a registration under a provision not formalised', 'an adopter with a bad profile', 'the profile is not a dict', 'an empty dict is a profile with both required keys missing', 'an empty list of periods is well formed', 'the profile is unbound', 'the date asked about is unbound', 'the date asked about is not a date', 'registration: an unbound application date', 'registration: an unknown provision has no answer', 'naturalisation requires its three judgement keys; citizenship does not', 'several problems are all reported, in contract order']).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

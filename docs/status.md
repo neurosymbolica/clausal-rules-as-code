@@ -18,3 +18,4 @@ not listed yet; they will be added per domain in the next release.
 | `eu/procurement/time_limits` | 118/118 | enforced: 43 units: 18 formalized, 25 deferred (25 authorized, 0 expansion), 0 unaccounted | pass | pass | pass |
 | `eu/procurement/utilities_negotiated_without_prior_call` | 147/147 | enforced: 14 units: 10 formalized, 4 deferred (4 authorized, 0 expansion), 0 unaccounted | pass | pass | pass |
 | `eu/state_aid/de_minimis_cumulation` | 120/120 | enforced: 10 units: 4 formalized, 6 deferred (0 authorized, 6 expansion), 0 unaccounted | pass | pass | pass |
+| `uk/british_nationality_act_1981` | 157/157 | enforced: 237 units: 123 formalized, 114 deferred (0 authorized, 114 expansion), 0 unaccounted | pass | pass | pass |

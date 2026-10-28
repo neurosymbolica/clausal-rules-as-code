@@ -12,5 +12,6 @@ Each domain answers one legal question. Its page shows the scope, the pinned sou
 | [`eu/procurement/time_limits`](eu-procurement-time_limits.md) | What is the minimum time limit for receipt (Art 27-31)? |
 | [`eu/procurement/utilities_negotiated_without_prior_call`](eu-procurement-utilities_negotiated_without_prior_call.md) | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 | [`eu/state_aid/de_minimis_cumulation`](eu-state_aid-de_minimis_cumulation.md) | How much de minimis aid has an undertaking received in the rolling three-year window, and is it under the ceiling (Regulation (EU) 2023/2831)? |
+| [`uk/british_nationality_act_1981`](uk-british_nationality_act_1981.md) | Is this person a British citizen on a given date under the British Nationality Act 1981 (as enacted), and if not, which registration or naturalisation route is open, and from when? |
 
 `eu/procurement/directive_2014_24/` is the shared vocabulary the procurement domains import.

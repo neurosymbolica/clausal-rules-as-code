@@ -45,7 +45,7 @@ Per-domain results of these checks will be added to the status page in the next 
 
 ## What the robustness tests found, and why they are now part of the bar
 
-Before this release, robustness tests were written for the eight domains and run against the
+Before the first release, robustness tests were written for the eight EU domains and run against the
 then-current code. Many failed: a missing value could still produce a definite answer, and some
 wrongly typed values caused errors instead of a refusal. Every domain was then given a single
 input check that runs before any rule decides, and the tests were kept. All of them pass now,

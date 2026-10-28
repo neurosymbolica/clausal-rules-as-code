@@ -1,0 +1,45 @@
+% =====================================================================
+% test_public_interface.clausal -- the package facade, and a determinism
+% sweep: every fixture gives exactly one answer for every determination.
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(uk/british_nationality_act_1981, [citation/2, implements/1, british_citizenship_status/3,
+    british_citizenship_registration/4, registration_provision/1, british_citizenship_naturalisation/4,
+    naturalisation_provision/1, british_nationality_input_problems/3, british_nationality_subject/1,
+    british_nationality_profile_for/2]).
+
+one_status(Subject) :-
+    british_nationality_profile_for(Subject, Profile),
+    findall(S, british_citizenship_status(Profile, date(2020, 1, 1), S), Answers), length(Answers, 1).
+one_registration(Subject, Provision) :-
+    british_nationality_profile_for(Subject, Profile),
+    findall(R, british_citizenship_registration(Profile, Provision, date(2015, 1, 1), R), Answers), length(Answers, 1).
+one_naturalisation(Subject, Provision) :-
+    british_nationality_profile_for(Subject, Profile),
+    findall(R, british_citizenship_naturalisation(Profile, Provision, date(2015, 1, 1), R), Answers), length(Answers, 1).
+
+all_hold([], _).
+all_hold([Item|Items], Check) :- call(Check, Item), all_hold(Items, Check).
+
+test('there are 52 fixtures') :-
+    findall(S, british_nationality_subject(S), Ss), length(Ss, 52).
+test('every fixture has exactly one citizenship status') :-
+    findall(S, british_nationality_subject(S), Ss), all_hold(Ss, one_status).
+test('every fixture has exactly one answer for each registration provision') :-
+    findall(S-P, (british_nationality_subject(S), registration_provision(P)), Pairs),
+    all_hold(Pairs, one_registration_pair).
+test('every fixture has exactly one answer for each naturalisation provision') :-
+    findall(S-P, (british_nationality_subject(S), naturalisation_provision(P)), Pairs),
+    all_hold(Pairs, one_naturalisation_pair).
+test('every citation the rules use is registered') :-
+    implements(british_nationality_act_1981_section_1_1),
+    citation(british_nationality_act_1981_section_1_1, Record),
+    member(units-Units, Record), Units = [_|_].
+test('the registration provisions') :-
+    findall(P, registration_provision(P), Ps),
+    Ps == [section_1_3, section_1_4, section_3_1, section_3_2, section_3_5, section_4_2, section_4_5].
+
+one_registration_pair(S-P) :- one_registration(S, P).
+one_naturalisation_pair(S-P) :- one_naturalisation(S, P).
+
+:- end_module(test_public_interface).

@@ -44,7 +44,7 @@ import os
 from collections import namedtuple
 
 # `clausal` comes from the ENVIRONMENT, and this module inserts no path for it.
-# Both real lanes already export one -- `hooks/pre-commit` sets PYTHONPATH to
+# Both real callers already export one -- `hooks/pre-commit` sets PYTHONPATH to
 # `<kit>:<clausify>:<clausal>:$REPO_ROOT`, and `auto.gates._gate_env` builds the
 # same list from `kit.clausal_module_paths()` -- and the repo root has to be on
 # the path anyway for `from _tools.provisions import ...` to resolve. A

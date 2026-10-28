@@ -1,0 +1,223 @@
+id: uk/british_nationality_act_1981
+shape_family: eligibility
+kit_version: "0.1.0"
+modules:
+  - "kernel"           # calendar and period arithmetic, ages, commencement (s. 50(10), (11), s. 53(2))
+  - "input_check"      # the declared key contract, a structural fold (no findall, no negation)
+  - "citizenship"      # who is a British citizen on a day: ss. 1(1), 1(2), 1(5), 2(1), 11(1), 14, 47, 50(2)-(5), (9)
+  - "registration"     # entitlement or discretion to register: ss. 1(3), 1(4), 1(7), 3(1)-(6), 4
+  - "naturalisation"   # s. 6 and Schedule 1 paras 1-4, 9(1)
+  - "queries"          # what-if, status history, absence figures, every route, earliest application date
+  - "fixtures"         # named profiles (top-layer consumer)
+public_interface:
+  - "british_citizenship_status/3"
+  - "british_citizenship_registration/4"
+  - "registration_provision/1"
+  - "british_citizenship_naturalisation/4"
+  - "naturalisation_provision/1"
+  - "british_nationality_input_problems/3"
+  - "british_nationality_subject/1"
+  - "british_nationality_profile_for/2"
+  - "citation/2"
+  - "implements/1"
+  - "british_nationality_answer/3"
+  - "british_nationality_what_if/4"
+  - "british_citizenship_status_history/2"
+  - "british_citizenship_absence_figures/4"
+  - "british_citizenship_routes/3"
+  - "british_citizenship_earliest_application/4"
+scope: >-
+  The British Nationality Act 1981 (c. 61) AS ENACTED, in force from 1 January 1983 (S.I. 1982/933),
+  for British citizenship only: whether a person is a British citizen on a given day, and by descent
+  or otherwise (ss. 1(1), 1(2), 1(5)-(6), 2(1)-(2), 11(1) as a stated input, 14(1)(a) and (c), 47(1),
+  50(2)-(5), (9)-(11)); whether, on an application made on a given date, he is entitled to be registered
+  as a British citizen, or may be registered at the Secretary of State's discretion (ss. 1(3), 1(4), 1(7),
+  3(1)-(6), 4(1)-(6)); and whether he fulfils the requirements for naturalisation (s. 6, Schedule 1
+  paras 1-4 and 9(1)). The input is a profile dict per person (keys in profile_keys.yaml); parents,
+  adopters and a spouse are nested profiles, so a parent's citizenship is itself decided by the same
+  rules. Registrations and naturalisations that happened are stated facts. A profile that is incomplete
+  or ill-typed gives indeterminate. Later amendments of the Act are not applied.
+sources:
+  - "British Nationality Act 1981 (c. 61), as enacted: ss. 1, 2, 3, 4, 6, 11, 14, 47, 50, 53 and Schedule 1 (legislation.gov.uk, Akoma Ntoso)"
+  - "British Nationality Act 1981 (Commencement) Order 1982 (S.I. 1982/933), art. 2: commencement on 1 January 1983"
+
+# Deferral register. Each entry names the units of the pinned extracts under sources/ that this
+# domain does not implement, why, and what that means for a caller.
+deferred_set:
+- what: headings
+  units:
+  - ukpga-1981-61#schedule-1
+  - ukpga-1981-61#schedule-1-crossheading-naturalisation-as-a-british-citizen-under-section-61
+  - ukpga-1981-61#schedule-1-crossheading-naturalisation-as-a-british-citizen-under-section-62
+  - ukpga-1981-61#schedule-1-crossheading-periods-to-be-treated-as-periods-of-absence-from-uk-or-a-dependent-territory
+  - ukpga-1981-61#schedule-1-paragraph-1
+  - ukpga-1981-61#schedule-1-paragraph-9
+  - ukpga-1981-61#section-1
+  - ukpga-1981-61#section-11
+  - ukpga-1981-61#section-14
+  - ukpga-1981-61#section-2
+  - ukpga-1981-61#section-3
+  - ukpga-1981-61#section-4
+  - ukpga-1981-61#section-47
+  - ukpga-1981-61#section-50
+  - ukpga-1981-61#section-53
+  - ukpga-1981-61#section-6
+  reason: Section, Schedule and paragraph headings and cross-headings carry no rule. Deferred so that
+    every unit of the pinned extracts is accounted for.
+  consequence: None. A heading states no rule.
+- what: definition_cross_reference
+  units:
+  - ukpga-1981-61#section-1-8
+  reason: s. 1(8) only says that "settled" has the meaning given by s. 50; the rules apply s. 50(2)-(5)
+    directly (citizenship.clausal settled_on_day_t/3).
+  consequence: None.
+- what: designation_of_service_by_order
+  units:
+  - ukpga-1981-61#section-2-3
+  - ukpga-1981-61#section-2-4
+  reason: Which services the Secretary of State has designated by order under s. 2(3) is not formalised;
+    the caller states a service as designated_service.
+  consequence: A service wrongly stated as designated (or not) gives a wrong answer under s. 2(1)(b) and
+    Schedule 1 para 4(d).
+- what: citizenship_at_commencement_conditions
+  units:
+  - ukpga-1981-61#section-11-2
+  - ukpga-1981-61#section-11-2-a
+  - ukpga-1981-61#section-11-2-b
+  - ukpga-1981-61#section-11-3
+  - ukpga-1981-61#section-11-3-a
+  - ukpga-1981-61#section-11-3-b
+  reason: Who became a British citizen at commencement depends on the law before 1983 (citizenship of
+    the United Kingdom and Colonies, the right of abode under the Immigration Act 1971, and the special
+    cases of s. 11(2)-(3)). The caller states the result in citizenship_at_commencement; s. 11(1) is cited
+    only as the ground it gives.
+  consequence: A wrong stated status at commencement gives a wrong status for that person and for every
+    child or grandchild whose citizenship is derived through him or her.
+- what: by_descent_at_commencement_and_other_registrations
+  units:
+  - ukpga-1981-61#section-14-1-b
+  - ukpga-1981-61#section-14-1-b-i
+  - ukpga-1981-61#section-14-1-b-ii
+  - ukpga-1981-61#section-14-1-b-iii
+  - ukpga-1981-61#section-14-1-b-iv
+  - ukpga-1981-61#section-14-1-d
+  - ukpga-1981-61#section-14-1-e
+  - ukpga-1981-61#section-14-1-f
+  - ukpga-1981-61#section-14-1-g
+  - ukpga-1981-61#section-14-1-h
+  - ukpga-1981-61#section-14-2
+  - ukpga-1981-61#section-14-2-a
+  - ukpga-1981-61#section-14-2-b
+  - ukpga-1981-61#section-14-3
+  - ukpga-1981-61#section-14-3-a
+  - ukpga-1981-61#section-14-3-b
+  reason: s. 14(1)(b) and s. 14(2)-(3) decide whether a person who became a citizen at commencement is
+    one by descent (pre-1983 law, stated by the caller as citizenship_at_commencement by_descent); s.
+    14(1)(d)-(h) concern registration under ss. 5, 8, 10, 13 and Schedule 2, which are not formalised.
+  consequence: A person who is a citizen by descent only because of one of these limbs must be stated
+    as such by the caller; registrations under ss. 5, 8, 9, 10 and 13 cannot be stated at all, so a person
+    whose only ground is one of them reads as not a British citizen.
+- what: legitimation_by_law_of_domicile
+  units:
+  - ukpga-1981-61#section-47-2
+  reason: Whether a marriage legitimated the child by the law of the father's domicile is not formalised;
+    the caller states the date of legitimation in legitimated_on.
+  consequence: A legitimation that the law of the domicile did not effect, if stated, makes the father
+    count from the marriage when he should not.
+- what: settled_in_a_dependent_territory
+  units:
+  - ukpga-1981-61#section-50-3-b
+  reason: s. 50(3)(b) concerns settlement in a dependent territory, which no formalised rule asks about.
+  consequence: None for British citizenship as formalised.
+- what: naturalisation_history_ships_and_definitions
+  units:
+  - ukpga-1981-61#section-50-12
+  - ukpga-1981-61#section-50-13
+  - ukpga-1981-61#section-50-13-a
+  - ukpga-1981-61#section-50-13-b
+  - ukpga-1981-61#section-50-6
+  - ukpga-1981-61#section-50-6-a
+  - ukpga-1981-61#section-50-6-a-i
+  - ukpga-1981-61#section-50-6-a-ii
+  - ukpga-1981-61#section-50-6-a-iii
+  - ukpga-1981-61#section-50-6-b
+  - ukpga-1981-61#section-50-6-b-i
+  - ukpga-1981-61#section-50-6-b-ii
+  - ukpga-1981-61#section-50-6-b-iii
+  - ukpga-1981-61#section-50-7
+  - ukpga-1981-61#section-50-7-a
+  - ukpga-1981-61#section-50-7-a-i
+  - ukpga-1981-61#section-50-7-a-ii
+  - ukpga-1981-61#section-50-7-b
+  - ukpga-1981-61#section-50-8
+  reason: 's. 50(6) (who was naturalised in the UK under the former Acts), s. 50(7) (births on ships and
+    aircraft), s. 50(8) (an application is made when received), s. 50(12) (Schedule 3 countries include
+    their dependencies) and s. 50(13) (amending Schedule 6) are not formalised: the caller supplies place_of_birth
+    after applying s. 50(7), and the date of an application as the date of its receipt.'
+  consequence: A birth on a ship or aircraft must be stated as in or outside the United Kingdom as s.
+    50(7) deems it; an application date that is not the date of receipt can move a residence period.
+- what: citation_commencement_and_extent
+  units:
+  - ukpga-1981-61#section-53-1
+  - ukpga-1981-61#section-53-3
+  - ukpga-1981-61#section-53-4
+  - ukpga-1981-61#section-53-5
+  - ukpga-1981-61#section-53-6
+  - ukpga-1981-61#section-53-7
+  - ukpga-1981-61#section-53-7-a
+  - ukpga-1981-61#section-53-7-b
+  - ukpga-1981-61#section-53-7-c
+  reason: s. 53 other than subsection (2) is about the short title, the early commencement of ss. 49 and
+    53, and territorial extent.
+  consequence: None for the questions answered here.
+- what: british_dependent_territories_naturalisation
+  units:
+  - ukpga-1981-61#schedule-1-crossheading-interpretation
+  - ukpga-1981-61#schedule-1-crossheading-naturalisation-as-a-british-dependent-territories-citizen-under-section-181
+  - ukpga-1981-61#schedule-1-crossheading-naturalisation-as-a-british-dependent-territories-citizen-under-section-182
+  - ukpga-1981-61#schedule-1-paragraph-10
+  - ukpga-1981-61#schedule-1-paragraph-5
+  - ukpga-1981-61#schedule-1-paragraph-5-1
+  - ukpga-1981-61#schedule-1-paragraph-5-1-a
+  - ukpga-1981-61#schedule-1-paragraph-5-1-b
+  - ukpga-1981-61#schedule-1-paragraph-5-1-c
+  - ukpga-1981-61#schedule-1-paragraph-5-1-d
+  - ukpga-1981-61#schedule-1-paragraph-5-1-d-i
+  - ukpga-1981-61#schedule-1-paragraph-5-1-d-ii
+  - ukpga-1981-61#schedule-1-paragraph-5-2
+  - ukpga-1981-61#schedule-1-paragraph-5-2-a
+  - ukpga-1981-61#schedule-1-paragraph-5-2-b
+  - ukpga-1981-61#schedule-1-paragraph-5-2-c
+  - ukpga-1981-61#schedule-1-paragraph-5-2-d
+  - ukpga-1981-61#schedule-1-paragraph-5-3
+  - ukpga-1981-61#schedule-1-paragraph-6
+  - ukpga-1981-61#schedule-1-paragraph-6-a
+  - ukpga-1981-61#schedule-1-paragraph-6-b
+  - ukpga-1981-61#schedule-1-paragraph-6-c
+  - ukpga-1981-61#schedule-1-paragraph-6-d
+  - ukpga-1981-61#schedule-1-paragraph-6-e
+  - ukpga-1981-61#schedule-1-paragraph-7
+  - ukpga-1981-61#schedule-1-paragraph-7-a
+  - ukpga-1981-61#schedule-1-paragraph-7-b
+  - ukpga-1981-61#schedule-1-paragraph-7-c
+  - ukpga-1981-61#schedule-1-paragraph-7-d
+  - ukpga-1981-61#schedule-1-paragraph-7-e
+  - ukpga-1981-61#schedule-1-paragraph-8
+  - ukpga-1981-61#schedule-1-paragraph-8-a
+  - ukpga-1981-61#schedule-1-paragraph-8-b
+  - ukpga-1981-61#schedule-1-paragraph-8-c
+  - ukpga-1981-61#schedule-1-paragraph-8-d
+  - ukpga-1981-61#schedule-1-paragraph-9-2
+  - ukpga-1981-61#schedule-1-paragraph-9-2-a
+  - ukpga-1981-61#schedule-1-paragraph-9-2-b
+  - ukpga-1981-61#schedule-1-paragraph-9-2-b-i
+  - ukpga-1981-61#schedule-1-paragraph-9-2-b-ii
+  - ukpga-1981-61#schedule-1-paragraph-9-2-b-iii
+  - ukpga-1981-61#schedule-1-paragraph-9-2-c
+  - ukpga-1981-61#schedule-1-paragraph-9-2-d
+  reason: Schedule 1 paras 5-8, 9(2) and 10 are the requirements for naturalisation as a British Dependent
+    Territories citizen under s. 18; only British citizenship is formalised.
+  consequence: None for British citizenship; British Dependent Territories citizenship is not answered
+    at all.
+
+provision_tracking: enforced

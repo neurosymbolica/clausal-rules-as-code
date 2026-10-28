@@ -1,0 +1,577 @@
+% =====================================================================
+% queries.clausal -- the QUERY LAYER of uk/british_nationality_act_1981.
+% A top-layer consumer: it asks the determination slices and decides
+% nothing of its own. Every figure it reports is computed by the same
+% predicate the rules use, so a query and a rule cannot disagree.
+%
+%   british_nationality_answer(Profile, Query, Answer)
+%       one entry point for the three determinations. Query is
+%       citizenship(Date) | registration(Provision, Date)
+%       | naturalisation(Provision, Date).
+%   british_nationality_what_if(Profile, Changes, Query, compared(Before, After))
+%       the answer before and after changing the profile. Changes is a list
+%       of Key-Value (set the key) and remove(Key) (drop it).
+%   british_citizenship_status_history(Profile, History)
+%       [since(Date, Status), ...]: the status from birth, and every day on
+%       which it changes.
+%   british_citizenship_absence_figures(Profile, Provision, Date, Figures)
+%       figure(Name, DaysAbsent, Limit, Excess) for each day-count
+%       requirement of the provision, on an application made on Date.
+%   british_citizenship_routes(Profile, Date, Routes)
+%       route(Provision, Outcome) for every registration and naturalisation
+%       provision, best outcome first.
+%   british_citizenship_earliest_application(Profile, Provision, From, Result)
+%       earliest(Date): the first application date on or after From on which
+%       the provision is fulfilled outright (entitled, or naturalisation
+%       requirements fulfilled), assuming the profile describes the future
+%       too (an ongoing period continues; no absence is added); or
+%       none_within(HorizonDate) when there is none in the next 20 years.
+%
+% Every query answers indeterminate (or a result holding it) when the input
+% check finds a problem; a provision the query does not cover has no answer.
+% =====================================================================
+
+:- module(queries, [
+    british_nationality_answer/3,
+    british_nationality_what_if/4,
+    british_citizenship_status_history/2,
+    british_citizenship_absence_figures/4,
+    british_citizenship_routes/3,
+    british_citizenship_earliest_application/4
+]).
+
+:- use_module(library(clpz)).
+:- use_module(uk/british_nationality_act_1981/kernel, [
+    date_day_number/2, day_number_date/2, years_after/3, period_bounds/3, profile_value/4]).
+:- use_module(uk/british_nationality_act_1981/input_check, [
+    british_nationality_input_problems/3, date_argument_problems/3]).
+:- use_module(uk/british_nationality_act_1981/citizenship, [
+    british_citizenship_status/3, citizenship_on_day/3, ground_change_days/2]).
+:- use_module(uk/british_nationality_act_1981/registration, [
+    british_citizenship_registration/4, registration_provision/1,
+    section_4_2_absence_days/4, section_1_4_year_absence_days/4, three_year_absence_days/3]).
+:- use_module(uk/british_nationality_act_1981/naturalisation, [
+    british_citizenship_naturalisation/4, naturalisation_provision/1, schedule_1_absence_days/5]).
+
+% ---------------------------------------------------------------------
+% One entry point, and what-if.
+% ---------------------------------------------------------------------
+
+british_nationality_answer(Profile, citizenship(Date), Status) :-
+    british_citizenship_status(Profile, Date, Status).
+british_nationality_answer(Profile, registration(Provision, Date), Result) :-
+    british_citizenship_registration(Profile, Provision, Date, Result).
+british_nationality_answer(Profile, naturalisation(Provision, Date), Result) :-
+    british_citizenship_naturalisation(Profile, Provision, Date, Result).
+
+british_nationality_what_if(Profile, Changes, Query, compared(Before, After)) :-
+    british_nationality_answer(Profile, Query, Before),
+    changed_profile(Profile, Changes, Changed),
+    british_nationality_answer(Changed, Query, After).
+
+% A profile that is not a dict is passed on unchanged (the answer is then
+% indeterminate either way). Changes that are not a ground list of
+% Key-Value and remove(Key) items give the atom invalid_changes, which the
+% input check refuses as not a profile, so After is indeterminate.
+changed_profile(Profile, _, Profile) :-
+    var(Profile).
+changed_profile(Profile, Changes, Changed) :-
+    nonvar(Profile),
+    is_dict_t(Profile, IsDict),
+    changed_dict(IsDict, Profile, Changes, Changed).
+
+changed_dict(false, Profile, _, Profile).
+changed_dict(true, Profile, Changes, Changed) :-
+    term_variables(Changes, Variables),
+    changes_t(Variables, Changes, Valid),
+    apply_valid(Valid, Profile, Changes, Changed).
+
+changes_t([_|_], _, false).
+changes_t([], Changes, Truth) :-
+    change_list_t(Changes, Truth).
+
+change_list_t([], true).
+change_list_t([Change|Changes], Truth) :-
+    change_t(Change, Here),
+    change_rest_t(Here, Changes, Truth).
+% (dif(Changes, []) first: in the ISO export [] is also the empty dict.)
+change_list_t(Changes, false) :-
+    dif(Changes, []),
+    is_dict_t(Changes, true).
+change_list_t(Changes, false) :-
+    dif(Changes, []),
+    is_dict_t(Changes, false),
+    functor(Changes, Name, Arity),
+    functor([cell], CellName, CellArity),
+    dif(Name/Arity, CellName/CellArity),
+    dif(Changes, []).
+
+change_rest_t(false, _, false).
+change_rest_t(true, Changes, Truth) :-
+    change_list_t(Changes, Truth).
+
+change_t(Change, false) :-
+    is_dict_t(Change, true).
+change_t(Change, Truth) :-
+    is_dict_t(Change, false),
+    change_shape_t(Change, Truth).
+
+change_shape_t(Key-_, Truth) :-
+    atom_t(Key, Truth).
+change_shape_t(remove(Key), Truth) :-
+    atom_t(Key, Truth).
+change_shape_t(Change, false) :-
+    functor(Change, Name, Arity),
+    dif(Name/Arity, (-)/2),
+    dif(Name/Arity, remove/1).
+
+atom_t(Term, true) :- atom(Term).
+atom_t(Term, false) :- integer(Term).
+atom_t(Term, false) :- float(Term).
+atom_t(Term, false) :- compound(Term).
+
+apply_valid(false, _, _, invalid_changes).
+apply_valid(true, Profile, Changes, Changed) :-
+    dict_pairs(Profile, Pairs),
+    apply_changes(Changes, Pairs, NewPairs),
+    dict_pairs(Changed, NewPairs).
+
+apply_changes([], Pairs, Pairs).
+apply_changes([Change|Changes], Pairs, Result) :-
+    apply_change(Change, Pairs, Next),
+    apply_changes(Changes, Next, Result).
+
+apply_change(Key-Value, Pairs, [Key-Value|Rest]) :-
+    without_key(Pairs, Key, Rest).
+apply_change(remove(Key), Pairs, Rest) :-
+    without_key(Pairs, Key, Rest).
+
+without_key([], _, []).
+without_key([Key-_|Pairs], Key, Rest) :-
+    without_key(Pairs, Key, Rest).
+without_key([Other-Value|Pairs], Key, [Other-Value|Rest]) :-
+    dif(Other, Key),
+    without_key(Pairs, Key, Rest).
+
+% ---------------------------------------------------------------------
+% Status history.
+% ---------------------------------------------------------------------
+
+british_citizenship_status_history(Profile, History) :-
+    british_nationality_input_problems(citizenship, Profile, Problems),
+    history_given(Problems, Profile, History).
+
+history_given([_|_], _, indeterminate).
+history_given([], Profile, History) :-
+    get(Profile, date_of_birth, DateOfBirth),
+    date_day_number(DateOfBirth, BirthDay),
+    ground_change_days(Profile, GroundDays),
+    days_from(GroundDays, BirthDay, Later),
+    sort([BirthDay|Later], Days),
+    statuses(Days, Profile, Points),
+    changes_only(Points, none, History).
+
+days_from([], _, []).
+days_from([Day|Days], From, Kept) :-
+    from_t(Day, From, Keep),
+    keep(Keep, Day, Rest, Kept),
+    days_from(Days, From, Rest).
+
+from_t(Day, From, true) :- Day #>= From.
+from_t(Day, From, false) :- Day #< From.
+
+keep(true, Item, Rest, [Item|Rest]).
+keep(false, _, Rest, Rest).
+
+statuses([], _, []).
+statuses([Day|Days], Profile, [since(Date, Status)|Points]) :-
+    day_number_date(Day, Date),
+    citizenship_on_day(Profile, Day, Status),
+    statuses(Days, Profile, Points).
+
+% Keeps a point only when its status differs from the one before it.
+changes_only([], _, []).
+changes_only([since(_, Status)|Points], Status, History) :-
+    changes_only(Points, Status, History).
+changes_only([since(Date, Status)|Points], Previous, [since(Date, Status)|History]) :-
+    dif(Status, Previous),
+    changes_only(Points, Status, History).
+
+% ---------------------------------------------------------------------
+% Absence figures.
+% ---------------------------------------------------------------------
+
+absence_figure_provision(section_1_4, registration).
+absence_figure_provision(section_3_5, registration).
+absence_figure_provision(section_4_2, registration).
+absence_figure_provision(section_6_1, citizenship).
+absence_figure_provision(section_6_2, citizenship).
+
+british_citizenship_absence_figures(Profile, Provision, Date, Figures) :-
+    absence_figure_provision(Provision, Determination),
+    british_nationality_input_problems(Determination, Profile, ProfileProblems),
+    date_argument_problems(application_date, Date, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    figures_given(Problems, Profile, Provision, Date, Figures).
+
+figures_given([_|_], _, _, _, indeterminate).
+figures_given([], Profile, Provision, Date, Figures) :-
+    figures(Provision, Profile, Date, Figures).
+
+figures(section_4_2, Profile, Date, [FiveYears, TwelveMonths]) :-
+    section_4_2_absence_days(Profile, Date, FiveYearDays, YearDays),
+    figure(absent_days_in_five_years, FiveYearDays, 450, FiveYears),
+    figure(absent_days_in_twelve_months, YearDays, 90, TwelveMonths).
+figures(section_6_1, Profile, Date, [FiveYears, TwelveMonths]) :-
+    schedule_1_absence_days(Profile, Date, 5, PeriodDays, YearDays),
+    figure(absent_days_in_five_years, PeriodDays, 450, FiveYears),
+    figure(absent_days_in_twelve_months, YearDays, 90, TwelveMonths).
+figures(section_6_2, Profile, Date, [ThreeYears, TwelveMonths]) :-
+    schedule_1_absence_days(Profile, Date, 3, PeriodDays, YearDays),
+    figure(absent_days_in_three_years, PeriodDays, 270, ThreeYears),
+    figure(absent_days_in_twelve_months, YearDays, 90, TwelveMonths).
+figures(section_1_4, Profile, _, Figures) :-
+    get(Profile, date_of_birth, DateOfBirth),
+    profile_value(Profile, absences_from_united_kingdom, [], Absences),
+    year_figures(0, Absences, DateOfBirth, Figures).
+figures(section_3_5, Profile, Date, [Person|Parents]) :-
+    profile_value(Profile, absences_from_united_kingdom, [], Absences),
+    three_year_absence_days(Absences, Date, Days),
+    figure(absent_days_in_three_years(person), Days, 270, Person),
+    parent_figures([mother, father], Profile, Date, Parents).
+
+figure(Name, Days, Limit, figure(Name, Days, Limit, Excess)) :-
+    Excess #= max(0, Days - Limit).
+
+% Years of life numbered 1 to 10, as a reader counts them.
+year_figures(10, _, _, []).
+year_figures(Year, Absences, DateOfBirth, [Figure|Figures]) :-
+    Year #< 10,
+    section_1_4_year_absence_days(Absences, DateOfBirth, Year, Days),
+    Number #= Year + 1,
+    figure(absent_days_in_year_of_life(Number), Days, 90, Figure),
+    Next #= Year + 1,
+    year_figures(Next, Absences, DateOfBirth, Figures).
+
+parent_figures([], _, _, []).
+parent_figures([Role|Roles], Profile, Date, Figures) :-
+    profile_value(Profile, Role, '$not_given', Parent),
+    parent_figure(Parent, Role, Date, Here),
+    parent_figures(Roles, Profile, Date, Rest),
+    append(Here, Rest, Figures).
+
+parent_figure('$not_given', _, _, []).
+parent_figure(Parent, Role, Date, [Figure]) :-
+    dif(Parent, '$not_given'),
+    profile_value(Parent, absences_from_united_kingdom, [], Absences),
+    three_year_absence_days(Absences, Date, Days),
+    figure(absent_days_in_three_years(Role), Days, 270, Figure).
+
+% ---------------------------------------------------------------------
+% Every route at once.
+% ---------------------------------------------------------------------
+
+route_provisions([
+    registration-section_1_3, registration-section_1_4, registration-section_3_1,
+    registration-section_3_2, registration-section_3_5, registration-section_4_2,
+    registration-section_4_5, naturalisation-section_6_1, naturalisation-section_6_2
+]).
+
+british_citizenship_routes(Profile, Date, Routes) :-
+    route_provisions(Provisions),
+    route_outcomes(Provisions, Profile, Date, Ranked),
+    keysort(Ranked, Sorted),
+    pairs_values(Sorted, Routes).
+
+route_outcomes([], _, _, []).
+route_outcomes([Kind-Provision|Provisions], Profile, Date, [Rank-route(Provision, Outcome)|Routes]) :-
+    route_outcome(Kind, Profile, Provision, Date, Outcome),
+    outcome_rank(Outcome, Rank),
+    route_outcomes(Provisions, Profile, Date, Routes).
+
+route_outcome(registration, Profile, Provision, Date, Outcome) :-
+    british_citizenship_registration(Profile, Provision, Date, assessment(Outcome, _)).
+route_outcome(naturalisation, Profile, Provision, Date, Outcome) :-
+    british_citizenship_naturalisation(Profile, Provision, Date, assessment(Outcome, _)).
+
+outcome_rank(entitled, 1).
+outcome_rank(requirements_fulfilled, 1).
+outcome_rank(at_discretion, 2).
+outcome_rank(requirements_fulfilled_only_if_waived, 2).
+outcome_rank(not_entitled, 3).
+outcome_rank(requirements_not_fulfilled, 3).
+outcome_rank(indeterminate, 4).
+
+pairs_values([], []).
+pairs_values([_-Value|Pairs], [Value|Values]) :-
+    pairs_values(Pairs, Values).
+
+% ---------------------------------------------------------------------
+% Earliest application date.
+%
+% The search steps through candidate days, never day by day:
+%   * if a day-count requirement is exceeded by K days, no application in
+%     the next K - 1 - K // 365 days can meet it, because each count falls by
+%     at most one a day, except that the first day of a period of years can
+%     skip a 29 February (once a year at most);
+%   * any other requirement can change only on an EVENT day: a day on which
+%     the date of application, or the beginning of one of the periods
+%     ending with it, crosses the beginning or end of one of the profile's
+%     periods; a birthday that matters (ten, eighteen); or a day on which
+%     the person (or for s. 6(2) the spouse) acquires a ground of
+%     citizenship. Between events those requirements stay as they are.
+% So the next day worth asking is the later of those two bounds.
+% ---------------------------------------------------------------------
+
+earliest_provision(section_1_4, registration, 1).
+earliest_provision(section_4_2, registration, 5).
+earliest_provision(section_6_1, naturalisation, 5).
+earliest_provision(section_6_2, naturalisation, 3).
+
+horizon_years(20).
+
+british_citizenship_earliest_application(Profile, Provision, From, Result) :-
+    earliest_provision(Provision, Determination, _),
+    british_nationality_input_problems(Determination, Profile, ProfileProblems),
+    date_argument_problems(from_date, From, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    earliest_given(Problems, Profile, Provision, From, Result).
+
+earliest_given([_|_], _, _, _, indeterminate).
+earliest_given([], Profile, Provision, From, Result) :-
+    date_day_number(From, FromDay),
+    horizon_years(Horizon),
+    years_after(From, Horizon, HorizonDate),
+    date_day_number(HorizonDate, HorizonDay),
+    event_days(Profile, Provision, Events),
+    search(FromDay, HorizonDay, HorizonDate, Events, Profile, Provision, Result).
+
+search(Day, HorizonDay, HorizonDate, _, _, _, none_within(HorizonDate)) :-
+    Day #> HorizonDay.
+search(Day, HorizonDay, HorizonDate, Events, Profile, Provision, Result) :-
+    Day #=< HorizonDay,
+    day_number_date(Day, Date),
+    provision_assessment(Provision, Profile, Date, Outcome, Conditions),
+    fulfilled_t(Outcome, Fulfilled),
+    search_on(Fulfilled, Day, Date, HorizonDay, HorizonDate, Events, Profile, Provision, Conditions, Result).
+
+search_on(true, _, Date, _, _, _, _, _, _, earliest(Date)).
+search_on(false, Day, Date, HorizonDay, HorizonDate, Events, Profile, Provision, Conditions, Result) :-
+    count_jump(Provision, Profile, Date, CountJump),
+    other_failure_t(Conditions, Provision, OtherFails),
+    next_event(Events, Day, HorizonDay, Event),
+    next_day(OtherFails, Day, CountJump, Event, Next),
+    search(Next, HorizonDay, HorizonDate, Events, Profile, Provision, Result).
+
+provision_assessment(Provision, Profile, Date, Outcome, Conditions) :-
+    earliest_provision(Provision, registration, _),
+    british_citizenship_registration(Profile, Provision, Date, assessment(Outcome, Conditions)).
+provision_assessment(Provision, Profile, Date, Outcome, Conditions) :-
+    earliest_provision(Provision, naturalisation, _),
+    british_citizenship_naturalisation(Profile, Provision, Date, assessment(Outcome, Conditions)).
+
+fulfilled_t(entitled, true).
+fulfilled_t(requirements_fulfilled, true).
+fulfilled_t(at_discretion, false).
+fulfilled_t(not_entitled, false).
+fulfilled_t(requirements_fulfilled_only_if_waived, false).
+fulfilled_t(requirements_not_fulfilled, false).
+
+% The safe jump for the day-count requirements (none for s. 1(4), whose
+% years of life do not move with the date of application).
+count_jump(section_1_4, _, _, 1).
+count_jump(Provision, Profile, Date, Jump) :-
+    dif(Provision, section_1_4),
+    figures(Provision, Profile, Date, Figures),
+    largest_excess(Figures, 0, Excess),
+    Jump #= max(1, Excess - 1 - Excess // 365).
+
+largest_excess([], Largest, Largest).
+largest_excess([figure(_, _, _, Excess)|Figures], Sofar, Largest) :-
+    Next #= max(Sofar, Excess),
+    largest_excess(Figures, Next, Largest).
+
+% Whether a requirement other than a day count is not met.
+other_failure_t([], _, false).
+other_failure_t([condition(Name, Status, _)|Conditions], Provision, Truth) :-
+    count_condition_t(Name, Counted),
+    other_fails_here(Counted, Status, Here),
+    other_rest_t(Here, Conditions, Provision, Truth).
+
+other_rest_t(true, _, _, true).
+other_rest_t(false, Conditions, Provision, Truth) :-
+    other_failure_t(Conditions, Provision, Truth).
+
+other_fails_here(true, _, false).
+other_fails_here(false, met, false).
+other_fails_here(false, unmet, true).
+other_fails_here(false, waivable, true).
+
+count_condition_t(absent_at_most_450_days_in_five_years, true).
+count_condition_t(absent_at_most_90_days_in_twelve_months, true).
+count_condition_t(absent_at_most_allowed_days_in_period, true).
+count_condition_t(Name, false) :-
+    dif(Name, absent_at_most_450_days_in_five_years),
+    dif(Name, absent_at_most_90_days_in_twelve_months),
+    dif(Name, absent_at_most_allowed_days_in_period).
+
+next_day(false, Day, CountJump, _, Next) :-
+    Next #= Day + CountJump.
+next_day(true, Day, CountJump, Event, Next) :-
+    Next #= max(Day + CountJump, Event).
+
+% The first event day after Day, or the day after the horizon.
+next_event([], _, HorizonDay, After) :-
+    After #= HorizonDay + 1.
+next_event([Event|Events], Day, HorizonDay, Next) :-
+    after_t(Event, Day, After),
+    next_event_given(After, Event, Events, Day, HorizonDay, Next).
+
+after_t(Event, Day, true) :- Event #> Day.
+after_t(Event, Day, false) :- Event #=< Day.
+
+next_event_given(true, Event, _, _, _, Event).
+next_event_given(false, _, Events, Day, HorizonDay, Next) :-
+    next_event(Events, Day, HorizonDay, Next).
+
+event_days(Profile, Provision, Events) :-
+    earliest_provision(Provision, _, Years),
+    profile_boundaries(Profile, Boundaries),
+    spouse_days(Provision, Profile, SpouseDays),
+    ground_change_days(Profile, GroundDays),
+    get(Profile, date_of_birth, DateOfBirth),
+    birthday(DateOfBirth, 10, Ten),
+    birthday(DateOfBirth, 18, Eighteen),
+    append([Boundaries, SpouseDays], AllBoundaries),
+    boundary_events(AllBoundaries, Years, BoundaryEvents),
+    append([BoundaryEvents, GroundDays, [Ten, Eighteen]], Unsorted),
+    sort(Unsorted, Events).
+
+birthday(DateOfBirth, Age, Day) :-
+    years_after(DateOfBirth, Age, Date),
+    date_day_number(Date, Day).
+
+spouse_days(section_6_2, Profile, Days) :-
+    profile_value(Profile, spouse, none, Spouse),
+    spouse_given_days(Spouse, Days).
+spouse_days(Provision, _, []) :-
+    dif(Provision, section_6_2).
+
+spouse_given_days(none, []).
+spouse_given_days(Spouse, Days) :-
+    dif(Spouse, none),
+    ground_change_days(Spouse, GroundDays),
+    profile_boundaries(Spouse, Boundaries),
+    append(GroundDays, Boundaries, Days).
+
+% The first day and the day after the last day of every period the profile
+% gives.
+profile_boundaries(Profile, Days) :-
+    period_lists(Profile, Lists),
+    append(Lists, Periods),
+    period_boundaries(Periods, Days).
+
+period_lists(Profile, [Absences, Restrictions, Breaches, Residence, Detentions, ExemptionPeriods, ServicePeriods]) :-
+    profile_value(Profile, absences_from_united_kingdom, [], Absences),
+    profile_value(Profile, immigration_restrictions_on_stay, [], Restrictions),
+    profile_value(Profile, in_united_kingdom_in_breach_of_immigration_laws, [], Breaches),
+    profile_value(Profile, ordinarily_resident_in_united_kingdom, [], Residence),
+    profile_value(Profile, detentions, [], Detentions),
+    profile_value(Profile, immigration_exemptions, [], Exemptions),
+    exemption_periods(Exemptions, ExemptionPeriods),
+    profile_value(Profile, service_outside_united_kingdom, [], Services),
+    service_periods(Services, ServicePeriods).
+
+exemption_periods([], []).
+exemption_periods([exemption(_, From, To)|Exemptions], [period(From, To)|Periods]) :-
+    exemption_periods(Exemptions, Periods).
+
+service_periods([], []).
+service_periods([service(_, From, To, _)|Services], [period(From, To)|Periods]) :-
+    service_periods(Services, Periods).
+
+period_boundaries([], []).
+period_boundaries([Period|Periods], [FromDay, AfterDay|Days]) :-
+    period_bounds(Period, FromDay, ToDay),
+    AfterDay #= ToDay + 1,
+    period_boundaries(Periods, Days).
+
+% For a boundary B: the days around it (the date of application crossing
+% it), and the days around the date of application whose period of Years
+% years, or of twelve months, begins on it.
+boundary_events([], _, []).
+boundary_events([Boundary|Boundaries], Years, Events) :-
+    BeforeDay #= Boundary - 1,
+    AfterDay #= Boundary + 1,
+    window_events(Boundary, Years, Long),
+    window_events(Boundary, 1, Short),
+    boundary_events(Boundaries, Years, Rest),
+    append([[BeforeDay, Boundary, AfterDay], Long, Short, Rest], Events).
+
+window_events(Boundary, Years, [A, B, C, D]) :-
+    day_number_date(Boundary, BoundaryDate),
+    years_after(BoundaryDate, Years, Later),
+    date_day_number(Later, LaterDay),
+    A #= LaterDay - 2,
+    B #= LaterDay - 1,
+    C #= LaterDay,
+    D #= LaterDay + 1.
+
+no_statute("british_nationality_answer", 3, "interface_shape").
+no_statute("british_nationality_what_if", 4, "interface_shape").
+no_statute("british_citizenship_status_history", 2, "interface_shape").
+no_statute("british_citizenship_absence_figures", 4, "interface_shape").
+no_statute("british_citizenship_routes", 3, "interface_shape").
+no_statute("british_citizenship_earliest_application", 4, "interface_shape").
+no_statute("changed_profile", 3, "computation_helper").
+no_statute("changed_dict", 4, "computation_helper").
+no_statute("changes_t", 3, "computation_helper").
+no_statute("change_list_t", 2, "computation_helper").
+no_statute("change_rest_t", 3, "computation_helper").
+no_statute("change_t", 2, "computation_helper").
+no_statute("change_shape_t", 2, "computation_helper").
+no_statute("atom_t", 2, "computation_helper").
+no_statute("apply_valid", 4, "computation_helper").
+no_statute("apply_changes", 3, "computation_helper").
+no_statute("apply_change", 3, "computation_helper").
+no_statute("without_key", 3, "computation_helper").
+no_statute("history_given", 3, "computation_helper").
+no_statute("days_from", 3, "computation_helper").
+no_statute("from_t", 3, "computation_helper").
+no_statute("statuses", 3, "computation_helper").
+no_statute("changes_only", 3, "computation_helper").
+no_statute("figures_given", 5, "computation_helper").
+no_statute("figures", 4, "computation_helper").
+no_statute("figure", 4, "computation_helper").
+no_statute("year_figures", 4, "computation_helper").
+no_statute("parent_figures", 4, "computation_helper").
+no_statute("parent_figure", 4, "computation_helper").
+no_statute("route_outcomes", 4, "computation_helper").
+no_statute("route_outcome", 5, "computation_helper").
+no_statute("pairs_values", 2, "computation_helper").
+no_statute("earliest_given", 5, "computation_helper").
+no_statute("search", 7, "computation_helper").
+no_statute("search_on", 10, "computation_helper").
+no_statute("provision_assessment", 5, "computation_helper").
+no_statute("count_jump", 4, "computation_helper").
+no_statute("largest_excess", 3, "computation_helper").
+no_statute("other_failure_t", 3, "computation_helper").
+no_statute("other_rest_t", 4, "computation_helper").
+no_statute("count_condition_t", 2, "computation_helper").
+no_statute("next_day", 5, "computation_helper").
+no_statute("next_event", 4, "computation_helper").
+no_statute("after_t", 3, "computation_helper").
+no_statute("next_event_given", 6, "computation_helper").
+no_statute("event_days", 3, "computation_helper").
+no_statute("birthday", 3, "computation_helper").
+no_statute("spouse_days", 3, "computation_helper").
+no_statute("spouse_given_days", 2, "computation_helper").
+no_statute("profile_boundaries", 2, "computation_helper").
+no_statute("period_lists", 2, "computation_helper").
+no_statute("exemption_periods", 2, "computation_helper").
+no_statute("service_periods", 2, "computation_helper").
+no_statute("period_boundaries", 2, "computation_helper").
+no_statute("boundary_events", 3, "computation_helper").
+no_statute("window_events", 4, "computation_helper").
+
+:- end_module(queries).

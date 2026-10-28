@@ -87,7 +87,7 @@ def _declared_units(src):
     """{registry key -> the unit its constant was DECLARED in}.
 
     The unit is now DATA, so the value check can stop guessing it from a name
-    suffix. Found 2026-09-13 by the build process: `expected_value_strings`
+    suffix. Found 2026-09-13 by a domain review: `expected_value_strings`
     keyed off a hardcoded suffix list and returned [] for everything else, so
     th/visa was 12 of 12 BLIND because Thai minor units are `_satang`. A
     per-currency hole, not a per-value one -- euro was blind the same way."""
