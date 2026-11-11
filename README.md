@@ -140,3 +140,7 @@ mike.amy@neurosymbolic.solutions, naming the domain.
 
 Outside contributions cannot be merged yet: they will need a signed contributor licence
 agreement, which is being prepared.
+
+## Research evaluation proposals
+
+The [English GDPR-30 concept and evaluation handoff](benchmarks/README.md) proposes a 30-task research benchmark, including provisional references, controlled model comparisons and a business analysis. It is separate from the validated domains above: independent legal review and genuine GDPR Prolog integration remain pending.

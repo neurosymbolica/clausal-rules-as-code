@@ -1,0 +1,15 @@
+# Sources, authorship and status — release 2.0
+
+This local GDPR evaluation package was prepared for Luc Thiery on 6 November 2026. Cases, provisional reference answers, documentation and software were developed with AI assistance. The release contains exactly 30 synthetic tasks: 20 focused tasks and 10 complex tasks with five subquestions each, 70 subquestions overall. It contains no real company incidents or personal records of affected individuals.
+
+Reference answers and supplied normalised facts have not received independent legal validation. The Python rules are a project-authored diagnostic baseline, not an independent legal oracle. No genuine GDPR Prolog rulebase is bundled; both Prolog conditions require reviewed external modules. No real model/product benchmark results, appointed legal reviewers, measured customer savings or market validation are claimed. Technical fixtures and illustrative economic inputs are not empirical results. This package is research material, not legal advice or a certification of compliance.
+
+The legislation is Regulation (EU) 2016/679, supplied by the EU Publications Office/CELLAR. [The law manifest](sources/law-manifest.json) records the source URL, consolidation metadata, retrieval time and hashes. The consolidated source is official documentary material; legal authority rests with the authentic Official Journal versions. The extracted article text is a machine-generated working copy. The original XML and derived article files remain distinguishable.
+
+The public [neurosymbolica/clausal-rules-as-code repository](https://github.com/neurosymbolica/clausal-rules-as-code) was inspected for available GDPR formalisation. [The recorded inspection](sources/upstream-check.json) identifies the revision, tree and limited search evidence. No Prolog program from that repository is included or executed here. Its EUPL-1.2 licence and NOTICE need separate consideration if code is integrated in future. The upstream project does not endorse this benchmark, its cases or its references. Private or unpublished modules were not inspected.
+
+Official provider interface links appear in [ADAPTERS.md](docs/ADAPTERS.md). [The market evidence register](sources/market-evidence.json) records dated primary-source research with short excerpts, supported claims and limitations. Vendor statements are not independently audited product or security findings. Research on historical systems is not represented as current GDPR performance for another product.
+
+The handoff does not supply credentials, confidential access links, product accounts, private modules or genuine external model answers. Future live runs and manual product captures can create locally stored prompts, raw answers and evidence; operators must manage those records under the applicable data and service arrangements. The documented manual product exchange does not imply that vendors have no official APIs or that this project has permission to use them.
+
+The commercial work is a completed desk analysis with explicit assumptions and evidence gates. **Commercial validation remains pending.**

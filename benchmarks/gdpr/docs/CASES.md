@@ -1,0 +1,584 @@
+# GDPR benchmark cases — release 2.0
+
+This is the complete English reading view of `data/cases.jsonl`: 20 focused cases and 10 complex cases, each complex case containing five questions (70 questions in total). The cases are synthetic, translated from the German release, and await independent legal and translation review. Normalised facts are diagnostic rule inputs; the narrative is the language-understanding task. Provisional reference answers are separate in [REFERENCE_ANSWERS.md](REFERENCE_ANSWERS.md).
+
+## Prespecified evaluation tags
+
+`exception_boundary` marks a deliberate exception, limit, competing legal route or threshold distinction in the scenario. It does not mark every ordinary application of a legal condition. `missing_information` marks an unresolved fact material to the requested legal conclusion; routine implementation details and unknowns made irrelevant by another established condition are excluded. Tags were assigned from the case design before future inference or human scoring; they are analysis metadata, not answer hints or model inputs. Their inclusion does not claim independent legal validation.
+
+The current set contains 46 exception/boundary questions and 6 material-unknown questions. The two groups may overlap.
+
+| Question | Tag | Design rationale |
+| --- | --- | --- |
+| F03/q1 | `exception_boundary` | Necessity fails where an equally effective less intrusive alternative exists. |
+| F04/q1 | `exception_boundary` | Explicit consent to health-data disclosure is defeated by unnecessary conditionality. |
+| F05/q1 | `exception_boundary` | A general account-creation click does not affirm a pre-ticked separate purpose. |
+| F07/q1 | `exception_boundary` | Complexity does not cure an extension notice delivered after the first month. |
+| F08/q1 | `exception_boundary` | Statutory retention limits erasure for the specified invoices. |
+| F12/q1 | `exception_boundary` | General authorisation requires advance change notice and an opportunity to object. |
+| F15/q1 | `exception_boundary` | Effective encryption may exempt individual breach communication. |
+| F16/q1 | `exception_boundary` | Pseudonymisation does not remove the large-scale health-data DPIA trigger. |
+| F17/q1 | `exception_boundary` | Large-scale regular systematic monitoring must be a core activity for this DPO trigger. |
+| F18/q1 | `exception_boundary` | EU hosting does not remove the Chapter V requirement for separate third-country access. |
+| F19/q1 | `exception_boundary` | Sole automated significant decisions require a valid exception; feasible manual review matters. |
+| F20/q1 | `exception_boundary` | The higher of the fixed and turnover limits applies, with a connected-infringement ceiling. |
+| C01/q1 | `exception_boundary` | A complaint after rejection does not make the initial decision human; exceptions must be checked. |
+| C01/q2 | `exception_boundary` | Extensive automated evaluation supporting significant decisions triggers a DPIA without health data. |
+| C01/q3 | `exception_boundary` | A requested pre-contractual process does not justify an unnecessary game test. |
+| C01/q4 | `exception_boundary` | Compelled diagnosis disclosure cannot rely on an explicit-consent exception. |
+| C01/q5 | `exception_boundary` | An ancillary recruitment process can require a DPIA without meeting the core-activity DPO trigger. |
+| C02/q3 | `exception_boundary` | Blocking links does not remove high risk from downloaded readable copies. |
+| C02/q4 | `exception_boundary` | Specific prior authorisation differs from the general-authorisation change procedure. |
+| C02/q5 | `exception_boundary` | Large-scale health-data processing must be a core activity for this DPO trigger. |
+| C03/q2 | `exception_boundary` | A sales contract does not make optional recommendation profiling necessary. |
+| C03/q4 | `exception_boundary` | A separate invoice-retention duty does not exempt an advertising profile from erasure. |
+| C03/q5 | `exception_boundary` | A justified, timely extension can permit a response beyond one month. |
+| C04/q2 | `exception_boundary` | Technical implementation choices alone do not establish joint control. |
+| C04/q3 | `exception_boundary` | General authorisation can suffice when change notice and objection requirements are met. |
+| C04/q4 | `exception_boundary` | Signed clauses require effective protection in the actual transfer context. |
+| C04/q5 | `exception_boundary` | Regular monitoring alone does not resolve core activity and large scale. |
+| C05/q4 | `exception_boundary` | Article 35(1) can require a DPIA even where paragraph 3(a) is not satisfied. |
+| C05/q5 | `exception_boundary` | Continued use and navigation do not establish affirmative consent to personalisation. |
+| C06/q1 | `exception_boundary` | Timely notice does not justify an extension based only on staff shortages. |
+| C06/q2 | `exception_boundary` | Mandatory invoice retention limits the erasure duty. |
+| C06/q4 | `exception_boundary` | An internally derived score is distinct from data provided by the person for portability. |
+| C07/q1 | `exception_boundary` | Genuine human review before effect can remove sole automation. |
+| C07/q2 | `exception_boundary` | A DPIA can be required despite a human final decision. |
+| C07/q3 | `exception_boundary` | Requested necessary pre-contractual steps can qualify before a contract exists. |
+| C07/q5 | `exception_boundary` | An isolated Article 32 infringement uses the lower fine tier and higher fixed amount. |
+| C08/q1 | `exception_boundary` | Necessary treatment under professional secrecy uses the healthcare exception, separately from consent. |
+| C08/q3 | `exception_boundary` | Withdrawal from a consent-based study does not automatically erase independent treatment records. |
+| C09/q2 | `exception_boundary` | A narrowly limited non-public trial without likely high risk need not trigger a DPIA. |
+| C09/q3 | `exception_boundary` | Limited ancillary site security does not satisfy the core-activity and scale DPO conditions. |
+| C09/q4 | `exception_boundary` | A documented unlikely risk can exempt authority notification but not breach documentation. |
+| C09/q5 | `exception_boundary` | Individual breach communication has its own high-risk threshold. |
+| C10/q1 | `exception_boundary` | Stipulated adequacy provides a Chapter V route without separate Article 46 safeguards. |
+| C10/q3 | `exception_boundary` | The 72-hour point is not permission to wait for complete forensics. |
+| C10/q4 | `exception_boundary` | Disproportionate individual contact requires equally effective substitute communication. |
+| C10/q5 | `exception_boundary` | The turnover percentage can exceed the fixed cap; connected infringements are not simply added. |
+| C04/q4 | `missing_information` | Local-law effects and feasible supplementary protection remain unresolved. |
+| C04/q5 | `missing_information` | The analytics product's scale and relation to core activity are unknown. |
+| C05/q3 | `missing_information` | Effectiveness of less intrusive measurement, expectations and actual safeguards are unknown. |
+| C07/q4 | `missing_information` | Less intrusive fraud indicators, expectations, quality and restrictions are unresolved. |
+| C08/q5 | `missing_information` | Actual permissions, restoration and effectiveness testing are unknown. |
+| C09/q1 | `missing_information` | Actual field of view and third-party expectations are unverified. |
+
+## F01 — Canadian language coaching for the EU
+
+**Type:** focused · **Relevant GDPR articles:** 3, 27
+
+A Toronto company provides online language coaching without an EU establishment. It targets advertising at Vienna and Paris, offers dedicated EU course times and prices in euros, and accepts bookings from people in Austria and France. It processes names, contact details and learning progress in course accounts. It does not create behavioural profiles beyond the booked course activity.
+
+### Questions
+
+1. **q1** — Does the GDPR apply territorially to the processing of course accounts for this customer group? Explain your answer and identify the next steps.
+
+**Included scope:** Territorial scope for customer processing; Next steps for a provider without an EU establishment.
+
+**Excluded scope:** Canadian law; Detailed legal bases and any transfers.
+
+**Missing facts:** The precise scale and regularity of EU activity for the Article 27 assessment.
+
+## F02 — A telephone number for the delivery team
+
+**Type:** focused · **Relevant GDPR articles:** 5, 6
+
+A furniture shop sells a wardrobe to a private customer with delivery into her home. The delivery company coordinates the promised delivery window by telephone and otherwise cannot reach the recipient in time. Only the assigned delivery team receives the number, which it uses to arrange the appointment and announce its arrival.
+
+### Questions
+
+1. **q1** — May the shop rely on Article 6(1)(b) to use the telephone number for this delivery coordination? Explain your answer and identify the next steps.
+
+**Included scope:** Customer data necessary to carry out delivery.
+
+**Excluded scope:** Further use by the delivery company; Allocation of roles in transport.
+
+**Missing facts:** How long the delivery team retains the number.
+
+## F03 — Cameras at the staff canteen
+
+**Type:** focused · **Relevant GDPR articles:** 5, 6
+
+After two delivery parcels disappear, a manufacturer plans to film the entrance to the staff canteen continuously. An internal inspection establishes that all parcels first pass through a locked goods reception area and that an electronic collection log there would prevent these incidents equally effectively. The canteen camera plan includes no masking, access model or deletion period.
+
+### Questions
+
+1. **q1** — Can the manufacturer rely on Article 6(1)(f) for the planned continuous canteen surveillance? Explain your answer and identify the next steps.
+
+**Included scope:** The private employer's legitimate interest in preventing losses.
+
+**Excluded scope:** Employment data protection under national law; Employee participation rights.
+
+**Missing facts:** None specified.
+
+## F04 — Allergy data for an advertising partner
+
+**Type:** focused · **Relevant GDPR articles:** 4, 6, 7, 9
+
+A cooking app requires users to give explicit agreement in a separate, initially unticked field to send self-reported allergies to an advertising partner. The purpose and recipient are explained. Without agreement, users cannot open even the recipe archive they have already paid for. The archive works technically without allergy details or advertising, and no other basis for the disclosure is apparent.
+
+### Questions
+
+1. **q1** — May the provider send the allergy data to the advertising partner on the basis of this consent process? Explain your answer and identify the next steps.
+
+**Included scope:** Health data and explicit consent; Making a service conditional on consent.
+
+**Excluded scope:** The contract with the advertising partner; Consumer law.
+
+**Missing facts:** None specified.
+
+## F05 — A pre-ticked newsletter box
+
+**Type:** focused · **Relevant GDPR articles:** 4, 6, 7
+
+When opening a free library account, a box for a personalised email newsletter is already ticked. The newsletter explanation is clear. Users who untick the box can still open an account. One user clicks "Create account" without changing the box.
+
+### Questions
+
+1. **q1** — Does leaving the pre-ticked box unchanged constitute valid consent to the personalised newsletter? Explain your answer and identify the next steps.
+
+**Included scope:** Consent under the GDPR.
+
+**Excluded scope:** Specific rules for electronic advertising; Possible alternative legal bases.
+
+**Missing facts:** None specified.
+
+## F06 — Withdrawal of consent to an employee profile
+
+**Type:** focused · **Relevant GDPR articles:** 7, 17
+
+A software company publishes a voluntary profile of an employee, including her photograph, on its careers page. The company relied exclusively on separate consent that was valid when given. The employee withdraws consent by email. The company manages its website and CDN itself and has also included the photograph in a scheduled social media post.
+
+### Questions
+
+1. **q1** — Must the company stop using the profile for this publication purpose after withdrawal? Explain your answer and identify the next steps.
+
+**Included scope:** Withdrawal and further processing of the profile.
+
+**Excluded scope:** Image rights; Effects on third-party archives without established knowledge.
+
+**Missing facts:** Other recipients or known copies of the publicly available photograph.
+
+## F07 — An extension notified one day after the deadline
+
+**Type:** focused · **Relevant GDPR articles:** 12, 15
+
+An insurance portal receives an access request through a logged-in account on 8 June 2026. A data archive makes the request demonstrably complex. The first notice reaches the person only on 9 July 2026 and cites the archive search as the reason for an extension. The full response is planned for 7 September 2026.
+
+### Questions
+
+1. **q1** — Is the proposed response date of 7 September within the time limit under the notified extension? Explain your answer and identify the next steps.
+
+**Included scope:** Time limits for the response and extension notice.
+
+**Excluded scope:** The substance of the right of access.
+
+**Missing facts:** None specified.
+
+## F08 — Account closed, invoices retained
+
+**Type:** focused · **Relevant GDPR articles:** 5, 6, 12, 17
+
+A bicycle subscription service terminates a customer's contract and receives an erasure request. The subscription has been settled. A retention obligation under Union or Member State law still applies to the specified invoices and their mandatory details. A marketing profile is stored in a separate system and is unnecessary for that retention.
+
+### Questions
+
+1. **q1** — Must the provider erase the invoices subject to mandatory retention now in response to the erasure request? Explain your answer and identify the next steps.
+
+**Included scope:** Erasure obligations for invoice data subject to mandatory retention.
+
+**Excluded scope:** National retention periods; Detailed erasure obligations for other account data.
+
+**Missing facts:** The end date of the specific statutory retention obligation.
+
+## F09 — Exporting self-entered training plans
+
+**Type:** focused · **Relevant GDPR articles:** 12, 20
+
+A runner enters her training plans and goals in a paid online training account. The provider stores these entries by automated means to perform the contract. It also calculates an injury-risk score, which the runner expressly excludes from her request. She wants a file containing the training plans and goals she entered so that she can switch providers.
+
+### Questions
+
+1. **q1** — Do the training plans and goals entered by the runner fall within data portability under Article 20(1)? Explain your answer and identify the next steps.
+
+**Included scope:** Portability of actively provided contractual data.
+
+**Excluded scope:** Portability of derived scores; Medical device law.
+
+**Missing facts:** The target provider's technical interface if direct transmission is requested later.
+
+## F10 — Stopping advertising and its audience profile
+
+**Type:** focused · **Relevant GDPR articles:** 21
+
+A mail-order retailer uses previous purchases to create segments for direct marketing and sends those segments to its mailing tool. A customer objects through his account to all direct marketing. The CRM team plans to stop sending messages but continue calculating his profile for future advertising campaigns.
+
+### Questions
+
+1. **q1** — Must the retailer also stop calculating this customer's direct-marketing profile after the objection? Explain your answer and identify the next steps.
+
+**Included scope:** Objection to direct marketing and related profiling.
+
+**Excluded scope:** Specific rules for advertising channels; Retention of invoices.
+
+**Missing facts:** Other systems and recipients using the advertising segment.
+
+## F11 — Registration for a jointly organised careers fair
+
+**Type:** focused · **Relevant GDPR articles:** 4, 26
+
+Two private organisers operate registration for a joint careers fair. They jointly determine that registration serves access control and participant planning. Both make binding decisions about mandatory fields, recipients and the deletion period. Organiser A hosts the form; organiser B operates the hotline.
+
+### Questions
+
+1. **q1** — Are the two organisers joint controllers for the registration process described? Explain your answer and identify the next steps.
+
+**Included scope:** Roles in collecting and using data for joint registration.
+
+**Excluded scope:** Subsequent independent recruitment processes; Contractual allocation of costs.
+
+**Missing facts:** None specified.
+
+## F12 — A subprocessor without advance notice
+
+**Type:** focused · **Relevant GDPR articles:** 28
+
+A cloud operator processes customer files as a processor. It has general written authorisation. Tomorrow it intends to engage an additional EU-based support service with access to the files. That service's contract provides equivalent data protection obligations. The operator plans to inform the controller of the change only on next month's invoice.
+
+### Questions
+
+1. **q1** — May the operator give the additional support service access to the files tomorrow? Explain your answer and identify the next steps.
+
+**Included scope:** Authorisation and information about subprocessors.
+
+**Excluded scope:** Third-country transfers; Detailed scope of the main contract.
+
+**Missing facts:** None specified.
+
+## F13 — An open link to medical findings
+
+**Type:** focused · **Relevant GDPR articles:** 5, 32
+
+A diagnostic laboratory places unencrypted medical findings in a cloud folder. Anyone with the URL can read the files. Although the folder is not indexed by search engines, a link has already been forwarded to the wrong recipient. Individual logins are disabled and a restoration test has never been performed.
+
+### Questions
+
+1. **q1** — Does the protection described for the medical findings folder satisfy Article 32 for this processing? Explain your answer and identify the next steps.
+
+**Included scope:** Appropriate security measures for the medical findings folder.
+
+**Excluded scope:** A final assessment of the individual incident's notification threshold.
+
+**Missing facts:** Access and download logs for the misdirected link.
+
+## F14 — Customer addresses after 78 hours
+
+**Type:** focused · **Relevant GDPR articles:** 4, 33
+
+On Monday at 09:00, a retailer learns from verified logs that a third party downloaded names, addresses and order histories from the customer account area. The data could support convincing invoice-fraud attempts. By Thursday at 15:00, the total number of records is still unknown. The supervisory authority has not yet been informed.
+
+### Questions
+
+1. **q1** — Must the retailer notify the supervisory authority now even though 72 hours have already elapsed? Explain your answer and identify the next steps.
+
+**Included scope:** The controller's notification to the authority and its deadline.
+
+**Excluded scope:** Direct communication to data subjects.
+
+**Missing facts:** Approximate number of data subjects and records; The reason why notification has not yet been made.
+
+## F15 — A stolen encrypted backup of medical findings
+
+**Type:** focused · **Relevant GDPR articles:** 4, 33, 34
+
+An external backup containing detailed medical findings is stolen from a rehabilitation centre. The backup is strongly encrypted and its keys remain in a separate system. Logs and a restoration test establish that the keys are uncompromised and the primary data remain available. Contact details for the patients are available. The question concerns direct communication to them.
+
+### Questions
+
+1. **q1** — Must the rehabilitation centre notify the data subjects individually about the theft? Explain your answer and identify the next steps.
+
+**Included scope:** An exception to individual communication to data subjects.
+
+**Excluded scope:** A separate assessment of notification to the authority.
+
+**Missing facts:** None specified.
+
+## F16 — Analysis of diagnoses across a hospital group
+
+**Type:** focused · **Relevant GDPR articles:** 4, 9, 35, 36
+
+A hospital group plans to centrally analyse several years of diagnoses relating to approximately 150,000 patients. The data are pseudonymised, but re-identification remains possible for follow-up examinations. A pilot using real data is due to start next month. No data protection impact assessment exists.
+
+### Questions
+
+1. **q1** — Must the hospital group conduct a data protection impact assessment before piloting the processing with these data? Explain your answer and identify the next steps.
+
+**Included scope:** The threshold for a data protection impact assessment before the pilot.
+
+**Excluded scope:** Lawfulness of the medical purpose under national law.
+
+**Missing facts:** Specific access, linkage and retention arrangements for the assessment.
+
+## F17 — Location tracking as a platform's core activity
+
+**Type:** focused · **Relevant GDPR articles:** 37, 38
+
+A private mobility platform processes the GPS positions of approximately 250,000 drivers throughout each shift. Continuous collection and analysis are central to its matching service. The platform regularly creates activity profiles and currently uses only a data protection coordinator without a formal designation.
+
+### Questions
+
+1. **q1** — Must the platform designate a data protection officer under Article 37(1)? Explain your answer and identify the next steps.
+
+**Included scope:** The duty to designate under Article 37(1).
+
+**Excluded scope:** Additional national requirements; The legal basis for tracking.
+
+**Missing facts:** None specified.
+
+## F18 — Third-country support despite EU hosting
+
+**Type:** focused · **Relevant GDPR articles:** 44, 45, 46, 49
+
+A German platform stores customer files in Ireland. A legally separate support service in a third country is to open readable files through remote access. Under the case assumptions, no adequacy decision covers this recipient. The contract and technical configuration currently contain no Article 46 safeguards, and no Article 49 derogation applies.
+
+### Questions
+
+1. **q1** — May the platform already enable the described remote access under Chapter V? Explain your answer and identify the next steps.
+
+**Included scope:** Third-country access and the basis for transfer.
+
+**Excluded scope:** Current country status; Other requirements of the support contract.
+
+**Missing facts:** The legal framework and access conditions in the recipient country for assessing appropriate safeguards.
+
+## F19 — Automatic rejection of instalment payments
+
+**Type:** focused · **Relevant GDPR articles:** 13, 22
+
+A mail-order retailer rejects an instalment-payment request solely on the basis of a score, without human review. The refusal significantly impedes the person's ability to finance a necessary purchase. Manual review would be possible within the usual processing time. There is no statutory authorisation or explicit consent, and no special categories of data are used.
+
+### Questions
+
+1. **q1** — Does the prohibition in Article 22(1) apply to the fully automated rejection described? Explain your answer and identify the next steps.
+
+**Included scope:** Automated individual decision-making under Article 22.
+
+**Excluded scope:** The general lawfulness of scoring; Consumer credit law.
+
+**Missing facts:** None specified.
+
+## F20 — The maximum fine for two connected infringements
+
+**Type:** focused · **Relevant GDPR articles:** 83
+
+The supervisory authority is considering a fine of EUR 17 million. It has established a negligent infringement of Article 5 and a negligent infringement of Article 32 in the same processing operations. The undertaking's total worldwide annual turnover in the preceding financial year was EUR 300 million. The amount of the actual fine has not yet been decided.
+
+### Questions
+
+1. **q1** — Is EUR 17 million within the applicable abstract maximum fine under the GDPR? Explain your answer and identify the next steps.
+
+**Included scope:** The abstract maximum and connected infringements.
+
+**Excluded scope:** National procedural issues; Determination of the final fine.
+
+**Missing facts:** Gravity, duration, culpability and remedial measures for determining the actual fine.
+
+## C01 — A logistics group's recruitment platform
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 6, 7, 9, 13, 22, 35, 36, 37
+
+An Austrian logistics group hires approximately 2,400 warehouse employees each year. On its own recruitment platform, browser-based game tests systematically assess attention and reaction. Around 18,000 applications annually are converted into a profile and score. Below a threshold, the platform immediately issues a binding rejection. Recruiters may intervene only after a complaint. A manually assessed work-sample test would enable selection within the same time limit. Applicants have applied for the vacancy. Process analysis shows that the game test is unnecessary for the pre-contractual steps. There is no statutory authorisation or explicit consent for automated rejection. No health data enter the score. Separately, at upload the group requires explicit permission to add voluntarily entered diagnosis details to a talent database. Without this permission, however, it blocks every application. No basis other than the claimed consent, and no Article 9 exception, is apparent. The employer is private. Recruitment administration is an ancillary process supporting cargo handling. Outside this pilot, the group does not conduct large-scale systematic monitoring of individuals or process special categories of data on a large scale as a core activity.
+
+### Questions
+
+1. **q1** — Does the prohibition in Article 22 apply to the binding score-based rejection? Explain your answer and identify the next steps.
+2. **q2** — Is a DPIA required before the recruitment filter goes live? Explain your answer and identify the next steps.
+3. **q3** — Does Article 6(1)(b) support the mandatory game test as a pre-contractual step? Explain your answer and identify the next steps.
+4. **q4** — May the group add the diagnosis details to the talent database on the basis of the permission described? Explain your answer and identify the next steps.
+5. **q5** — Does the processing described trigger a duty for the group to designate a data protection officer under Article 37(1)? Explain your answer and identify the next steps.
+
+**Included scope:** Recruitment selection; Health data in the talent database; DPIA and designation duties under the GDPR.
+
+**Excluded scope:** National employment and anti-discrimination law; National DPO designation requirements.
+
+**Missing facts:** The game's error rates for different groups; Actual opportunities to correct input data; Access and retention periods for diagnoses already collected.
+
+## C02 — A hospital network after a portal misconfiguration
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 9, 28, 32, 33, 34, 37, 38
+
+A private hospital network maintains central medical records for the inpatient treatment of approximately 120,000 patients each year. Its clinical work is impossible without these data. An IT provider operates the medical findings portal on instructions. The hospital has given separate prior written authorisation for an independent EU monitoring service. The subcontract imposes the same data protection obligations as the main contract, and the network has not objected to the engagement. A release made several medical findings containing names, diagnoses and medication available unencrypted through open links. Individual authentication and download logs were absent; restoration had not been tested. On Tuesday at 10:00, the provider confirmed a download by an unauthorised person and immediately informed the network. By Wednesday at 16:00, the network has disabled the links. It can no longer control dissemination of the downloaded copies. Given the specific diagnoses, stigmatisation and blackmail are plausible. The data subjects are identifiable and individually reachable.
+
+### Questions
+
+1. **q1** — Was the protection described for the accessible medical findings appropriate under Article 32? Explain your answer and identify the next steps.
+2. **q2** — Must the hospital network notify the competent supervisory authority of the download now? Explain your answer and identify the next steps.
+3. **q3** — Must the hospital network notify the affected individuals individually? Explain your answer and identify the next steps.
+4. **q4** — May the IT provider engage the authorised monitoring service under Article 28(2) and (4)? Explain your answer and identify the next steps.
+5. **q5** — Must the private hospital network designate a data protection officer under Article 37(1)? Explain your answer and identify the next steps.
+
+**Included scope:** Articles 32–34; Subprocessing; The private network's duty to designate a DPO.
+
+**Excluded scope:** Allocation of liability under national law; Third-country transfers.
+
+**Missing facts:** Actual distribution of the links and duration of exposure; Number of data subjects and records; Extent of dissemination of copies; Actual recipients and any additional exposed contact information.
+
+## C03 — Direct marketing and customer rights at a bicycle retailer
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 6, 7, 12, 15, 17, 19, 21
+
+An online bicycle retailer processes orders through a delivery account. After registration, a separate, initially unticked box offers personalised product recommendations by email. It specifies the purpose, the purchase history used, the controller and a simple way to withdraw consent. Purchases work fully without agreement. A customer ticks the box herself. Management instead wants to treat recommendation calculations as a necessary part of the sales contract. The checkout does not technically use them. Months later, the customer objects to all direct marketing and withdraws consent. She asks the retailer to review both her advertising profile and the stored information. The advertising profile has no further purpose, retention obligation or connection to legal claims. Invoices are stored separately. Through her logged-in account, the retailer receives an extensive access request on 8 June 2026 covering several earlier shop migrations. It notifies her on 6 July of a demonstrably necessary extension and explains the research across separate legacy systems. It plans to provide the full response on 3 September.
+
+### Questions
+
+1. **q1** — Was the newsletter consent described valid when given at registration? Explain your answer and identify the next steps.
+2. **q2** — Does Article 6(1)(b) support calculating recommendations as part of processing the purchase? Explain your answer and identify the next steps.
+3. **q3** — Must ongoing segment calculations for direct marketing stop after the objection? Explain your answer and identify the next steps.
+4. **q4** — Must the retailer erase the customer's purely advertising-related profile? Explain your answer and identify the next steps.
+5. **q5** — Is 3 September within the extended time limit for responding to the access request? Explain your answer and identify the next steps.
+
+**Included scope:** Consent and contractual basis for the direct-marketing profile; Objection and erasure; The access-request deadline.
+
+**Excluded scope:** National rules on electronic advertising; Detailed statutory invoice retention requirements.
+
+**Missing facts:** Existing evidence of the specific click and wording; The synchronisation route to mailing or analytics services; Recipients of the profile and technical deletion paths.
+
+## C04 — An international event service with a European campaign
+
+**Type:** complex · **Relevant GDPR articles:** 3, 4, 26, 27, 28, 37, 44, 45, 46, 49
+
+A Montréal company without an EU establishment sells online access to professional events. It advertises in France and Belgium, offers French-language support and bills in euros. A dedicated EU campaign attracts participants living in the Union. The ticket platform does not monitor their behaviour beyond ticket processing. An EU hosting company stores the data on instructions. The event company independently determines the purpose, mandatory fields and deletion period. The hosting company chooses server hardware and similar technical details. The event company has given general written authorisation for additional processors. The host announced an EU backup service in advance, allowed sufficient time to object and agreed equivalent data protection obligations. The event company did not object. An unrelated remote-maintenance service in a third country is to receive access to readable data. According to the facts, no relevant adequacy decision or Article 49 derogation applies. Standard contractual clauses have been signed and an effectiveness assessment has begun. It remains unknown whether local law undermines protection and whether supplementary technical measures are possible. The core activity is ticket sales; an optional separate analytics product for organisers regularly tracks users, but its scale and actual integration into the core service are unknown. Processing special categories of data is not a core activity of the company.
+
+### Questions
+
+1. **q1** — Does the GDPR apply territorially to ticket processing for the EU campaign? Explain your answer and identify the next steps.
+2. **q2** — Are the event company and the EU hosting company joint controllers for storing the ticket data? Explain your answer and identify the next steps.
+3. **q3** — May the host use the announced EU backup service as described under Article 28(2) and (4)? Explain your answer and identify the next steps.
+4. **q4** — Can access from the third country, under the actual legal and technical conditions, be based on the agreed standard contractual clauses? Explain your answer and identify the next steps.
+5. **q5** — Must the event company designate a data protection officer because of the optional analytics product? Explain your answer and identify the next steps.
+
+**Included scope:** Territorial scope; Roles and subprocessing; Third-country access; DPO designation.
+
+**Excluded scope:** Specific third-country status beyond the case assumptions; Advertising law.
+
+**Missing facts:** Regularity and risk profile relevant to a possible Article 27(2) exception; The host's actual use of logs for any purposes of its own; Public-authority access powers and effective legal remedies in the third country; Feasibility of effective supplementary measures where plaintext access is required; Number of data subjects, data volume, geographical reach and duration; Integration of the product into the core service.
+
+## C05 — Audience measurement in a media app
+
+**Type:** complex · **Relevant GDPR articles:** 3, 4, 5, 6, 7, 13, 26, 35, 36
+
+Two media companies jointly operate a news app from Berlin. They jointly determine how app events are collected and combined to provide recommendations and a shared audience-measurement product. They jointly decide on identifiers, access and deletion periods. For subsequent editorial planning, each uses separate analyses for its own purposes. The app tracks approximately 900,000 regular readers in the EU and combines device identifiers, article views and click sequences across sections over months. Detailed individual news preferences can be inferred. Profiles only change the order of ordinary articles, without affecting access, prices or other significant decisions. According to the data inventory, the planned system does not incorporate attributes relating to special categories of data. Its scale, combination of data across sections and inference risks lead the internal screening assessment to identify a likely high risk. The companies are considering Article 6(1)(f) for editorial audience measurement. It is unknown whether short-lived, aggregated measurement would be equally effective and which pseudonymisation measures and deletion periods will actually be implemented. Subscribers' expectations have not yet been established. For consent to personalised recommendations, the app merely states "By continuing to use the app, you agree" above a button leading to the homepage. Users who click nothing receive the same recommendations.
+
+### Questions
+
+1. **q1** — Does the GDPR apply territorially to the two media companies' app analytics? Explain your answer and identify the next steps.
+2. **q2** — Are the companies joint controllers for collecting and combining the app events together? Explain your answer and identify the next steps.
+3. **q3** — Can the individual audience measurement described rely on Article 6(1)(f)? Explain your answer and identify the next steps.
+4. **q4** — Is a DPIA required before launching the described app analytics despite the absence of significant decisions? Explain your answer and identify the next steps.
+5. **q5** — Does the continued use described constitute valid consent to personalised recommendations? Explain your answer and identify the next steps.
+
+**Included scope:** Joint collection; Article 6(1)(f); Consent; DPIA.
+
+**Excluded scope:** National rules on terminal equipment and media; Specific rules for journalistic processing.
+
+**Missing facts:** The location of any separate analytics partners involved in further data flows; Responsibility for information duties and requests at the joint processing stage; Measurement quality of aggregated methods; Users' expectations; Effective retention and access restrictions and pseudonymisation; Specific possibilities for linking and accessing data; Residual risks after safeguards.
+
+## C06 — A fitness provider replaces legacy systems after contract termination
+
+**Type:** complex · **Relevant GDPR articles:** 5, 12, 15, 17, 19, 20, 21
+
+A fitness chain ends a customer's app subscription while migrating old contract records. Her invoices contain mandatory details that must still be retained under the applicable statutory rule. A separate recommendation and training assessment that is no longer used is unnecessary for either a retention obligation or legal claims. Its processing relied on the app contract, which has now ended. Requests for access, erasure and export arrive through the logged-in account on 5 May 2026. A complete system index makes it possible to handle the access request within the normal time. On 20 May the team sends a notice citing staff shortages as the reason for an extension. It wants to respond on 13 July. For her Article 20 request, the customer asks only for the internal training assessment. The app automatically derives it from several measurements and inputs. She does not request those underlying values. She also objects to all direct marketing. The marketing department intends to continue using her segment for telephone win-back campaigns and tailored offers in her customer inbox.
+
+### Questions
+
+1. **q1** — Does the extension notified on 20 May cover the planned response date of 13 July? Explain your answer and identify the next steps.
+2. **q2** — Must the chain immediately erase the invoices subject to statutory retention? Explain your answer and identify the next steps.
+3. **q3** — Must the chain erase the internal recommendation and training assessment in response to the erasure request? Explain your answer and identify the next steps.
+4. **q4** — Does the purely internally derived training assessment fall within the Article 20 request? Explain your answer and identify the next steps.
+5. **q5** — Must the chain stop using the segment for telephone advertising and personalised offers after the objection? Explain your answer and identify the next steps.
+
+**Included scope:** Time limits for data subject rights; Erasure by dataset; Data portability; Objection to direct marketing.
+
+**Excluded scope:** The length of national retention periods; Specific national rules on telephone advertising.
+
+**Missing facts:** The retention end date for each invoice; Any external recipients of the assessment; Reconciliation of marketing lists with the migrated data.
+
+## C07 — Credit assessment with a genuine human decision
+
+**Type:** complex · **Relevant GDPR articles:** 5, 6, 14, 22, 35, 36, 83
+
+A private credit provider handles approximately 90,000 credit applications annually. Applicants initiate the assessment themselves. To prepare the specific offer requested, the provider must collect monthly net income and existing instalment commitments; otherwise it cannot calculate monthly affordability. No contract yet exists. A model systematically evaluates extensive financial data and recommends terms or rejection. Its output goes to a qualified caseworker. She can see the relevant inputs, examines the file before the legally effective decision, is free to change the result and demonstrably does so. The recommendation remains a substantial basis for the decision. No special categories of data are used. The provider also wants to incorporate applicants' contacts from a third-party dataset for fraud detection. It claims a legitimate security interest. It is unknown whether less intrusive fraud indicators would be equally effective, what expectations individuals have and which access and deletion restrictions will be implemented. If incorrectly attributed, the additional contacts could significantly affect the credit decision. A concluded earlier case concerns only an infringement of Article 32. For the maximum-fine assessment, worldwide turnover in the preceding year is established at EUR 250 million. A fine of EUR 12 million is under consideration.
+
+### Questions
+
+1. **q1** — Does the prohibition in Article 22(1) apply to the final credit decision described? Explain your answer and identify the next steps.
+2. **q2** — Is a DPIA required before using this scoring process even though a human makes the final decision? Explain your answer and identify the next steps.
+3. **q3** — Does Article 6(1)(b) support collecting income and existing instalment commitments for the specific offer requested? Explain your answer and identify the next steps.
+4. **q4** — Can the credit provider rely on Article 6(1)(f) for the additional third-party data? Explain your answer and identify the next steps.
+5. **q5** — Is the proposed EUR 12 million within the abstract maximum for the isolated Article 32 infringement? Explain your answer and identify the next steps.
+
+**Included scope:** Article 22 and DPIA; Pre-contractual basis; Fraud data and legitimate interests; The abstract maximum fine.
+
+**Excluded scope:** Credit supervision law; Determination of the actual fine; Third-country law.
+
+**Missing facts:** A sample of review quality and actual departures from model outputs in borderline cases; Error distribution, data quality and effects on applicants; Measurement quality of less intrusive fraud indicators; Source and accuracy of the third-party data; Expectations, access and deletion periods; Circumstances relevant to determining the fine in the earlier case.
+
+## C08 — A digital treatment portal with a voluntary research diary
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 6, 7, 9, 17, 20, 32
+
+A private telemedicine service provides booked remote treatment through medical practitioners. They need the reported symptoms to perform the contract. Processing for diagnosis and treatment is based on a treatment contract with the professionals, who are subject to statutory professional secrecy. A patient enters her symptoms in the portal herself. The service processes her entries by automated means to perform the contract and stores them separately from the practitioners' assessments. The portal also offers an optional research diary. For this, the patient ticks an initially empty box, separate from the treatment contract, expressly authorising use of her health details for a specifically described care study. The purpose, recipients, controller and withdrawal are clearly explained. Appointments and treatment work equally well without participation. The study relies exclusively on this consent. Later, the patient withdraws consent through the portal and requests a machine-readable export of the symptoms she entered in the treatment module. Medical findings are encrypted, with separate keys and individual access rights. It is unknown whether restoration has been tested, which roles can actually read the data and whether security measures are regularly reviewed. No disclosure is known.
+
+### Questions
+
+1. **q1** — May the service process the necessary health details for diagnosis and treatment on the circumstances described? Explain your answer and identify the next steps.
+2. **q2** — Is the consent for the optional study valid under the general consent requirements? Explain your answer and identify the next steps.
+3. **q3** — Must further processing of the research diary for this study stop after withdrawal? Explain your answer and identify the next steps.
+4. **q4** — Do the self-entered symptom details in the treatment portal fall under Article 20(1)? Explain your answer and identify the next steps.
+5. **q5** — Can the described security architecture already be classified as appropriate under Article 32? Explain your answer and identify the next steps.
+
+**Included scope:** Health data for treatment and research; Withdrawal and portability; Security measures appropriate to the risk.
+
+**Excluded scope:** National medical record-keeping obligations; Professional and research law beyond the case assumptions.
+
+**Missing facts:** Whether technical assistants satisfy Article 9(3); Evidence of the stated wording and individual confirmation; Which study data remain identifiable and who received copies; References to other individuals in particular free-text fields; Actual role permissions; Restoration time and tested restoration; Frequency and results of effectiveness testing.
+
+## C09 — A camera trial at a restricted factory entrance
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 6, 13, 33, 34, 35, 37
+
+Following documented break-ins, a private supplier is considering a fixed camera covering a small enclosed part of its outdoor premises. Only two trained security guards may enter the area when incidents occur; it is closed to the public. The camera would record briefly only when a perimeter alarm is triggered, capture no sound and create no profiles. A preliminary technical assessment has ruled out an equally effective, less intrusive option. A short deletion period, restricted access and clear advance information are planned. The actual field of view has not yet been tested to establish whether it inadvertently captures people outside the alarm area or what third parties there reasonably expect. For the stated narrow field of view and limited trial, without special categories of data, public monitoring or extensive evaluation, the documented data-protection screening reasonably finds no likely high risk. The camera serves the ancillary function of site security. The supplier has no other large-scale monitoring or large-scale processing of special categories of data as a core activity. Separately, an existing alarm ticket containing a guard's name was made accessible to the wrong internal specialist team, which should not have had access. Logs show that nobody opened the message before it was withdrawn ten minutes later. Sensitive content and further disclosure are ruled out. A reasoned preliminary assessment finds adverse consequences for the data subject unlikely.
+
+### Questions
+
+1. **q1** — Can the supplier rely on Article 6(1)(f) for the proposed alarm camera? Explain your answer and identify the next steps.
+2. **q2** — Under the case assumptions, is a DPIA under Article 35(1) or (3) mandatory before the narrowly limited camera trial? Explain your answer and identify the next steps.
+3. **q3** — Must the supplier designate a data protection officer under Article 37(1) solely because of the described camera trial? Explain your answer and identify the next steps.
+4. **q4** — Must the supplier notify the supervisory authority of the alarm ticket's incorrect access permissions? Explain your answer and identify the next steps.
+5. **q5** — Must the supplier notify the guard individually under Article 34? Explain your answer and identify the next steps.
+
+**Included scope:** Balancing of interests and DPIA screening for the camera; DPO duties; Notification thresholds for the internal alarm ticket.
+
+**Excluded scope:** National employee participation and video-surveillance rules; Specific supervisory-authority DPIA lists beyond the facts.
+
+**Missing facts:** The measured field of view; Typical use of adjacent areas and data subjects' expectations; The applicable supervisory-authority list under Article 35(4); The precise time of established awareness for any reassessment.
+
+## C10 — A service platform after a CRM migration data leak
+
+**Type:** complex · **Relevant GDPR articles:** 4, 5, 28, 32, 33, 34, 44, 45, 46, 83
+
+A European customer-service network is migrating its CRM. A legally separate recipient in a third country handles an isolated part of the migration. A binding case assumption states that an applicable adequacy decision covers precisely that country, recipient and processing. Access for the rest of the project team is allocated separately. In a separate import job, a spreadsheet copy containing contact details and detailed health information from complaints was placed unencrypted in a publicly accessible object. Individual permissions were absent. The most recent restoration test succeeded. An external download is confirmed. The controller gained established awareness on Monday at 08:00. It is now Thursday at 08:00. The copy has been removed, but the download enables blackmail and stigmatisation. The forensic investigation is incomplete. For a large proportion of individuals, old contact details are demonstrably unusable. After documented attempts, individual contact is disproportionate for the group at issue here. Prominent notices in service channels they still use can demonstrably reach them equally effectively. A total fine of EUR 36 million is being discussed for negligent infringements of Articles 5 and 32 in the same processing operation. The undertaking's worldwide turnover in the preceding year was EUR 900 million.
+
+### Questions
+
+1. **q1** — Is the isolated third-country access by the specifically covered recipient permitted under Chapter V on the stated assumption? Explain your answer and identify the next steps.
+2. **q2** — Was the protection of the publicly stored CRM copy appropriate under Article 32? Explain your answer and identify the next steps.
+3. **q3** — Must the network notify the authority now despite the incomplete forensic investigation? Prioritise initial notification, technical containment and communication to data subjects over the next few hours. Explain your answer and identify the next steps.
+4. **q4** — Must the network necessarily notify the specified group individually? Explain your answer and identify the next steps.
+5. **q5** — Is EUR 36 million within the abstract GDPR maximum for the connected infringements? Explain your answer and identify the next steps.
+
+**Included scope:** Chapter V where adequacy is stipulated; Articles 32–34 after a data leak; The maximum fine.
+
+**Excluded scope:** Verification of a specific country's status; National liability and determination of the final fine.
+
+**Missing facts:** Possible onward transfers by the recipient; A complete inventory of temporary objects and technical access paths; Approximate number of affected individuals and data records; Other disclosure routes; Evidence showing which group can actually be reached through each service channel; Gravity, duration, culpability and remedial measures for the actual decision.

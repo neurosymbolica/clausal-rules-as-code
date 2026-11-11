@@ -1,0 +1,61 @@
+How this demo works
+Industries
+How it works
+Design partners
+Theme
+Join the waitlist
+← All test books
+How this demo works
+Internal preview: awaiting review by lawyers. Not legal advice.
+The rules are code. Each part of the GDPR here was written as logic rules by a formalisation process automated by Clausify, our neurosymbolic formalisation engine. Clausify uses an AI model to draft the rules; each book page names the exact model and date. The rules are then checked by automated tests and by an independent test book, and they will be checked by lawyers, which has not happened yet.
+Every answer comes from running those rules on the facts you give, on a rules engine. Nothing is looked up or guessed, and the same facts always give the same answer.
+The English you read is written by fixed templates from the engine's output. No language model writes any answer, reason or citation.
+Each part comes with a test book: small test cases and the answer the rules gave when they were checked. We show that recorded answer next to the live one, so you can see they agree.
+Some questions are judgements the GDPR leaves open. The rules never decide those: you answer them (Yes / No / Cannot say), and the open ones lead to "refer for legal review".
+Held out for benchmarking: about 30% of the test cases are kept aside to measure how well language models answer the same questions. Their answers are not shown anywhere here. Where a panel would reveal one, it says "held out" instead. That is deliberate, not an error.
+Language models: used only where a page says so. On the benchmark page you paste a model's reply to be scored. A model never decides an answer.
+Nothing you enter is stored.
+Which order text: the rules here were all written and scored under the formalisation order as it stood before 7 November 2026. That day a sentence was added that a repeated input key must give a duplicate-key error. These packages were not written to it and are not claimed to satisfy it; their scores are unaffected. When you type the same key twice, the demo's own input check handles it; that is the demo's behaviour, not the rules'.
+Internal preview: the rules and test cases are awaiting review by lawyers. Not legal advice.
+How the rules are checked
+This is not a language model's guess that was run through a few tests. Packages are put through the layers below, and each layer exists because the others cannot catch what it catches. Figures are the ones recorded when each package was built; each names the package it was run on.
+The techniques, by name: adversarial red teaming, mutation testing, property checking, independent test books, a second separately written reading of the order, differential testing across three engines, and provision-by-provision accounting. Which package each was run on is stated below. What is kept to ourselves is the exact implementation, not the method.
+The system in full: validation and Clausal Prolog
+A written order first.
+Every package is built to a written order: which provisions to cover, how open questions must be handled, and the exact shape of the inputs and answers. The order's text is recorded with the package, so we can say which wording a package was written under.
+Every provision accounted for.
+A ledger lists every provision of the article. Each one is formalised as rules, deferred with a stated reason, or excluded with a reason. A package is accepted only with none left unaccounted for, and a separate program checks the ledger after drafting. Article 6, for example: 57 provisions, 9 formalised, 48 deferred (47 with a stated reason from the order, 1 as an expansion), 2 excluded, 0 unaccounted for.
+The package's own tests.
+Each package carries its own tests, written with it: 181 for Article 6 (after its ledger repair; 197 before), 204 for Article 8, 136 for the breach package.
+Three independent engines.
+The same tests are run on three separate Prolog implementations (Clausal, Scryer and Trealla). A test counts only where all three give the same verdict. A package that fails this check shows a blank test count on the overview, and the overview says why.
+A test book written separately from the rules.
+For each package, a test book of cases is written separately from the rules, from the order and the statute text. Each case is a small plain-English situation with the provision it tests, the verbatim statute text and the expected answer. The breach package's book has 8,127 rows built from 2,591 distinct cases, and a second book of 36 cases puts dates and hours at the limits of each deadline. Article 6: 147 of 147; Article 8: 101 of 101.
+The first score is the one we report, and the books can be wrong too.
+The breach package scored 195 of 196 the first time. The book's author then found that one expected answer conflicted with the order's own text and corrected it; the package then scores 196 of 196. We publish both numbers and the reason, not only the better one.
+Adversarial red teaming.
+Confirming that rules work is easy; the useful question is whether something set on breaking them can. A language model is told to find inputs on which a package disagrees with the order text, and to quote the order for each. Each attack is run and the result recorded, and the tool's false positives are re-run by hand. Child consent: 8 attacks, no defect found (one tool false positive; two attacks re-run by hand). Article 6: 16 attacks over two usable calls, no defect found; four inputs repeating a key showed a gap in the specification, which says nothing about it, and that is recorded as a gap, not a defect. Breach: 8 attacks, no defect found (seven agreed outright and one was ruled in the package's favour by the owner of the order). A fixed catalogue of 6 automated attacks, run on the code with no model, was also run on each of the three, with none confirmed. Calls that returned nothing usable are not counted and say nothing about the package. These are small trials with an experimental tool, and we say so. Separately, a checker who read only the order text and ran the package on test inputs, using no scores and no test-book cases, wrote findings down; the breach package was repaired once from them, and the checker found nothing without a hint.
+Adversarial testing of the tests: planted defects.
+Passing tests prove little if they would also pass on wrong rules. So we red-team the tests themselves, in the manner of mutation testing: defects are planted on purpose, each a deliberately broken version of the rules, and run against the tests. Article 6: 32 planted, 15 caught (the test book caught all 15), and the other 17 cannot change any answer. Child consent: 34 planted, 21 caught, and the other 13 cannot change any answer. Those that cannot change an answer were reasoned out by construction, not proved by a tool, and no test could catch them. Breach: 42 planted, 26 caught, 16 not caught by any test, 4 of which concern invalid dates and hours that the books do not run. We keep the missed ones as a list and run them again whenever cases are added, and we publish the numbers instead of leaving them out.
+Properties that must hold for every input.
+Six checks come from rules every order states, and are run on generated inputs without knowing any right answer: exactly one answer per question; a missing-keys answer is non-empty, without duplicates and names only absent keys; supplying a reported missing key never leaves it reported missing; a referral names a key that is present and unsure; an unknown key is reported as unknown; a wrong-type value is reported as wrong type. Child consent: 346 inputs across 5 questions, clean. Breach: 1,566 inputs across 4 questions, one flagged, where the order itself refers on a false judgement as well as an unsure one, so the check is stricter than the order and the package is not at fault.
+A second reading of the order, written separately.
+The order is also implemented a second time, separately, and the two are compared on every input in a large generated set. Article 6: 12,245 inputs, no differences, on the package as first built, before a later repair that changed no rule file. Child consent: 16,362 inputs, two differences, both already known and recorded.
+Coverage and sanity checks.
+Checks that no rule depends on a catch-all fact (none found in Article 6, child consent or breach), what happens when the same fact is given twice (the first value is read), and that every decision rule is exercised: in the child-consent package, all 105 decision lines run.
+Open readings are marked, not settled.
+Where the law can be read two ways, the package marks the reading as open for legal review instead of choosing one quietly. Questions the GDPR leaves to judgement are never decided by the rules: you answer them, and an unanswered or unsure one leads to a referral for legal review.
+Cases kept back for benchmarking.
+About 30% of each package's cases are held out, chosen by a fixed rule on groups of related cases and never by looking at answers. They are used to score language models fairly, and no page here shows their answers. Automated tests sample pages and panels and fail if any of them would reveal one.
+Nothing changes without being noticed.
+Every file of every package is recorded with a SHA-256 hash, and so are the test cases and the national-age table. Our tests check them against those records and fail on any changed or unlisted file.
+The demo itself is tested.
+Facts you type are checked against the package's own input definition before anything runs. The engine is the only thing that decides an answer, and the English is written by fixed templates. Test suites cover the engine side, the web pages and the browser code, and the pages are checked in a real browser at phone and desktop widths before each release.
+Sources for national ages.
+Each member state's age of digital consent is a row with its source and whether the source is primary or secondary. Where a source gives the age only as of a date, the page says so.
+What this does not show
+No lawyer has reviewed these rules yet. That is the largest step still to come, and it is meant to be adversarial too: lawyers asked to attack the formalisations, not to approve them.
+The scores are against test books written by AI models, not by lawyers. They show that the rules and an independent reading of the order agree, not that either is right in law.
+These packages were written under the order text as it stood before 7 November 2026, and are not claimed to satisfy the current one.
+Red-team, planted-defect, property-check and second-reading figures are given for the packages they were run on, and only for those.
+Each package covers one part of the GDPR. The provisions it leaves out are listed, each with a reason.
