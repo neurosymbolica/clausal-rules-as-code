@@ -1,0 +1,119 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: exactly one full answer
+% per relation and fixture.
+% Run: python -m clausal.testing eu/data_protection/gdpr_common_definitions_data_and_processing/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_common_definitions_data_and_processing/gdpr_common_definitions_data_and_processing, [
+    decide_gdpr_common_definitions_data_and_processing/2,
+    gdpr_common_definitions_data_and_processing_status/2,
+    gdpr_common_definitions_data_and_processing_checklist/2,
+    personal_data/2,
+    processing/2,
+    restriction_of_processing/2,
+    profiling/2,
+    pseudonymisation/2,
+    filing_system/2,
+    receiving_body_is_recipient/2,
+    receiving_body_is_third_party/2,
+    personal_data_breach/2,
+    international_organisation/2,
+    data_and_processing_outside_facts/2
+]).
+:- use_module(eu/data_protection/gdpr_common_definitions_data_and_processing/fixtures, [gdpr_common_definitions_data_and_processing_profile_for/2]).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    findall(Status, gdpr_common_definitions_data_and_processing_status(Profile, Status), Statuses),
+    Statuses == [met].
+
+test(the_verdict_carries_a_citation) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    decide_gdpr_common_definitions_data_and_processing(Profile, gdpr_common_definitions_data_and_processing_verdict(met, [cite(eu_reg_2016_679_art_4_1)])).
+
+test(personal_data_answer_list_is_one_answer) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    findall(Answer, personal_data(Profile, Answer), Answers),
+    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_1)])].
+
+test(processing_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    processing(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_2)])).
+
+test(restriction_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    restriction_of_processing(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_3)])).
+
+test(filing_system_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    filing_system(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_6)])).
+
+test(missing_operation_is_indeterminate) :-
+    gdpr_common_definitions_data_and_processing_profile_for(operation_missing, Profile),
+    processing(Profile, definition_answer(indeterminate([operation_performed_on_the_data]), none, [cite(eu_reg_2016_679_art_4_2)])).
+
+test(profiling_names_every_absent_key_in_order) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    profiling(Profile, definition_answer(indeterminate([processing_automated, evaluates_personal_aspects_of_natural_person]), none, [cite(eu_reg_2016_679_art_4_4)])).
+
+test(profiling_met_when_automated_and_evaluating) :-
+    gdpr_common_definitions_data_and_processing_profile_for(automated_evaluation, Profile),
+    profiling(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_4)])).
+
+test(pseudonymisation_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(pseudonymised_data, Profile),
+    pseudonymisation(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_5)])).
+
+test(pseudonymisation_without_measures_is_not_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(attribution_without_measures, Profile),
+    pseudonymisation(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_5)])).
+
+test(unsure_identifiability_refers_with_its_inputs) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, Profile),
+    personal_data(Profile, definition_answer(needs_legal_review(open_textured(natural_person_identifiable, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([information_relates_to_natural_person-true, natural_person_identified-false, natural_person_identifiable-unsure])]), none, [cite(eu_reg_2016_679_art_4_1)])).
+
+% TEST FIXED (side b): the rule is right. The fixture lacks the 4(6) key, so an absent key
+% gives indeterminate before any referral. The profile is completed with that key so the
+% unsure identifiability alone decides and refers, citing point 4(1).
+test(unsure_identifiability_refers_a_composed_relation_citing_point_one) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, Base),
+    append(Base, [attribute(structured_set_accessible_by_specific_criteria, true)], Profile),
+    filing_system(Profile, definition_answer(needs_legal_review(open_textured(natural_person_identifiable, cite(eu_reg_2016_679_art_4_1)), _), none, [cite(eu_reg_2016_679_art_4_1)])).
+
+test(unsure_identifiability_with_absent_structure_key_is_indeterminate) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, Profile),
+    filing_system(Profile, definition_answer(indeterminate([structured_set_accessible_by_specific_criteria]), none, [cite(eu_reg_2016_679_art_4_6)])).
+
+test(recipient_met_and_third_party_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(disclosed_to_other_body, Profile),
+    receiving_body_is_recipient(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_9)])),
+    receiving_body_is_third_party(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_10)])).
+
+test(inquiry_authority_is_not_a_recipient) :-
+    gdpr_common_definitions_data_and_processing_profile_for(inquiry_authority, Profile),
+    receiving_body_is_recipient(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_9)])).
+
+test(third_party_names_absent_exclusions) :-
+    gdpr_common_definitions_data_and_processing_profile_for(inquiry_authority, Profile),
+    receiving_body_is_third_party(Profile, definition_answer(indeterminate([receiving_body_is_data_subject, receiving_body_is_controller_or_processor, receiving_body_authorised_under_direct_authority]), none, [cite(eu_reg_2016_679_art_4_10)])).
+
+test(breach_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(breach_of_personal_data, Profile),
+    personal_data_breach(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_12)])).
+
+test(unattested_organisation_refers) :-
+    gdpr_common_definitions_data_and_processing_profile_for(unattested_organisation, Profile),
+    international_organisation(Profile, definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)), [resolution(cite(public_international_law_governing_organisation), not_attempted), inputs_relied_on([body_set_up_by_agreement_between_countries-false])]), none, [cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)])).
+
+test(outside_facts_as_the_profile_holds_them) :-
+    gdpr_common_definitions_data_and_processing_profile_for(attested_service, Profile),
+    data_and_processing_outside_facts(Profile, [outside_fact(service_is_information_society_service, attested(true, attestation(fixture_host, fixture_clock, fixture_reason, none))), outside_fact(organisation_governed_by_public_international_law, absent)]).
+
+test(checklist_has_one_cited_row_per_relation) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    gdpr_common_definitions_data_and_processing_checklist(Profile, Items),
+    length(Items, 12),
+    Items = [item(personal_data, met, [cite(eu_reg_2016_679_art_4_1)]), item(processing, met, [cite(eu_reg_2016_679_art_4_2)])|_].
+
+:- end_module(test_output_mode).

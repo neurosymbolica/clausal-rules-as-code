@@ -1,0 +1,45 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_arts33_34_breach_notification___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [authority_notification_content_check/2, authority_notification_deadline/3, authority_notification_period_end/3, breach_notification_verdict/4, breach_notification_verdict_checklist/2, breach_notification_verdict_decision_resolvable/1, breach_notification_verdict_status/2, breach_notification_verdict_status_values/1, communicate_to_data_subject/1, contradictory_inputs/1, data_subject_communication_check/2, decide_breach_notification_verdict/2, document_breach/1, duplicate_key/1, indeterminate/1, information_to_follow_in_phases/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, no_communication_required/1, no_notification_required/1, notification_obligation/2, notification_requirement_not_met/1, notify_controller/1, notify_supervisory_authority/1, open_textured/2, period_end/2, provenance/2, public_communication_or_similar_measure/1, requirements_not_met/1, unknown_key/1, wrong_type/1]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_queries, [gdpr_arts33_34_breach_notification_profile_keys/1, gdpr_arts33_34_breach_notification_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_fixtures, [gdpr_arts33_34_breach_notification_assess/2, gdpr_arts33_34_breach_notification_profile_for/2, gdpr_arts33_34_breach_notification_subject/1]).
+
+root_export(appropriate_protection_measures_applied_to_affected_data).
+root_export(breach_likely_to_result_in_high_risk).
+root_export(breach_unlikely_to_result_in_risk).
+root_export(categories_and_approximate_numbers_possible).
+root_export(communication_describes_likely_consequences).
+root_export(communication_describes_measures_taken_or_proposed).
+root_export(communication_describes_mitigation_measures).
+root_export(communication_describes_nature_in_clear_and_plain_language).
+root_export(communication_gives_contact_point).
+root_export(communication_made_without_undue_delay).
+root_export(communication_would_involve_disproportionate_effort).
+root_export(controller).
+root_export(decided_point_a_condition_met).
+root_export(decided_point_b_condition_met).
+root_export(decided_point_c_condition_met).
+root_export(delay_justified_by_reasons).
+root_export(information_not_possible_to_provide_at_the_same_time).
+root_export(mitigation_measures_appropriate).
+root_export(no_decision).
+root_export(notification_accompanied_by_reasons_for_delay).
+root_export(notification_describes_likely_consequences).
+root_export(notification_describes_measures_taken_or_proposed).
+root_export(notification_describes_mitigation_measures).
+root_export(notification_describes_nature_of_breach).
+root_export(notification_gives_categories_and_approximate_numbers).
+root_export(notification_gives_contact_point).
+root_export(notification_made_without_undue_delay).
+root_export(party_role).
+root_export(processor).
+root_export(required_communication).
+root_export(subsequent_measures_ensure_high_risk_no_longer_likely).
+root_export(supervisory_authority_decision_on_communication).
+root_export(unsure).

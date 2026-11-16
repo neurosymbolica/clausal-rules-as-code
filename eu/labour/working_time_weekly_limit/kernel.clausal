@@ -1,0 +1,252 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/labour/working_time_weekly_limit (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This domain has ONE
+% determination slice (working_time_weekly_limit.clausal), so no rule
+% predicate is shared: the date arithmetic (the month rule, the minute
+% of a date_time term, the day ordinals), the figures, the limit test
+% and the argument checks of step 0 all live in that slice.
+% Exception: the scaffold writes the order's input check
+% working_time_weekly_limit_input_problems/2 here, exported, for the
+% slice and queries.clausal to import.
+% deontic family: STATUS is a modal vocabulary (cf.
+% eu/procurement/exclusion_grounds must_exclude/may_exclude/not_excluded).
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003 (the original act; CELEX 32003L0088): Art 2(1) (working
+% time), Art 6(b) (the 48-hour average for each seven-day period),
+% Art 16(b) with the sentence printed after it (the reference period of
+% at most four months; paid annual leave and sick leave neutral),
+% Art 19 first and second subparagraphs and Art 20(2) (longer reference
+% periods), Art 22(1) and Art 22(1)(a) (the option not to apply Art 6).
+%
+% Atoms and data terms need NO declaration and NO import: nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% Result terms of the slice:
+%   working_time_weekly_limit_verdict(Status, Citations)
+%     Status    -- the RESULT of weekly_limit_status/7: one of the atoms
+%                  within_weekly_limit, over_weekly_limit,
+%                  weekly_limit_not_applied_by_agreement,
+%                  reference_period_longer_than_allowed,
+%                  no_countable_period; or a status compound ITSELF:
+%                  input_problems(Problems), indeterminate([Key]) or
+%                  needs_legal_review(open_textured(Key, cite(eu_dir_2003_88_art_2_1)),
+%                                     [inputs_relied_on(Pairs)]).
+%     Citations -- a set-like flat list of cite(Key) terms, [] when the
+%                  Status is not final.
+%   minutes_per_seven_days(Numerator, Denominator)
+%     the exact average of weekly_working_time_average/6: two bare
+%     integers in lowest terms, Denominator at least 1; never a float.
+%   input_problems(Problems)
+%     Problems a flat list of duplicate_key(Key), wrong_type(Key) and
+%     unknown_key(Key) terms (wrong_type(worker), wrong_type(shifts),
+%     wrong_type(period_start), wrong_type(period_end) follow the
+%     profile problems at step 0 of each query).
+%   indeterminate([Key])           -- exactly ONE missing key atom.
+%   needs_legal_review(Reason, [inputs_relied_on(Pairs)])
+%     Reason open_textured(Key, cite(CitationKey)); Pairs the Key-Value
+%     pairs of the PRESENT judgement keys, in root_exports order; an
+%     optional trailing provenance(Clause, Citations) is unscored.
+% Shared across the files: the checklist row id `overall` (an atom --
+% nothing to export).
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [working_time_weekly_limit_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% working_time_weekly_limit_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% It gives exactly one answer for every Profile, and the answer is ground
+% except for a non-atom Key, which is named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] (an unbound
+%   Profile, a partial list, an unbound element, or an element of another shape)
+%   gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type (an unbound value included); then unknown_key(Key) for each key
+%   outside the contract (a non-atom Key, an unbound one included, is outside it), in
+%   the order of its first occurrence in Profile, compared as terms (==). Each key is
+%   named once. An absent key is not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+working_time_weekly_limit_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [reference_period_basis, on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, member_state_uses_article_22_option, worker_agreement_to_exceed_obtained_first],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(reference_period_basis, reference_period_basis_atom).
+key_type(on_call_on_site_counts_as_working_time, judgement).
+key_type(on_call_standby_counts_as_working_time, judgement).
+key_type(member_state_uses_article_22_option, boolean).
+key_type(worker_agreement_to_exceed_obtained_first, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a proper list of attribute(Key, Value)
+% items (any Key: a non-atom Key is an unknown key, not a malformed profile); false for
+% anything else, an unbound Term, a partial list and an unbound element included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+% Keys are compared as terms (==), so an unbound or compound Key is never bound here.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    key_known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+key_known_t(_, [], false).
+key_known_t(Key, [KnownKey|_], true) :-
+    Key == KnownKey.
+key_known_t(Key, [KnownKey|KnownKeys], T) :-
+    Key \== KnownKey,
+    key_known_t(Key, KnownKeys, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(reference_period_basis_atom, Value, T) :-
+    in_type_t(enum([member_state_reference_period, derogation_under_article_17_3_or_article_18, collective_agreement_under_article_19, offshore_work_under_article_20_2]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+test(an_empty_profile_has_no_problem) :-
+    working_time_weekly_limit_input_problems([], []).
+test(a_good_profile_has_no_problem) :-
+    working_time_weekly_limit_input_problems([attribute(reference_period_basis, member_state_reference_period), attribute(on_call_on_site_counts_as_working_time, unsure), attribute(member_state_uses_article_22_option, false)], []).
+test(a_wrong_basis_and_a_repeated_unknown_key) :-
+    working_time_weekly_limit_input_problems([attribute(reference_period_basis, x), attribute(foo, 1), attribute(foo, 2)], [wrong_type(reference_period_basis), unknown_key(foo)]).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    working_time_weekly_limit_input_problems([attribute(member_state_uses_article_22_option, maybe), attribute(member_state_uses_article_22_option, true)], [duplicate_key(member_state_uses_article_22_option)]).
+test(unsure_is_not_a_crisp_value) :-
+    working_time_weekly_limit_input_problems([attribute(worker_agreement_to_exceed_obtained_first, unsure)], [wrong_type(worker_agreement_to_exceed_obtained_first)]).
+test(a_number_key_is_unknown) :-
+    working_time_weekly_limit_input_problems([attribute(7, true)], [unknown_key(7)]).
+test(an_unbound_value_is_wrong_type) :-
+    working_time_weekly_limit_input_problems([attribute(on_call_standby_counts_as_working_time, _)], [wrong_type(on_call_standby_counts_as_working_time)]).
+test(an_unbound_profile_is_not_a_profile) :-
+    working_time_weekly_limit_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_not_a_profile) :-
+    working_time_weekly_limit_input_problems([attribute(reference_period_basis, member_state_reference_period)|_], [wrong_type(profile)]).
+test(a_foreign_element_is_not_a_profile) :-
+    working_time_weekly_limit_input_problems([attribute(foo, 1), reference_period_basis], [wrong_type(profile)]).
+test(the_check_answers_once) :-
+    findall(Problems, working_time_weekly_limit_input_problems([attribute(foo, 1), attribute(bar, 2), attribute(foo, 3)], Problems), Answers),
+    Answers == [[unknown_key(foo), unknown_key(bar)]].
+
+:- end_module(kernel).

@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+% PROPERTY tests for the query layer: every exported query predicate.
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/queries, [
+    gdpr_data_subject_rights_portability_and_objection_profile_keys/1,
+    gdpr_data_subject_rights_portability_and_objection_input_problems/2,
+    gdpr_data_subject_rights_portability_and_objection_what_if/4,
+    gdpr_data_subject_rights_portability_and_objection_compliance_check/3,
+    gdpr_data_subject_rights_portability_and_objection_justification/2,
+    decide_data_subject_request/2,
+    request_basis/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/fixtures, [gdpr_data_subject_rights_portability_and_objection_profile_for/2]).
+
+items_cited([]).
+items_cited([item(_, _, cite(_))|Items]) :-
+    items_cited(Items).
+
+test(profile_keys_count_is_fifty_four) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_keys(ProfileKeys),
+    length(ProfileKeys, 54).
+
+test(profile_keys_start_with_the_request_type) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_keys([First, Second|_]),
+    First == request_type,
+    Second == objection_ground_claimed.
+
+test(input_problems_empty_for_a_good_profile) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_input_problems(Profile, []).
+
+test(input_problems_name_an_unknown_key) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(unknown_key_problem, Profile),
+    gdpr_data_subject_rights_portability_and_objection_input_problems(Profile, [unknown_key(no_such_key)]).
+
+% ---- what-if (#16) ----
+test(what_if_breaking_engagement_flips_the_verdict) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_what_if(Profile, processing_carried_out_by_automated_means, false, Verdict),
+    Verdict == gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_20_1)]).
+
+test(what_if_adding_an_exception_key) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_what_if(Profile, request_manifestly_unfounded_or_excessive, true, Verdict),
+    Verdict == gdpr_data_subject_request_verdict(need_not_comply, art20_1, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_20_1)]).
+
+test(what_if_replaces_a_present_key_once) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_public_task, Profile),
+    findall(Verdict, gdpr_data_subject_rights_portability_and_objection_what_if(Profile, processing_necessary_for_public_task_or_official_authority, false, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], [cite(eu_reg_2016_679_art_20_1)])].
+
+test(what_if_leaves_the_original_decision_alone) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_what_if(Profile, processing_carried_out_by_automated_means, false, _),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], _)).
+
+test(what_if_an_invalid_value_reports_input_problems) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_what_if(Profile, processing_carried_out_by_automated_means, unsure, Verdict),
+    Verdict == gdpr_data_subject_request_verdict(input_problems([wrong_type(processing_carried_out_by_automated_means)]), none, none, [], []).
+
+% ---- compliance check (#13) ----
+test(compliance_must_comply_requires_action) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, comply_with_request, required).
+
+test(compliance_must_comply_prohibits_refusal) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, refuse_to_act, prohibited).
+
+test(compliance_enumerates_each_action_once) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    findall(Action-Standing, gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, Action, Standing), Pairs),
+    Pairs == [comply_with_request-required, refuse_to_act-prohibited].
+
+test(compliance_relief_permits_refusal) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_public_task, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, refuse_to_act, permitted).
+
+test(compliance_open_case_is_undetermined) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_missing_key, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, comply_with_request, undetermined).
+
+test(compliance_suspension_is_undetermined) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_suspended, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, refuse_to_act, undetermined).
+
+test(compliance_must_comply_is_not_permitted_refusal, fail) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_compliance_check(Profile, refuse_to_act, permitted).
+
+% ---- justification (#7) ----
+test(justification_portability_has_seven_cited_rows) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, Items),
+    length(Items, 7),
+    items_cited(Items).
+
+test(justification_first_row_is_the_met_engagement) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, [First|_]),
+    First == item(engagement, met, cite(eu_reg_2016_679_art_20_1)).
+
+test(justification_names_the_open_key) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(portability_missing_key, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, [First|_]),
+    First == item(engagement, unknown([personal_data_provided_by_data_subject]), cite(eu_reg_2016_679_art_20_1)).
+
+test(justification_art21_2_has_five_cited_rows) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(objection_art21_2_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, Items),
+    length(Items, 5),
+    items_cited(Items).
+
+test(justification_art21_1_has_seven_cited_rows) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(objection_art21_1_positive, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, Items),
+    length(Items, 7),
+    items_cited(Items).
+
+test(justification_of_a_profile_with_problems_is_empty) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(unknown_key_problem, Profile),
+    gdpr_data_subject_rights_portability_and_objection_justification(Profile, []).
+
+% ---- the entry points ----
+test(decide_and_basis_agree) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(objection_art21_6_positive, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(_, Basis, _, _, _)),
+    request_basis(Profile, Basis),
+    Basis == art21_6.
+
+:- end_module(test_queries).

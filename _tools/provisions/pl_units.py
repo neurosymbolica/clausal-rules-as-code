@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """pl_units.py -- write `units-[...]` bindings into a Prolog citation registry.
 
 The Prolog spelling of a seam record's `units:` key is an optional LAST pair,

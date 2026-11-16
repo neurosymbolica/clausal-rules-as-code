@@ -36,8 +36,9 @@ ledger (`provisions.yaml`) accounts for every one of them as:
 - **excluded**: outside the domain's scope by design (for example a provision of a different
   article that the extract cross-refers to).
 
-A unit that is none of these is **unaccounted**, and in every domain of this release the check
-fails if any unit is unaccounted. Today the count is zero in all eight.
+A unit that is none of these is **unaccounted**, and in each of the first eight domains the check
+fails if any unit is unaccounted. Today the count is zero in all eight. The 66 domains added on
+2026-11-16 have no ledger, so this check does not apply to them.
 
 ## The side-by-side report
 

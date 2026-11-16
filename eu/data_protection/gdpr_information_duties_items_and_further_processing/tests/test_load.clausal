@@ -1,0 +1,44 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor loads, the input check works,
+% the verdict atoms are distinct and a real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_information_duties_items_and_further_processing/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/kernel, [gdpr_information_duties_items_and_further_processing_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/citations, [citation/2, implements/1]).
+
+test(an_empty_attribute_list_has_no_problem) :-
+    gdpr_information_duties_items_and_further_processing_input_problems([], []).
+
+test(a_non_list_profile_is_wrong_type) :-
+    gdpr_information_duties_items_and_further_processing_input_problems(not_a_profile, [wrong_type(profile)]).
+
+test(other_purpose_information_is_not_an_item_provided) :-
+    gdpr_information_duties_items_and_further_processing_input_problems([attribute(items_provided, [other_purpose_information])], [wrong_type(items_provided)]).
+
+test(an_unknown_key_is_named) :-
+    gdpr_information_duties_items_and_further_processing_input_problems([attribute(bogus_key, true)], [unknown_key(bogus_key)]).
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(art13, art14),
+    dif(eligible, ineligible),
+    dif(eligible, not_applicable).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = information_route_verdict(art13, [cite(eu_reg_2016_679_art_13_1)]),
+    Verdict = information_route_verdict(Status, Citations),
+    Status == art13,
+    Citations == [cite(eu_reg_2016_679_art_13_1)].
+
+test(a_real_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_13_1_a, _Record).
+
+test(implements_accepts_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_14_4).
+
+test(implements_refuses_an_unrecorded_key, fail) :-
+    implements(eu_reg_2016_679_art_99_9).
+
+:- end_module(test_load).

@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism (every subject yields exactly one verdict),
+% citation shape (final verdicts cite Art 17(1), non-final ones cite
+% nothing, citations are ordered, without duplicates and recorded), the
+% Art 12(5) fee condition, and the irrelevance of an unread key.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_erasure/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure/queries, [decide_data_subject_request/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure/citations, [citation/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure/fixtures, [
+    gdpr_data_subject_rights_erasure_subject/1,
+    gdpr_data_subject_rights_erasure_profile_for/2,
+    gdpr_data_subject_rights_erasure_assess/2
+]).
+
+all_subjects(SubjectSet) :-
+    findall(Subject, gdpr_data_subject_rights_erasure_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet).
+
+subject_verdict_count(Subject, Count) :-
+    gdpr_data_subject_rights_erasure_profile_for(Subject, Profile),
+    findall(Verdict, decide_data_subject_request(Profile, Verdict), Verdicts),
+    length(Verdicts, Count).
+
+citation_invariant(must_comply, Citations) :-
+    member(cite(eu_reg_2016_679_art_17_1), Citations).
+citation_invariant(need_not_comply, Citations) :-
+    member(cite(eu_reg_2016_679_art_17_1), Citations).
+citation_invariant(indeterminate(_), []).
+citation_invariant(needs_legal_review(_, _), []).
+citation_invariant(suspended(_), []).
+citation_invariant(input_problems(_), []).
+
+conditions_invariant(art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged]).
+conditions_invariant(Exception, []) :-
+    dif(Exception, art12_5_manifestly_unfounded_or_excessive).
+
+citations_well_ordered(Subject) :-
+    gdpr_data_subject_rights_erasure_assess(Subject, gdpr_data_subject_request_verdict(_, _, _, _, Citations)),
+    sort(Citations, SortedCitations),
+    SortedCitations == Citations.
+
+unread_key_stable(Subject) :-
+    gdpr_data_subject_rights_erasure_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, Verdict),
+    decide_data_subject_request([attribute(accuracy_contested_by_data_subject, true)|Profile], Verdict).
+
+verdict_citation_key(Subject, CitationKey) :-
+    gdpr_data_subject_rights_erasure_assess(Subject, gdpr_data_subject_request_verdict(_, _, _, _, Citations)),
+    member(cite(CitationKey), Citations).
+
+test(totality_every_subject_classifies) :-
+    all_subjects(SubjectSet),
+    findall(Subject, (gdpr_data_subject_rights_erasure_subject(Subject), gdpr_data_subject_rights_erasure_assess(Subject, _)), ClassifiedSubjects),
+    sort(ClassifiedSubjects, ClassifiedSet),
+    ClassifiedSet == SubjectSet.
+
+test(determinism_every_subject_yields_exactly_one_verdict) :-
+    findall(Subject-Count, (gdpr_data_subject_rights_erasure_subject(Subject), subject_verdict_count(Subject, Count)), ActualRows),
+    findall(Subject-1, gdpr_data_subject_rights_erasure_subject(Subject), ExpectedRows),
+    ActualRows == ExpectedRows.
+
+test(final_verdicts_cite_article_17_1_and_non_final_cite_nothing) :-
+    all_subjects(SubjectSet),
+    findall(Subject, (gdpr_data_subject_rights_erasure_subject(Subject), gdpr_data_subject_rights_erasure_assess(Subject, gdpr_data_subject_request_verdict(Comply, _, _, _, Citations)), citation_invariant(Comply, Citations)), Holding),
+    sort(Holding, HoldingSet),
+    HoldingSet == SubjectSet.
+
+test(the_fee_condition_goes_with_article_12_5_only) :-
+    all_subjects(SubjectSet),
+    findall(Subject, (gdpr_data_subject_rights_erasure_subject(Subject), gdpr_data_subject_rights_erasure_assess(Subject, gdpr_data_subject_request_verdict(_, _, Exception, Conditions, _)), conditions_invariant(Exception, Conditions)), Holding),
+    sort(Holding, HoldingSet),
+    HoldingSet == SubjectSet.
+
+test(citations_are_in_vocabulary_order_without_duplicates) :-
+    all_subjects(SubjectSet),
+    findall(Subject, (gdpr_data_subject_rights_erasure_subject(Subject), citations_well_ordered(Subject)), Holding),
+    sort(Holding, HoldingSet),
+    HoldingSet == SubjectSet.
+
+test(every_returned_citation_is_recorded) :-
+    findall(CitationKey, verdict_citation_key(_, CitationKey), CitationKeys),
+    sort(CitationKeys, CitationKeySet),
+    findall(CitationKey, (member(CitationKey, CitationKeySet), citation(CitationKey, _)), RecordedKeys),
+    RecordedKeys == CitationKeySet.
+
+test(an_unread_key_changes_no_answer) :-
+    all_subjects(SubjectSet),
+    findall(Subject, (gdpr_data_subject_rights_erasure_subject(Subject), unread_key_stable(Subject)), Holding),
+    sort(Holding, HoldingSet),
+    HoldingSet == SubjectSet.
+
+:- end_module(test_properties).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_beneficial_ownership_threshold_queries, [amlr_bo_diff/3, amlr_bo_what_if/3, amlr_bo_direct_boundary/1, amlr_bo_gap_to_threshold/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_beneficial_ownership_threshold___init__, [root_export/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

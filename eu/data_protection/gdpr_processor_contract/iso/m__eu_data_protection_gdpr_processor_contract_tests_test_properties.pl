@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_processor_contract_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(formalize_lib, [not_member/2]).
+:- use_module(m__eu_data_protection_gdpr_processor_contract_processor_contract_status, [decide_processor_contract/2, processor_contract_status/2, contract_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_processor_contract_queries, [gdpr_processor_contract_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_processor_contract_fixtures, [gdpr_processor_contract_subject/1, gdpr_processor_contract_profile_for/2]).
+
+subject_verdict(Subject, Verdict) :-
+    gdpr_processor_contract_subject(Subject),
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    decide_processor_contract(Profile, Verdict).
+
+subject_classifies(Subject) :-
+    subject_verdict(Subject, _Verdict).
+
+subject_has_one_verdict(Subject) :-
+    gdpr_processor_contract_subject(Subject),
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    findall(Verdict, decide_processor_contract(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+status_allowed(eligible).
+status_allowed(ineligible).
+status_allowed(not_applicable).
+status_allowed(indeterminate(_)).
+status_allowed(needs_legal_review(_, _)).
+status_allowed(input_problems(_)).
+
+allowed_citation(eu_reg_2016_679_art_4_8).
+allowed_citation(eu_reg_2016_679_art_28_1).
+allowed_citation(eu_reg_2016_679_art_28_2).
+allowed_citation(eu_reg_2016_679_art_28_3).
+allowed_citation(eu_reg_2016_679_art_28_3_a).
+allowed_citation(eu_reg_2016_679_art_28_3_b).
+allowed_citation(eu_reg_2016_679_art_28_3_c).
+allowed_citation(eu_reg_2016_679_art_28_3_d).
+allowed_citation(eu_reg_2016_679_art_28_3_e).
+allowed_citation(eu_reg_2016_679_art_28_3_f).
+allowed_citation(eu_reg_2016_679_art_28_3_g).
+allowed_citation(eu_reg_2016_679_art_28_3_h).
+allowed_citation(eu_reg_2016_679_art_28_3_second_subpara).
+allowed_citation(eu_reg_2016_679_art_28_4).
+allowed_citation(eu_reg_2016_679_art_28_9).
+allowed_citation(eu_reg_2016_679_art_28_10).
+
+citation_keys([eu_reg_2016_679_art_4_8, eu_reg_2016_679_art_28_1, eu_reg_2016_679_art_28_2, eu_reg_2016_679_art_28_3, eu_reg_2016_679_art_28_3_a, eu_reg_2016_679_art_28_3_b, eu_reg_2016_679_art_28_3_c, eu_reg_2016_679_art_28_3_d, eu_reg_2016_679_art_28_3_e, eu_reg_2016_679_art_28_3_f, eu_reg_2016_679_art_28_3_g, eu_reg_2016_679_art_28_3_h, eu_reg_2016_679_art_28_3_second_subpara, eu_reg_2016_679_art_28_4, eu_reg_2016_679_art_28_9, eu_reg_2016_679_art_28_10]).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(there_are_subjects) :-
+    findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
+    length(Subjects, Count),
+    Count > 10.
+test(determinism_every_subject_has_exactly_one_verdict) :-
+    findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_has_one_verdict(Subject), OneVerdictSubjects),
+    sort(OneVerdictSubjects, SubjectSet).
+test(every_status_is_in_the_closed_vocabulary) :-
+    findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, (subject_verdict(Subject, processor_contract_verdict(Status, _, _)), status_allowed(Status)), AllowedSubjects),
+    sort(AllowedSubjects, SubjectSet).
+test(every_ineligible_verdict_has_aligned_nonempty_lists) :-
+    findall(Subject, subject_verdict(Subject, processor_contract_verdict(ineligible, _, _)), IneligibleSubjects),
+    IneligibleSubjects = [_|_],
+    findall(Subject, (subject_verdict(Subject, processor_contract_verdict(ineligible, Missing, Citations)), length(Missing, Count), length(Citations, Count), Count > 0), AlignedSubjects),
+    AlignedSubjects == IneligibleSubjects.
+test(only_ineligible_has_a_missing_list) :-
+    subject_verdict(compliant_without_subprocessor, processor_contract_verdict(eligible, [], _)),
+    subject_verdict(not_a_processor, processor_contract_verdict(not_applicable, [], _)),
+    subject_verdict(in_writing_unestablished, processor_contract_verdict(indeterminate(_), [], [])).
+test(the_citation_vocabulary_is_nonvacuous) :-
+    subject_verdict(audit_clause_missing, processor_contract_verdict(ineligible, _, [cite(Key)])),
+    allowed_citation(Key).
+test(the_checklist_is_nonempty_for_a_valid_subject) :-
+    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
+    contract_checklist(Profile, [_|_]).
+test(unread_subprocessor_keys_do_not_change_the_answer) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    gdpr_processor_contract_what_if(Profile, subprocessor_obligations_same, false, eligible),
+    gdpr_processor_contract_what_if(Profile, subprocessor_authorisation, none, eligible).
+test(unread_general_keys_do_not_change_a_specific_authorisation) :-
+    gdpr_processor_contract_profile_for(compliant_with_specific_subprocessor, Profile),
+    gdpr_processor_contract_what_if(Profile, processor_informed_controller_of_intended_changes, false, eligible),
+    gdpr_processor_contract_what_if(Profile, controller_given_opportunity_to_object, false, eligible).
+test(the_outside_fact_never_decides_the_status) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    processor_contract_status(Profile, BareStatus),
+    gdpr_processor_contract_what_if(Profile, standard_clauses_adopted, attested(true, attestation(decision_layer, recorded_at_review, user_confirmed, none)), BareStatus),
+    gdpr_processor_contract_what_if(Profile, standard_clauses_adopted, attested(false, attestation(decision_layer, recorded_at_review, user_confirmed, none)), BareStatus).
+
+test(a_non_ineligible_verdict_with_a_missing_list_does_not_exist, fail) :-
+    subject_verdict(_, processor_contract_verdict(Status, [_|_], _)),
+    status_allowed(Status),
+    Status \== ineligible.
+test(only_eligible_and_not_applicable_and_ineligible_carry_citations, fail) :-
+    subject_verdict(_, processor_contract_verdict(Status, _, [_|_])),
+    Status \== eligible,
+    Status \== ineligible,
+    Status \== not_applicable.
+test(no_citation_outside_the_closed_vocabulary, fail) :-
+    subject_verdict(_, processor_contract_verdict(_, _, Citations)),
+    member(cite(Key), Citations),
+    citation_keys(Keys),
+    not_member(Key, Keys).
+test(every_checklist_item_carries_a_cite_term, fail) :-
+    gdpr_processor_contract_subject(Subject),
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    contract_checklist(Profile, Items),
+    member(checklist_item(_, Citation, _), Items),
+    Citation \= cite(_).
+
+cp_test_names([totality_every_subject_classifies, there_are_subjects, determinism_every_subject_has_exactly_one_verdict, every_status_is_in_the_closed_vocabulary, every_ineligible_verdict_has_aligned_nonempty_lists, only_ineligible_has_a_missing_list, the_citation_vocabulary_is_nonvacuous, the_checklist_is_nonempty_for_a_valid_subject, unread_subprocessor_keys_do_not_change_the_answer, unread_general_keys_do_not_change_a_specific_authorisation, the_outside_fact_never_decides_the_status]).
+cp_test_fail_names([a_non_ineligible_verdict_with_a_missing_list_does_not_exist, only_eligible_and_not_applicable_and_ineligible_carry_citations, no_citation_outside_the_closed_vocabulary, every_checklist_item_carries_a_cite_term]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

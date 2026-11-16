@@ -1,0 +1,242 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% information_route.clausal -- the "information_route" DETERMINATION for
+% eu/data_protection/gdpr_information_duties_items_and_further_processing.
+% Answers information_route/2, information_items_owed/2 and
+% information_items_missing/2 over an attribute-list PROFILE.
+% Source: Regulation (EU) 2016/679 Art 13(1), 13(2), 13(4), 14(1), 14(2), 14(5)(a).
+%
+% The item table below is the statutory VALUE table: one row per item and
+% article, in checklist order, carrying a ready-made cite(Key) term.
+% Shared with the further-processing slice (exported): information_item_row/5,
+% information_route_for_flag/2, information_absent_keys/3.
+% Evaluation order on every relation: input problems, then absent keys, then
+% unsure judgement, then the answer. Each relation gives exactly one answer.
+% =====================================================================
+
+:- module(information_route, [
+    information_route/2,
+    information_items_owed/2,
+    information_items_missing/2,
+    decide_information_route/2,
+    information_route_status/2,
+    information_route_checklist/2,
+    information_route_decision_resolvable/1,
+    information_route_status_values/1,
+    information_item_row/5,
+    information_route_for_flag/2,
+    information_absent_keys/3
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2, not_member/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/kernel, [gdpr_information_duties_items_and_further_processing_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+information_route_status_values([art13, art14]).
+
+% The keys each relation requires, in contract order.
+owed_required_keys([personal_data_collected_from_data_subject, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22]).
+
+missing_required_keys([personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22]).
+
+% information_item_row(Item, Route, Paragraph, Citation, Condition): the item
+% atom, the article route, the paragraph of that article, the point, and the
+% condition (always, or the profile key that must be true).
+information_item_row(controller_identity_and_contact_details, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_a), always).
+information_item_row(controller_identity_and_contact_details, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_a), always).
+information_item_row(data_protection_officer_contact_details, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_b), data_protection_officer_designated).
+information_item_row(data_protection_officer_contact_details, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_b), data_protection_officer_designated).
+information_item_row(purposes_and_legal_basis, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_c), always).
+information_item_row(purposes_and_legal_basis, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_c), always).
+information_item_row(legitimate_interests, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_d), processing_based_on_legitimate_interests).
+information_item_row(legitimate_interests, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_b), processing_based_on_legitimate_interests).
+information_item_row(recipients_or_categories_of_recipients, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_e), recipients_exist).
+information_item_row(recipients_or_categories_of_recipients, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_e), recipients_exist).
+information_item_row(third_country_transfer_information, art13, paragraph_1, cite(eu_reg_2016_679_art_13_1_f), transfer_intended).
+information_item_row(third_country_transfer_information, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_f), transfer_intended).
+information_item_row(categories_of_personal_data, art14, paragraph_1, cite(eu_reg_2016_679_art_14_1_d), always).
+information_item_row(storage_period_or_criteria, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_a), always).
+information_item_row(storage_period_or_criteria, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_a), always).
+information_item_row(data_subject_rights, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_b), always).
+information_item_row(data_subject_rights, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_c), always).
+information_item_row(right_to_withdraw_consent, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_c), processing_based_on_consent).
+information_item_row(right_to_withdraw_consent, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_d), processing_based_on_consent).
+information_item_row(right_to_lodge_complaint, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_d), always).
+information_item_row(right_to_lodge_complaint, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_e), always).
+information_item_row(statutory_or_contractual_requirement, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_e), always).
+information_item_row(source_of_personal_data, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_f), always).
+information_item_row(automated_decision_making_information, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_f), automated_decision_making_under_article_22).
+information_item_row(automated_decision_making_information, art14, paragraph_2, cite(eu_reg_2016_679_art_14_2_g), automated_decision_making_under_article_22).
+
+automated_decision_citation_key(art13, eu_reg_2016_679_art_13_2_f).
+automated_decision_citation_key(art14, eu_reg_2016_679_art_14_2_g).
+
+% ---- helpers ----------------------------------------------------------
+% information_absent_keys(Profile, Keys, Absent): the keys of Keys that the
+% profile does not supply, in the order of Keys.
+information_absent_keys(_, [], []).
+information_absent_keys(Profile, [Key|Keys], [Key|Absent]) :-
+    profile_lacks(Profile, Key),
+    information_absent_keys(Profile, Keys, Absent).
+information_absent_keys(Profile, [Key|Keys], Absent) :-
+    profile_has(Profile, Key),
+    information_absent_keys(Profile, Keys, Absent).
+
+% Art 13(1) / Art 14(1): the two routes are exclusive and exhaustive.
+information_route_for_flag(true, art13) :-
+    implements(eu_reg_2016_679_art_13_1).
+information_route_for_flag(false, art14) :-
+    implements(eu_reg_2016_679_art_14_1).
+
+% A row's condition holds: always, or the condition key is true.
+condition_holds(_, always).
+condition_holds(Profile, Key) :-
+    dif(Key, always),
+    profile_get(Profile, Key, true).
+
+% An item owed on the route: its article lists it and its condition holds.
+owed_row(Profile, Route, Item, Citation) :-
+    information_item_row(Item, Route, _Paragraph, Citation, Condition),
+    condition_holds(Profile, Condition).
+
+% An item covered by neither items_provided nor items_data_subject_already_has.
+uncovered_item(Profile, Item) :-
+    profile_get(Profile, items_provided, Provided),
+    profile_get(Profile, items_data_subject_already_has, AlreadyHas),
+    not_member(Item, Provided),
+    not_member(Item, AlreadyHas).
+
+% An item owed and not covered (Art 13(4), 14(5)(a)).
+missing_row(Profile, art13, Item, Citation) :-
+    implements(eu_reg_2016_679_art_13_4),
+    owed_row(Profile, art13, Item, Citation),
+    uncovered_item(Profile, Item).
+missing_row(Profile, art14, Item, Citation) :-
+    implements(eu_reg_2016_679_art_14_5_a),
+    owed_row(Profile, art14, Item, Citation),
+    uncovered_item(Profile, Item).
+
+automated_decision_review(Route, needs_legal_review(open_textured(automated_decision_making_under_article_22, cite(Key)), [inputs_relied_on([automated_decision_making_under_article_22-unsure])])) :-
+    automated_decision_citation_key(Route, Key).
+
+% ---- (A) information_route/2 -------------------------------------------
+information_route(Profile, Answer) :-
+    gdpr_information_duties_items_and_further_processing_input_problems(Profile, Problems),
+    route_with_problems(Problems, Profile, Answer).
+
+route_with_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+route_with_problems([], Profile, Answer) :-
+    information_absent_keys(Profile, [personal_data_collected_from_data_subject], Absent),
+    route_after_absence(Absent, Profile, Answer).
+
+route_after_absence([Key|Keys], _, indeterminate([Key|Keys])).
+route_after_absence([], Profile, Route) :-
+    profile_get(Profile, personal_data_collected_from_data_subject, Collected),
+    information_route_for_flag(Collected, Route).
+
+% ---- (B) information_items_owed/2 --------------------------------------
+information_items_owed(Profile, Answer) :-
+    gdpr_information_duties_items_and_further_processing_input_problems(Profile, Problems),
+    owed_with_problems(Problems, Profile, Answer).
+
+owed_with_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+owed_with_problems([], Profile, Answer) :-
+    owed_required_keys(RequiredKeys),
+    information_absent_keys(Profile, RequiredKeys, Absent),
+    owed_after_absence(Absent, Profile, Answer).
+
+owed_after_absence([Key|Keys], _, indeterminate([Key|Keys])).
+owed_after_absence([], Profile, Answer) :-
+    profile_get(Profile, personal_data_collected_from_data_subject, Collected),
+    information_route_for_flag(Collected, Route),
+    profile_get(Profile, automated_decision_making_under_article_22, Decision),
+    owed_by_decision(Decision, Route, Profile, Answer).
+
+owed_by_decision(unsure, Route, _, Review) :-
+    automated_decision_review(Route, Review).
+owed_by_decision(Decision, Route, Profile, Owed) :-
+    dif(Decision, unsure),
+    findall(owed_item(Item, Citation), owed_row(Profile, Route, Item, Citation), Owed).
+
+% ---- (C) information_items_missing/2 -----------------------------------
+information_items_missing(Profile, Answer) :-
+    gdpr_information_duties_items_and_further_processing_input_problems(Profile, Problems),
+    missing_with_problems(Problems, Profile, Answer).
+
+missing_with_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+missing_with_problems([], Profile, Answer) :-
+    missing_required_keys(RequiredKeys),
+    information_absent_keys(Profile, RequiredKeys, Absent),
+    missing_after_absence(Absent, Profile, Answer).
+
+missing_after_absence([Key|Keys], _, indeterminate([Key|Keys])).
+missing_after_absence([], Profile, Answer) :-
+    profile_get(Profile, personal_data_collected_from_data_subject, Collected),
+    information_route_for_flag(Collected, Route),
+    findall(missing_item(Item, Citation), missing_row(Profile, Route, Item, Citation), Missing),
+    profile_get(Profile, automated_decision_making_under_article_22, Decision),
+    missing_by_outcome(Missing, Decision, Profile, Route, Answer).
+
+% A definite missing item decides first; an unsure judgement matters only
+% when nothing else is missing and the automated decision item is uncovered.
+missing_by_outcome([Item|Items], _, _, _, [Item|Items]).
+missing_by_outcome([], true, _, _, [no_item_missing]).
+missing_by_outcome([], false, _, _, [no_item_missing]).
+missing_by_outcome([], unsure, Profile, Route, Answer) :-
+    automated_decision_coverage(Profile, Coverage),
+    unsure_outcome(Coverage, Route, Answer).
+
+automated_decision_coverage(Profile, Coverage) :-
+    profile_get(Profile, items_provided, Provided),
+    profile_get(Profile, items_data_subject_already_has, AlreadyHas),
+    memberd_t(automated_decision_making_information, Provided, InProvided),
+    memberd_t(automated_decision_making_information, AlreadyHas, InAlreadyHas),
+    coverage_state(InProvided, InAlreadyHas, Coverage).
+
+coverage_state(true, _, covered).
+coverage_state(false, true, covered).
+coverage_state(false, false, uncovered).
+
+unsure_outcome(covered, _, [no_item_missing]).
+unsure_outcome(uncovered, Route, Review) :-
+    automated_decision_review(Route, Review).
+
+% ---- facade: verdict term, status, checklist ----------------------------
+decide_information_route(Profile, information_route_verdict(Status, Citations)) :-
+    information_route(Profile, Status),
+    route_citations(Status, Citations).
+
+route_citations(art13, [cite(eu_reg_2016_679_art_13_1)]).
+route_citations(art14, [cite(eu_reg_2016_679_art_14_1)]).
+route_citations(indeterminate(_), []).
+route_citations(input_problems(_), []).
+
+information_route_status(Profile, Status) :-
+    information_route(Profile, Status).
+
+information_route_checklist(Profile, [item(route, ItemStatus, Citation)]) :-
+    information_route(Profile, Answer),
+    route_item_status(Answer, ItemStatus, Citation).
+
+route_item_status(art13, met, cite(eu_reg_2016_679_art_13_1)).
+route_item_status(art14, met, cite(eu_reg_2016_679_art_14_1)).
+route_item_status(indeterminate(Keys), unknown(Keys), cite(eu_reg_2016_679_art_13_1)).
+route_item_status(input_problems(_), unmet(input_problems), cite(eu_reg_2016_679_art_13_1)).
+
+information_route_decision_resolvable(Profile) :-
+    information_route(Profile, Status),
+    resolved_route(Status).
+
+resolved_route(art13).
+resolved_route(art14).
+
+test(the_statutory_requirement_row_is_art13_only) :-
+    information_item_row(statutory_or_contractual_requirement, art13, paragraph_2, cite(eu_reg_2016_679_art_13_2_e), always).
+test(the_statutory_requirement_has_no_art14_row, fail) :-
+    information_item_row(statutory_or_contractual_requirement, art14, _, _, _).
+test(an_absent_key_is_named) :-
+    information_absent_keys([attribute(recipients_exist, true)], [recipients_exist, transfer_intended], [transfer_intended]).
+
+:- end_module(information_route).

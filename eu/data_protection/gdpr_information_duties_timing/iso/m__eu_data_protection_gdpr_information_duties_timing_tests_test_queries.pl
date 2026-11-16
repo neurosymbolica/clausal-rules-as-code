@@ -1,0 +1,81 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_information_duties_timing_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_queries, [gdpr_information_duties_timing_profile_keys/1, gdpr_information_duties_timing_what_if/4, gdpr_information_duties_timing_obligation/2, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, attested/2, attestation/4, url/2, document/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_fixtures, [gdpr_information_duties_timing_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_information_duties_timing_profile_keys(ProfileKeys),
+    ProfileKeys == [personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays].
+test(the_reexported_input_check_accepts_an_empty_profile) :-
+    gdpr_information_duties_timing_input_problems([], []).
+test(the_reexported_input_check_names_a_wrong_type) :-
+    gdpr_information_duties_timing_input_problems([attribute(provided_within_reasonable_period, maybe)], [wrong_type(provided_within_reasonable_period)]).
+test(what_if_an_earlier_provision_is_timely) :-
+    gdpr_information_duties_timing_what_if([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10)), attribute(provision_date, date(2026, 3, 11))], provision_date, date(2026, 3, 10), timely).
+test(what_if_a_later_provision_is_late) :-
+    gdpr_information_duties_timing_what_if([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10)), attribute(provision_date, date(2026, 3, 10))], provision_date, date(2026, 3, 11), late).
+test(what_if_flipping_the_route_flips_the_verdict) :-
+    gdpr_information_duties_timing_profile_for(art14_one_month_last_day, Profile),
+    gdpr_information_duties_timing_what_if(Profile, personal_data_collected_from_data_subject, true, late).
+test(what_if_an_unsure_judgement_refers) :-
+    gdpr_information_duties_timing_profile_for(art14_reasonable_period_false, Profile),
+    gdpr_information_duties_timing_what_if(Profile, provided_within_reasonable_period, unsure, needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), _)).
+test(what_if_replaces_a_duplicated_key) :-
+    gdpr_information_duties_timing_what_if([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10)), attribute(obtaining_date, date(2026, 3, 11)), attribute(provision_date, date(2026, 3, 10))], obtaining_date, date(2026, 3, 10), timely).
+test(what_if_has_exactly_one_answer) :-
+    findall(Verdict, gdpr_information_duties_timing_what_if([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], provision_date, date(2026, 3, 9), Verdict), Verdicts),
+    Verdicts == [timely].
+test(what_if_on_a_non_list_profile) :-
+    findall(Verdict, gdpr_information_duties_timing_what_if(profile, provision_date, date(2026, 3, 9), Verdict), Verdicts),
+    Verdicts == [input_problems([wrong_type(profile)])].
+test(obligation_on_the_article_13_route) :-
+    gdpr_information_duties_timing_obligation([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], obligation(provide_information, by(date(2026, 3, 10)), art13_1, [cite(eu_reg_2016_679_art_13_1)])).
+test(obligation_under_limb_b) :-
+    gdpr_information_duties_timing_profile_for(art14_first_communication_on_day, Profile),
+    findall(Obligation, gdpr_information_duties_timing_obligation(Profile, Obligation), Obligations),
+    Obligations == [obligation(provide_information, by(date(2026, 1, 20)), art14_3_b, [cite(eu_reg_2016_679_art_14_3_b)])].
+test(obligation_while_keys_are_absent) :-
+    findall(Obligation, gdpr_information_duties_timing_obligation([], Obligation), Obligations),
+    Obligations == [indeterminate([personal_data_collected_from_data_subject, obtaining_date])].
+test(obligation_with_an_input_problem) :-
+    gdpr_information_duties_timing_obligation([attribute(personal_data_collected_from_data_subject, unsure)], input_problems([wrong_type(personal_data_collected_from_data_subject)])).
+test(result_constructors_accept_their_shapes) :-
+    indeterminate([obtaining_date]),
+    input_problems([wrong_type(profile)]),
+    unknown_key(as_of_date),
+    wrong_type(obtaining_date),
+    duplicate_key(obtaining_date),
+    open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
+    inputs_relied_on([provided_within_reasonable_period - unsure]),
+    provenance(reasonable_period_for_art14_information, [cite(eu_reg_2016_679_art_14_3_a)]),
+    needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), [inputs_relied_on([provided_within_reasonable_period - unsure])]).
+test(attestation_constructors_accept_every_evidence_form) :-
+    attested(true, attestation(host, moment, reason, none)),
+    attested([date(2026, 12, 25)], attestation(host, moment, reason, url(address, retrieved))),
+    attestation(host, moment, reason, document(upload, content_hash)),
+    url(address, retrieved),
+    document(upload, content_hash).
+
+test(what_if_a_later_provision_is_not_timely, fail) :-
+    gdpr_information_duties_timing_what_if([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10)), attribute(provision_date, date(2026, 3, 10))], provision_date, date(2026, 3, 11), timely).
+test(obligation_under_limb_b_is_not_limb_a, fail) :-
+    gdpr_information_duties_timing_profile_for(art14_first_communication_on_day, Profile),
+    gdpr_information_duties_timing_obligation(Profile, obligation(_, _, art14_3_a, _)).
+test(an_attestation_with_unknown_evidence_is_rejected, fail) :-
+    attestation(host, moment, reason, rumour).
+test(indeterminate_of_a_bare_key_is_rejected, fail) :-
+    indeterminate(obtaining_date).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_reexported_input_check_accepts_an_empty_profile, the_reexported_input_check_names_a_wrong_type, what_if_an_earlier_provision_is_timely, what_if_a_later_provision_is_late, what_if_flipping_the_route_flips_the_verdict, what_if_an_unsure_judgement_refers, what_if_replaces_a_duplicated_key, what_if_has_exactly_one_answer, what_if_on_a_non_list_profile, obligation_on_the_article_13_route, obligation_under_limb_b, obligation_while_keys_are_absent, obligation_with_an_input_problem, result_constructors_accept_their_shapes, attestation_constructors_accept_every_evidence_form]).
+cp_test_fail_names([what_if_a_later_provision_is_not_timely, obligation_under_limb_b_is_not_limb_a, an_attestation_with_unknown_evidence_is_rejected, indeterminate_of_a_bare_key_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

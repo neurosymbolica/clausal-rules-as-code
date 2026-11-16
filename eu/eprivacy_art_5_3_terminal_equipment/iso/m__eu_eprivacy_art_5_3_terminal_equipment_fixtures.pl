@@ -1,0 +1,61 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_eprivacy_art_5_3_terminal_equipment_fixtures, [eprivacy_art_5_3_terminal_equipment_subject/1, eprivacy_art_5_3_terminal_equipment_profile_for/2, eprivacy_art_5_3_terminal_equipment_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_eprivacy_art_5_3_terminal_equipment_eprivacy_art_5_3_terminal_equipment, [decide_eprivacy_art_5_3_terminal_equipment/2]).
+
+eprivacy_art_5_3_terminal_equipment_subject(empty_profile).
+eprivacy_art_5_3_terminal_equipment_subject(out_of_scope).
+eprivacy_art_5_3_terminal_equipment_subject(scope_only).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_only).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_failed_alone).
+eprivacy_art_5_3_terminal_equipment_subject(requested_and_strictly_necessary).
+eprivacy_art_5_3_terminal_equipment_subject(requested_but_not_strictly_necessary).
+eprivacy_art_5_3_terminal_equipment_subject(informed_consent).
+eprivacy_art_5_3_terminal_equipment_subject(consent_without_information).
+eprivacy_art_5_3_terminal_equipment_subject(all_ways_failed).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_restores_permission).
+eprivacy_art_5_3_terminal_equipment_subject(fewest_unresolved_first).
+eprivacy_art_5_3_terminal_equipment_subject(unsure_open_way_skipped_for_missing).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_missing_named).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_settled_permitted).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_settled_forbidden).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(consent_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(information_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(full_referral_row).
+eprivacy_art_5_3_terminal_equipment_subject(full_row_transmission_met).
+eprivacy_art_5_3_terminal_equipment_subject(attested_value).
+eprivacy_art_5_3_terminal_equipment_subject(duplicate_scope_key).
+eprivacy_art_5_3_terminal_equipment_subject(not_attribute_list).
+
+eprivacy_art_5_3_terminal_equipment_profile_for(empty_profile, []).
+eprivacy_art_5_3_terminal_equipment_profile_for(out_of_scope, [attribute(storage_or_access_in_terminal_equipment, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_only, [attribute(storage_or_access_in_terminal_equipment, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_only, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_failed_alone, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(requested_and_strictly_necessary, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, true), attribute(strictly_necessary_to_provide_requested_service, true), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(requested_but_not_strictly_necessary, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, true), attribute(strictly_necessary_to_provide_requested_service, false), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(informed_consent, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, true), attribute(clear_and_comprehensive_information_provided, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(consent_without_information, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, true), attribute(clear_and_comprehensive_information_provided, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(all_ways_failed, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_restores_permission, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, true), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(fewest_unresolved_first, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(unsure_open_way_skipped_for_missing, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, unsure)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_missing_named, [attribute(storage_or_access_in_terminal_equipment, unsure)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_settled_permitted, [attribute(storage_or_access_in_terminal_equipment, unsure), attribute(storage_or_access_solely_for_transmission, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_settled_forbidden, [attribute(storage_or_access_in_terminal_equipment, unsure), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_unsure_referred, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, unsure), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, false)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(consent_unsure_referred, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, unsure), attribute(clear_and_comprehensive_information_provided, true)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(information_unsure_referred, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(user_consent_given, true), attribute(clear_and_comprehensive_information_provided, unsure)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(full_referral_row, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, unsure), attribute(service_explicitly_requested_by_user, unsure), attribute(strictly_necessary_to_provide_requested_service, unsure), attribute(user_consent_given, unsure), attribute(clear_and_comprehensive_information_provided, unsure)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(full_row_transmission_met, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, true), attribute(service_explicitly_requested_by_user, unsure), attribute(strictly_necessary_to_provide_requested_service, unsure), attribute(user_consent_given, unsure), attribute(clear_and_comprehensive_information_provided, unsure)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(attested_value, [attribute(storage_or_access_in_terminal_equipment, attested(true))]).
+eprivacy_art_5_3_terminal_equipment_profile_for(duplicate_scope_key, [attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_in_terminal_equipment, true), attribute(zzz, 1)]).
+eprivacy_art_5_3_terminal_equipment_profile_for(not_attribute_list, [foo]).
+
+eprivacy_art_5_3_terminal_equipment_assess(Subject, Result) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(Subject, Profile),
+    decide_eprivacy_art_5_3_terminal_equipment(Profile, Result).

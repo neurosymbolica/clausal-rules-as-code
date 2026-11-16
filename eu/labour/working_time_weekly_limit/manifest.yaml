@@ -1,0 +1,317 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/labour/working_time_weekly_limit
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "working_time_weekly_limit"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The arity-0 entries are the root_exports the test
+# cases read as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  - "working_time_weekly_limit_input_problems/2"
+  # -- citations.clausal --
+  - "citation/2"
+  # -- working_time_weekly_limit.clausal --
+  - "weekly_limit_status/7"
+  - "weekly_working_time_average/6"
+  - "required_reduction_minutes/6"
+  - "within_weekly_limit/0"
+  - "over_weekly_limit/0"
+  - "weekly_limit_not_applied_by_agreement/0"
+  - "reference_period_longer_than_allowed/0"
+  - "no_countable_period/0"
+  - "decide_working_time_weekly_limit/2"
+  - "working_time_weekly_limit_status/2"
+  - "working_time_weekly_limit_checklist/2"
+  - "working_time_weekly_limit_decision_resolvable/1"
+  - "working_time_weekly_limit_status_values/1"
+  # -- queries.clausal --
+  - "working_time_weekly_limit_profile_keys/1"
+  - "working_time_weekly_limit_what_if/4"
+  - "working_time_weekly_limit_maximum_counted_minutes/6"
+  - "reference_period_basis/0"
+  - "on_call_on_site_counts_as_working_time/0"
+  - "on_call_standby_counts_as_working_time/0"
+  - "member_state_uses_article_22_option/0"
+  - "worker_agreement_to_exceed_obtained_first/0"
+  - "member_state_reference_period/0"
+  - "derogation_under_article_17_3_or_article_18/0"
+  - "collective_agreement_under_article_19/0"
+  - "offshore_work_under_article_20_2/0"
+  - "work/0"
+  - "on_call_on_site/0"
+  - "on_call_standby/0"
+  - "paid_annual_leave/0"
+  - "sick_leave/0"
+  - "unsure/0"
+  - "minutes_per_seven_days/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "working_time_weekly_limit_subject/1"
+  - "working_time_weekly_limit_profile_for/2"
+  - "working_time_weekly_limit_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only kit modules (formalize_lib, kit/deadline_lib)
+# and library(datetime), none of them a backbone package.
+uses: []
+
+scope: >-
+  What Art 6(b) of Directive 2003/88/EC, read with Art 2(1) (working time),
+  Art 16(b) and the sentence printed after it (a reference period of at most
+  four months; paid annual leave and sick leave neutral), Art 19 first and
+  second subparagraphs and Art 20(2) (longer reference periods) and Art 22(1)
+  and Art 22(1)(a) (the option not to apply Art 6), requires a Member State to
+  ensure, measured on one worker's shifts over one reference period given by
+  the caller. Decided here are whether the reference period is within the
+  ceiling of the basis the caller states, whether the counted working time is
+  within the 48-hour average (2880 minutes per seven-day period, exact, no
+  rounding), over it, not limited because of the Art 22(1) option with the
+  worker's prior agreement, or not measurable; the exact average itself; the
+  whole minutes of counted working time that would have to be removed; and the
+  threshold of counted minutes at which the outcome flips. Out of scope and
+  handed to the caller or a lawyer are whether on-call time is working time
+  under national laws and/or practice (an unsure judgement that decides goes to
+  needs_legal_review), the conditions of Art 17(3), Art 18, Art 19 second
+  subparagraph and Art 20(2), the measures of Art 22(1)(b) to (e) and the
+  validity of an agreement, the scope of Art 1 and the derogations of Art 17(1)
+  and Art 17(5) (assumed not to apply), time zones and summer time, and every
+  amendment after the original act. It is a check of a rota against the limit
+  of the Directive, not a finding against an employer.
+
+sources:
+  - 'Directive 2003/88/EC of the European Parliament and of the Council of 4 November 2003 concerning certain aspects of the organisation of working time, OJ L 299, 18.11.2003, p. 9 (CELEX 32003L0088), the original act as pinned; Art 2(1), Art 6(b), Art 16(b) with the sentence printed after it, Art 19 first and second subparagraphs, Art 20(2), Art 22(1) and Art 22(1)(a)'
+  - 'Directive 2003/88/EC, Art 1(3), Art 6 (opening words), Art 16 (opening words), Art 17(1) and Art 17(5), read for the assumptions of readings (1), (3) and (10) and deferred'
+
+query_interface:
+  2: "weekly_limit_status/7"                                  # eligibility: the verdict with its citations
+  6: "working_time_weekly_limit_maximum_counted_minutes/6"    # threshold: the largest counted minutes within the limit
+  16: "working_time_weekly_limit_what_if/4"                   # what_if: re-evaluate under an overridden key
+  23: "required_reduction_minutes/6"                          # calculation: the minutes to remove
+
+deferred_set:
+- what: article_units
+  units:
+  - 32003L0088#art_001
+  - 32003L0088#art_002
+  - 32003L0088#art_006
+  - 32003L0088#art_016
+  - 32003L0088#art_017
+  - 32003L0088#art_018
+  - 32003L0088#art_019
+  - 32003L0088#art_020
+  - 32003L0088#art_022
+  reason: Each article unit holds the article's heading and its whole text; the operative
+    text this order cites sits in the paragraph, point and subparagraph units below
+    them. The opening words of Art 6 and Art 16 are read in readings (1) and (3) and
+    are cited through point (b) of each. Deferred so every unit of the pinned extract
+    is accounted for.
+  consequence: 'None for a caller: the cited units below carry the rules.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: scope_of_the_directive
+  units:
+  - 32003L0088#parag_001.001
+  - 32003L0088#parag_001.002
+  - 32003L0088#point_001.002_a
+  - 32003L0088#point_001.002_b
+  - 32003L0088#parag_001.003
+  - 32003L0088#subpara_001.003_1
+  - 32003L0088#parag_001.004
+  reason: Art 1 states the purpose and scope (all sectors within the meaning of Directive
+    89/391/EEC; not seafarers). The order does not decide whether a worker is within
+    the Directive; it assumes so (reading (10), Q13).
+  consequence: A caller whose worker is outside Art 1 (a seafarer, for example) must
+    not rely on the answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as an input fact on scope in a later change to the orders; the
+    deferral stands for this run.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32003L0088#parag_002.002
+  - 32003L0088#parag_002.003
+  - 32003L0088#parag_002.004
+  - 32003L0088#point_002.004_a
+  - 32003L0088#point_002.004_b
+  - 32003L0088#point_002.004_b_i
+  - 32003L0088#point_002.004_b_ii
+  - 32003L0088#parag_002.005
+  - 32003L0088#parag_002.006
+  - 32003L0088#parag_002.007
+  - 32003L0088#parag_002.008
+  - 32003L0088#parag_002.009
+  reason: Art 2(2) to (9) define rest period, night time, night worker, shift work,
+    shift worker, mobile worker, offshore work and adequate rest. This order reads
+    only Art 2(1); the night-time and night-worker definitions belong to the night-work
+    order, the others to the rest, break and mobile-worker orders of the plan. On-call
+    minutes that do not count are rest periods in the sense of Art 2(2), and no answer
+    turns on that.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  debt: true
+  open: to be read by the orders for daily rest, breaks, weekly rest and night work
+    (labour plan R2 to R5).
+- what: limit_set_by_national_measures
+  units:
+  - 32003L0088#point_006_a
+  reason: Art 6(a) requires the Member States to limit weekly working time by laws,
+    regulations, administrative provisions or agreements. It states how the limit
+    is set, not a limit a rota can be checked against.
+  consequence: The answers say nothing about the national measure that sets the limit.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: reference_periods_of_other_articles
+  units:
+  - 32003L0088#point_016_a
+  - 32003L0088#point_016_c
+  - 32003L0088#subpara_016_2
+  reason: Art 16(a) and (c) and the last sentence of Art 16 give the reference periods
+    of Art 5 (weekly rest) and Art 8 (night work) and the rule on the weekly rest
+    period within the Art 8 reference period. They do not apply to Art 6.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  debt: true
+  open: to be read by the weekly-rest and night-work orders (labour plan R3 and R4).
+- what: derogations_of_article_17
+  units:
+  - 32003L0088#parag_017.001
+  - 32003L0088#point_017.001_a
+  - 32003L0088#point_017.001_b
+  - 32003L0088#point_017.001_c
+  - 32003L0088#parag_017.002
+  - 32003L0088#parag_017.003
+  - 32003L0088#point_017.003_a
+  - 32003L0088#point_017.003_b
+  - 32003L0088#point_017.003_c
+  - 32003L0088#point_017.003_c_i
+  - 32003L0088#point_017.003_c_ii
+  - 32003L0088#point_017.003_c_iii
+  - 32003L0088#point_017.003_c_iv
+  - 32003L0088#point_017.003_c_v
+  - 32003L0088#point_017.003_c_vi
+  - 32003L0088#point_017.003_c_vii
+  - 32003L0088#point_017.003_c_viii
+  - 32003L0088#point_017.003_d
+  - 32003L0088#point_017.003_d_i
+  - 32003L0088#point_017.003_d_ii
+  - 32003L0088#point_017.003_d_iii
+  - 32003L0088#point_017.003_e
+  - 32003L0088#point_017.003_e_i
+  - 32003L0088#point_017.003_e_ii
+  - 32003L0088#point_017.003_e_iii
+  - 32003L0088#point_017.003_f
+  - 32003L0088#point_017.003_g
+  - 32003L0088#parag_017.004
+  - 32003L0088#point_017.004_a
+  - 32003L0088#point_017.004_b
+  - 32003L0088#parag_017.005
+  - 32003L0088#subpara_017.005_1
+  - 32003L0088#subpara_017.005_2
+  - 32003L0088#subpara_017.005_3
+  - 32003L0088#subpara_017.005_4
+  - 32003L0088#subpara_017.005_5
+  - 32003L0088#point_017.005_a
+  - 32003L0088#point_017.005_b
+  - 32003L0088#subpara_017.005_6
+  reason: Art 17 lets the Member States derogate, by laws, regulations, administrative
+    provisions or agreements, from Arts 3 to 6, 8 and 16. Whether a derogation exists
+    for a worker is a matter of national law. Art 17(3) enters only as the basis of
+    the reference period (reading (3)); Art 17(1) and Art 17(5), which can lift the
+    limit of Art 6 itself, are assumed not to apply (reading (10), Q13).
+  consequence: A caller whose worker falls under a derogation from Art 6 under Art
+    17(1) or Art 17(5) must not rely on the answers; a derogated reference period
+    is given through reference_period_basis.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: derogations_by_collective_agreement_of_article_18
+  units:
+  - 32003L0088#subpara_018_1
+  - 32003L0088#subpara_018_2
+  - 32003L0088#subpara_018_3
+  - 32003L0088#subpara_018_4
+  - 32003L0088#point_018_a
+  - 32003L0088#point_018_b
+  reason: Art 18 lets collective agreements or agreements between the two sides of
+    industry derogate from Arts 3, 4, 5, 8 and 16, on conditions. Whether such an
+    agreement exists is a matter of national law and of the agreements; it enters
+    only as the basis of the reference period (reading (3)).
+  consequence: A derogated reference period is given through reference_period_basis;
+    its conditions are not checked (Q8).
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: reviews_and_re_examinations
+  units:
+  - 32003L0088#subpara_019_3
+  - 32003L0088#subpara_022.001_1
+  - 32003L0088#parag_020.003
+  reason: The last subparagraph of Art 19, the last sentence of Art 22(1) and Art
+    20(3) ask the Council or the Commission to re-examine or review provisions by
+    dates in 2003 and 2005. They bind the institutions and change no answer.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: mobile_workers
+  units:
+  - 32003L0088#parag_020.001
+  - 32003L0088#subpara_020.001_1
+  reason: Art 20(1) says Arts 3, 4, 5 and 8 do not apply to mobile workers and requires
+    adequate rest for them. It does not touch Art 6.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  debt: true
+  open: to be read by the daily-rest, break, weekly-rest and night-work orders (labour
+    plan R2 to R5).
+- what: member_state_measures_for_the_article_22_option
+  units:
+  - 32003L0088#point_022.001_b
+  - 32003L0088#point_022.001_c
+  - 32003L0088#point_022.001_d
+  - 32003L0088#point_022.001_e
+  reason: Art 22(1)(b) to (e) list the measures a Member State must take when it uses
+    the option (no detriment, records, records for the authorities, information to
+    the authorities). They bind the Member State and, through national law, the employer;
+    the order takes member_state_uses_article_22_option as given and does not check
+    the measures (reading (8), Q7).
+  consequence: weekly_limit_not_applied_by_agreement never says that the measures
+    were taken or that the employer keeps the records.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: article_22_transitional_leave_option_and_information
+  units:
+  - 32003L0088#parag_022.002
+  - 32003L0088#point_022.002_a
+  - 32003L0088#point_022.002_b
+  - 32003L0088#parag_022.003
+  reason: Art 22(2) is a transitional option on annual leave (Art 7) of at most three
+    years from 23 November 1996; Art 22(3) requires the Member States to inform the
+    Commission when they use an option of Art 22. Neither changes an answer of this
+    order.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional

@@ -1,0 +1,188 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_complaints_and_judicial_remedies
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_complaints_and_judicial_remedies"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_complaints_and_judicial_remedies_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- gdpr_complaints_and_judicial_remedies.clausal --
+  - "complaint_right/3"
+  - "authority_decision_remedy_right/3"
+  - "authority_inaction_remedy_right/4"
+  - "controller_processor_remedy_right/3"
+  - "controller_processor_forum/3"
+  - "complaint_right_exists/0"
+  - "no_complaint_right/0"
+  - "decision_remedy_right_exists/0"
+  - "no_decision_remedy_right/0"
+  - "inaction_remedy_right_exists/0"
+  - "no_inaction_remedy_right/0"
+  - "judicial_remedy_right_exists/0"
+  - "no_judicial_remedy_right/0"
+  - "forum_establishment_state_only/0"
+  - "forum_establishment_or_habitual_residence_state/0"
+  - "decide_gdpr_complaints_and_judicial_remedies/2"
+  - "gdpr_complaints_and_judicial_remedies_status/2"
+  - "gdpr_complaints_and_judicial_remedies_checklist/2"
+  - "gdpr_complaints_and_judicial_remedies_decision_resolvable/1"
+  - "gdpr_complaints_and_judicial_remedies_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_complaints_and_judicial_remedies_profile_keys/1"
+  - "gdpr_complaints_and_judicial_remedies_input_problems/2"
+  - "gdpr_complaints_and_judicial_remedies_what_if/4"
+  - "gdpr_complaints_and_judicial_remedies_eligibility/4"
+  - "is_data_subject/0"
+  - "data_subject_considers_processing_infringes_regulation/0"
+  - "decision_is_legally_binding/0"
+  - "decision_concerns_the_caller/0"
+  - "complaint_lodged_under_article_77/0"
+  - "authority_competent_under_articles_55_and_56/0"
+  - "authority_handled_the_complaint/0"
+  - "three_months_from_the_complaint_have_passed/0"
+  - "authority_informed_on_progress_or_outcome/0"
+  - "data_subject_considers_rights_infringed_by_processing/0"
+  - "defendant_is_member_state_public_authority_acting_in_public_powers/0"
+  - "unsure/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_complaints_and_judicial_remedies_subject/1"
+  - "gdpr_complaints_and_judicial_remedies_profile_for/2"
+  - "gdpr_complaints_and_judicial_remedies_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This package imports only the kit (formalize_lib), no backbone.
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Arts 77(1), 78(1), 78(2), 79(1) and 79(2): for the facts a caller states about one situation, whether the right to lodge a complaint with a supervisory authority exists, whether the judicial remedy against a legally binding decision of a supervisory authority concerning the caller exists, whether the judicial remedy against a competent authority that does not handle a complaint or does not inform within three months exists, whether the judicial remedy against a controller or processor exists, and which courts Art 79(2) names. Each right is stated independently. Out of scope (handed to the caller, a lawyer or a sibling order): whether a complaint or claim would succeed, whether processing infringes the Regulation, whether the data subject's view is right, which authority to choose, the competence of the authority under Arts 55 and 56 (an attested outside fact), the counting of the three months, the legal characterisations legally binding and concerning them (tri-state judgements; unsure refers), Art 77(2), Art 78(3) and (4), Arts 80 and 82 and the definition of data subject in Art 4(1)."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504, Art 77(1) (parag_077.001), Art 77(2) (parag_077.002, quoted, deferred), Art 78(1) (parag_078.001), Art 78(2) (parag_078.002), Art 78(3) and (4) (parag_078.003, parag_078.004, deferred), Art 79(1) (parag_079.001), Art 79(2) (parag_079.002); pinned by tools/pin_statute.py, fetched 2026-11-12"
+
+query_interface:
+  2: "gdpr_complaints_and_judicial_remedies_eligibility/4"     # eligibility: eligible | ineligible | indeterminate_eligibility per right query
+  7: "gdpr_complaints_and_judicial_remedies_checklist/2"       # justification: one cited item(...) per right
+  16: "gdpr_complaints_and_judicial_remedies_what_if/4"        # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_077
+  - 02016R0679-20160504#art_078
+  - 02016R0679-20160504#art_079
+  reason: 'The titles of Articles 77, 78 and 79 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: authority_duty_to_inform_the_complainant
+  units:
+  - 02016R0679-20160504#parag_077.002
+  partial: true
+  reason: 'Art 77(2) says the authority with which the complaint has been lodged shall
+    inform the complainant on the progress and the outcome of the complaint, including
+    the possibility of a judicial remedy under Art 78. It is a duty of the authority,
+    quoted (deferred: see the deferred set) because Art 78(2) points to the same information;
+    it is not a limb of any query.'
+  consequence: The answers never say that an authority has or has not complied with
+    Art 77(2); authority_inaction_remedy_right reads the caller's statement that the
+    authority informed on the progress or the outcome.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a query on the authority's side; a later change could add
+    it; the deferral stands for this run.
+- what: court_of_the_authority_state
+  units:
+  - 02016R0679-20160504#parag_078.003
+  reason: Art 78(3) says proceedings against a supervisory authority are brought before
+    the courts of the Member State where the authority is established. It is a fixed
+    rule with no input.
+  consequence: The answers of authority_decision_remedy_right and authority_inaction_remedy_right
+    never say which court; the text of Art 78(3) names the courts of the State where
+    the authority is established.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a constant answer; a later change could add a query.
+- what: forwarding_of_board_opinion_or_decision
+  units:
+  - 02016R0679-20160504#parag_078.004
+  reason: Art 78(4) says that where proceedings are brought against a decision preceded
+    by an opinion or a decision of the Board in the consistency mechanism, the authority
+    shall forward it to the court. It is a procedural duty of the authority within
+    a proceeding.
+  consequence: The answers never say that an opinion or decision was or must be forwarded.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: competence_of_supervisory_authorities
+  instrument: Regulation (EU) 2016/679 Arts 55 and 56
+  cites:
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  reason: Which supervisory authority is competent is decided by Arts 55 and 56; Art
+    78(2) turns on it. The order takes the caller's attested statement (the outside
+    fact authority_competent_under_articles_55_and_56) and never decides competence.
+  consequence: An absent statement refers; a present statement is copied into the
+    answer.
+- what: right_to_compensation
+  instrument: Regulation (EU) 2016/679 Art 82
+  cites:
+  - 02016R0679-20160504#art_082
+  reason: The right to compensation and the liability of controllers and processors
+    is the subject of the Art 82 order; Art 79(1) states a judicial remedy and not
+    compensation.
+  consequence: The answers never say that compensation is owed.
+- what: representation_of_data_subjects
+  instrument: Regulation (EU) 2016/679 Art 80
+  cites:
+  - 02016R0679-20160504#art_080
+  reason: Whether a body, organisation or association may lodge a complaint or exercise
+    the remedies for a data subject is Art 80; this order reads the data subject as
+    the caller.
+  consequence: A representative asks as the data subject only if the caller states
+    is_data_subject true.
+- what: definition_of_data_subject
+  instrument: Regulation (EU) 2016/679 Art 4(1)
+  cites:
+  - 02016R0679-20160504#art_004
+  reason: Who is a data subject is decided by the sibling order on definitions; this
+    order takes the caller's statement is_data_subject.
+  consequence: The caller establishes who is a data subject first.

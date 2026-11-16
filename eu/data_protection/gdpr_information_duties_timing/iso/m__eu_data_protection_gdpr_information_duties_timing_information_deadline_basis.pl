@@ -1,0 +1,323 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_information_duties_timing_information_deadline_basis, [decide_information_deadline_basis/2, information_deadline_basis_status/2, information_deadline_basis_checklist/2, information_deadline_basis_decision_resolvable/1, information_deadline_basis_status_values/1, information_deadline_basis_outcome/2, information_deadline/2, information_deadline_basis/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2, int_min/3]).
+:- use_module(deadline_lib, [month_last_day/3]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2, gdpr_information_duties_timing_date_order/3]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_citations, [implements/1]).
+
+information_deadline_basis_status_values([art13_1, art14_3_a, art14_3_b, art14_3_c]).
+
+basis_citation(art13_1, cite(eu_reg_2016_679_art_13_1)).
+basis_citation(art14_3_a, cite(eu_reg_2016_679_art_14_3_a)).
+basis_citation(art14_3_b, cite(eu_reg_2016_679_art_14_3_b)).
+basis_citation(art14_3_c, cite(eu_reg_2016_679_art_14_3_c)).
+
+basis_route(art13_1, article_13).
+basis_route(art14_3_a, article_14).
+basis_route(art14_3_b, article_14).
+basis_route(art14_3_c, article_14).
+
+limb_a_period(months(1), cite(eu_reg_2016_679_art_14_3_a)).
+
+weekday_month_offset(1, 0, 1).
+weekday_month_offset(2, 3, 1).
+weekday_month_offset(3, 2, 0).
+weekday_month_offset(4, 5, 0).
+weekday_month_offset(5, 0, 0).
+weekday_month_offset(6, 3, 0).
+weekday_month_offset(7, 5, 0).
+weekday_month_offset(8, 1, 0).
+weekday_month_offset(9, 4, 0).
+weekday_month_offset(10, 6, 0).
+weekday_month_offset(11, 2, 0).
+weekday_month_offset(12, 4, 0).
+
+weekday_kind(0, weekend, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(1, working, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(2, working, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(3, working, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(4, working, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(5, working, cite(eu_reg_1971_1182_art_3_4)).
+weekday_kind(6, weekend, cite(eu_reg_1971_1182_art_3_4)).
+
+information_deadline_basis_outcome(Profile, input_problems([Problem|Problems])) :-
+    gdpr_information_duties_timing_input_problems(Profile, [Problem|Problems]).
+information_deadline_basis_outcome(Profile, Outcome) :-
+    gdpr_information_duties_timing_input_problems(Profile, []),
+    route_outcome(Profile, Outcome).
+
+route_outcome(Profile, indeterminate([personal_data_collected_from_data_subject|MissingKeys])) :-
+    profile_lacks(Profile, personal_data_collected_from_data_subject),
+    absent_keys([obtaining_date], Profile, MissingKeys).
+route_outcome(Profile, Outcome) :-
+    profile_has(Profile, personal_data_collected_from_data_subject),
+    profile_get(Profile, personal_data_collected_from_data_subject, true),
+    article_13_outcome(Profile, Outcome).
+route_outcome(Profile, Outcome) :-
+    profile_has(Profile, personal_data_collected_from_data_subject),
+    profile_get(Profile, personal_data_collected_from_data_subject, false),
+    article_14_outcome(Profile, Outcome).
+
+article_13_outcome(Profile, deadline(ObtainingDate, art13_1)) :-
+    implements(eu_reg_2016_679_art_13_1),
+    profile_has(Profile, obtaining_date),
+    profile_get(Profile, obtaining_date, ObtainingDate).
+article_13_outcome(Profile, indeterminate([obtaining_date])) :-
+    profile_lacks(Profile, obtaining_date).
+
+article_14_outcome(Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_14_1),
+    conditional_keys(Profile, data_used_for_communication_with_data_subject, first_communication_date, CommunicationKeys),
+    conditional_keys(Profile, disclosure_to_another_recipient_envisaged, first_disclosure_date, DisclosureKeys),
+    append([obtaining_date|CommunicationKeys], DisclosureKeys, NeededKeys),
+    absent_keys(NeededKeys, Profile, MissingKeys),
+    article_14_resolution(MissingKeys, Profile, Outcome).
+
+conditional_keys(Profile, FlagKey, _, [FlagKey]) :-
+    profile_lacks(Profile, FlagKey).
+conditional_keys(Profile, FlagKey, DateKey, [FlagKey, DateKey]) :-
+    profile_has(Profile, FlagKey),
+    profile_get(Profile, FlagKey, true).
+conditional_keys(Profile, FlagKey, _, [FlagKey]) :-
+    profile_has(Profile, FlagKey),
+    profile_get(Profile, FlagKey, false).
+
+absent_keys([], _, []).
+absent_keys([ProfileKey|ProfileKeys], Profile, [ProfileKey|MissingKeys]) :-
+    profile_lacks(Profile, ProfileKey),
+    absent_keys(ProfileKeys, Profile, MissingKeys).
+absent_keys([ProfileKey|ProfileKeys], Profile, MissingKeys) :-
+    profile_has(Profile, ProfileKey),
+    absent_keys(ProfileKeys, Profile, MissingKeys).
+
+article_14_resolution([MissingKey|MissingKeys], _, indeterminate([MissingKey|MissingKeys])).
+article_14_resolution([], Profile, deadline(DeadlineDate, LimbBasis)) :-
+    implements(eu_reg_2016_679_art_14_3),
+    limb_a_candidate(Profile, LimbA),
+    limb_b_candidates(Profile, LimbsB),
+    limb_c_candidates(Profile, LimbsC),
+    append([LimbA|LimbsB], LimbsC, Candidates),
+    earliest_candidate(Candidates, LimbBasis - DeadlineDate).
+
+limb_a_candidate(Profile, art14_3_a - EndDate) :-
+    implements(eu_reg_2016_679_art_14_3_a),
+    implements(eu_reg_1971_1182_art_3_1),
+    profile_get(Profile, obtaining_date, ObtainingDate),
+    limb_a_period(months(PeriodMonths), _PeriodCitation),
+    applicable_public_holidays(Profile, Holidays),
+    same_date_months_later(ObtainingDate, PeriodMonths, NominalEnd),
+    period_last_day(NominalEnd, Holidays, EndDate).
+
+limb_b_candidates(Profile, [art14_3_b - CommunicationDate]) :-
+    implements(eu_reg_2016_679_art_14_3_b),
+    profile_get(Profile, data_used_for_communication_with_data_subject, true),
+    profile_get(Profile, first_communication_date, CommunicationDate).
+limb_b_candidates(Profile, []) :-
+    implements(eu_reg_2016_679_art_14_3_b),
+    profile_get(Profile, data_used_for_communication_with_data_subject, false).
+
+limb_c_candidates(Profile, [art14_3_c - DisclosureDate]) :-
+    implements(eu_reg_2016_679_art_14_3_c),
+    profile_get(Profile, disclosure_to_another_recipient_envisaged, true),
+    profile_get(Profile, first_disclosure_date, DisclosureDate).
+limb_c_candidates(Profile, []) :-
+    implements(eu_reg_2016_679_art_14_3_c),
+    profile_get(Profile, disclosure_to_another_recipient_envisaged, false).
+
+earliest_candidate([FirstCandidate|OtherCandidates], Chosen) :-
+    foldl(keep_earlier, OtherCandidates, FirstCandidate, Chosen).
+
+keep_earlier(NextLimb - NextDate, CurrentLimb - CurrentDate, Chosen) :-
+    implements(eu_reg_2016_679_art_14_3),
+    gdpr_information_duties_timing_date_order(NextDate, CurrentDate, Order),
+    earlier_choice(Order, NextLimb - NextDate, CurrentLimb - CurrentDate, Chosen).
+
+earlier_choice(before, NextCandidate, _, NextCandidate).
+earlier_choice(same, _, CurrentCandidate, CurrentCandidate).
+earlier_choice(after, _, CurrentCandidate, CurrentCandidate).
+
+applicable_public_holidays(Profile, Holidays) :-
+    implements(eu_reg_1971_1182_art_3),
+    profile_has(Profile, public_holidays),
+    profile_get(Profile, public_holidays, attested(Holidays, _Attestation)).
+applicable_public_holidays(Profile, []) :-
+    implements(eu_reg_1971_1182_art_3),
+    profile_lacks(Profile, public_holidays).
+
+same_date_months_later(date(Year, Month, DayNumber), PeriodMonths, date(EndYear, EndMonth, EndDayNumber)) :-
+    implements(eu_reg_1971_1182_art_3_2_c),
+    TotalMonths #= Year * 12 + Month - 1 + PeriodMonths,
+    EndYear #= TotalMonths // 12,
+    EndMonth #= TotalMonths mod 12 + 1,
+    month_last_day(EndYear, EndMonth, LastDayNumber),
+    int_min(DayNumber, LastDayNumber, EndDayNumber).
+
+period_last_day(CandidateDate, Holidays, EndDate) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    closed_day_t(CandidateDate, Holidays, IsClosed),
+    closed_day_step(IsClosed, CandidateDate, Holidays, EndDate).
+
+closed_day_step(false, CandidateDate, _, CandidateDate).
+closed_day_step(true, CandidateDate, Holidays, EndDate) :-
+    next_calendar_day(CandidateDate, FollowingDate),
+    period_last_day(FollowingDate, Holidays, EndDate).
+
+closed_day_t(CandidateDate, Holidays, IsClosed) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    weekday_number(CandidateDate, WeekdayNumber),
+    weekday_kind(WeekdayNumber, Kind, _KindCitation),
+    kind_closed_t(Kind, CandidateDate, Holidays, IsClosed).
+
+kind_closed_t(weekend, _, _, true).
+kind_closed_t(working, CandidateDate, Holidays, IsClosed) :-
+    memberd_t(CandidateDate, Holidays, IsClosed).
+
+weekday_number(date(Year, Month, DayNumber), WeekdayNumber) :-
+    weekday_month_offset(Month, MonthOffset, YearShift),
+    ShiftedYear #= Year - YearShift,
+    WeekdayNumber #= (ShiftedYear + ShiftedYear // 4 - ShiftedYear // 100 + ShiftedYear // 400 + MonthOffset + DayNumber) mod 7.
+
+next_calendar_day(date(Year, Month, DayNumber), date(Year, Month, NextDayNumber)) :-
+    month_last_day(Year, Month, LastDayNumber),
+    DayNumber #< LastDayNumber,
+    NextDayNumber #= DayNumber + 1.
+next_calendar_day(date(Year, Month, DayNumber), date(Year, NextMonth, 1)) :-
+    month_last_day(Year, Month, LastDayNumber),
+    DayNumber #= LastDayNumber,
+    Month #< 12,
+    NextMonth #= Month + 1.
+next_calendar_day(date(Year, 12, 31), date(NextYear, 1, 1)) :-
+    NextYear #= Year + 1.
+
+information_deadline(Profile, Deadline) :-
+    information_deadline_basis_outcome(Profile, Outcome),
+    outcome_deadline(Outcome, Deadline).
+
+outcome_deadline(deadline(DeadlineDate, _), DeadlineDate).
+outcome_deadline(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+outcome_deadline(input_problems(Problems), input_problems(Problems)).
+
+information_deadline_basis(Profile, Basis) :-
+    information_deadline_basis_outcome(Profile, Outcome),
+    outcome_basis(Outcome, Basis).
+
+outcome_basis(deadline(_, LimbBasis), LimbBasis).
+outcome_basis(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+outcome_basis(input_problems(Problems), input_problems(Problems)).
+
+decide_information_deadline_basis(Profile, information_deadline_basis_verdict(Status, Citations)) :-
+    information_deadline_basis_outcome(Profile, Outcome),
+    outcome_verdict(Outcome, Status, Citations).
+
+outcome_verdict(deadline(_, LimbBasis), LimbBasis, [Citation]) :-
+    basis_citation(LimbBasis, Citation).
+outcome_verdict(indeterminate(MissingKeys), indeterminate(MissingKeys), []).
+outcome_verdict(input_problems(Problems), input_problems(Problems), []).
+
+information_deadline_basis_status(Profile, Status) :-
+    decide_information_deadline_basis(Profile, information_deadline_basis_verdict(Status, _Citations)).
+
+information_deadline_basis_checklist(Profile, Items) :-
+    information_deadline_basis_outcome(Profile, Outcome),
+    maplist(checklist_item(Profile, Outcome), [art13_1, art14_3_a, art14_3_b, art14_3_c], Items).
+
+checklist_item(Profile, Outcome, ChecklistRow, item(ChecklistRow, Status, Citation)) :-
+    basis_citation(ChecklistRow, Citation),
+    row_status(Profile, ChecklistRow, Outcome, Status).
+
+row_status(_, ChecklistRow, deadline(_, ChecklistRow), met).
+row_status(_, ChecklistRow, deadline(_, LimbBasis), inapplicable) :-
+    basis_route(ChecklistRow, RowRoute),
+    basis_route(LimbBasis, BasisRoute),
+    dif(RowRoute, BasisRoute).
+row_status(Profile, ChecklistRow, deadline(_, LimbBasis), Status) :-
+    dif(ChecklistRow, LimbBasis),
+    basis_route(ChecklistRow, article_14),
+    basis_route(LimbBasis, article_14),
+    limb_applies(Profile, ChecklistRow, Applies),
+    applies_status(Applies, Status).
+row_status(_, _, indeterminate(MissingKeys), unknown(MissingKeys)).
+row_status(_, _, input_problems(Problems), unmet(input_problems(Problems))).
+
+limb_applies(_, art14_3_a, true) :-
+    implements(eu_reg_2016_679_art_14_3_a).
+limb_applies(Profile, art14_3_b, Applies) :-
+    implements(eu_reg_2016_679_art_14_3_b),
+    profile_get(Profile, data_used_for_communication_with_data_subject, Applies).
+limb_applies(Profile, art14_3_c, Applies) :-
+    implements(eu_reg_2016_679_art_14_3_c),
+    profile_get(Profile, disclosure_to_another_recipient_envisaged, Applies).
+
+applies_status(true, unmet(not_the_earliest_applicable_date)).
+applies_status(false, inapplicable).
+
+information_deadline_basis_decision_resolvable(Profile) :-
+    decide_information_deadline_basis(Profile, _Verdict).
+
+test(art13_deadline_is_the_obtaining_day) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], date(2026, 3, 10)).
+test(art13_basis_and_citation) :-
+    decide_information_deadline_basis([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], information_deadline_basis_verdict(art13_1, [cite(eu_reg_2016_679_art_13_1)])).
+test(one_month_from_the_fifteenth_moves_off_sunday) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 2, 16)).
+test(one_month_from_january_thirty_first_caps_then_moves_off_weekend) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 31)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 3, 2)).
+test(one_month_reaches_a_leap_day) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2028, 1, 31)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2028, 2, 29)).
+test(one_month_caps_at_april_thirtieth) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 3, 31)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 4, 30)).
+test(one_month_crosses_the_year) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 12, 15)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2027, 1, 15)).
+test(one_month_from_new_years_eve_moves_off_sunday) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 12, 31)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2027, 2, 1)).
+test(an_attested_public_holiday_moves_the_last_day_again) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 12, 31)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false), attribute(public_holidays, attested([date(2027, 2, 1)], attestation(host, moment, reason, none)))], date(2027, 2, 2)).
+test(one_month_from_may_thirtieth) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 5, 30)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 6, 30)).
+test(an_earlier_first_communication_binds) :-
+    decide_information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 1, 20)), attribute(disclosure_to_another_recipient_envisaged, false)], information_deadline_basis_verdict(art14_3_b, [cite(eu_reg_2016_679_art_14_3_b)])).
+test(a_communication_date_is_never_shifted) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 1, 25)), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 1, 25)).
+test(a_tie_goes_to_limb_a) :-
+    findall(Basis, information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 2, 16)), attribute(disclosure_to_another_recipient_envisaged, false)], Basis), Bases),
+    Bases == [art14_3_a].
+test(the_earliest_of_three_is_the_disclosure) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 2, 2)), attribute(disclosure_to_another_recipient_envisaged, true), attribute(first_disclosure_date, date(2026, 1, 30))], art14_3_c).
+test(a_later_disclosure_does_not_bind) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, true), attribute(first_disclosure_date, date(2026, 5, 1))], art14_3_a).
+test(a_false_flag_does_not_read_its_date) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, false), attribute(first_communication_date, date(2026, 1, 16)), attribute(disclosure_to_another_recipient_envisaged, false)], art14_3_a).
+test(an_unknown_route_names_the_route_and_the_obtaining_date) :-
+    information_deadline([], indeterminate([personal_data_collected_from_data_subject, obtaining_date])).
+test(an_unknown_route_never_names_the_article_14_flags) :-
+    information_deadline_basis([attribute(obtaining_date, date(2026, 1, 15))], indeterminate([personal_data_collected_from_data_subject])).
+test(absent_article_14_flags_are_named_in_order) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false)], indeterminate([obtaining_date, data_used_for_communication_with_data_subject, disclosure_to_another_recipient_envisaged])).
+test(a_true_flag_without_its_date_is_indeterminate) :-
+    decide_information_deadline_basis([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(disclosure_to_another_recipient_envisaged, false)], information_deadline_basis_verdict(indeterminate([first_communication_date]), [])).
+test(art13_without_obtaining_date_is_indeterminate) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, true)], indeterminate([obtaining_date])).
+test(input_problems_come_first) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, unsure)], input_problems([wrong_type(personal_data_collected_from_data_subject)])).
+test(input_problems_carry_no_citation) :-
+    decide_information_deadline_basis([attribute(obtaining_date, date(2026, 2, 30))], information_deadline_basis_verdict(input_problems([wrong_type(obtaining_date)]), [])).
+test(an_unread_key_does_not_change_the_answer) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10)), attribute(items_provided, []), attribute(automated_decision_making_under_article_22, unsure)], art13_1).
+test(the_deadline_has_exactly_one_answer) :-
+    findall(Deadline, information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 31)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 3, 2)), attribute(disclosure_to_another_recipient_envisaged, true), attribute(first_disclosure_date, date(2026, 3, 2))], Deadline), Deadlines),
+    Deadlines == [date(2026, 3, 2)].
+test(the_checklist_marks_the_binding_limb) :-
+    information_deadline_basis_checklist([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 1, 20)), attribute(disclosure_to_another_recipient_envisaged, false)], [item(art13_1, inapplicable, cite(eu_reg_2016_679_art_13_1)), item(art14_3_a, unmet(not_the_earliest_applicable_date), cite(eu_reg_2016_679_art_14_3_a)), item(art14_3_b, met, cite(eu_reg_2016_679_art_14_3_b)), item(art14_3_c, inapplicable, cite(eu_reg_2016_679_art_14_3_c))]).
+test(the_status_projection) :-
+    information_deadline_basis_status([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], art13_1).
+
+test(art13_basis_is_not_art14, fail) :-
+    information_deadline_basis([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 3, 10))], art14_3_a).
+test(one_month_from_the_fifteenth_is_not_the_sunday, fail) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false)], date(2026, 2, 15)).

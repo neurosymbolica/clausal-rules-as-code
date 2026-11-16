@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Contract tests for `propose_provisions.py --pack`.
 
 The properties under test are Task 1's contract, not its tokens:

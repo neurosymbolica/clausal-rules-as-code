@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 import os, textwrap, tempfile
 from _tools import check_citations as cc
 

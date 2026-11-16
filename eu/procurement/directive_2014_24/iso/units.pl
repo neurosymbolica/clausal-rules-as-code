@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % units — vendored so an exported domain's `-import_from(units, [percent])`
 % resolves, and (since 2026-09-17) so that `quantity_number/2` has a definition
 % on the Prolog side.

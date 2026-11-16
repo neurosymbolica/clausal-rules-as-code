@@ -1,0 +1,312 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_small_items_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_small_items_small_items, [bias_data_processing_status/4, sandbox_personal_data_processing_status/4, real_world_testing_status/4, informed_consent_status/4, sme_simplified_compliance_status/4, explanation_right_status/4, decide_small_items/2, small_items_status/2, small_items_checklist/2, small_items_decision_resolvable/1, small_items_status_values/1]).
+:- use_module(m__eu_ai_act_small_items_kernel, [small_items_input_problems/2]).
+:- use_module(m__eu_ai_act_small_items_fixtures, [small_items_subject/1, small_items_profile_for/2, small_items_assess/2]).
+
+citation_group(none, []).
+citation_group(article_4a_date, [cite(eu_reg_2024_1689_art_113_a)]).
+citation_group(general_date, [cite(eu_reg_2024_1689_art_113)]).
+citation_group(provider, [cite(eu_reg_2024_1689_art_4a_1), cite(eu_reg_2024_1689_art_4a_1_a), cite(eu_reg_2024_1689_art_4a_1_b), cite(eu_reg_2024_1689_art_4a_1_c), cite(eu_reg_2024_1689_art_4a_1_d), cite(eu_reg_2024_1689_art_4a_1_e), cite(eu_reg_2024_1689_art_4a_1_f)]).
+citation_group(other, [cite(eu_reg_2024_1689_art_4a_2), cite(eu_reg_2024_1689_art_4a_2_a), cite(eu_reg_2024_1689_art_4a_2_b), cite(eu_reg_2024_1689_art_4a_1), cite(eu_reg_2024_1689_art_4a_1_a), cite(eu_reg_2024_1689_art_4a_1_b), cite(eu_reg_2024_1689_art_4a_1_c), cite(eu_reg_2024_1689_art_4a_1_d), cite(eu_reg_2024_1689_art_4a_1_e), cite(eu_reg_2024_1689_art_4a_1_f)]).
+citation_group(sandbox, [cite(eu_reg_2024_1689_art_59_1), cite(eu_reg_2024_1689_art_59_2)]).
+citation_group(framework_absent, [cite(eu_reg_2024_1689_art_60a_1), cite(eu_reg_2024_1689_art_60a_2)]).
+citation_group(framework_present, [cite(eu_reg_2024_1689_art_60a_1), cite(eu_reg_2024_1689_art_60a_5)]).
+citation_group(article_60, [cite(eu_reg_2024_1689_art_60_1), cite(eu_reg_2024_1689_art_60_4)]).
+citation_group(consent, [cite(eu_reg_2024_1689_art_61_1), cite(eu_reg_2024_1689_art_61_1_a), cite(eu_reg_2024_1689_art_61_1_b), cite(eu_reg_2024_1689_art_61_1_c), cite(eu_reg_2024_1689_art_61_1_d), cite(eu_reg_2024_1689_art_61_1_e), cite(eu_reg_2024_1689_art_61_2)]).
+citation_group(sme, [cite(eu_reg_2024_1689_art_63_1), cite(eu_reg_2024_1689_art_63_2)]).
+citation_group(explanation, [cite(eu_reg_2024_1689_art_86_1), cite(eu_reg_2024_1689_art_86_2), cite(eu_reg_2024_1689_art_86_3)]).
+
+expected(bias_provider_all_conditions_met, bias_processing_permitted, provider).
+expected(bias_provider_on_twenty_sixth_july, not_applicable_on_date, article_4a_date).
+expected(bias_provider_without_records_of_reasons, bias_processing_not_permitted, provider).
+expected(bias_other_deployer_all_conditions_met, bias_processing_permitted, other).
+expected(bias_other_deployer_safeguards_unsure, needs_legal_review(open_textured(appropriate_safeguards_for_fundamental_rights_and_freedoms, cite(eu_reg_2024_1689_art_4a_1)), [inputs_relied_on([strictly_necessary_for_bias_detection_and_correction_of_biases_affecting_health_safety_or_fundamental_rights - true, appropriate_safeguards_for_fundamental_rights_and_freedoms - unsure, bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data - true, technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures - true, measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation - true])]), none).
+expected(bias_capacity_absent, indeterminate([bias_processing_capacity]), none).
+expected(sandbox_outside_law_enforcement, sandbox_processing_permitted, sandbox).
+expected(sandbox_on_first_august, not_applicable_on_date, general_date).
+expected(sandbox_law_enforcement_with_specific_law, sandbox_processing_permitted, sandbox).
+expected(sandbox_law_enforcement_without_specific_law, sandbox_processing_not_permitted, sandbox).
+expected(sandbox_none_of_the_listed_areas, sandbox_processing_not_permitted, sandbox).
+expected(sandbox_nothing_known, indeterminate([sandbox_processing_of_data_collected_for_other_purposes_solely_for_developing_training_and_testing]), none).
+expected(testing_section_b_without_framework, testing_not_provided_for_by_the_member_state, framework_absent).
+expected(testing_section_b_with_framework, subject_to_the_member_state_framework, framework_present).
+expected(testing_annex_iii_all_conditions_met, real_world_testing_permitted, article_60).
+expected(testing_on_first_august, not_applicable_on_date, general_date).
+expected(testing_tacit_approval_allowed, real_world_testing_permitted, article_60).
+expected(testing_tacit_approval_not_in_national_law, real_world_testing_not_permitted, article_60).
+expected(testing_extension_notified, real_world_testing_permitted, article_60).
+expected(testing_extension_not_notified, real_world_testing_not_permitted, article_60).
+expected(testing_longer_than_twelve_months, real_world_testing_not_permitted, article_60).
+expected(testing_law_enforcement_without_consent, real_world_testing_permitted, article_60).
+expected(testing_law_enforcement_with_negative_effect, real_world_testing_not_permitted, article_60).
+expected(testing_deployers_bound_by_agreement, real_world_testing_permitted, article_60).
+expected(testing_deployers_without_agreement, real_world_testing_not_permitted, article_60).
+expected(testing_consent_facts_absent, indeterminate([informed_consent_given_in_accordance_with_article_61]), none).
+expected(consent_meets_all_conditions, consent_meets_article_61, consent).
+expected(consent_without_copy, consent_does_not_meet_article_61, consent).
+expected(consent_freely_given_unsure, needs_legal_review(open_textured(consent_freely_given, cite(eu_reg_2024_1689_art_61_1)), [inputs_relied_on([consent_freely_given - unsure, information_concise_clear_relevant_and_understandable - true])]), none).
+expected(sme_independent, may_comply_in_a_simplified_manner, sme).
+expected(sme_with_linked_enterprises, no_simplified_compliance, sme).
+expected(sme_not_an_sme, no_simplified_compliance, sme).
+expected(explanation_all_conditions_met, right_to_explanation_under_article_86, explanation).
+expected(explanation_on_first_august, not_applicable_on_date, general_date).
+expected(explanation_point_2_system, no_right_to_explanation_under_article_86, explanation).
+expected(explanation_exception_in_union_or_national_law, no_right_to_explanation_under_article_86, explanation).
+expected(explanation_otherwise_provided_for, no_right_to_explanation_under_article_86, explanation).
+expected(input_duplicate_and_unknown_key, input_problems([duplicate_key(is_an_sme_including_a_start_up), unknown_key(unlisted_key)]), none).
+expected(input_unsure_for_a_crisp_key, input_problems([wrong_type(has_partner_or_linked_enterprises)]), none).
+expected(input_impossible_date, input_problems([wrong_type(assessment_date)]), none).
+
+expected_verdict_holds(Subject) :-
+    expected(Subject, Result, Group),
+    citation_group(Group, Citations),
+    findall(Verdict, small_items_assess(Subject, Verdict), Verdicts),
+    Verdicts == [small_items_verdict(Result, Citations)].
+
+has_expectation(Subject) :-
+    expected(Subject, _, _).
+
+is_registered(Subject) :-
+    small_items_subject(Subject).
+
+answers_exactly_once(Subject) :-
+    findall(Verdict, small_items_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+resolvable(Subject) :-
+    small_items_profile_for(Subject, Request),
+    small_items_decision_resolvable(Request).
+
+cited_item(item(_, _, cite(_))).
+
+met_item(item(_, met, cite(_))).
+
+subject_checklist(Subject, Items) :-
+    small_items_profile_for(Subject, Request),
+    small_items_checklist(Request, Items).
+
+checklist_is_cited(Subject) :-
+    subject_checklist(Subject, Items),
+    Items = [_|_],
+    maplist(cited_item, Items).
+
+final_status_is_listed(Values, Result) :-
+    member(Result, Values).
+
+test(every_subject_has_an_expectation) :-
+    findall(Subject, small_items_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(has_expectation, Subjects).
+test(every_expectation_is_a_registered_subject) :-
+    findall(Subject, expected(Subject, _, _), Subjects),
+    maplist(is_registered, Subjects).
+test(every_subject_answers_exactly_once) :-
+    findall(Subject, small_items_subject(Subject), Subjects),
+    maplist(answers_exactly_once, Subjects).
+test(every_subject_is_resolvable) :-
+    findall(Subject, small_items_subject(Subject), Subjects),
+    maplist(resolvable, Subjects).
+test(every_final_atom_is_a_status_value) :-
+    small_items_status_values(Values),
+    findall(Result, (expected(_, Result, _), atom(Result)), Results),
+    maplist(final_status_is_listed(Values), Results).
+test(bias_provider_all_conditions_met_is_permitted) :-
+    expected_verdict_holds(bias_provider_all_conditions_met).
+test(bias_provider_on_twenty_sixth_july_is_not_applicable) :-
+    expected_verdict_holds(bias_provider_on_twenty_sixth_july).
+test(bias_provider_without_records_is_not_permitted) :-
+    expected_verdict_holds(bias_provider_without_records_of_reasons).
+test(bias_other_deployer_all_conditions_met_is_permitted) :-
+    expected_verdict_holds(bias_other_deployer_all_conditions_met).
+test(bias_other_deployer_safeguards_unsure_is_referred) :-
+    expected_verdict_holds(bias_other_deployer_safeguards_unsure).
+test(bias_capacity_absent_is_asked_for) :-
+    expected_verdict_holds(bias_capacity_absent).
+test(sandbox_outside_law_enforcement_is_permitted) :-
+    expected_verdict_holds(sandbox_outside_law_enforcement).
+test(sandbox_on_first_august_is_not_applicable) :-
+    expected_verdict_holds(sandbox_on_first_august).
+test(sandbox_law_enforcement_with_specific_law_is_permitted) :-
+    expected_verdict_holds(sandbox_law_enforcement_with_specific_law).
+test(sandbox_law_enforcement_without_specific_law_is_not_permitted) :-
+    expected_verdict_holds(sandbox_law_enforcement_without_specific_law).
+test(sandbox_none_of_the_listed_areas_is_not_permitted) :-
+    expected_verdict_holds(sandbox_none_of_the_listed_areas).
+test(sandbox_nothing_known_asks_the_first_key) :-
+    expected_verdict_holds(sandbox_nothing_known).
+test(testing_section_b_without_framework_is_not_provided_for) :-
+    expected_verdict_holds(testing_section_b_without_framework).
+test(testing_section_b_with_framework_is_subject_to_it) :-
+    expected_verdict_holds(testing_section_b_with_framework).
+test(testing_annex_iii_all_conditions_met_is_permitted) :-
+    expected_verdict_holds(testing_annex_iii_all_conditions_met).
+test(testing_on_first_august_is_not_applicable) :-
+    expected_verdict_holds(testing_on_first_august).
+test(testing_tacit_approval_allowed_is_permitted) :-
+    expected_verdict_holds(testing_tacit_approval_allowed).
+test(testing_tacit_approval_not_in_national_law_is_not_permitted) :-
+    expected_verdict_holds(testing_tacit_approval_not_in_national_law).
+test(testing_extension_notified_is_permitted) :-
+    expected_verdict_holds(testing_extension_notified).
+test(testing_extension_not_notified_is_not_permitted) :-
+    expected_verdict_holds(testing_extension_not_notified).
+test(testing_longer_than_twelve_months_is_not_permitted) :-
+    expected_verdict_holds(testing_longer_than_twelve_months).
+test(testing_law_enforcement_without_consent_is_permitted) :-
+    expected_verdict_holds(testing_law_enforcement_without_consent).
+test(testing_law_enforcement_with_negative_effect_is_not_permitted) :-
+    expected_verdict_holds(testing_law_enforcement_with_negative_effect).
+test(testing_deployers_bound_by_agreement_is_permitted) :-
+    expected_verdict_holds(testing_deployers_bound_by_agreement).
+test(testing_deployers_without_agreement_is_not_permitted) :-
+    expected_verdict_holds(testing_deployers_without_agreement).
+test(testing_consent_facts_absent_asks_the_consent_key_first) :-
+    expected_verdict_holds(testing_consent_facts_absent).
+test(consent_meets_all_conditions_meets_article_61) :-
+    expected_verdict_holds(consent_meets_all_conditions).
+test(consent_without_copy_does_not_meet_article_61) :-
+    expected_verdict_holds(consent_without_copy).
+test(consent_freely_given_unsure_is_referred) :-
+    expected_verdict_holds(consent_freely_given_unsure).
+test(sme_independent_may_simplify) :-
+    expected_verdict_holds(sme_independent).
+test(sme_with_linked_enterprises_may_not_simplify) :-
+    expected_verdict_holds(sme_with_linked_enterprises).
+test(sme_not_an_sme_may_not_simplify) :-
+    expected_verdict_holds(sme_not_an_sme).
+test(explanation_all_conditions_met_gives_the_right) :-
+    expected_verdict_holds(explanation_all_conditions_met).
+test(explanation_on_first_august_is_not_applicable) :-
+    expected_verdict_holds(explanation_on_first_august).
+test(explanation_point_2_system_gives_no_right) :-
+    expected_verdict_holds(explanation_point_2_system).
+test(explanation_exception_gives_no_right) :-
+    expected_verdict_holds(explanation_exception_in_union_or_national_law).
+test(explanation_otherwise_provided_for_gives_no_right) :-
+    expected_verdict_holds(explanation_otherwise_provided_for).
+test(input_duplicate_and_unknown_key_is_an_input_problem) :-
+    expected_verdict_holds(input_duplicate_and_unknown_key).
+test(input_unsure_for_a_crisp_key_is_an_input_problem) :-
+    expected_verdict_holds(input_unsure_for_a_crisp_key).
+test(input_impossible_date_is_an_input_problem) :-
+    expected_verdict_holds(input_impossible_date).
+test(bias_query_direct) :-
+    small_items_profile_for(bias_provider_all_conditions_met, small_items_request(_, Profile, AssessmentDate)),
+    bias_data_processing_status(Profile, AssessmentDate, Result, _),
+    Result == bias_processing_permitted.
+test(sandbox_query_direct) :-
+    small_items_profile_for(sandbox_outside_law_enforcement, small_items_request(_, Profile, AssessmentDate)),
+    sandbox_personal_data_processing_status(Profile, AssessmentDate, Result, _),
+    Result == sandbox_processing_permitted.
+test(testing_query_direct) :-
+    small_items_profile_for(testing_annex_iii_all_conditions_met, small_items_request(_, Profile, AssessmentDate)),
+    real_world_testing_status(Profile, AssessmentDate, Result, _),
+    Result == real_world_testing_permitted.
+test(consent_query_direct) :-
+    small_items_profile_for(consent_meets_all_conditions, small_items_request(_, Profile, AssessmentDate)),
+    informed_consent_status(Profile, AssessmentDate, Result, _),
+    Result == consent_meets_article_61.
+test(sme_query_direct) :-
+    small_items_profile_for(sme_independent, small_items_request(_, Profile, AssessmentDate)),
+    sme_simplified_compliance_status(Profile, AssessmentDate, Result, _),
+    Result == may_comply_in_a_simplified_manner.
+test(explanation_query_direct) :-
+    small_items_profile_for(explanation_all_conditions_met, small_items_request(_, Profile, AssessmentDate)),
+    explanation_right_status(Profile, AssessmentDate, Result, Citations),
+    Result == right_to_explanation_under_article_86,
+    citation_group(explanation, Citations).
+test(status_projection_matches_the_verdict) :-
+    small_items_profile_for(sme_with_linked_enterprises, Request),
+    small_items_status(Request, Status),
+    Status == no_simplified_compliance.
+test(decide_gives_the_verdict_term) :-
+    small_items_profile_for(sme_independent, Request),
+    decide_small_items(Request, small_items_verdict(may_comply_in_a_simplified_manner, Citations)),
+    citation_group(sme, Citations).
+test(the_referral_context_admits_an_optional_provenance_element) :-
+    small_items_assess(consent_freely_given_unsure, small_items_verdict(needs_legal_review(Reason, [inputs_relied_on(Pairs)]), [])),
+    Extended = needs_legal_review(Reason, [inputs_relied_on(Pairs), provenance(informed_consent, [cite(eu_reg_2024_1689_art_61_1)])]),
+    Extended = needs_legal_review(_, [inputs_relied_on(_), provenance(Clause, Citations)]),
+    Clause == informed_consent,
+    Citations == [cite(eu_reg_2024_1689_art_61_1)].
+test(input_check_names_duplicate_then_unknown) :-
+    small_items_profile_for(input_duplicate_and_unknown_key, small_items_request(_, Profile, _)),
+    small_items_input_problems(Profile, Problems),
+    Problems == [duplicate_key(is_an_sme_including_a_start_up), unknown_key(unlisted_key)].
+test(input_check_passes_a_well_formed_profile) :-
+    small_items_profile_for(testing_annex_iii_all_conditions_met, small_items_request(_, Profile, _)),
+    small_items_input_problems(Profile, Problems),
+    Problems == [].
+test(input_check_refuses_a_non_attribute_element) :-
+    small_items_input_problems([attribute(is_an_sme_including_a_start_up, true), stray_element], Problems),
+    Problems == [wrong_type(profile)].
+test(checklists_are_non_empty_and_cited) :-
+    maplist(checklist_is_cited, [bias_provider_all_conditions_met, bias_other_deployer_safeguards_unsure, sandbox_none_of_the_listed_areas, testing_section_b_with_framework, testing_deployers_without_agreement, consent_without_copy, sme_independent, explanation_point_2_system]).
+test(sme_independent_checklist_is_all_met) :-
+    subject_checklist(sme_independent, Items),
+    Items == [item(small_or_medium_enterprise, met, cite(eu_reg_2024_1689_art_63_1)), item(no_partner_or_linked_enterprises, met, cite(eu_reg_2024_1689_art_63_1))].
+test(sme_linked_checklist_names_the_unmet_proviso) :-
+    subject_checklist(sme_with_linked_enterprises, Items),
+    Items == [item(small_or_medium_enterprise, met, cite(eu_reg_2024_1689_art_63_1)), item(no_partner_or_linked_enterprises, unmet(no_partner_or_linked_enterprises), cite(eu_reg_2024_1689_art_63_1))].
+test(bias_provider_checklist_has_eight_met_items) :-
+    subject_checklist(bias_provider_all_conditions_met, Items),
+    length(Items, 8),
+    maplist(met_item, Items).
+test(bias_unsure_checklist_marks_the_judgement_unknown) :-
+    subject_checklist(bias_other_deployer_safeguards_unsure, Items),
+    member(item(appropriate_safeguards, unknown([appropriate_safeguards_for_fundamental_rights_and_freedoms]), cite(eu_reg_2024_1689_art_4a_1)), Items).
+test(testing_deployer_checklist_cites_point_h) :-
+    subject_checklist(testing_deployers_without_agreement, Items),
+    member(item(deployer_cooperation, unmet(deployer_cooperation), cite(eu_reg_2024_1689_art_60_4_h)), Items).
+test(testing_framework_checklist_cites_article_60a_2) :-
+    subject_checklist(testing_section_b_with_framework, Items),
+    Items == [item(framework_adopted, met, cite(eu_reg_2024_1689_art_60a_2))].
+
+test(bias_day_before_is_not_permitted, fail) :-
+    small_items_assess(bias_provider_on_twenty_sixth_july, small_items_verdict(bias_processing_permitted, _)).
+test(bias_without_records_is_not_permitted_verdict, fail) :-
+    small_items_assess(bias_provider_without_records_of_reasons, small_items_verdict(bias_processing_permitted, _)).
+test(sandbox_without_specific_law_is_not_permitted_verdict, fail) :-
+    small_items_assess(sandbox_law_enforcement_without_specific_law, small_items_verdict(sandbox_processing_permitted, _)).
+test(sandbox_unlisted_area_is_not_permitted_verdict, fail) :-
+    small_items_assess(sandbox_none_of_the_listed_areas, small_items_verdict(sandbox_processing_permitted, _)).
+test(sandbox_day_before_is_not_permitted, fail) :-
+    small_items_assess(sandbox_on_first_august, small_items_verdict(sandbox_processing_permitted, _)).
+test(testing_without_tacit_approval_is_not_permitted_verdict, fail) :-
+    small_items_assess(testing_tacit_approval_not_in_national_law, small_items_verdict(real_world_testing_permitted, _)).
+test(testing_unnotified_extension_is_not_permitted_verdict, fail) :-
+    small_items_assess(testing_extension_not_notified, small_items_verdict(real_world_testing_permitted, _)).
+test(testing_negative_effect_is_not_permitted_verdict, fail) :-
+    small_items_assess(testing_law_enforcement_with_negative_effect, small_items_verdict(real_world_testing_permitted, _)).
+test(testing_without_deployer_agreement_is_not_permitted_verdict, fail) :-
+    small_items_assess(testing_deployers_without_agreement, small_items_verdict(real_world_testing_permitted, _)).
+test(testing_with_framework_is_not_unprovided, fail) :-
+    small_items_assess(testing_section_b_with_framework, small_items_verdict(testing_not_provided_for_by_the_member_state, _)).
+test(testing_day_before_is_not_permitted, fail) :-
+    small_items_assess(testing_on_first_august, small_items_verdict(real_world_testing_permitted, _)).
+test(consent_without_copy_does_not_meet, fail) :-
+    small_items_assess(consent_without_copy, small_items_verdict(consent_meets_article_61, _)).
+test(sme_with_linked_enterprises_does_not_simplify, fail) :-
+    small_items_assess(sme_with_linked_enterprises, small_items_verdict(may_comply_in_a_simplified_manner, _)).
+test(explanation_point_2_system_has_no_right, fail) :-
+    small_items_assess(explanation_point_2_system, small_items_verdict(right_to_explanation_under_article_86, _)).
+test(explanation_otherwise_provided_for_has_no_right, fail) :-
+    small_items_assess(explanation_otherwise_provided_for, small_items_verdict(right_to_explanation_under_article_86, _)).
+test(explanation_day_before_has_no_right, fail) :-
+    small_items_assess(explanation_on_first_august, small_items_verdict(right_to_explanation_under_article_86, _)).
+test(the_slice_referral_context_carries_no_provenance, fail) :-
+    small_items_assess(consent_freely_given_unsure, small_items_verdict(needs_legal_review(_, [_, provenance(_, _)]), _)).
+
+cp_test_names([every_subject_has_an_expectation, every_expectation_is_a_registered_subject, every_subject_answers_exactly_once, every_subject_is_resolvable, every_final_atom_is_a_status_value, bias_provider_all_conditions_met_is_permitted, bias_provider_on_twenty_sixth_july_is_not_applicable, bias_provider_without_records_is_not_permitted, bias_other_deployer_all_conditions_met_is_permitted, bias_other_deployer_safeguards_unsure_is_referred, bias_capacity_absent_is_asked_for, sandbox_outside_law_enforcement_is_permitted, sandbox_on_first_august_is_not_applicable, sandbox_law_enforcement_with_specific_law_is_permitted, sandbox_law_enforcement_without_specific_law_is_not_permitted, sandbox_none_of_the_listed_areas_is_not_permitted, sandbox_nothing_known_asks_the_first_key, testing_section_b_without_framework_is_not_provided_for, testing_section_b_with_framework_is_subject_to_it, testing_annex_iii_all_conditions_met_is_permitted, testing_on_first_august_is_not_applicable, testing_tacit_approval_allowed_is_permitted, testing_tacit_approval_not_in_national_law_is_not_permitted, testing_extension_notified_is_permitted, testing_extension_not_notified_is_not_permitted, testing_longer_than_twelve_months_is_not_permitted, testing_law_enforcement_without_consent_is_permitted, testing_law_enforcement_with_negative_effect_is_not_permitted, testing_deployers_bound_by_agreement_is_permitted, testing_deployers_without_agreement_is_not_permitted, testing_consent_facts_absent_asks_the_consent_key_first, consent_meets_all_conditions_meets_article_61, consent_without_copy_does_not_meet_article_61, consent_freely_given_unsure_is_referred, sme_independent_may_simplify, sme_with_linked_enterprises_may_not_simplify, sme_not_an_sme_may_not_simplify, explanation_all_conditions_met_gives_the_right, explanation_on_first_august_is_not_applicable, explanation_point_2_system_gives_no_right, explanation_exception_gives_no_right, explanation_otherwise_provided_for_gives_no_right, input_duplicate_and_unknown_key_is_an_input_problem, input_unsure_for_a_crisp_key_is_an_input_problem, input_impossible_date_is_an_input_problem, bias_query_direct, sandbox_query_direct, testing_query_direct, consent_query_direct, sme_query_direct, explanation_query_direct, status_projection_matches_the_verdict, decide_gives_the_verdict_term, the_referral_context_admits_an_optional_provenance_element, input_check_names_duplicate_then_unknown, input_check_passes_a_well_formed_profile, input_check_refuses_a_non_attribute_element, checklists_are_non_empty_and_cited, sme_independent_checklist_is_all_met, sme_linked_checklist_names_the_unmet_proviso, bias_provider_checklist_has_eight_met_items, bias_unsure_checklist_marks_the_judgement_unknown, testing_deployer_checklist_cites_point_h, testing_framework_checklist_cites_article_60a_2]).
+cp_test_fail_names([bias_day_before_is_not_permitted, bias_without_records_is_not_permitted_verdict, sandbox_without_specific_law_is_not_permitted_verdict, sandbox_unlisted_area_is_not_permitted_verdict, sandbox_day_before_is_not_permitted, testing_without_tacit_approval_is_not_permitted_verdict, testing_unnotified_extension_is_not_permitted_verdict, testing_negative_effect_is_not_permitted_verdict, testing_without_deployer_agreement_is_not_permitted_verdict, testing_with_framework_is_not_unprovided, testing_day_before_is_not_permitted, consent_without_copy_does_not_meet, sme_with_linked_enterprises_does_not_simplify, explanation_point_2_system_has_no_right, explanation_otherwise_provided_for_has_no_right, explanation_day_before_has_no_right, the_slice_referral_context_carries_no_provenance]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,32 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor loads, the result terms
+% build and destructure, and a real citation record resolves.
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/citations, [citation/2, implements/1]).
+
+test(a_real_citation_resolves) :-
+    citation(eu_reg_2016_679_art_4_7, _Record).
+
+test(implements_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_4_8).
+
+test(implements_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_reg_2016_679_art_9_9).
+
+test(the_answer_term_builds_and_destructures) :-
+    Answer = definition_answer(met, none, [cite(eu_reg_2016_679_art_4_8)]),
+    Answer = definition_answer(Status, Ground, Citations),
+    Status == met,
+    Ground == none,
+    Citations == [cite(eu_reg_2016_679_art_4_8)].
+
+test(the_status_atoms_are_distinct) :-
+    dif(met, not_met).
+
+test(an_empty_profile_has_no_input_problems) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([], []).
+
+:- end_module(test_load).

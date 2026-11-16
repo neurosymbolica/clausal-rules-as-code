@@ -1,0 +1,189 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_impact_assessment_prior_consultation.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's input
+% contract), never a dict. This order has no numeric threshold, so each route is paired
+% with a ONE-FACT near-miss control: the same profile with one fact changed, which gets
+% the opposite (or the referring) answer.
+%
+% Routes and their controls (expected status in brackets):
+%   residual_high_risk_no_measures            [required, Art 36(1)]
+%     control measures_bring_risk_below_high  [not_required]
+%   residual_high_risk_measures_insufficient  [required, Art 36(1)]
+%     control no_high_risk_indicated          [not_required]
+%   member_state_prior_authorisation          [required, Art 36(5)]
+%     control member_state_law_does_not_require_authorisation [not_required]
+%   both_ways_met                             [required, basis Art 36(1)]
+%   no_assessment_public_interest_unmet       [needs_legal_review, not_governed_here (Q5)]
+%   no_assessment_member_state_authorisation  [required, Art 36(5)]
+%   no_assessment_member_state_fact_absent    [needs_legal_review, cross_reference_unresolved]
+%   assessment_status_absent_no_way_open      [not_required, reading (13)]
+%     control assessment_status_absent_way_open [indeterminate([impact_assessment_carried_out])]
+%   two_keys_missing                          [indeterminate, both keys named]
+%   residual_risk_unsure                      [needs_legal_review, open_textured]
+%   high_risk_unsure                          [needs_legal_review, open_textured]
+%   duplicate_and_unknown_keys                [input_problems]
+%   criteria_and_item_keys_ignored            [the verdict of residual_high_risk_no_measures]
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_impact_assessment_prior_consultation_subject/1,
+    gdpr_impact_assessment_prior_consultation_profile_for/2,
+    gdpr_impact_assessment_prior_consultation_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/prior_consultation_duty, [decide_prior_consultation_duty/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_impact_assessment_prior_consultation_subject(residual_high_risk_no_measures).
+gdpr_impact_assessment_prior_consultation_subject(measures_bring_risk_below_high).
+gdpr_impact_assessment_prior_consultation_subject(residual_high_risk_measures_insufficient).
+gdpr_impact_assessment_prior_consultation_subject(no_high_risk_indicated).
+gdpr_impact_assessment_prior_consultation_subject(member_state_prior_authorisation).
+gdpr_impact_assessment_prior_consultation_subject(member_state_law_does_not_require_authorisation).
+gdpr_impact_assessment_prior_consultation_subject(both_ways_met).
+gdpr_impact_assessment_prior_consultation_subject(no_assessment_public_interest_unmet).
+gdpr_impact_assessment_prior_consultation_subject(no_assessment_member_state_authorisation).
+gdpr_impact_assessment_prior_consultation_subject(no_assessment_member_state_fact_absent).
+gdpr_impact_assessment_prior_consultation_subject(assessment_status_absent_no_way_open).
+gdpr_impact_assessment_prior_consultation_subject(assessment_status_absent_way_open).
+gdpr_impact_assessment_prior_consultation_subject(two_keys_missing).
+gdpr_impact_assessment_prior_consultation_subject(residual_risk_unsure).
+gdpr_impact_assessment_prior_consultation_subject(high_risk_unsure).
+gdpr_impact_assessment_prior_consultation_subject(duplicate_and_unknown_keys).
+gdpr_impact_assessment_prior_consultation_subject(criteria_and_item_keys_ignored).
+
+% ---- Profiles --------------------------------------------------------
+% Art 36(1): an assessment shows a high risk and no mitigating measures were taken.
+gdpr_impact_assessment_prior_consultation_profile_for(residual_high_risk_no_measures, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% Control: measures were taken and the user judges they bring the risk below high.
+gdpr_impact_assessment_prior_consultation_profile_for(measures_bring_risk_below_high, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, true),
+    attribute(measures_reduce_residual_risk_below_high, true),
+    attribute(processing_for_public_interest_task, false)
+]).
+% Art 36(1): measures were taken but the user judges they leave the risk high.
+gdpr_impact_assessment_prior_consultation_profile_for(residual_high_risk_measures_insufficient, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, true),
+    attribute(measures_reduce_residual_risk_below_high, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% Control: the assessment shows no high risk.
+gdpr_impact_assessment_prior_consultation_profile_for(no_high_risk_indicated, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, false),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% Art 36(5): public-interest processing; Member State law, attested, requires authorisation.
+gdpr_impact_assessment_prior_consultation_profile_for(member_state_prior_authorisation, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, false),
+    attribute(processing_for_public_interest_task, true),
+    attribute(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none)))
+]).
+% Control: the attested Member State law does not require authorisation.
+gdpr_impact_assessment_prior_consultation_profile_for(member_state_law_does_not_require_authorisation, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, false),
+    attribute(processing_for_public_interest_task, true),
+    attribute(member_state_requires_prior_authorisation, attested(false, attestation(by, at, reason, none)))
+]).
+% Both ways MET: the Art 36(1) basis is given.
+gdpr_impact_assessment_prior_consultation_profile_for(both_ways_met, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, true),
+    attribute(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none)))
+]).
+% Q5: no assessment carried out and the Art 36(5) way UNMET: a referral.
+gdpr_impact_assessment_prior_consultation_profile_for(no_assessment_public_interest_unmet, [
+    attribute(impact_assessment_carried_out, false),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% No assessment, but the Art 36(5) way MET: required.
+gdpr_impact_assessment_prior_consultation_profile_for(no_assessment_member_state_authorisation, [
+    attribute(impact_assessment_carried_out, false),
+    attribute(processing_for_public_interest_task, true),
+    attribute(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none)))
+]).
+% No assessment, public-interest task, the Member State fact ABSENT: cross-reference.
+gdpr_impact_assessment_prior_consultation_profile_for(no_assessment_member_state_fact_absent, [
+    attribute(impact_assessment_carried_out, false),
+    attribute(processing_for_public_interest_task, true)
+]).
+% Reading (13): assessment status absent, both ways UNMET through their other parts.
+gdpr_impact_assessment_prior_consultation_profile_for(assessment_status_absent_no_way_open, [
+    attribute(assessment_indicates_high_risk_absent_mitigation, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% Control: the same, but a high risk is indicated, so the absent assessment status decides.
+gdpr_impact_assessment_prior_consultation_profile_for(assessment_status_absent_way_open, [
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% both missing keys of the residual-risk limb are named.
+gdpr_impact_assessment_prior_consultation_profile_for(two_keys_missing, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(processing_for_public_interest_task, false)
+]).
+% The user cannot say whether the measures bring the risk below high.
+gdpr_impact_assessment_prior_consultation_profile_for(residual_risk_unsure, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, true),
+    attribute(measures_reduce_residual_risk_below_high, unsure),
+    attribute(processing_for_public_interest_task, false)
+]).
+% The user cannot say what the assessment indicates.
+gdpr_impact_assessment_prior_consultation_profile_for(high_risk_unsure, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, unsure),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false)
+]).
+% A repeated key, an ill-typed crisp key and a key outside the contract.
+gdpr_impact_assessment_prior_consultation_profile_for(duplicate_and_unknown_keys, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(impact_assessment_carried_out, false),
+    attribute(mitigating_measures_taken, unsure),
+    attribute(stray_flag, true)
+]).
+% The first profile plus keys entry B never reads: the verdict is unchanged.
+gdpr_impact_assessment_prior_consultation_profile_for(criteria_and_item_keys_ignored, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, false),
+    attribute(highly_personal_data_processed, unsure),
+    attribute(vulnerable_data_subjects, false),
+    attribute(uses_new_technologies, true),
+    attribute(likely_high_risk_to_rights_and_freedoms, true),
+    attribute(national_list_requires_assessment, attested(true, attestation(by, at, reason, none))),
+    attribute(national_list_requires_item, attested(national_list_item(ie_dpc, ie_dpc_35_4_nr_1), attestation(by, at, reason, none))), % lint: order-given atom
+    attribute(route_approvals, approvals(viewer(account), []))
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_impact_assessment_prior_consultation_assess(Subject, Result) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(Subject, Profile),
+    decide_prior_consultation_duty(Profile, Result).
+
+:- end_module(fixtures).

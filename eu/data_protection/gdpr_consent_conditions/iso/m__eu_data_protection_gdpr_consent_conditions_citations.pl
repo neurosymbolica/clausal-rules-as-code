@@ -1,0 +1,23 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_consent_conditions_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+citation(eu_reg_2016_679_art_7_1, [label - 'GDPR Art 7(1)', ref - 'Regulation (EU) 2016/679, Article 7(1), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'Where processing is based on consent, the controller shall be able to demonstrate that the data subject has consented to processing of his or her personal data.']).
+citation(eu_reg_2016_679_art_7_2, [label - 'GDPR Art 7(2)', ref - 'Regulation (EU) 2016/679, Article 7(2), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'the request for consent shall be presented in a manner which is clearly distinguishable from the other matters, in an intelligible and easily accessible form, using clear and plain language']).
+citation(eu_reg_2016_679_art_7_3, [label - 'GDPR Art 7(3) third and fourth sentences', ref - 'Regulation (EU) 2016/679, Article 7(3), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'Prior to giving consent, the data subject shall be informed thereof. It shall be as easy to withdraw as to give consent.']).
+citation(eu_reg_2016_679_art_7_4, [label - 'GDPR Art 7(4)', ref - 'Regulation (EU) 2016/679, Article 7(4), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'When assessing whether consent is freely given, utmost account shall be taken of whether, inter alia, the performance of a contract, including the provision of a service, is conditional on consent to the processing of personal data that is not necessary for the performance of that contract.']).
+citation(eu_reg_2016_679_art_11_1, [label - 'GDPR Art 11(1)', ref - 'Regulation (EU) 2016/679, Article 11(1), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'the controller shall not be obliged to maintain, acquire or process additional information in order to identify the data subject for the sole purpose of complying with this Regulation.']).
+citation(eu_reg_2016_679_art_11_2, [label - 'GDPR Art 11(2)', ref - 'Regulation (EU) 2016/679, Article 11(2), https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim - 'Where, in cases referred to in paragraph 1 of this Article, the controller is able to demonstrate that it is not in a position to identify the data subject, the controller shall inform the data subject accordingly, if possible.']).
+citation(consent_demonstration_statement, [label - 'Caller statement that the controller is able to demonstrate consent (GDPR Art 7(1) outside fact consent_demonstrable)', ref - 'Regulation (EU) 2016/679, Article 7(1), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(consent_request_presentation_statement, [label - 'Caller statement on the presentation of the request for consent (GDPR Art 7(2) outside fact request_clearly_distinguishable_and_intelligible)', ref - 'Regulation (EU) 2016/679, Article 7(2), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(withdrawal_ease_statement, [label - 'Caller statement that withdrawal is as easy as giving consent (GDPR Art 7(3) outside fact withdrawal_as_easy_as_giving_consent)', ref - 'Regulation (EU) 2016/679, Article 7(3), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(consent_freely_given_statement, [label - 'Caller statement on whether consent is freely given (GDPR Art 7(4) outside fact consent_freely_given)', ref - 'Regulation (EU) 2016/679, Article 7(4), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(identification_not_required_statement, [label - 'Caller statement that the purposes do not require identification (GDPR Art 11(1) outside fact purposes_do_not_require_identification)', ref - 'Regulation (EU) 2016/679, Article 11(1), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(inability_to_identify_statement, [label - 'Caller statement that the controller can demonstrate it is not in a position to identify the data subject (GDPR Art 11(2) outside fact able_to_demonstrate_not_in_position_to_identify)', ref - 'Regulation (EU) 2016/679, Article 11(2), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+citation(informing_possible_statement, [label - 'Caller statement that informing the data subject is possible (GDPR Art 11(2) outside fact informing_data_subject_possible)', ref - 'Regulation (EU) 2016/679, Article 11(2), https://eur-lex.europa.eu/eli/reg/2016/679/oj']).
+
+implements(Key) :-
+    citation(Key, _).

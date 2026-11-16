@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(test_negative_controls, []).
+:- use_module(eu/nis2_incident_reporting/nis2_incident_reporting, [
+    nis2_incident_reporting_status/2,
+    nis2_incident_reporting_status_values/1,
+    incident_reporting_steps/2,
+    reporting_step_timeliness/4
+]).
+:- use_module(eu/nis2_incident_reporting/fixtures, [nis2_incident_reporting_profile_for/2]).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    nis2_incident_reporting_status_values(StatusValues),
+    member(not_significant, StatusValues).
+
+% Route: limb (a).
+test(limb_a_is_significant) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    nis2_incident_reporting_status(Profile, significant).
+test(both_false_is_not_significant) :-
+    nis2_incident_reporting_profile_for(both_limbs_false, Profile),
+    nis2_incident_reporting_status(Profile, not_significant).
+test(both_false_is_not_significant_near_miss, fail) :-
+    nis2_incident_reporting_profile_for(both_limbs_false, Profile),
+    nis2_incident_reporting_status(Profile, significant).
+
+% Route: limb (b) alone.
+test(limb_b_alone_is_significant) :-
+    nis2_incident_reporting_profile_for(limb_b_met, Profile),
+    nis2_incident_reporting_status(Profile, significant).
+test(limb_b_alone_is_not_not_significant, fail) :-
+    nis2_incident_reporting_profile_for(limb_b_met, Profile),
+    nis2_incident_reporting_status(Profile, not_significant).
+
+% Route: early warning hour limit.
+test(early_warning_24_on_time) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], early_warning, 24, on_time).
+test(early_warning_25_late) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], early_warning, 25, late(hour_limit)).
+test(early_warning_25_is_not_on_time, fail) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], early_warning, 25, on_time).
+
+% Route: trust service provider limit for the notification.
+test(notification_30_standard_on_time) :-
+    reporting_step_timeliness([attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_notification_without_undue_delay, true)], incident_notification, 30, on_time).
+test(notification_30_provider_late) :-
+    reporting_step_timeliness([attribute(trust_service_provider_incident_affects_trust_services, true), attribute(incident_notification_without_undue_delay, true)], incident_notification, 30, late(hour_limit)).
+test(notification_30_provider_not_on_time, fail) :-
+    reporting_step_timeliness([attribute(trust_service_provider_incident_affects_trust_services, true), attribute(incident_notification_without_undue_delay, true)], incident_notification, 30, on_time).
+test(notification_72_on_time_and_73_late) :-
+    reporting_step_timeliness([attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_notification_without_undue_delay, true)], incident_notification, 72, on_time),
+    reporting_step_timeliness([attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_notification_without_undue_delay, true)], incident_notification, 73, late(hour_limit)).
+
+% Route: without undue delay.
+test(undue_delay_true_on_time) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], early_warning, 5, on_time).
+test(undue_delay_false_late) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, false)], early_warning, 5, late(without_undue_delay)).
+test(undue_delay_false_not_on_time, fail) :-
+    reporting_step_timeliness([attribute(early_warning_without_undue_delay, false)], early_warning, 5, on_time).
+
+% Route: ongoing incident adds two steps.
+test(ongoing_has_six_steps) :-
+    incident_reporting_steps([attribute(severe_operational_disruption_or_financial_loss, true), attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_ongoing_at_final_report_due, true)], Steps),
+    length(Steps, 6).
+test(not_ongoing_has_four_steps) :-
+    incident_reporting_steps([attribute(severe_operational_disruption_or_financial_loss, true), attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_ongoing_at_final_report_due, false)], Steps),
+    length(Steps, 4).
+test(not_ongoing_does_not_have_six_steps, fail) :-
+    incident_reporting_steps([attribute(severe_operational_disruption_or_financial_loss, true), attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_ongoing_at_final_report_due, false)], Steps),
+    length(Steps, 6).
+
+:- end_module(test_negative_controls).

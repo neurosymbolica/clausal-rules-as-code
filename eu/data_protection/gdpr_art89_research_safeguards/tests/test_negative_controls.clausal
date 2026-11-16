@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed -> different verdict), proving the route is
+% LOAD-BEARING. Every `fail` test is paired with a positive test over the
+% same case so a misspelt atom shows up as a failing positive.
+% Run: python -m clausal.testing eu/data_protection/gdpr_art89_research_safeguards/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/safeguards_status, [
+    safeguards_status_status/2,
+    safeguards_status_status_values/1,
+    unmet_requirements/2
+]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/fixtures, [gdpr_art89_research_safeguards_profile_for/2]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/queries, [gdpr_art89_research_safeguards_what_if/4]).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    safeguards_status_status_values(StatusValues),
+    member(not_in_accordance, StatusValues).
+
+% ---- route: measures ----
+test(measures_unmet_is_not_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    safeguards_status_status(Profile, not_in_accordance).
+test(measures_met_is_not_not_in_accordance, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_status(Profile, not_in_accordance).
+test(restoring_measures_flips_to_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, technical_organisational_measures_in_place, true, in_accordance).
+
+% ---- route: minimisation ----
+test(minimisation_unmet_is_not_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(no_minimisation, Profile),
+    unmet_requirements(Profile, [minimisation]).
+test(minimisation_met_leaves_no_unmet_list, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    unmet_requirements(Profile, [minimisation]).
+test(restoring_minimisation_flips_to_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(no_minimisation, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, minimisation_measures_in_place, true, in_accordance).
+
+% ---- route: identification ----
+test(identifiable_and_sufficient_is_unmet) :-
+    gdpr_art89_research_safeguards_profile_for(identifiable_and_sufficient, Profile),
+    unmet_requirements(Profile, [identification]).
+test(identifiable_but_not_sufficient_is_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(identifiable_not_sufficient, Profile),
+    safeguards_status_status(Profile, in_accordance).
+test(not_sufficient_is_not_unmet, fail) :-
+    gdpr_art89_research_safeguards_profile_for(identifiable_not_sufficient, Profile),
+    unmet_requirements(Profile, [identification]).
+test(non_identifiable_data_ignores_the_sufficiency_judgement) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, non_identifying_processing_sufficient, unsure, in_accordance).
+test(non_identifiable_data_ignores_a_true_sufficiency_judgement) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, non_identifying_processing_sufficient, true, in_accordance).
+
+% ---- route: appropriateness ----
+test(inappropriate_safeguards_is_unmet) :-
+    gdpr_art89_research_safeguards_profile_for(inappropriate_safeguards, Profile),
+    unmet_requirements(Profile, [appropriateness]).
+test(appropriate_safeguards_is_not_unmet, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    unmet_requirements(Profile, [appropriateness]).
+
+% ---- route: purpose absent ----
+test(absent_purpose_is_indeterminate) :-
+    gdpr_art89_research_safeguards_profile_for(purpose_absent, Profile),
+    safeguards_status_status(Profile, indeterminate([purpose])).
+test(present_purpose_is_not_indeterminate, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_status(Profile, indeterminate(_)).
+
+% ---- route: other purpose ----
+test(other_purpose_is_not_applicable) :-
+    gdpr_art89_research_safeguards_profile_for(other_purpose_case, Profile),
+    safeguards_status_status(Profile, not_applicable).
+test(a_named_purpose_is_not_not_applicable, fail) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    safeguards_status_status(Profile, not_applicable).
+test(naming_a_research_purpose_applies_the_article) :-
+    gdpr_art89_research_safeguards_profile_for(other_purpose_case, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, purpose, scientific_research, not_in_accordance).
+
+% ---- route: absence ----
+test(absent_measures_key_is_indeterminate) :-
+    gdpr_art89_research_safeguards_profile_for(measures_key_absent, Profile),
+    safeguards_status_status(Profile, indeterminate([technical_organisational_measures_in_place])).
+test(supplying_the_absent_key_flips_to_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(measures_key_absent, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, technical_organisational_measures_in_place, true, in_accordance).
+test(a_complete_profile_is_not_indeterminate, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_status(Profile, indeterminate(_)).
+test(unmet_dominates_absence) :-
+    gdpr_art89_research_safeguards_profile_for(unmet_dominates_absence, Profile),
+    safeguards_status_status(Profile, not_in_accordance).
+test(unmet_dominating_absence_is_not_indeterminate, fail) :-
+    gdpr_art89_research_safeguards_profile_for(unmet_dominates_absence, Profile),
+    safeguards_status_status(Profile, indeterminate(_)).
+
+% ---- route: judgement handed to the user ----
+test(unsure_sufficiency_needs_legal_review) :-
+    gdpr_art89_research_safeguards_profile_for(sufficiency_unsure, Profile),
+    safeguards_status_status(Profile, needs_legal_review(open_textured(non_identifying_processing_sufficient, cite(eu_reg_2016_679_art_89_1)), _)).
+test(deciding_sufficiency_true_flips_to_unmet) :-
+    gdpr_art89_research_safeguards_profile_for(sufficiency_unsure, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, non_identifying_processing_sufficient, true, not_in_accordance).
+test(deciding_sufficiency_false_flips_to_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(sufficiency_unsure, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, non_identifying_processing_sufficient, false, in_accordance).
+test(unsure_appropriateness_needs_legal_review) :-
+    gdpr_art89_research_safeguards_profile_for(appropriateness_unsure, Profile),
+    safeguards_status_status(Profile, needs_legal_review(open_textured(safeguards_appropriate, cite(eu_reg_2016_679_art_89_1)), _)).
+test(deciding_appropriateness_true_flips_to_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(appropriateness_unsure, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, safeguards_appropriate, true, in_accordance).
+test(a_decided_profile_needs_no_legal_review, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_status(Profile, needs_legal_review(_, _)).
+
+% ---- route: input check ----
+test(unknown_key_is_an_input_problem) :-
+    gdpr_art89_research_safeguards_profile_for(unknown_key_given, Profile),
+    safeguards_status_status(Profile, input_problems([unknown_key(extra_note)])).
+test(a_clean_profile_has_no_input_problems, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_status(Profile, input_problems(_)).
+
+:- end_module(test_negative_controls).

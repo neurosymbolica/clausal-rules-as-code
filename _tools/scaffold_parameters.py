@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """scaffold_parameters.py -- decision-preserving scaffold of a domain's
 parameters.clausal submodule (Part B; docs/superpowers/specs/
 2026-07-17-citation-partB-parameter-provenance-design.md).

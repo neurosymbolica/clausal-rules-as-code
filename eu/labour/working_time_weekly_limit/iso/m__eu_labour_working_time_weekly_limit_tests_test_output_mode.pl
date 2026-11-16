@@ -1,0 +1,169 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_labour_working_time_weekly_limit_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_labour_working_time_weekly_limit_working_time_weekly_limit, [decide_working_time_weekly_limit/2, working_time_weekly_limit_status/2, weekly_working_time_average/6, required_reduction_minutes/6]).
+:- use_module(m__eu_labour_working_time_weekly_limit_fixtures, [working_time_weekly_limit_profile_for/2]).
+
+verdicts_of(Subject, Verdicts) :-
+    working_time_weekly_limit_profile_for(Subject, SubjectCase),
+    findall(Verdict, decide_working_time_weekly_limit(SubjectCase, Verdict), Verdicts).
+
+averages_of(Subject, Averages) :-
+    working_time_weekly_limit_profile_for(Subject, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Average, weekly_working_time_average(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Average), Averages).
+
+reductions_of(Subject, Reductions) :-
+    working_time_weekly_limit_profile_for(Subject, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Minutes, required_reduction_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes), Reductions).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    working_time_weekly_limit_profile_for(at_limit, SubjectCase),
+    findall(Status, working_time_weekly_limit_status(SubjectCase, Status), Statuses),
+    Statuses == [within_weekly_limit].
+test(the_verdict_carries_a_citation) :-
+    working_time_weekly_limit_profile_for(at_limit, SubjectCase),
+    decide_working_time_weekly_limit(SubjectCase, working_time_weekly_limit_verdict(_Status, [_FirstCitation|_OtherCitations])).
+test(at_the_limit_is_within) :-
+    verdicts_of(at_limit, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(within_weekly_limit, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_6_b), cite(eu_dir_2003_88_art_16_b)])].
+test(one_minute_over_is_over) :-
+    verdicts_of(one_minute_over, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(over_weekly_limit, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_6_b), cite(eu_dir_2003_88_art_16_b)])].
+test(over_with_the_option_absent_asks_for_it) :-
+    verdicts_of(option_absent_over, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(indeterminate([member_state_uses_article_22_option]), [])].
+test(the_option_with_prior_agreement) :-
+    verdicts_of(opt_out_agreed, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(weekly_limit_not_applied_by_agreement, [cite(eu_dir_2003_88_art_22_1), cite(eu_dir_2003_88_art_22_1_a)])].
+test(the_option_without_prior_agreement) :-
+    verdicts_of(opt_out_without_agreement, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(over_weekly_limit, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_16_b), cite(eu_dir_2003_88_art_22_1_a)])].
+test(no_prior_agreement_with_the_option_absent_names_both_routes) :-
+    verdicts_of(agreement_false_option_absent, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(over_weekly_limit, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_6_b), cite(eu_dir_2003_88_art_16_b), cite(eu_dir_2003_88_art_22_1_a)])].
+test(a_day_of_leave_at_the_limit_is_within) :-
+    verdicts_of(leave_day_at_limit, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(a_day_of_leave_one_minute_over_is_over) :-
+    verdicts_of(leave_day_one_minute_over, [working_time_weekly_limit_verdict(over_weekly_limit, _)]).
+test(four_months_under_the_member_state_period_is_within) :-
+    verdicts_of(member_state_period_at_four_months, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(one_day_over_four_months_under_the_member_state_period) :-
+    verdicts_of(member_state_period_one_day_over, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(reference_period_longer_than_allowed, [cite(eu_dir_2003_88_art_16_b)])].
+test(one_day_over_four_months_without_a_basis) :-
+    verdicts_of(basis_absent_one_day_over, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(indeterminate([reference_period_basis]), [])].
+test(six_months_under_a_derogation_is_within) :-
+    verdicts_of(derogation_period_at_six_months, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(one_day_over_six_months_under_a_derogation) :-
+    verdicts_of(derogation_period_one_day_over, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(reference_period_longer_than_allowed, [cite(eu_dir_2003_88_art_16_b), cite(eu_dir_2003_88_art_19_first_subpara)])].
+test(twelve_months_under_a_collective_agreement_is_within) :-
+    verdicts_of(collective_agreement_period_at_twelve_months, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(twelve_months_for_offshore_work_is_within) :-
+    verdicts_of(offshore_period_at_twelve_months, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(one_day_over_twelve_months) :-
+    verdicts_of(period_one_day_over_twelve_months, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(reference_period_longer_than_allowed, [cite(eu_dir_2003_88_art_16_b), cite(eu_dir_2003_88_art_19_first_subpara), cite(eu_dir_2003_88_art_19_second_subpara), cite(eu_dir_2003_88_art_20_2)])].
+test(a_whole_period_of_sick_leave) :-
+    verdicts_of(all_sick_leave, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(no_countable_period, [cite(eu_dir_2003_88_art_16_b)])].
+test(one_minute_short_of_a_whole_period_of_sick_leave) :-
+    verdicts_of(sick_leave_one_minute_short, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(an_absent_on_site_judgement_that_matters) :-
+    verdicts_of(on_site_absent_matters, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(indeterminate([on_call_on_site_counts_as_working_time]), [])].
+test(an_absent_on_site_judgement_that_does_not_matter) :-
+    verdicts_of(on_site_absent_does_not_matter, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(an_unsure_on_site_judgement_that_matters) :-
+    verdicts_of(on_site_unsure_matters, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time - unsure])]), [])].
+test(on_site_time_counted) :-
+    verdicts_of(on_site_counted, [working_time_weekly_limit_verdict(over_weekly_limit, _)]).
+test(on_site_time_not_counted) :-
+    verdicts_of(on_site_not_counted, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(an_absent_standby_judgement_that_matters) :-
+    verdicts_of(standby_absent_matters, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(indeterminate([on_call_standby_counts_as_working_time]), [])].
+test(a_shift_across_the_end_at_the_limit) :-
+    verdicts_of(edge_shift_at_limit, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(a_shift_across_the_end_one_minute_over) :-
+    verdicts_of(edge_shift_one_minute_over, [working_time_weekly_limit_verdict(over_weekly_limit, _)]).
+test(another_workers_rota_is_ignored) :-
+    verdicts_of(other_worker_ignored, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(the_same_rota_for_its_own_worker_is_over) :-
+    verdicts_of(same_rota_own_worker, [working_time_weekly_limit_verdict(over_weekly_limit, _)]).
+test(a_bad_profile_is_refused) :-
+    verdicts_of(bad_profile, Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(input_problems([wrong_type(reference_period_basis), unknown_key(foo)]), [])].
+test(the_good_profile_control_is_within) :-
+    verdicts_of(good_profile_control, [working_time_weekly_limit_verdict(within_weekly_limit, _)]).
+test(the_average_at_the_limit) :-
+    averages_of(at_limit, Averages),
+    Averages == [minutes_per_seven_days(2880, 1)].
+test(the_average_one_minute_over) :-
+    averages_of(one_minute_over, Averages),
+    Averages == [minutes_per_seven_days(2881, 1)].
+test(the_average_with_a_day_of_leave_is_exact) :-
+    averages_of(leave_day_at_limit, Averages),
+    Averages == [minutes_per_seven_days(8638, 3)].
+test(the_average_of_a_whole_period_of_sick_leave) :-
+    averages_of(all_sick_leave, Averages),
+    Averages == [no_countable_period].
+test(the_average_one_minute_short_of_sick_leave) :-
+    averages_of(sick_leave_one_minute_short, Averages),
+    Averages == [minutes_per_seven_days(0, 1)].
+test(the_average_with_an_absent_judgement_and_on_site_minutes) :-
+    averages_of(on_site_absent_does_not_matter, Averages),
+    Averages == [indeterminate([on_call_on_site_counts_as_working_time])].
+test(the_average_with_an_unsure_judgement) :-
+    averages_of(on_site_unsure_matters, Averages),
+    Averages == [needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time - unsure])])].
+test(the_average_with_on_site_time_counted) :-
+    averages_of(on_site_counted, Averages),
+    Averages == [minutes_per_seven_days(3000, 1)].
+test(the_average_with_on_site_time_not_counted) :-
+    averages_of(on_site_not_counted, Averages),
+    Averages == [minutes_per_seven_days(2000, 1)].
+test(the_average_does_not_read_the_ceiling) :-
+    averages_of(period_one_day_over_twelve_months, Averages),
+    Averages == [minutes_per_seven_days(0, 1)].
+test(no_reduction_at_the_limit) :-
+    reductions_of(at_limit, Reductions),
+    Reductions == [0].
+test(one_minute_over_needs_one_minute) :-
+    reductions_of(one_minute_over, Reductions),
+    Reductions == [1].
+test(a_day_of_leave_one_minute_over_needs_one_minute) :-
+    reductions_of(leave_day_one_minute_over, Reductions),
+    Reductions == [1].
+test(six_whole_days_of_work_need_5760_minutes) :-
+    reductions_of(same_rota_own_worker, Reductions),
+    Reductions == [5760].
+test(counted_on_site_time_needs_120_minutes) :-
+    reductions_of(on_site_counted, Reductions),
+    Reductions == [120].
+test(no_reduction_when_the_unresolved_kind_cannot_cross) :-
+    reductions_of(on_site_absent_does_not_matter, Reductions),
+    Reductions == [0].
+test(the_reduction_asks_for_the_absent_judgement) :-
+    reductions_of(on_site_absent_matters, Reductions),
+    Reductions == [indeterminate([on_call_on_site_counts_as_working_time])].
+test(the_reduction_of_a_whole_period_of_sick_leave) :-
+    reductions_of(all_sick_leave, Reductions),
+    Reductions == [no_countable_period].
+test(the_reduction_of_a_bad_profile) :-
+    reductions_of(bad_profile, Reductions),
+    Reductions == [input_problems([wrong_type(reference_period_basis), unknown_key(foo)])].
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_a_citation, at_the_limit_is_within, one_minute_over_is_over, over_with_the_option_absent_asks_for_it, the_option_with_prior_agreement, the_option_without_prior_agreement, no_prior_agreement_with_the_option_absent_names_both_routes, a_day_of_leave_at_the_limit_is_within, a_day_of_leave_one_minute_over_is_over, four_months_under_the_member_state_period_is_within, one_day_over_four_months_under_the_member_state_period, one_day_over_four_months_without_a_basis, six_months_under_a_derogation_is_within, one_day_over_six_months_under_a_derogation, twelve_months_under_a_collective_agreement_is_within, twelve_months_for_offshore_work_is_within, one_day_over_twelve_months, a_whole_period_of_sick_leave, one_minute_short_of_a_whole_period_of_sick_leave, an_absent_on_site_judgement_that_matters, an_absent_on_site_judgement_that_does_not_matter, an_unsure_on_site_judgement_that_matters, on_site_time_counted, on_site_time_not_counted, an_absent_standby_judgement_that_matters, a_shift_across_the_end_at_the_limit, a_shift_across_the_end_one_minute_over, another_workers_rota_is_ignored, the_same_rota_for_its_own_worker_is_over, a_bad_profile_is_refused, the_good_profile_control_is_within, the_average_at_the_limit, the_average_one_minute_over, the_average_with_a_day_of_leave_is_exact, the_average_of_a_whole_period_of_sick_leave, the_average_one_minute_short_of_sick_leave, the_average_with_an_absent_judgement_and_on_site_minutes, the_average_with_an_unsure_judgement, the_average_with_on_site_time_counted, the_average_with_on_site_time_not_counted, the_average_does_not_read_the_ceiling, no_reduction_at_the_limit, one_minute_over_needs_one_minute, a_day_of_leave_one_minute_over_needs_one_minute, six_whole_days_of_work_need_5760_minutes, counted_on_site_time_needs_120_minutes, no_reduction_when_the_unresolved_kind_cannot_cross, the_reduction_asks_for_the_absent_judgement, the_reduction_of_a_whole_period_of_sick_leave, the_reduction_of_a_bad_profile]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

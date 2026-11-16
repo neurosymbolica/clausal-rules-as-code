@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """gen_citation_index.py -- group cite atoms by legal instrument for batching."""
 from _tools.source_files import is_source
 import os, sys

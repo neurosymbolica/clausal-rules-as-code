@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_information_duties_items_and_further_processing.
+% A TOP-LAYER consumer: it imports the slices' PUBLIC predicates it calls.
+%
+% #2  eligibility          further_processing_information_verdict_status/2 (slice) 
+% #13 compliance_check     gdpr_information_duties_items_and_further_processing_compliance_check/3
+% #14 obligation_surfacing gdpr_information_duties_items_and_further_processing_obligations/2
+% #15 deadline             gdpr_information_duties_items_and_further_processing_deadline/2
+% #16 what-if              gdpr_information_duties_items_and_further_processing_what_if/4
+% Also: profile_keys/1 and the input check (re-exported from the kernel).
+% The result constructors are exported here for the package root; the root
+% atoms are listed under root_atoms: in manifest.yaml (an export list holds
+% only name/arity entries).
+% =====================================================================
+
+:- module(queries, [
+    gdpr_information_duties_items_and_further_processing_profile_keys/1,
+    gdpr_information_duties_items_and_further_processing_input_problems/2,
+    gdpr_information_duties_items_and_further_processing_what_if/4,
+    gdpr_information_duties_items_and_further_processing_deadline/2,
+    gdpr_information_duties_items_and_further_processing_compliance_check/3,
+    gdpr_information_duties_items_and_further_processing_obligations/2,
+    owed_item/2,
+    missing_item/2,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
+]).
+
+:- constructors([
+    owed_item(item, citation),
+    missing_item(item, citation),
+    indeterminate(keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(location, title),
+    document(title, location)
+]).
+
+:- use_module(library(datetime), [timedelta/3, date_sub/3]).
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/kernel, [gdpr_information_duties_items_and_further_processing_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/information_route, [information_route_status/2, information_items_missing/2, information_route_for_flag/2, information_absent_keys/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_items_and_further_processing/further_processing_information_verdict, [further_processing_information_verdict/3]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_information_duties_items_and_further_processing_profile_keys([personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays]).
+
+% #16 what-if: re-read the route with one key hypothetically overridden
+gdpr_information_duties_items_and_further_processing_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    information_route_status(Hypothesis, NewStatus).
+
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(Key, _)|Rest], Key, Value, [attribute(Key, Value)|Rest]).
+override_attribute([attribute(OtherKey, OtherValue)|Rest], Key, Value, [attribute(OtherKey, OtherValue)|NewRest]) :-
+    dif(OtherKey, Key),
+    override_attribute(Rest, Key, Value, NewRest).
+
+% #13 compliance check: may the controller start the further processing now?
+% Permitted when the information was given in time (or no further processing
+% for another purpose is intended); prohibited when the verdict is ineligible.
+gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, Verdict) :-
+    further_processing_information_verdict(Profile, Status, Citations),
+    compliance_verdict(Status, Citations, Verdict).
+
+compliance_verdict(eligible, Citations, permitted(Citations)).
+compliance_verdict(not_applicable, Citations, permitted(Citations)).
+compliance_verdict(ineligible, Citations, prohibited(Citations)).
+compliance_verdict(indeterminate(Keys), _, indeterminate(Keys)).
+compliance_verdict(needs_legal_review(Reason, Context), _, needs_legal_review(Reason, Context)).
+compliance_verdict(input_problems(Problems), _, input_problems(Problems)).
+
+% #14 obligation surfacing: what the controller must still give the data subject
+gdpr_information_duties_items_and_further_processing_obligations(Profile, Answer) :-
+    information_items_missing(Profile, Answer).
+
+% #15 deadline: Art 13(3), 14(4) require the information PRIOR to the further
+% processing, so the last day is the day before the start date; missing it
+% makes the further_processing_information_verdict ineligible.
+gdpr_information_duties_items_and_further_processing_deadline(Profile, Answer) :-
+    gdpr_information_duties_items_and_further_processing_input_problems(Profile, Problems),
+    deadline_with_problems(Problems, Profile, Answer).
+
+deadline_with_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+deadline_with_problems([], Profile, Answer) :-
+    information_absent_keys(Profile, [personal_data_collected_from_data_subject, further_processing_for_another_purpose_intended], Absent),
+    deadline_after_gate(Absent, Profile, Answer).
+
+deadline_after_gate([Key|Keys], _, indeterminate([Key|Keys])).
+deadline_after_gate([], Profile, Answer) :-
+    profile_get(Profile, further_processing_for_another_purpose_intended, Intended),
+    deadline_by_intention(Intended, Profile, Answer).
+
+deadline_by_intention(false, _, not_applicable).
+deadline_by_intention(true, Profile, Answer) :-
+    information_absent_keys(Profile, [further_processing_start_date], Absent),
+    deadline_after_start(Absent, Profile, Answer).
+
+deadline_after_start([Key|Keys], _, indeterminate([Key|Keys])).
+deadline_after_start([], Profile, deadline(LastDate, cite(CiteKey), consequence(ineligible))) :-
+    profile_get(Profile, further_processing_start_date, StartDate),
+    profile_get(Profile, personal_data_collected_from_data_subject, Collected),
+    information_route_for_flag(Collected, Route),
+    prior_citation_key(Route, CiteKey),
+    timedelta(1, 0, OneDay),
+    date_sub(StartDate, OneDay, LastDate).
+
+prior_citation_key(art13, eu_reg_2016_679_art_13_3) :-
+    implements(eu_reg_2016_679_art_13_3).
+prior_citation_key(art14, eu_reg_2016_679_art_14_4) :-
+    implements(eu_reg_2016_679_art_14_4).
+
+:- end_module(queries).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Korean National Law Information Centre (law.go.kr DRF `lawService`, target=eflaw,
 type=XML) -> an Akoma Ntoso extract the units reader already reads.
 

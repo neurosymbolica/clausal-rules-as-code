@@ -1,0 +1,345 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_art36_3_consultation_request
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_art36_3_consultation_request"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_art36_3_consultation_request.clausal --
+  - "consultation_request_status/4"
+  - "missing_consultation_request_items/4"
+  - "decide_gdpr_art36_3_consultation_request/2"
+  - "gdpr_art36_3_consultation_request_status/2"
+  - "gdpr_art36_3_consultation_request_checklist/2"
+  - "gdpr_art36_3_consultation_request_decision_resolvable/1"
+  - "gdpr_art36_3_consultation_request_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_art36_3_consultation_request_profile_keys/1"
+  - "gdpr_art36_3_consultation_request_input_problems/2"
+  - "gdpr_art36_3_consultation_request_what_if/4"
+  - "consultation_request_complete/0"
+  - "consultation_request_incomplete/0"
+  - "not_governed_by_article_36_3/0"
+  - "respective_responsibilities/0"
+  - "purposes_and_means/0"
+  - "measures_and_safeguards/0"
+  - "data_protection_officer_contact_details/0"
+  - "data_protection_impact_assessment/0"
+  - "other_requested_information/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_art36_3_consultation_request_subject/1"
+  - "gdpr_art36_3_consultation_request_profile_for/2"
+  - "gdpr_art36_3_consultation_request_assess/2"
+
+# root_exports: every bare atom the scorer resolves on the package root.
+root_exports:
+  - consultation_under_article_36_1
+  - joint_controllers_or_processors_involved
+  - respective_responsibilities_provided
+  - purposes_and_means_provided
+  - measures_and_safeguards_provided
+  - data_protection_officer_designated
+  - data_protection_officer_contact_details_provided
+  - impact_assessment_provided
+  - other_information_requested_by_supervisory_authority
+  - requested_other_information_provided
+  - consultation_request_complete
+  - consultation_request_incomplete
+  - not_governed_by_article_36_3
+  - respective_responsibilities
+  - purposes_and_means
+  - measures_and_safeguards
+  - data_protection_officer_contact_details
+  - data_protection_impact_assessment
+  - other_requested_information
+  - absent
+  - not_attempted
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators), which are not backbone packages.
+uses: []
+
+scope: 'What the controller must provide to the supervisory authority when it consults
+  the authority under Article 36(1) of Regulation (EU) 2016/679: the six items of
+  Article 36(3), points (a) to (f), read as a checklist of presence (not adequacy).
+  Two questions are answered: whether the consultation request holds every item that
+  applies (consultation_request_status/4) and which items that apply are not provided
+  (missing_consultation_request_items/4). Out of scope: whether the controller must
+  consult (Art 36(1) and 36(5), decided in gdpr-impact-assessment-prior-consultation),
+  whether an impact assessment was required or what it must contain (Art 35, decided
+  in gdpr-impact-assessment-assessment-duty-stated-risk), who is a controller, joint
+  controller or processor (an attested outside fact; Arts 4(7), 4(8), 26 and 28),
+  whether a data protection officer must be designated (Art 37), and what the authority
+  does after the request (Art 36(2) and Arts 51, 55, 56, 58). No date is computed.'
+
+sources:
+  - 'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated
+    text 02016R0679-20160504: Article 36(3), points (a) to (f) (formalised); Article
+    36(1) and 36(5) (read only to say which consultation the key consultation_under_article_36_1
+    names).'
+
+query_interface:
+  2: "gdpr_art36_3_consultation_request_status/2"           # status verdict projection
+  4: "missing_consultation_request_items/4"                 # enumeration: items that apply and are missing
+  7: "gdpr_art36_3_consultation_request_checklist/2"        # justification: one cited row per point
+  13: "consultation_request_status/4"                       # compliance_check: is the request complete
+  16: "gdpr_art36_3_consultation_request_what_if/4"         # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_035
+  - 02016R0679-20160504#art_036
+  reason: 'The headings of Articles 4, 35 and 36 (with the opening words of Article
+    4, ''For the purposes of this Regulation:'') carry no obligation: document structure,
+    not operative law.'
+  consequence: 'None for a caller: a heading carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: consultation_duty
+  units:
+  - 02016R0679-20160504#parag_036.001
+  - 02016R0679-20160504#parag_036.005
+  reason: Whether the controller must consult the supervisory authority under Art
+    36(1), or under Member State law adopted under Art 36(5), is decided in gdpr-impact-assessment-prior-consultation.
+    This order quotes both paragraphs for reading (1) only and takes, as the crisp
+    key consultation_under_article_36_1, the caller's statement that it consults under
+    Art 36(1).
+  consequence: No answer of this order says whether a consultation is required; the
+    caller asks gdpr-impact-assessment-prior-consultation, and states consultation_under_article_36_1.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-impact-assessment-prior-consultation
+- debt: true
+  what: authority_response_periods
+  units:
+  - 02016R0679-20160504#parag_036.002
+  reason: Art 36(2) (written advice within up to eight weeks of receipt of the request,
+    extension by six weeks, suspension until the authority has obtained information
+    it has requested) binds the supervisory authority after the request; no answer
+    of this order computes a period or says whether a period runs while the request
+    is incomplete (reading (7)).
+  consequence: A caller who needs to know when the written advice is due, or whether
+    an incomplete request delays it, reads Art 36(2) itself.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later order, not in this order's rules;
+    the deferral stands for this run.
+- what: member_state_legislative_consultation
+  units:
+  - 02016R0679-20160504#parag_036.004
+  reason: Art 36(4) binds Member States preparing legislative or regulatory measures,
+    not controllers.
+  consequence: 'None for a caller: Art 36(4) binds Member States, not controllers.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: impact_assessment_duty_and_contents
+  units:
+  - 02016R0679-20160504#parag_035.001
+  - 02016R0679-20160504#parag_035.003
+  - 02016R0679-20160504#point_035.003_a
+  - 02016R0679-20160504#point_035.003_b
+  - 02016R0679-20160504#point_035.003_c
+  - 02016R0679-20160504#parag_035.004
+  - 02016R0679-20160504#parag_035.005
+  - 02016R0679-20160504#parag_035.007
+  - 02016R0679-20160504#point_035.007_a
+  - 02016R0679-20160504#point_035.007_b
+  - 02016R0679-20160504#point_035.007_c
+  - 02016R0679-20160504#point_035.007_d
+  - 02016R0679-20160504#parag_035.010
+  reason: Whether an impact assessment is required (Art 35(1), (3), (4), (5), (10))
+    and which of its Art 35(7) contents are missing are decided in gdpr-impact-assessment-assessment-duty-stated-risk.
+    This order reads only whether the controller provides the assessment it carried
+    out (Art 36(3)(e); reading (2) and (4)).
+  consequence: An answer consultation_request_complete does not say that the impact
+    assessment has the Art 35(7) contents; the caller asks gdpr-impact-assessment-assessment-duty-stated-risk.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-impact-assessment-assessment-duty-stated-risk
+- debt: true
+  what: impact_assessment_procedure_points
+  units:
+  - 02016R0679-20160504#parag_035.002
+  - 02016R0679-20160504#parag_035.008
+  - 02016R0679-20160504#parag_035.009
+  - 02016R0679-20160504#parag_035.011
+  reason: Art 35(2) (the advice of the data protection officer), 35(8) (codes of conduct
+    taken into account), 35(9) (the views of data subjects) and 35(11) (review of
+    the assessment) are steps in carrying out an assessment; no answer of this order
+    reads them.
+  consequence: No answer checks how the impact assessment was carried out or reviewed.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later order, not in this order's rules;
+    the deferral stands for this run.
+- what: consistency_mechanism_for_lists
+  units:
+  - 02016R0679-20160504#parag_035.006
+  reason: Art 35(6) binds the competent supervisory authority (the consistency mechanism
+    for its lists), not controllers.
+  consequence: 'None for a caller: Art 35(6) binds the supervisory authority.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: role_definitions
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_24
+  reason: 'The definitions of personal data, controller, processor and the other roles,
+    establishments and groups of undertakings in Article 4, and the definitions of
+    genetic, biometric and health data and of a relevant and reasoned objection (Article
+    4(13), (14), (15) and (24)), are decided in gdpr-common-definitions-roles-and-establishments.
+    This order applies none of them: the role question of point (a) is the attested
+    outside fact joint_controllers_or_processors_involved (reading (3)).'
+  consequence: No answer says who is a controller, joint controller or processor;
+    the caller asks gdpr-common-definitions-roles-and-establishments or attests joint_controllers_or_processors_involved.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-roles-and-establishments
+- what: role_definitions_lettered_parts
+  units:
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  reason: The lettered parts of the definitions of main establishment, supervisory
+    authority concerned and cross-border processing (Article 4(16), (22) and (23))
+    are decided with their parent points in gdpr-common-definitions-roles-and-establishments;
+    this order applies none of them.
+  consequence: 'None for a caller of this order: no answer turns on these definitions.'
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-roles-and-establishments
+- what: data_and_processing_definitions
+  units:
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: The definitions of processing, profiling, pseudonymisation and the other
+    data and processing terms in Article 4 are decided in gdpr-common-definitions-data-and-processing;
+    this order applies none of them.
+  consequence: 'None for a caller of this order: no answer turns on these definitions.'
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-data-and-processing
+- what: supervisory_authority_definition
+  units:
+  - 02016R0679-20160504#point_004_21
+  reason: Article 4(21) defines a supervisory authority as an independent public authority
+    established by a Member State under Article 51; which authority the controller
+    consults is an institutional question this order does not decide.
+  consequence: The caller consults the authority it takes to be competent; no answer
+    names it.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- debt: true
+  what: representative_and_binding_corporate_rules_definitions
+  units:
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_20
+  reason: Article 4(17) (representative) and 4(20) (binding corporate rules) are definitions
+    no answer of this order reads.
+  consequence: 'None for a caller of this order: no answer turns on these definitions.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later order, not in this order's rules;
+    the deferral stands for this run.
+
+excluded_set:
+- what: joint_controller_and_processor_rules
+  instrument: Regulation (EU) 2016/679 Arts 26 and 28
+  cites:
+  - 02016R0679-20160504#art_026
+  - 02016R0679-20160504#art_028
+  reason: The arrangement between joint controllers and the processor's position are
+    in Articles 26 and 28, not pinned here; whether a joint controller or processor
+    is involved is the attested outside fact joint_controllers_or_processors_involved
+    (reading (3)).
+  consequence: No answer checks the joint controllers' arrangement or the processor
+    contract; the caller attests the roles.
+- what: data_protection_officer_designation
+  instrument: Regulation (EU) 2016/679 Art 37
+  cites:
+  - 02016R0679-20160504#art_037
+  reason: Whether the controller must designate a data protection officer is decided
+    under Article 37, not pinned here; the order reads only whether one is designated
+    (data_protection_officer_designated; reading (5), Q3).
+  consequence: No answer says whether a data protection officer must be designated.
+- what: authority_competence_and_powers
+  instrument: Regulation (EU) 2016/679 Arts 51, 55, 56 and 58
+  cites:
+  - 02016R0679-20160504#art_051
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_058
+  reason: Which supervisory authority is competent to be consulted and what it may
+    do after the request are in Articles 51, 55, 56 and 58, not pinned here.
+  consequence: No answer names the authority to consult or says what it may do with
+    an incomplete request.
+- what: recitals
+  instrument: Regulation (EU) 2016/679 recitals on impact assessment and prior consultation
+  cites:
+  - 32016R0679#rct_84
+  - 32016R0679#rct_89
+  - 32016R0679#rct_90
+  - 32016R0679#rct_94
+  - 32016R0679#rct_95
+  - 32016R0679#rct_96
+  reason: No recital is pinned, so none is quoted or cited as a provision.
+  consequence: The readings rest on the pinned articles only.

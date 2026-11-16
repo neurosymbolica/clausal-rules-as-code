@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: the profile
+% schema, the what-if override and the re-exported input check.
+% Run: python -m clausal.testing eu/data_protection/gdpr_administrative_fine_maximum/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/queries, [
+    gdpr_administrative_fine_maximum_profile_keys/1,
+    gdpr_administrative_fine_maximum_input_problems/2,
+    gdpr_administrative_fine_maximum_what_if/4
+]).
+:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/fixtures, [gdpr_administrative_fine_maximum_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_administrative_fine_maximum_profile_keys(ProfileKeys),
+    ProfileKeys == [infringed_provisions, infringer_is_undertaking, total_worldwide_annual_turnover_in_euros, infringements_concern_same_or_linked_processing_operations, infringements_intentional_or_negligent].
+
+test(what_if_replaces_an_existing_key) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_tie_at_fixed, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, 500000001, Verdict),
+    Verdict == fine_maximum(lower_maximum_tier, percentage_of_turnover, 1000000002).
+
+test(what_if_gives_exactly_one_answer) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_tie_at_fixed, Profile),
+    findall(Verdict, gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, 499999999, Verdict), Verdicts),
+    Verdicts == [fine_maximum(lower_maximum_tier, fixed_amount, 1000000000)].
+
+test(what_if_adds_an_absent_key) :-
+    gdpr_administrative_fine_maximum_profile_for(missing_turnover, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, 1000, Verdict),
+    Verdict == fine_maximum(higher_maximum_tier, fixed_amount, 2000000000).
+
+test(what_if_leaves_the_original_verdict_alone) :-
+    gdpr_administrative_fine_maximum_profile_for(missing_turnover, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, infringer_is_undertaking, false, Verdict),
+    Verdict == fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000).
+
+test(what_if_can_flip_the_tier) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, infringed_provisions, [article_6], Verdict),
+    Verdict == fine_maximum(higher_maximum_tier, percentage_of_turnover, 4000000000).
+
+test(what_if_can_make_the_infringements_separate) :-
+    gdpr_administrative_fine_maximum_profile_for(combined_all_lower, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, infringements_intentional_or_negligent, false, Verdict),
+    Verdict == separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_33, lower_maximum_tier, percentage_of_turnover, 2000000000)]).
+
+test(what_if_can_resolve_a_referral) :-
+    gdpr_administrative_fine_maximum_profile_for(unsure_second_art_83_3_key, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, infringements_intentional_or_negligent, true, Verdict),
+    Verdict == fine_maximum(higher_maximum_tier, fixed_amount, 2000000000).
+
+test(what_if_into_a_bad_value_is_an_input_problem) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_tie_at_fixed, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, -5, Verdict),
+    Verdict == input_problems([wrong_type(total_worldwide_annual_turnover_in_euros)]).
+
+test(what_if_does_not_leave_the_wrong_verdict, fail) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_tie_at_fixed, Profile),
+    gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, 499999999, fine_maximum(_, percentage_of_turnover, _)).
+
+test(the_input_check_is_re_exported) :-
+    gdpr_administrative_fine_maximum_profile_for(input_unknown_key, Profile),
+    gdpr_administrative_fine_maximum_input_problems(Profile, [unknown_key(surprise_key)]).
+
+test(the_input_check_gives_one_answer) :-
+    gdpr_administrative_fine_maximum_profile_for(input_duplicate_key, Profile),
+    findall(Problems, gdpr_administrative_fine_maximum_input_problems(Profile, Problems), ProblemLists),
+    ProblemLists == [[duplicate_key(infringer_is_undertaking)]].
+
+:- end_module(test_queries).

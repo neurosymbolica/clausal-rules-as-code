@@ -1,0 +1,69 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_nis2_implementing_regulation_significant_incidents_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_queries, [nis2_implementing_regulation_significant_incidents_profile_keys/1, nis2_implementing_regulation_significant_incidents_what_if/4, unsure/0, relevant_entity_type/0, trust_service_provider/0]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_nis2_implementing_regulation_significant_incidents, [significant_incident_criteria/3, nis2_implementing_regulation_significant_incidents_checklist/2]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_fixtures, [nis2_implementing_regulation_significant_incidents_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    nis2_implementing_regulation_significant_incidents_profile_keys(ProfileKeys),
+    ProfileKeys == [scheduled_interruption_or_maintenance, relevant_entity_type, direct_financial_loss_euro_cents, annual_turnover_preceding_financial_year_euro_cents, trade_secret_exfiltration, death_of_natural_person, considerable_damage_to_natural_person_health, suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption, recurring_incidents_within_six_months, same_apparent_root_cause, recurring_collective_direct_financial_loss_euro_cents, complete_unavailability_seconds, average_response_time_above_ten_seconds_seconds, limited_availability_seconds, weekly_unavailability_seconds, complete_unavailability_users, limited_availability_users, data_compromise_users, service_users_in_union, data_compromised, data_compromise_suspectedly_malicious, physical_access_compromised, incorrect_data_only_by_misconfiguration, incorrect_domain_names, managed_domain_names].
+test(root_export_atoms_are_served) :-
+    unsure,
+    relevant_entity_type,
+    trust_service_provider.
+test(eligibility_answers_once_with_its_citation) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(trade_secret_exfiltration_true, Profile),
+    findall(Result - Citations, significant_incident_criteria(Profile, Result, Citations), Answers),
+    Answers == [significant - [cite(eu_reg_2024_2690_art_3_1)]].
+test(eligibility_checklist_names_the_open_keys) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_below_floor_turnover_absent, Profile),
+    nis2_implementing_regulation_significant_incidents_checklist(Profile, Items),
+    member(item(direct_financial_loss, unknown([annual_turnover_preceding_financial_year_euro_cents]), cite(eu_reg_2024_2690_art_3_1_a)), Items).
+test(what_if_raising_the_loss_above_the_floor_flips_to_significant) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_equal_floor_turnover_large, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, direct_financial_loss_euro_cents, 50000001, NewStatus),
+    NewStatus == significant.
+test(what_if_leaves_the_loss_at_the_floor_not_significant) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_equal_floor_turnover_large, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, direct_financial_loss_euro_cents, 50000000, NewStatus),
+    NewStatus == not_significant.
+test(what_if_unscheduling_flips_to_significant) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(scheduled_maintenance_with_loss, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, scheduled_interruption_or_maintenance, false, NewStatus),
+    NewStatus == significant.
+test(what_if_adds_an_absent_key) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_scheduled_absent, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, scheduled_interruption_or_maintenance, false, NewStatus),
+    NewStatus == significant.
+test(what_if_unsure_judgement_goes_to_a_lawyer) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(all_criteria_closed_dns, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, death_of_natural_person, unsure, NewStatus),
+    NewStatus = needs_legal_review(open_textured(death_of_natural_person, cite(eu_reg_2024_2690_art_3_1_c)), _).
+test(what_if_with_a_bad_value_is_an_input_problem) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(all_criteria_closed_dns, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, death_of_natural_person, maybe, NewStatus),
+    NewStatus == input_problems([wrong_type(death_of_natural_person)]).
+test(what_if_replaces_every_occurrence_of_the_key) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(duplicate_and_unknown_keys, Profile),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, scheduled_interruption_or_maintenance, false, NewStatus),
+    NewStatus == input_problems([unknown_key(colour)]).
+test(what_if_passes_a_non_list_to_the_input_check) :-
+    nis2_implementing_regulation_significant_incidents_what_if(not_a_profile, death_of_natural_person, true, NewStatus),
+    NewStatus == input_problems([wrong_type(profile)]).
+test(what_if_yields_exactly_one_status) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(dns_outage_exactly_thirty_minutes, Profile),
+    findall(NewStatus, nis2_implementing_regulation_significant_incidents_what_if(Profile, complete_unavailability_seconds, 1801, NewStatus), NewStatuses),
+    NewStatuses == [significant].
+
+cp_test_names([profile_keys_are_the_contract_keys, root_export_atoms_are_served, eligibility_answers_once_with_its_citation, eligibility_checklist_names_the_open_keys, what_if_raising_the_loss_above_the_floor_flips_to_significant, what_if_leaves_the_loss_at_the_floor_not_significant, what_if_unscheduling_flips_to_significant, what_if_adds_an_absent_key, what_if_unsure_judgement_goes_to_a_lawyer, what_if_with_a_bad_value_is_an_input_problem, what_if_replaces_every_occurrence_of_the_key, what_if_passes_a_non_list_to_the_input_check, what_if_yields_exactly_one_status]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

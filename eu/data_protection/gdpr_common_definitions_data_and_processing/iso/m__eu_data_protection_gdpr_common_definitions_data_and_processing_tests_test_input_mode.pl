@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_gdpr_common_definitions_data_and_processing, [gdpr_common_definitions_data_and_processing_status/2, personal_data/2, receiving_body_is_third_party/2, consent_elements/2, information_society_service/2, international_organisation/2, data_and_processing_outside_facts/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_kernel, [gdpr_common_definitions_data_and_processing_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_fixtures, [gdpr_common_definitions_data_and_processing_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    gdpr_common_definitions_data_and_processing_status(Profile, met).
+test(not_about_a_person_is_not_met) :-
+    gdpr_common_definitions_data_and_processing_profile_for(not_about_a_person, Profile),
+    personal_data(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_1)])).
+test(consent_names_every_false_element) :-
+    gdpr_common_definitions_data_and_processing_profile_for(consent_without_specificity, Profile),
+    consent_elements(Profile, definition_answer(not_met, unmet_elements([indication_specific, indication_unambiguous]), [cite(eu_reg_2016_679_art_4_11)])).
+test(own_processor_is_not_a_third_party) :-
+    gdpr_common_definitions_data_and_processing_profile_for(own_processor, Profile),
+    receiving_body_is_third_party(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_10)])).
+test(unattested_service_refers) :-
+    gdpr_common_definitions_data_and_processing_profile_for(unattested_service, Profile),
+    information_society_service(Profile, definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)), [resolution(cite(eu_dir_2015_1535_art_1_1_b), not_attempted), inputs_relied_on([])]), none, [cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)])).
+test(governed_by_public_international_law_ground) :-
+    gdpr_common_definitions_data_and_processing_profile_for(public_international_organisation, Profile),
+    international_organisation(Profile, definition_answer(met, governed_by_public_international_law, [cite(eu_reg_2016_679_art_4_26)])).
+test(set_up_by_agreement_ground) :-
+    gdpr_common_definitions_data_and_processing_profile_for(set_up_by_agreement, Profile),
+    international_organisation(Profile, definition_answer(met, set_up_by_agreement_between_countries, [cite(eu_reg_2016_679_art_4_26)])).
+test(well_formed_profile_has_no_problem) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    gdpr_common_definitions_data_and_processing_input_problems(Profile, []).
+test(empty_profile_has_no_problem) :-
+    gdpr_common_definitions_data_and_processing_input_problems([], []).
+test(unsure_on_a_crisp_key_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_profile_for(malformed_profile, Profile),
+    gdpr_common_definitions_data_and_processing_input_problems(Profile, [wrong_type(natural_person_identified)]).
+test(unknown_key_is_named) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(some_other_key, true)], [unknown_key(some_other_key)]).
+test(duplicate_key_is_named_whatever_the_values) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(natural_person_identified, true), attribute(natural_person_identified, true)], [duplicate_key(natural_person_identified)]).
+test(bare_outside_fact_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(service_is_information_society_service, true)], [wrong_type(service_is_information_society_service)]).
+test(a_list_of_non_attributes_is_not_a_profile) :-
+    gdpr_common_definitions_data_and_processing_input_problems(not_a_list, [wrong_type(profile)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(extra_key, true), attribute(processing_automated, unsure), attribute(natural_person_identified, true), attribute(natural_person_identified, false)], [duplicate_key(natural_person_identified), wrong_type(processing_automated), unknown_key(extra_key)]).
+test(a_profile_with_problems_gives_input_problems_answer) :-
+    gdpr_common_definitions_data_and_processing_profile_for(malformed_profile, Profile),
+    personal_data(Profile, definition_answer(input_problems([wrong_type(natural_person_identified)]), none, [])).
+test(the_input_check_covers_keys_a_relation_does_not_read) :-
+    personal_data([attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(processing_automated, unsure)], definition_answer(input_problems([wrong_type(processing_automated)]), none, [])).
+test(outside_facts_with_problems) :-
+    gdpr_common_definitions_data_and_processing_profile_for(malformed_profile, Profile),
+    data_and_processing_outside_facts(Profile, input_problems([wrong_type(natural_person_identified)])).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+    gdpr_common_definitions_data_and_processing_status(Profile, not_met).
+
+cp_test_names([status_holds_with_the_verdict_bound, not_about_a_person_is_not_met, consent_names_every_false_element, own_processor_is_not_a_third_party, unattested_service_refers, governed_by_public_international_law_ground, set_up_by_agreement_ground, well_formed_profile_has_no_problem, empty_profile_has_no_problem, unsure_on_a_crisp_key_is_wrong_type, unknown_key_is_named, duplicate_key_is_named_whatever_the_values, bare_outside_fact_is_wrong_type, a_list_of_non_attributes_is_not_a_profile, problems_come_in_contract_order_then_unknown_keys, a_profile_with_problems_gives_input_problems_answer, the_input_check_covers_keys_a_relation_does_not_read, outside_facts_with_problems]).
+cp_test_fail_names([the_wrong_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

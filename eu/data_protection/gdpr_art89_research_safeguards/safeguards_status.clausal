@@ -1,0 +1,198 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% safeguards_status.clausal -- the safeguards_status DETERMINATION for
+% eu/data_protection/gdpr_art89_research_safeguards.
+% Source: Regulation (EU) 2016/679 (GDPR) Art 89(1).
+% Four requirements (measures, minimisation, identification,
+% appropriateness), each evaluated by strong Kleene to met, unmet,
+% absent(Keys) or judgement(Key). Judgements are handed to the user.
+% =====================================================================
+
+:- module(safeguards_status, [
+    decide_safeguards/2,
+    safeguards_status/2,
+    unmet_requirements/2,
+    decide_safeguards_status/2,
+    safeguards_status_status/2,
+    safeguards_status_checklist/2,
+    safeguards_status_decision_resolvable/1,
+    safeguards_status_status_values/1
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/kernel, [gdpr_art89_research_safeguards_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/citations, [implements/1]).
+
+% ---- value facts owned by this determination --------------------------
+safeguards_status_status_values([in_accordance, not_in_accordance, not_applicable]).
+
+named_purpose(archiving_public_interest).
+named_purpose(scientific_research).
+named_purpose(historical_research).
+named_purpose(statistical).
+
+missing_key_order([
+    identifiable_data_processed,
+    minimisation_measures_in_place,
+    non_identifying_processing_sufficient,
+    safeguards_appropriate,
+    technical_organisational_measures_in_place
+]).
+
+judgement_key_order([non_identifying_processing_sufficient, safeguards_appropriate]).
+
+% referral(Input, Reason, Citation, InputsRead)
+referral(non_identifying_processing_sufficient, open_textured, cite(eu_reg_2016_679_art_89_1), [identifiable_data_processed, non_identifying_processing_sufficient]).
+referral(safeguards_appropriate, open_textured, cite(eu_reg_2016_679_art_89_1), [safeguards_appropriate]).
+
+% ---- reading a key: its value, or absent --------------------------------
+reading(Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+reading(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+% ---- the headline verdict ---------------------------------------------
+decide_safeguards(Profile, Verdict) :-
+    gdpr_art89_research_safeguards_input_problems(Profile, Problems),
+    decide_checked(Problems, Profile, Verdict).
+
+decide_checked([Problem|Problems], _, gdpr_art89_verdict(input_problems([Problem|Problems]), [], [])).
+decide_checked([], Profile, Verdict) :-
+    reading(Profile, purpose, Purpose),
+    decide_purpose(Purpose, Profile, Verdict).
+
+decide_purpose(absent, _, gdpr_art89_verdict(indeterminate([purpose]), [], [])) :-
+    implements(eu_reg_2016_679_art_89_1).
+decide_purpose(other_purpose, _, gdpr_art89_verdict(not_applicable, [], [])) :-
+    implements(eu_reg_2016_679_art_89_1).
+decide_purpose(Purpose, Profile, Verdict) :-
+    implements(eu_reg_2016_679_art_89_1),
+    named_purpose(Purpose),
+    requirement_outcomes(Profile, Outcomes),
+    unmet_ids(Outcomes, Unmet),
+    decide_by_unmet(Unmet, Outcomes, Profile, Verdict).
+
+unmet_ids(Outcomes, Unmet) :-
+    findall(RequirementId, member(RequirementId-unmet, Outcomes), Unmet).
+
+decide_by_unmet([First|Remaining], _, _, gdpr_art89_verdict(not_in_accordance, [First|Remaining], [cite(eu_reg_2016_679_art_89_1)])) :-
+    implements(eu_reg_2016_679_art_89_1).
+decide_by_unmet([], Outcomes, Profile, Verdict) :-
+    absent_keys(Outcomes, Missing),
+    decide_by_missing(Missing, Outcomes, Profile, Verdict).
+
+absent_keys(Outcomes, Missing) :-
+    missing_key_order(Order),
+    findall(Key, (member(Key, Order), absent_in(Key, Outcomes)), Missing).
+
+absent_in(Key, Outcomes) :-
+    member(_-absent(Keys), Outcomes),
+    member(Key, Keys).
+
+decide_by_missing([First|Remaining], _, _, gdpr_art89_verdict(indeterminate([First|Remaining]), [], [])) :-
+    implements(eu_reg_2016_679_art_89_1).
+decide_by_missing([], Outcomes, Profile, Verdict) :-
+    open_judgement_keys(Outcomes, Keys),
+    decide_by_judgement(Keys, Profile, Verdict).
+
+open_judgement_keys(Outcomes, Keys) :-
+    judgement_key_order(Order),
+    findall(Key, (member(Key, Order), member(_-judgement(Key), Outcomes)), Keys).
+
+decide_by_judgement([Input|_], Profile, gdpr_art89_verdict(needs_legal_review(open_textured(Input, Citation), [inputs_relied_on(Relied)]), [], [])) :-
+    implements(eu_reg_2016_679_art_89_1),
+    referral(Input, open_textured, Citation, InputsRead),
+    relied_pairs(InputsRead, Profile, Relied).
+decide_by_judgement([], _, gdpr_art89_verdict(in_accordance, [], [cite(eu_reg_2016_679_art_89_1)])) :-
+    implements(eu_reg_2016_679_art_89_1).
+
+relied_pairs([], _, []).
+relied_pairs([Key|Keys], Profile, [Key-Value|Pairs]) :-
+    profile_get(Profile, Key, Value),
+    relied_pairs(Keys, Profile, Pairs).
+
+% ---- the four requirements ----------------------------------------------
+requirement_outcomes(Profile, [measures-MeasuresOutcome, minimisation-MinimisationOutcome, identification-IdentificationOutcome, appropriateness-AppropriatenessOutcome]) :-
+    requirement_outcome(measures, Profile, MeasuresOutcome),
+    requirement_outcome(minimisation, Profile, MinimisationOutcome),
+    requirement_outcome(identification, Profile, IdentificationOutcome),
+    requirement_outcome(appropriateness, Profile, AppropriatenessOutcome).
+
+requirement_outcome(measures, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_89_1),
+    reading(Profile, technical_organisational_measures_in_place, Value),
+    crisp_outcome(Value, technical_organisational_measures_in_place, Outcome).
+requirement_outcome(minimisation, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_89_1),
+    reading(Profile, minimisation_measures_in_place, Value),
+    crisp_outcome(Value, minimisation_measures_in_place, Outcome).
+requirement_outcome(identification, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_89_1),
+    reading(Profile, identifiable_data_processed, Identifiable),
+    reading(Profile, non_identifying_processing_sufficient, Sufficient),
+    identification_outcome(Identifiable, Sufficient, Outcome).
+requirement_outcome(appropriateness, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_89_1),
+    reading(Profile, safeguards_appropriate, Value),
+    judgement_outcome(Value, safeguards_appropriate, Outcome).
+
+crisp_outcome(true, _, met).
+crisp_outcome(false, _, unmet).
+crisp_outcome(absent, Key, absent([Key])).
+
+judgement_outcome(true, _, met).
+judgement_outcome(false, _, unmet).
+judgement_outcome(unsure, Key, judgement(Key)).
+judgement_outcome(absent, Key, absent([Key])).
+
+identification_outcome(false, _, met).
+identification_outcome(true, false, met).
+identification_outcome(true, true, unmet).
+identification_outcome(true, unsure, judgement(non_identifying_processing_sufficient)).
+identification_outcome(true, absent, absent([non_identifying_processing_sufficient])).
+identification_outcome(absent, false, met).
+identification_outcome(absent, true, absent([identifiable_data_processed])).
+identification_outcome(absent, unsure, absent([identifiable_data_processed])).
+identification_outcome(absent, absent, absent([identifiable_data_processed, non_identifying_processing_sufficient])).
+
+% ---- projections -----------------------------------------------------
+safeguards_status(Profile, Status) :-
+    decide_safeguards(Profile, gdpr_art89_verdict(Status, _, _)).
+
+unmet_requirements(Profile, Unmet) :-
+    decide_safeguards(Profile, gdpr_art89_verdict(_, Unmet, _)).
+
+decide_safeguards_status(Profile, safeguards_status_verdict(Status, Citations)) :-
+    decide_safeguards(Profile, gdpr_art89_verdict(Status, _, Citations)).
+
+safeguards_status_status(Profile, Status) :-
+    safeguards_status(Profile, Status).
+
+safeguards_status_decision_resolvable(Profile) :-
+    decide_safeguards(Profile, _).
+
+% ---- checklist: one row per requirement, each with cite(...) ----------
+safeguards_status_checklist(Profile, Items) :-
+    gdpr_art89_research_safeguards_input_problems(Profile, Problems),
+    checklist_for(Problems, Profile, Items).
+
+checklist_for([], Profile, Items) :-
+    requirement_outcomes(Profile, Outcomes),
+    checklist_items(Outcomes, Items).
+checklist_for([Problem|Problems], _, [item(input_check, input_problems([Problem|Problems]), cite(eu_reg_2016_679_art_89_1))]).
+
+checklist_items([], []).
+checklist_items([RequirementId-Outcome|Remaining], [item(RequirementId, Outcome, cite(eu_reg_2016_679_art_89_1))|Items]) :-
+    checklist_items(Remaining, Items).
+
+% ---- per-rule tests ---------------------------------------------------
+test(complete_profile_is_in_accordance) :-
+    decide_safeguards([attribute(purpose, scientific_research), attribute(technical_organisational_measures_in_place, true), attribute(minimisation_measures_in_place, true), attribute(identifiable_data_processed, false), attribute(safeguards_appropriate, true)], gdpr_art89_verdict(in_accordance, [], [cite(eu_reg_2016_679_art_89_1)])).
+test(absent_purpose_is_indeterminate) :-
+    decide_safeguards([], gdpr_art89_verdict(indeterminate([purpose]), [], [])).
+test(other_purpose_is_not_applicable) :-
+    decide_safeguards([attribute(purpose, other_purpose)], gdpr_art89_verdict(not_applicable, [], [])).
+test(missing_measures_is_unmet) :-
+    unmet_requirements([attribute(purpose, statistical), attribute(technical_organisational_measures_in_place, false), attribute(minimisation_measures_in_place, true), attribute(identifiable_data_processed, false), attribute(safeguards_appropriate, true)], [measures]).
+
+:- end_module(safeguards_status).

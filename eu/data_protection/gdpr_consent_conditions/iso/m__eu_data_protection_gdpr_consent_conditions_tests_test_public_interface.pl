@@ -1,0 +1,204 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_consent_conditions_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [decide_gdpr_consent_conditions/2, gdpr_consent_conditions_status/2, gdpr_consent_conditions_checklist/2, gdpr_consent_conditions_decision_resolvable/1, gdpr_consent_conditions_status_values/1, consent_conditions_status/4, consent_declaration_effect/3, consent_assessment_factors/2, identification_obligation/4, identification_information_duty/4, identification_rights_effect/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_subject/1, gdpr_consent_conditions_profile_for/2, gdpr_consent_conditions_assess/2]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_queries, [gdpr_consent_conditions_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_kernel, [gdpr_consent_conditions_input_problems/2]).
+
+test(met_plain_gives_exactly_one_conditions_met_answer) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_met, [outside_fact(consent_demonstrable, attested(true, _)), outside_fact(withdrawal_as_easy_as_giving_consent, attested(true, _)), outside_fact(consent_freely_given, attested(true, _))], [cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_3), cite(eu_reg_2016_679_art_7_4)])].
+test(met_with_declaration_cites_art_7_2_and_copies_its_statement) :-
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_met, [outside_fact(consent_demonstrable, attested(true, _)), outside_fact(request_clearly_distinguishable_and_intelligible, attested(true, _)), outside_fact(withdrawal_as_easy_as_giving_consent, attested(true, _)), outside_fact(consent_freely_given, attested(true, _))], [cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_2), cite(eu_reg_2016_679_art_7_3), cite(eu_reg_2016_679_art_7_4)])].
+test(not_demonstrable_is_conditions_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_not_demonstrable, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_not_met, [outside_fact(consent_demonstrable, attested(false, _))], [cite(eu_reg_2016_679_art_7_1)])].
+test(unclear_request_in_a_declaration_is_conditions_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_request_unclear, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_not_met, [outside_fact(request_clearly_distinguishable_and_intelligible, attested(false, _))], [cite(eu_reg_2016_679_art_7_2)])].
+test(missing_withdrawal_information_is_conditions_not_met_with_empty_basis) :-
+    gdpr_consent_conditions_profile_for(consent_withdrawal_not_informed, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(conditions_not_met, [], [cite(eu_reg_2016_679_art_7_3)])].
+test(not_freely_given_is_conditions_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_not_freely_given, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_not_met, [outside_fact(consent_freely_given, attested(false, _))], [cite(eu_reg_2016_679_art_7_4)])].
+test(two_unmet_limbs_are_cited_once_each_in_order) :-
+    gdpr_consent_conditions_profile_for(consent_two_conditions_unmet, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(conditions_not_met, [outside_fact(consent_demonstrable, attested(false, _)), outside_fact(consent_freely_given, attested(false, _))], [cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_4)])].
+test(an_absent_freely_given_statement_refers) :-
+    gdpr_consent_conditions_profile_for(consent_freely_given_not_stated, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_7_4), cite(consent_freely_given_statement)), [resolution(cite(consent_freely_given_statement), not_attempted), inputs_relied_on([consent_freely_given - absent])]), [], [])].
+test(processing_not_on_consent_is_not_applicable) :-
+    gdpr_consent_conditions_profile_for(processing_not_on_consent, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(not_applicable, [], [])].
+test(an_empty_profile_misses_the_scope_key) :-
+    gdpr_consent_conditions_profile_for(consent_scope_not_stated, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(indeterminate([processing_based_on_consent]), [], [])].
+test(missing_crisp_keys_are_reported_before_a_cross_reference) :-
+    gdpr_consent_conditions_profile_for(declaration_part_infringing, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(indeterminate([informed_of_withdrawal_right_before_consent]), [], [])].
+test(an_infringing_part_is_not_binding) :-
+    gdpr_consent_conditions_profile_for(declaration_part_infringing, Profile),
+    findall(result(Status, Citations), consent_declaration_effect(Profile, Status, Citations), Solutions),
+    Solutions == [result(part_not_binding, [cite(eu_reg_2016_679_art_7_2)])].
+test(no_infringing_part_is_the_near_miss) :-
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    findall(result(Status, Citations), consent_declaration_effect(Profile, Status, Citations), Solutions),
+    Solutions == [result(no_part_infringing, [cite(eu_reg_2016_679_art_7_2)])].
+test(no_declaration_makes_the_effect_not_applicable) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    findall(result(Status, Citations), consent_declaration_effect(Profile, Status, Citations), Solutions),
+    Solutions == [result(not_applicable, [])].
+test(the_conditional_contract_factor_is_reported) :-
+    gdpr_consent_conditions_profile_for(contract_conditional_consent, Profile),
+    findall(Factors, consent_assessment_factors(Profile, Factors), Solutions),
+    Solutions == [[factor(contract_conditional_on_unneeded_consent, cite(eu_reg_2016_679_art_7_4))]].
+test(an_unconditional_contract_reports_no_factor) :-
+    gdpr_consent_conditions_profile_for(contract_unconditional_consent, Profile),
+    findall(Factors, consent_assessment_factors(Profile, Factors), Solutions),
+    Solutions == [[]].
+test(an_absent_factor_key_is_indeterminate) :-
+    findall(Factors, consent_assessment_factors([], Factors), Solutions),
+    Solutions == [indeterminate([contract_conditional_on_unneeded_consent])].
+test(identification_not_required_relieves_the_controller) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    findall(result(Status, Basis, Citations), identification_obligation(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(not_obliged_to_acquire_identifying_information, [outside_fact(purposes_do_not_require_identification, attested(true, _))], [cite(eu_reg_2016_679_art_11_1)])].
+test(identification_required_does_not_engage_art_11_1) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    findall(result(Status, Basis, Citations), identification_obligation(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(art11_1_not_engaged, [outside_fact(purposes_do_not_require_identification, attested(false, _))], [cite(eu_reg_2016_679_art_11_1)])].
+test(an_absent_purposes_statement_refers_on_art_11_1) :-
+    findall(result(Status, Basis, Citations), identification_obligation([], Status, Basis, Citations), Solutions),
+    Solutions == [result(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_11_1), cite(identification_not_required_statement)), [resolution(cite(identification_not_required_statement), not_attempted), inputs_relied_on([purposes_do_not_require_identification - absent])]), [], [])].
+test(an_engaged_art_11_2_with_possible_informing_must_inform) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    findall(result(Status, Basis, Citations), identification_information_duty(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(must_inform_data_subject, [outside_fact(purposes_do_not_require_identification, attested(true, _)), outside_fact(able_to_demonstrate_not_in_position_to_identify, attested(true, _)), outside_fact(informing_data_subject_possible, attested(true, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(impossible_informing_need_not_inform) :-
+    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
+    findall(result(Status, Basis, Citations), identification_information_duty(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(need_not_inform_data_subject, [outside_fact(purposes_do_not_require_identification, attested(true, _)), outside_fact(able_to_demonstrate_not_in_position_to_identify, attested(true, _)), outside_fact(informing_data_subject_possible, attested(false, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(a_false_purposes_statement_leaves_art_11_2_not_engaged) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    findall(result(Status, Basis, Citations), identification_information_duty(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(art11_2_not_engaged, [outside_fact(purposes_do_not_require_identification, attested(false, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(a_false_value_decides_before_an_absent_key_is_read) :-
+    gdpr_consent_conditions_profile_for(identification_inability_denied, Profile),
+    findall(result(Status, Basis, Citations), identification_information_duty(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(art11_2_not_engaged, [outside_fact(able_to_demonstrate_not_in_position_to_identify, attested(false, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(absent_statements_refer_on_the_first_absent_outside_fact) :-
+    gdpr_consent_conditions_profile_for(identification_statements_absent, Profile),
+    findall(Status, identification_information_duty(Profile, Status, _Basis, _Citations), Solutions),
+    Solutions == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_11_1), cite(identification_not_required_statement)), [resolution(cite(identification_not_required_statement), not_attempted), inputs_relied_on([purposes_do_not_require_identification - absent])])].
+test(arts_15_to_20_do_not_apply_without_additional_information) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    findall(result(Status, Basis, Citations), identification_rights_effect(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(articles_15_to_20_do_not_apply, [outside_fact(purposes_do_not_require_identification, attested(true, _)), outside_fact(able_to_demonstrate_not_in_position_to_identify, attested(true, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(arts_15_to_20_apply_when_additional_information_is_provided) :-
+    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
+    findall(result(Status, Basis, Citations), identification_rights_effect(Profile, Status, Basis, Citations), Solutions),
+    Solutions = [result(articles_15_to_20_apply, [outside_fact(purposes_do_not_require_identification, attested(true, _)), outside_fact(able_to_demonstrate_not_in_position_to_identify, attested(true, _))], [cite(eu_reg_2016_679_art_11_2)])].
+test(an_unstated_additional_information_key_is_indeterminate) :-
+    gdpr_consent_conditions_profile_for(identification_rights_not_stated, Profile),
+    findall(result(Status, Basis, Citations), identification_rights_effect(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(indeterminate([additional_identifying_information_provided]), [], [])].
+test(rights_effect_is_not_engaged_when_purposes_require_identification) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    findall(Status, identification_rights_effect(Profile, Status, _Basis, _Citations), Solutions),
+    Solutions == [art11_2_not_engaged].
+test(provenance_constructor_marks_a_deciding_clause) :-
+    Marker = provenance(art_7_1_clause, [cite(eu_reg_2016_679_art_7_1)]),
+    Marker = provenance(Clause, Citations),
+    Clause == art_7_1_clause,
+    Citations == [cite(eu_reg_2016_679_art_7_1)].
+test(provenance_constructor_accepts_an_empty_citation_list) :-
+    Marker = provenance(no_citation_clause, []),
+    Marker = provenance(_, []).
+test(provenance_constructor_destructures_in_a_referral_context) :-
+    Context = [resolution(cite(consent_demonstration_statement), not_attempted), inputs_relied_on([consent_demonstrable - absent]), provenance(art_7_1_clause, [cite(eu_reg_2016_679_art_7_1)])],
+    memberchk(provenance(Clause, Citations), Context),
+    Clause == art_7_1_clause,
+    Citations == [cite(eu_reg_2016_679_art_7_1)].
+test(url_constructor_sits_inside_an_attestation) :-
+    Attested = attested(true, attestation(host_system, recorded_2026_11_12, fixture_statement, url('https://example.org/evidence', retrieved_2026_11_12))),
+    Attested = attested(true, attestation(_, _, _, Evidence)),
+    Evidence == url('https://example.org/evidence', retrieved_2026_11_12).
+test(document_constructor_sits_inside_an_attestation) :-
+    Attested = attested(false, attestation(host_system, recorded_2026_11_12, fixture_statement, document(upload_one, sha256_fixture_digest))),
+    Attested = attested(false, attestation(_, _, _, Evidence)),
+    Evidence == document(upload_one, sha256_fixture_digest).
+test(duplicate_and_unknown_keys_are_input_problems) :-
+    gdpr_consent_conditions_profile_for(input_problem_profile, Profile),
+    findall(Problems, gdpr_consent_conditions_input_problems(Profile, Problems), Solutions),
+    Solutions == [[duplicate_key(processing_based_on_consent), unknown_key(unexpected_key)]].
+test(input_problems_come_first_in_every_query) :-
+    gdpr_consent_conditions_profile_for(input_problem_profile, Profile),
+    findall(result(Status, Basis, Citations), consent_conditions_status(Profile, Status, Basis, Citations), Solutions),
+    Solutions == [result(input_problems([duplicate_key(processing_based_on_consent), unknown_key(unexpected_key)]), [], [])],
+    findall(Factors, consent_assessment_factors(Profile, Factors), FactorSolutions),
+    FactorSolutions == [input_problems([duplicate_key(processing_based_on_consent), unknown_key(unexpected_key)])].
+test(a_bare_value_for_an_outside_fact_is_a_wrong_type) :-
+    findall(Status, consent_conditions_status([attribute(consent_demonstrable, true)], Status, _Basis, _Citations), Solutions),
+    Solutions == [input_problems([wrong_type(consent_demonstrable)])].
+test(a_clean_profile_has_no_input_problems) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_input_problems(Profile, Problems),
+    Problems == [].
+test(the_verdict_term_carries_status_and_citations) :-
+    gdpr_consent_conditions_assess(consent_met_plain, Verdict),
+    Verdict == gdpr_consent_conditions_verdict(conditions_met, [cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_3), cite(eu_reg_2016_679_art_7_4)]).
+test(the_near_miss_gets_the_opposite_verdict) :-
+    gdpr_consent_conditions_assess(consent_not_demonstrable, Verdict),
+    Verdict == gdpr_consent_conditions_verdict(conditions_not_met, [cite(eu_reg_2016_679_art_7_1)]).
+test(every_fixture_subject_resolves_to_a_status) :-
+    gdpr_consent_conditions_subject(consent_met_with_declaration),
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met),
+    gdpr_consent_conditions_decision_resolvable(Profile).
+test(the_status_values_include_every_final_status) :-
+    gdpr_consent_conditions_status_values(Values),
+    Values == [not_applicable, conditions_met, conditions_not_met].
+test(the_checklist_has_one_row_per_limb) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_checklist(Profile, Items),
+    Items = [item(scope_processing_based_on_consent, met, _), item(art_7_1_consent_demonstrable, met, _), item(art_7_2_request_presentation, not_applicable, _), item(art_7_3_withdrawal_information, met, _), item(art_7_3_withdrawal_ease, met, _), item(art_7_4_consent_freely_given, met, _)].
+test(the_checklist_marks_the_unmet_limb) :-
+    gdpr_consent_conditions_profile_for(consent_not_demonstrable, Profile),
+    gdpr_consent_conditions_checklist(Profile, [_ScopeItem, item(art_7_1_consent_demonstrable, unmet, _)|_OtherItems]).
+test(what_if_flips_the_status) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_what_if(Profile, consent_demonstrable, attested(false, attestation(tester, now, reason, none)), NewStatus),
+    NewStatus == conditions_not_met.
+test(what_if_with_the_same_value_keeps_the_status) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_what_if(Profile, informed_of_withdrawal_right_before_consent, true, NewStatus),
+    NewStatus == conditions_met.
+
+test(url_and_document_evidence_are_distinct_terms, fail) :-
+    url(upload_one, sha256_fixture_digest) = document(upload_one, sha256_fixture_digest).
+
+cp_test_names([met_plain_gives_exactly_one_conditions_met_answer, met_with_declaration_cites_art_7_2_and_copies_its_statement, not_demonstrable_is_conditions_not_met, unclear_request_in_a_declaration_is_conditions_not_met, missing_withdrawal_information_is_conditions_not_met_with_empty_basis, not_freely_given_is_conditions_not_met, two_unmet_limbs_are_cited_once_each_in_order, an_absent_freely_given_statement_refers, processing_not_on_consent_is_not_applicable, an_empty_profile_misses_the_scope_key, missing_crisp_keys_are_reported_before_a_cross_reference, an_infringing_part_is_not_binding, no_infringing_part_is_the_near_miss, no_declaration_makes_the_effect_not_applicable, the_conditional_contract_factor_is_reported, an_unconditional_contract_reports_no_factor, an_absent_factor_key_is_indeterminate, identification_not_required_relieves_the_controller, identification_required_does_not_engage_art_11_1, an_absent_purposes_statement_refers_on_art_11_1, an_engaged_art_11_2_with_possible_informing_must_inform, impossible_informing_need_not_inform, a_false_purposes_statement_leaves_art_11_2_not_engaged, a_false_value_decides_before_an_absent_key_is_read, absent_statements_refer_on_the_first_absent_outside_fact, arts_15_to_20_do_not_apply_without_additional_information, arts_15_to_20_apply_when_additional_information_is_provided, an_unstated_additional_information_key_is_indeterminate, rights_effect_is_not_engaged_when_purposes_require_identification, provenance_constructor_marks_a_deciding_clause, provenance_constructor_accepts_an_empty_citation_list, provenance_constructor_destructures_in_a_referral_context, url_constructor_sits_inside_an_attestation, document_constructor_sits_inside_an_attestation, duplicate_and_unknown_keys_are_input_problems, input_problems_come_first_in_every_query, a_bare_value_for_an_outside_fact_is_a_wrong_type, a_clean_profile_has_no_input_problems, the_verdict_term_carries_status_and_citations, the_near_miss_gets_the_opposite_verdict, every_fixture_subject_resolves_to_a_status, the_status_values_include_every_final_status, the_checklist_has_one_row_per_limb, the_checklist_marks_the_unmet_limb, what_if_flips_the_status, what_if_with_the_same_value_keeps_the_status]).
+cp_test_fail_names([url_and_document_evidence_are_distinct_terms]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

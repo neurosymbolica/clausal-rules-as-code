@@ -1,0 +1,287 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/eprivacy_breach_traffic_location_marketing (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+%
+% Source: Directive 2002/58/EC (the ePrivacy Directive), consolidated text
+% 02002L0058-20091219 (as amended by Directive 2009/136/EC; extracted text
+% sha256 c2e044900633b59f47eba8f2e35c0fbad4df41cb4d417a2c837a972bf68b6bcd):
+% Article 4(3) (notification of a personal data breach), Article 6(1) to (3)
+% (traffic data), Article 9(1) and (2) (location data other than traffic
+% data) and Article 13(1) to (5) (unsolicited communications), with the
+% Article 2 definitions, second paragraph, points (b), (c), (f), (g), (h)
+% and (i). Every answer is under the Directive's text only; no Member
+% State's transposing law is read (reading (1)). Every reading is the
+% a reading, not a lawyer's.
+%
+% WHAT LIVES HERE. Only the order's input check,
+% eprivacy_breach_traffic_location_marketing_input_problems/2, written by the
+% scaffold from the order's typed input contract and imported by the
+% determination slice and by queries.clausal. It decides no statutory
+% condition (it checks the PROFILE against the contract alone), so its
+% clauses carry no implements/1 marker. This domain has ONE determination
+% slice (eprivacy_breach_traffic_location_marketing.clausal), so every other
+% predicate -- the outcome limbs, the completion engine (settled answer,
+% MATTERS, BEHIND, first missing key, first unsure referral), the decision
+% orders, the fixed citations and the referral citations -- is single-caller
+% and lives in that slice. Move a predicate here only when a second file
+% calls it.
+%
+% deontic family: STATUS is a modal vocabulary (permitted / not_permitted,
+% notification due, practice_prohibited ...).
+%
+% RESULT TERMS (recorded here so every file spells them alike; atoms and
+% data terms need no declaration and no import):
+%
+%   The five contract queries, each QUERY(Profile, Result, Citations):
+%     personal_data_breach_notification_status/3 (Art 4(3)):
+%       Result authority_and_individual_notification_due |
+%              authority_notification_due | not_applicable;
+%       Citations [cite(eu_dir_2002_58_art_4_3)].
+%     traffic_data_processing_status/3 (Art 6(1) to (3)):
+%       Result permitted | not_permitted | not_applicable;
+%       permitted cites [cite(eu_dir_2002_58_art_6_1),
+%       cite(eu_dir_2002_58_art_6_2), cite(eu_dir_2002_58_art_6_3)];
+%       not_permitted and not_applicable cite [cite(eu_dir_2002_58_art_6_1)].
+%     location_data_processing_status/3 (Art 9(1), (2)):
+%       Result permitted | not_permitted | not_applicable;
+%       Citations [cite(eu_dir_2002_58_art_9_1)].
+%     direct_marketing_communication_status/3 (Art 13(1), (2), (3), (5)):
+%       Result sending_permitted | sending_not_permitted |
+%              national_law_decides | not_applicable;
+%       not_applicable cites [cite(eu_dir_2002_58_art_13_1)];
+%       national_law_decides cites [cite(eu_dir_2002_58_art_13_3),
+%       cite(eu_dir_2002_58_art_13_5)];
+%       both sending answers cite [cite(eu_dir_2002_58_art_13_1),
+%       cite(eu_dir_2002_58_art_13_2)].
+%     direct_marketing_email_practice_status/3 (Art 13(4)):
+%       Result practice_prohibited | practice_not_prohibited | not_applicable;
+%       Citations [cite(eu_dir_2002_58_art_13_4)].
+%
+%   Non-final Results of every query (Citations []), never written bare:
+%     indeterminate([Key])          -- the first absent key that matters;
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                   -- the first unsure judgement that
+%                                      matters; Pairs the Key-Value pairs of
+%                                      every present key of the query, in
+%                                      its decision order;
+%     input_problems(Problems)      -- Problems a non-empty list of
+%                                      duplicate_key(Key), wrong_type(Key),
+%                                      unknown_key(Key), or
+%                                      [wrong_type(profile)].
+%
+%   The slice's own verdict term (scaffold facade):
+%     eprivacy_breach_traffic_location_marketing_verdict(Status, Citations)
+%     Status one of eligible | ineligible | national_law_decides |
+%     not_applicable, or one of the non-final terms above; Citations a list
+%     of cite(Key) terms ([] for a non-final Status).
+%   Checklist rows: item(Determination, Result, Citations).
+% =====================================================================
+
+:- module(kernel, [eprivacy_breach_traffic_location_marketing_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% eprivacy_breach_traffic_location_marketing_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+eprivacy_breach_traffic_location_marketing_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [breach_provider_of_publicly_available_service, personal_data_breach_occurred, authority_required_individual_notification, breach_likely_to_adversely_affect_subscriber_or_individual, protection_measures_demonstrated_to_authority, traffic_provider_of_public_network_or_service, traffic_data_relating_to_subscribers_or_users, traffic_processing_purpose, traffic_data_still_needed_for_transmission, traffic_data_necessary_for_billing_or_interconnection, traffic_billing_challenge_or_payment_period_running, traffic_marketing_provider_of_publicly_available_service, traffic_marketing_prior_consent_given, traffic_marketing_consent_withdrawn, traffic_marketing_processing_within_necessary_extent_and_duration, location_data_other_than_traffic_data_in_scope, location_data_made_anonymous, location_consent_given, location_consent_withdrawn, location_processing_within_necessary_extent_and_duration_for_value_added_service, location_processing_temporarily_refused, marketing_communication_for_direct_marketing, marketing_subscriber_is_natural_person, marketing_communication_means, marketing_prior_consent_given, marketing_contact_details_obtained_from_customer_in_sale, marketing_sender_obtained_the_contact_details, marketing_own_similar_products_or_services, marketing_objection_offered_at_collection, marketing_objection_offered_in_each_message, marketing_customer_refused_or_objected, email_sender_identity_disguised_or_concealed, email_contravenes_electronic_commerce_directive_article_6, email_valid_cessation_address_provided, email_encourages_visiting_contravening_websites],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(breach_provider_of_publicly_available_service, judgement).
+key_type(personal_data_breach_occurred, judgement).
+key_type(authority_required_individual_notification, boolean).
+key_type(breach_likely_to_adversely_affect_subscriber_or_individual, judgement).
+key_type(protection_measures_demonstrated_to_authority, boolean).
+key_type(traffic_provider_of_public_network_or_service, judgement).
+key_type(traffic_data_relating_to_subscribers_or_users, judgement).
+key_type(traffic_processing_purpose, traffic_processing_purpose).
+key_type(traffic_data_still_needed_for_transmission, judgement).
+key_type(traffic_data_necessary_for_billing_or_interconnection, judgement).
+key_type(traffic_billing_challenge_or_payment_period_running, judgement).
+key_type(traffic_marketing_provider_of_publicly_available_service, judgement).
+key_type(traffic_marketing_prior_consent_given, judgement).
+key_type(traffic_marketing_consent_withdrawn, boolean).
+key_type(traffic_marketing_processing_within_necessary_extent_and_duration, judgement).
+key_type(location_data_other_than_traffic_data_in_scope, judgement).
+key_type(location_data_made_anonymous, judgement).
+key_type(location_consent_given, judgement).
+key_type(location_consent_withdrawn, boolean).
+key_type(location_processing_within_necessary_extent_and_duration_for_value_added_service, judgement).
+key_type(location_processing_temporarily_refused, boolean).
+key_type(marketing_communication_for_direct_marketing, judgement).
+key_type(marketing_subscriber_is_natural_person, boolean).
+key_type(marketing_communication_means, marketing_communication_means).
+key_type(marketing_prior_consent_given, judgement).
+key_type(marketing_contact_details_obtained_from_customer_in_sale, judgement).
+key_type(marketing_sender_obtained_the_contact_details, boolean).
+key_type(marketing_own_similar_products_or_services, judgement).
+key_type(marketing_objection_offered_at_collection, judgement).
+key_type(marketing_objection_offered_in_each_message, judgement).
+key_type(marketing_customer_refused_or_objected, boolean).
+key_type(email_sender_identity_disguised_or_concealed, judgement).
+key_type(email_contravenes_electronic_commerce_directive_article_6, judgement).
+key_type(email_valid_cessation_address_provided, judgement).
+key_type(email_encourages_visiting_contravening_websites, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(traffic_processing_purpose, Value, T) :-
+    in_type_t(enum([transmission_of_communication, subscriber_billing_or_interconnection_payments, marketing_or_value_added_service, other_purpose]), Value, T).
+
+in_type_t(marketing_communication_means, Value, T) :-
+    in_type_t(enum([automatic_calling_machine, fax, electronic_mail, other_means]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

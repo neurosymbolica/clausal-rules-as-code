@@ -1,0 +1,102 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer.
+% #3 status_determination, #7 justification, #13 compliance_check,
+% and the what-if combinator.
+% Run: python -m clausal.testing eu/data_protection/gdpr_art89_research_safeguards/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/queries, [
+    gdpr_art89_research_safeguards_profile_keys/1,
+    gdpr_art89_research_safeguards_what_if/4,
+    gdpr_art89_research_safeguards_justification/2,
+    gdpr_art89_research_safeguards_compliance_check/2
+]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/safeguards_status, [safeguards_status/2]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/fixtures, [gdpr_art89_research_safeguards_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_art89_research_safeguards_profile_keys(ProfileKeys),
+    ProfileKeys == [identifiable_data_processed, minimisation_measures_in_place, non_identifying_processing_sufficient, purpose, safeguards_appropriate, technical_organisational_measures_in_place].
+
+% ---- #3 status determination ----
+test(status_determination_yields_one_answer) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    findall(Status, safeguards_status(Profile, Status), Statuses),
+    Statuses == [in_accordance].
+
+% ---- what-if ----
+test(what_if_yields_one_answer) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    findall(Status, gdpr_art89_research_safeguards_what_if(Profile, technical_organisational_measures_in_place, false, Status), Statuses),
+    Statuses == [not_in_accordance].
+
+test(what_if_adds_an_absent_key) :-
+    gdpr_art89_research_safeguards_profile_for(measures_key_absent, Profile),
+    findall(Status, gdpr_art89_research_safeguards_what_if(Profile, technical_organisational_measures_in_place, true, Status), Statuses),
+    Statuses == [in_accordance].
+
+test(what_if_does_not_change_the_original) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, safeguards_appropriate, false, not_in_accordance),
+    safeguards_status(Profile, in_accordance).
+
+test(what_if_to_a_malformed_value_is_an_input_problem) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, purpose, bogus, input_problems([wrong_type(purpose)])).
+
+% ---- #7 justification ----
+test(justification_carries_a_citation_per_item) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    findall(Items, gdpr_art89_research_safeguards_justification(Profile, Items), ItemLists),
+    ItemLists == [[item(measures, met, cite(eu_reg_2016_679_art_89_1)), item(minimisation, met, cite(eu_reg_2016_679_art_89_1)), item(identification, met, cite(eu_reg_2016_679_art_89_1)), item(appropriateness, met, cite(eu_reg_2016_679_art_89_1))]].
+
+test(justification_shows_the_unmet_item) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    gdpr_art89_research_safeguards_justification(Profile, [item(measures, unmet, cite(eu_reg_2016_679_art_89_1))|_]).
+
+test(justification_shows_the_judgement_item) :-
+    gdpr_art89_research_safeguards_profile_for(appropriateness_unsure, Profile),
+    gdpr_art89_research_safeguards_justification(Profile, [_, _, _, item(appropriateness, judgement(safeguards_appropriate), cite(eu_reg_2016_679_art_89_1))]).
+
+test(justification_of_an_input_problem) :-
+    gdpr_art89_research_safeguards_profile_for(unknown_key_given, Profile),
+    findall(Items, gdpr_art89_research_safeguards_justification(Profile, Items), ItemLists),
+    ItemLists == [[item(input_check, input_problems([unknown_key(extra_note)]), cite(eu_reg_2016_679_art_89_1))]].
+
+% ---- #13 compliance check ----
+test(compliance_permitted) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [permitted].
+
+test(compliance_prohibited) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [prohibited].
+
+test(compliance_not_applicable_purpose_is_permitted) :-
+    gdpr_art89_research_safeguards_profile_for(other_purpose_case, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [permitted].
+
+test(compliance_undetermined_when_indeterminate) :-
+    gdpr_art89_research_safeguards_profile_for(purpose_absent, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [undetermined].
+
+test(compliance_undetermined_when_a_judgement_is_open) :-
+    gdpr_art89_research_safeguards_profile_for(sufficiency_unsure, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [undetermined].
+
+test(compliance_undetermined_on_input_problems) :-
+    gdpr_art89_research_safeguards_profile_for(unknown_key_given, Profile),
+    findall(Result, gdpr_art89_research_safeguards_compliance_check(Profile, Result), Results),
+    Results == [undetermined].
+
+test(compliance_permitted_is_not_prohibited, fail) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_compliance_check(Profile, prohibited).
+
+:- end_module(test_queries).

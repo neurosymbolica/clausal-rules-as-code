@@ -1,0 +1,84 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_records_and_officer___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_kernel, [gdpr_records_and_officer_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_gdpr_records_and_officer, [attested/2, cross_reference_unresolved/2, data_protection_officer_designation/2, data_protection_officer_outside_facts/2, decide_gdpr_records_and_officer/2, designate_data_protection_officer/1, gdpr_records_and_officer_checklist/2, gdpr_records_and_officer_decision_resolvable/1, gdpr_records_and_officer_status/2, gdpr_records_and_officer_status_values/1, indeterminate/1, input_problems/1, inputs_relied_on/1, keep_controller_record/1, keep_processor_record/1, met/0, missing_officer_task/2, missing_record_item/3, needs_legal_review/2, no_designation_required/1, no_record_required/1, not_governed_here/1, not_met/0, officer_missing_tasks/2, officer_position_status/5, open_textured/2, outside_fact/2, record_missing_items/2, record_obligation/2, resolution/2, unknown_key/1, wrong_type/1]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_queries, [gdpr_records_and_officer_compliance_verdict/3, gdpr_records_and_officer_exemption_verdict/2, gdpr_records_and_officer_obligations/2, gdpr_records_and_officer_profile_keys/1, gdpr_records_and_officer_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_fixtures, [gdpr_records_and_officer_assess/2, gdpr_records_and_officer_profile_for/2, gdpr_records_and_officer_subject/1]).
+
+root_export(absent).
+root_export(acting_as_contact_point).
+root_export(acts_as_controller).
+root_export(acts_as_processor).
+root_export(advising_on_impact_assessment).
+root_export(article_49_safeguards_documentation).
+root_export(categories_of_data_subjects_and_personal_data).
+root_export(categories_of_processing).
+root_export(categories_of_recipients).
+root_export(conflict_of_interests).
+root_export(contact_details).
+root_export(controller).
+root_export(controller_erasure_time_limits_possible).
+root_export(controller_record_has_article_49_safeguards_documentation).
+root_export(controller_record_has_categories_of_data_subjects_and_personal_data).
+root_export(controller_record_has_categories_of_recipients).
+root_export(controller_record_has_contact_details).
+root_export(controller_record_has_erasure_time_limits).
+root_export(controller_record_has_purposes).
+root_export(controller_record_has_security_measures_description).
+root_export(controller_record_has_transfer_details).
+root_export(controller_security_measures_description_possible).
+root_export(controller_transfers_rely_on_article_49_1_second_subparagraph).
+root_export(controller_transfers_to_third_countries).
+root_export(cooperating_with_supervisory_authority).
+root_export(direct_reporting).
+root_export(erasure_time_limits).
+root_export(informing_and_advising).
+root_export(involvement).
+root_export(is_public_authority_or_body).
+root_export(met).
+root_export(monitoring_compliance).
+root_export(monitoring_is_core_activity).
+root_export(monitoring_is_large_scale).
+root_export(no_instructions_or_penalty).
+root_export(none).
+root_export(not_attempted).
+root_export(not_met).
+root_export(officer_free_of_instructions_and_penalty).
+root_export(officer_involved_properly_and_in_time).
+root_export(officer_other_tasks_result_in_conflict_of_interests).
+root_export(officer_reports_to_highest_management_level).
+root_export(officer_supported_with_resources_and_access).
+root_export(officer_tasks_include_acting_as_contact_point).
+root_export(officer_tasks_include_advising_on_impact_assessment).
+root_export(officer_tasks_include_cooperating_with_supervisory_authority).
+root_export(officer_tasks_include_informing_and_advising).
+root_export(officer_tasks_include_monitoring_compliance).
+root_export(persons_employed).
+root_export(processing_includes_criminal_offence_data).
+root_export(processing_includes_special_categories).
+root_export(processing_is_by_court_in_judicial_capacity).
+root_export(processing_is_occasional).
+root_export(processing_likely_to_result_in_risk).
+root_export(processing_requires_regular_and_systematic_monitoring).
+root_export(processor).
+root_export(processor_record_has_article_49_safeguards_documentation).
+root_export(processor_record_has_categories_of_processing).
+root_export(processor_record_has_contact_details).
+root_export(processor_record_has_security_measures_description).
+root_export(processor_record_has_transfer_details).
+root_export(processor_security_measures_description_possible).
+root_export(processor_transfers_rely_on_article_49_1_second_subparagraph).
+root_export(processor_transfers_to_third_countries).
+root_export(purposes_of_the_processing).
+root_export(resources_and_access).
+root_export(security_measures_description).
+root_export(special_category_processing_is_core_activity).
+root_export(special_category_processing_is_large_scale).
+root_export(third_country_transfers).
+root_export(union_or_member_state_law_requires_data_protection_officer).
+root_export(unsure).

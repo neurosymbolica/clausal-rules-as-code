@@ -1,0 +1,305 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_art6_lawful_basis.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls. Profile keys and subject ids are atoms and need no
+% import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The order has no threshold, period or amount, so
+% the near-miss control of each route is ONE KEY flipped (true/false, or an
+% attested statement true/false), or one key supplied or withdrawn.
+%
+% Routes covered (Regulation (EU) 2016/679 Art 6), each with its control:
+%   step 1/2 per point (a) to (f), claimed: holds / fails
+%   step 1 two ways holding (flags), unclaimed
+%   step 3a empty profile               / contract stated true
+%   step 3b consent statement absent    / consent statement attested true
+%   step 3b law statement absent        / law statement attested true
+%   step 4  public-authority key missing/ stated (then step 6)
+%   step 5  law statement absent, necessity unsure / attested (step 6)
+%   step 6  the point (f) balance unsure / stated false (eligible)
+%   step 0  input problems of every kind
+%   Art 6(4) routes of purpose_compatibility/4
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_art6_lawful_basis_subject/1,
+    gdpr_art6_lawful_basis_profile_for/2,
+    gdpr_art6_lawful_basis_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_art6_lawful_basis/gdpr_art6_lawful_basis, [decide_gdpr_art6_lawful_basis/2]).
+
+% The host's attested statement: the four attestation arguments are copied,
+% never read.
+host_statement(Value, attested(Value, attestation(host_system, recorded_moment, stated_by_host, none))).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_art6_lawful_basis_subject(consent_claimed_attested_true).
+gdpr_art6_lawful_basis_subject(consent_claimed_attested_false).
+gdpr_art6_lawful_basis_subject(contract_claimed_necessary).
+gdpr_art6_lawful_basis_subject(contract_claimed_not_necessary).
+gdpr_art6_lawful_basis_subject(legal_obligation_laid_down_by_law_true).
+gdpr_art6_lawful_basis_subject(legal_obligation_laid_down_by_law_false).
+gdpr_art6_lawful_basis_subject(vital_interests_claimed_necessary).
+gdpr_art6_lawful_basis_subject(vital_interests_claimed_not_necessary).
+gdpr_art6_lawful_basis_subject(public_interest_task_laid_down_by_law_true).
+gdpr_art6_lawful_basis_subject(public_interest_task_not_necessary).
+gdpr_art6_lawful_basis_subject(legitimate_interests_balance_for_controller).
+gdpr_art6_lawful_basis_subject(legitimate_interests_public_authority).
+gdpr_art6_lawful_basis_subject(legitimate_interests_overridden).
+gdpr_art6_lawful_basis_subject(two_ways_hold_with_special_category).
+gdpr_art6_lawful_basis_subject(contract_alone_unclaimed).
+gdpr_art6_lawful_basis_subject(empty_profile).
+gdpr_art6_lawful_basis_subject(consent_statement_attested_for_last_open_way).
+gdpr_art6_lawful_basis_subject(consent_statement_absent_for_last_open_way).
+gdpr_art6_lawful_basis_subject(legal_obligation_law_statement_absent_one_step).
+gdpr_art6_lawful_basis_subject(public_authority_question_missing_beside_unsure).
+gdpr_art6_lawful_basis_subject(public_task_necessity_unsure_after_authority_stated).
+gdpr_art6_lawful_basis_subject(legal_obligation_unsure_law_statement_absent).
+gdpr_art6_lawful_basis_subject(legal_obligation_unsure_law_statement_attested).
+gdpr_art6_lawful_basis_subject(legitimate_interests_balance_unsure).
+gdpr_art6_lawful_basis_subject(duplicate_contract_key).
+gdpr_art6_lawful_basis_subject(bare_outside_fact_value).
+gdpr_art6_lawful_basis_subject(attested_judgement_value).
+gdpr_art6_lawful_basis_subject(crisp_key_given_unsure).
+gdpr_art6_lawful_basis_subject(basis_claimed_outside_its_list).
+gdpr_art6_lawful_basis_subject(unknown_and_numeric_keys).
+gdpr_art6_lawful_basis_subject(unbound_attestation_argument).
+gdpr_art6_lawful_basis_subject(partial_list_profile).
+gdpr_art6_lawful_basis_subject(new_purpose_not_engaged).
+gdpr_art6_lawful_basis_subject(new_purpose_absent).
+gdpr_art6_lawful_basis_subject(new_purpose_compatible).
+gdpr_art6_lawful_basis_subject(new_purpose_not_compatible).
+gdpr_art6_lawful_basis_subject(new_purpose_compatibility_absent).
+gdpr_art6_lawful_basis_subject(new_purpose_compatibility_unsure).
+
+% ---- Profiles: point (a) consent, claimed ------------------------------
+gdpr_art6_lawful_basis_profile_for(consent_claimed_attested_true, [
+    attribute(basis_claimed, consent),
+    attribute(consent_given_and_conditions_met, Consent)
+]) :-
+    host_statement(true, Consent).
+gdpr_art6_lawful_basis_profile_for(consent_claimed_attested_false, [
+    attribute(basis_claimed, consent),
+    attribute(consent_given_and_conditions_met, Refused)
+]) :-
+    host_statement(false, Refused).
+
+% ---- point (b) contract, claimed ----------------------------------------
+gdpr_art6_lawful_basis_profile_for(contract_claimed_necessary, [
+    attribute(basis_claimed, contract),
+    attribute(contract_necessary, true)
+]).
+gdpr_art6_lawful_basis_profile_for(contract_claimed_not_necessary, [
+    attribute(basis_claimed, contract),
+    attribute(contract_necessary, false)
+]).
+
+% ---- point (c) legal obligation with Art 6(3), claimed ------------------
+gdpr_art6_lawful_basis_profile_for(legal_obligation_laid_down_by_law_true, [
+    attribute(basis_claimed, legal_obligation),
+    attribute(legal_obligation_necessary, true),
+    attribute(legal_obligation_laid_down_by_law, LawStated)
+]) :-
+    host_statement(true, LawStated).
+gdpr_art6_lawful_basis_profile_for(legal_obligation_laid_down_by_law_false, [
+    attribute(basis_claimed, legal_obligation),
+    attribute(legal_obligation_necessary, true),
+    attribute(legal_obligation_laid_down_by_law, LawRefused)
+]) :-
+    host_statement(false, LawRefused).
+
+% ---- point (d) vital interests, claimed ---------------------------------
+gdpr_art6_lawful_basis_profile_for(vital_interests_claimed_necessary, [
+    attribute(basis_claimed, vital_interests),
+    attribute(vital_interests_necessary, true)
+]).
+gdpr_art6_lawful_basis_profile_for(vital_interests_claimed_not_necessary, [
+    attribute(basis_claimed, vital_interests),
+    attribute(vital_interests_necessary, false)
+]).
+
+% ---- point (e) public task with Art 6(3), claimed -----------------------
+gdpr_art6_lawful_basis_profile_for(public_interest_task_laid_down_by_law_true, [
+    attribute(basis_claimed, public_interest_task),
+    attribute(public_interest_task_necessary, true),
+    attribute(public_interest_task_laid_down_by_law, LawStated)
+]) :-
+    host_statement(true, LawStated).
+gdpr_art6_lawful_basis_profile_for(public_interest_task_not_necessary, [
+    attribute(basis_claimed, public_interest_task),
+    attribute(public_interest_task_necessary, false),
+    attribute(public_interest_task_laid_down_by_law, LawStated)
+]) :-
+    host_statement(true, LawStated).
+
+% ---- point (f) legitimate interests, claimed ----------------------------
+gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_for_controller, [
+    attribute(basis_claimed, legitimate_interests),
+    attribute(processing_by_public_authority_in_its_tasks, false),
+    attribute(legitimate_interests_pursued, true),
+    attribute(interests_overridden, false),
+    attribute(child_data_subject, Child),
+    attribute(special_category, Special)
+]) :-
+    host_statement(true, Child),
+    host_statement(true, Special).
+gdpr_art6_lawful_basis_profile_for(legitimate_interests_public_authority, [
+    attribute(basis_claimed, legitimate_interests),
+    attribute(processing_by_public_authority_in_its_tasks, true),
+    attribute(legitimate_interests_pursued, true),
+    attribute(interests_overridden, false)
+]).
+gdpr_art6_lawful_basis_profile_for(legitimate_interests_overridden, [
+    attribute(basis_claimed, legitimate_interests),
+    attribute(processing_by_public_authority_in_its_tasks, false),
+    attribute(legitimate_interests_pursued, true),
+    attribute(interests_overridden, true)
+]).
+
+% ---- unclaimed: several ways, flags --------------------------------------
+gdpr_art6_lawful_basis_profile_for(two_ways_hold_with_special_category, [
+    attribute(contract_necessary, true),
+    attribute(vital_interests_necessary, true),
+    attribute(child_data_subject, Child),
+    attribute(special_category, Special)
+]) :-
+    host_statement(true, Child),
+    host_statement(true, Special).
+gdpr_art6_lawful_basis_profile_for(contract_alone_unclaimed, [
+    attribute(contract_necessary, true)
+]).
+
+% ---- step (3a): the first one-step key is asked for ---------------------
+gdpr_art6_lawful_basis_profile_for(empty_profile, []).
+
+% ---- step (3b): the consent statement of the last open way ---------------
+gdpr_art6_lawful_basis_profile_for(consent_statement_attested_for_last_open_way, [
+    attribute(consent_given_and_conditions_met, Consent),
+    attribute(contract_necessary, false),
+    attribute(legal_obligation_necessary, false),
+    attribute(vital_interests_necessary, false),
+    attribute(public_interest_task_necessary, false),
+    attribute(processing_by_public_authority_in_its_tasks, true)
+]) :-
+    host_statement(true, Consent).
+gdpr_art6_lawful_basis_profile_for(consent_statement_absent_for_last_open_way, [
+    attribute(contract_necessary, false),
+    attribute(legal_obligation_necessary, false),
+    attribute(vital_interests_necessary, false),
+    attribute(public_interest_task_necessary, false),
+    attribute(processing_by_public_authority_in_its_tasks, true)
+]).
+
+% ---- step (3b): the law statement of a claimed point (c) -----------------
+gdpr_art6_lawful_basis_profile_for(legal_obligation_law_statement_absent_one_step, [
+    attribute(basis_claimed, legal_obligation),
+    attribute(legal_obligation_necessary, true)
+]).
+
+% ---- step (4): a missing crisp key beside an unsure judgement ------------
+gdpr_art6_lawful_basis_profile_for(public_authority_question_missing_beside_unsure, [
+    attribute(consent_given_and_conditions_met, Refused),
+    attribute(contract_necessary, false),
+    attribute(legal_obligation_necessary, false),
+    attribute(vital_interests_necessary, false),
+    attribute(public_interest_task_necessary, unsure),
+    attribute(public_interest_task_laid_down_by_law, LawStated)
+]) :-
+    host_statement(false, Refused),
+    host_statement(true, LawStated).
+gdpr_art6_lawful_basis_profile_for(public_task_necessity_unsure_after_authority_stated, [
+    attribute(consent_given_and_conditions_met, Refused),
+    attribute(contract_necessary, false),
+    attribute(legal_obligation_necessary, false),
+    attribute(vital_interests_necessary, false),
+    attribute(public_interest_task_necessary, unsure),
+    attribute(public_interest_task_laid_down_by_law, LawStated),
+    attribute(processing_by_public_authority_in_its_tasks, true)
+]) :-
+    host_statement(false, Refused),
+    host_statement(true, LawStated).
+
+% ---- step (5): an absent outside fact before an unsure judgement ---------
+gdpr_art6_lawful_basis_profile_for(legal_obligation_unsure_law_statement_absent, [
+    attribute(basis_claimed, legal_obligation),
+    attribute(legal_obligation_necessary, unsure)
+]).
+gdpr_art6_lawful_basis_profile_for(legal_obligation_unsure_law_statement_attested, [
+    attribute(basis_claimed, legal_obligation),
+    attribute(legal_obligation_necessary, unsure),
+    attribute(legal_obligation_laid_down_by_law, LawStated)
+]) :-
+    host_statement(true, LawStated).
+
+% ---- step (6): the balance of point (f) goes to a lawyer -----------------
+gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_unsure, [
+    attribute(basis_claimed, legitimate_interests),
+    attribute(processing_by_public_authority_in_its_tasks, false),
+    attribute(legitimate_interests_pursued, true),
+    attribute(interests_overridden, unsure),
+    attribute(child_data_subject, Child)
+]) :-
+    host_statement(true, Child).
+
+% ---- step (0): input problems --------------------------------------------
+gdpr_art6_lawful_basis_profile_for(duplicate_contract_key, [
+    attribute(contract_necessary, true),
+    attribute(contract_necessary, false)
+]).
+gdpr_art6_lawful_basis_profile_for(bare_outside_fact_value, [
+    attribute(consent_given_and_conditions_met, true)
+]).
+gdpr_art6_lawful_basis_profile_for(attested_judgement_value, [
+    attribute(contract_necessary, Stated)
+]) :-
+    host_statement(true, Stated).
+gdpr_art6_lawful_basis_profile_for(crisp_key_given_unsure, [
+    attribute(processing_by_public_authority_in_its_tasks, unsure)
+]).
+gdpr_art6_lawful_basis_profile_for(basis_claimed_outside_its_list, [
+    attribute(basis_claimed, public_task),
+    attribute(contract_necessary, true)
+]).
+gdpr_art6_lawful_basis_profile_for(unknown_and_numeric_keys, [
+    attribute(favourite_colour, blue),
+    attribute(42, true),
+    attribute(favourite_colour, green)
+]).
+gdpr_art6_lawful_basis_profile_for(unbound_attestation_argument, [
+    attribute(consent_given_and_conditions_met, attested(true, attestation(host_system, _UnstatedMoment, stated_by_host, none)))
+]).
+gdpr_art6_lawful_basis_profile_for(partial_list_profile, [attribute(contract_necessary, true)|_UnfinishedTail]).
+
+% ---- Art 6(4) compatibility ----------------------------------------------
+gdpr_art6_lawful_basis_profile_for(new_purpose_not_engaged, [
+    attribute(new_purpose_processing, false),
+    attribute(compatible_purpose, false)
+]).
+gdpr_art6_lawful_basis_profile_for(new_purpose_absent, [
+    attribute(compatible_purpose, true)
+]).
+gdpr_art6_lawful_basis_profile_for(new_purpose_compatible, [
+    attribute(new_purpose_processing, true),
+    attribute(compatible_purpose, true)
+]).
+gdpr_art6_lawful_basis_profile_for(new_purpose_not_compatible, [
+    attribute(new_purpose_processing, true),
+    attribute(compatible_purpose, false)
+]).
+gdpr_art6_lawful_basis_profile_for(new_purpose_compatibility_absent, [
+    attribute(new_purpose_processing, true)
+]).
+gdpr_art6_lawful_basis_profile_for(new_purpose_compatibility_unsure, [
+    attribute(new_purpose_processing, true),
+    attribute(compatible_purpose, unsure)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_art6_lawful_basis_assess(Subject, Result) :-
+    gdpr_art6_lawful_basis_profile_for(Subject, Profile),
+    decide_gdpr_art6_lawful_basis(Profile, Result).
+
+:- end_module(fixtures).

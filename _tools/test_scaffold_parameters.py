@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 import os, textwrap
 from _tools import scaffold_parameters as sp
 

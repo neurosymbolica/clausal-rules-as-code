@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """The corpus's suffix helper, tested in BOTH spellings.
 
 WHY THIS FILE EXISTS. `b7d3c416` converted 18 glob sites to the shared suffix

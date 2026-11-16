@@ -1,0 +1,832 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_records_and_officer_gdpr_records_and_officer, [decide_gdpr_records_and_officer/2, gdpr_records_and_officer_status/2, gdpr_records_and_officer_checklist/2, gdpr_records_and_officer_decision_resolvable/1, gdpr_records_and_officer_status_values/1, record_obligation/2, record_missing_items/2, data_protection_officer_designation/2, officer_missing_tasks/2, data_protection_officer_outside_facts/2, officer_position_status/5, met/0, not_met/0, missing_record_item/3, missing_officer_task/2, keep_controller_record/1, keep_processor_record/1, no_record_required/1, designate_data_protection_officer/1, no_designation_required/1, input_problems/1, unknown_key/1, wrong_type/1, indeterminate/1, needs_legal_review/2, open_textured/2, cross_reference_unresolved/2, not_governed_here/1, resolution/2, inputs_relied_on/1, outside_fact/2, attested/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [is_list/1]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_kernel, [gdpr_records_and_officer_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_citations, [implements/1]).
+
+gdpr_records_and_officer_status_values([record_required, record_not_required, record_unresolved]).
+
+record_exemption_trigger(processing_includes_criminal_offence_data, flag, cite(eu_reg_2016_679_art_30_5)).
+record_exemption_trigger(processing_includes_special_categories, flag, cite(eu_reg_2016_679_art_30_5)).
+record_exemption_trigger(processing_is_occasional, negated_judgement, cite(eu_reg_2016_679_art_30_5)).
+record_exemption_trigger(processing_likely_to_result_in_risk, judgement, cite(eu_reg_2016_679_art_30_5)).
+
+record_content_item(controller, flag(controller_record_has_contact_details), contact_details, cite(eu_reg_2016_679_art_30_1_a)).
+record_content_item(controller, flag(controller_record_has_purposes), purposes_of_the_processing, cite(eu_reg_2016_679_art_30_1_b)).
+record_content_item(controller, flag(controller_record_has_categories_of_data_subjects_and_personal_data), categories_of_data_subjects_and_personal_data, cite(eu_reg_2016_679_art_30_1_c)).
+record_content_item(controller, flag(controller_record_has_categories_of_recipients), categories_of_recipients, cite(eu_reg_2016_679_art_30_1_d)).
+record_content_item(controller, transfer(controller_transfers_to_third_countries, controller_record_has_transfer_details), third_country_transfers, cite(eu_reg_2016_679_art_30_1_e)).
+record_content_item(controller, safeguards(controller_transfers_to_third_countries, controller_transfers_rely_on_article_49_1_second_subparagraph, controller_record_has_article_49_safeguards_documentation), article_49_safeguards_documentation, cite(eu_reg_2016_679_art_30_1_e)).
+record_content_item(controller, where_possible(controller_record_has_erasure_time_limits, controller_erasure_time_limits_possible), erasure_time_limits, cite(eu_reg_2016_679_art_30_1_f)).
+record_content_item(controller, where_possible(controller_record_has_security_measures_description, controller_security_measures_description_possible), security_measures_description, cite(eu_reg_2016_679_art_30_1_g)).
+record_content_item(processor, flag(processor_record_has_contact_details), contact_details, cite(eu_reg_2016_679_art_30_2_a)).
+record_content_item(processor, flag(processor_record_has_categories_of_processing), categories_of_processing, cite(eu_reg_2016_679_art_30_2_b)).
+record_content_item(processor, transfer(processor_transfers_to_third_countries, processor_record_has_transfer_details), third_country_transfers, cite(eu_reg_2016_679_art_30_2_c)).
+record_content_item(processor, safeguards(processor_transfers_to_third_countries, processor_transfers_rely_on_article_49_1_second_subparagraph, processor_record_has_article_49_safeguards_documentation), article_49_safeguards_documentation, cite(eu_reg_2016_679_art_30_2_c)).
+record_content_item(processor, where_possible(processor_record_has_security_measures_description, processor_security_measures_description_possible), security_measures_description, cite(eu_reg_2016_679_art_30_2_d)).
+
+designation_limb_citation(public_body, cite(eu_reg_2016_679_art_37_1_a)).
+designation_limb_citation(monitoring, cite(eu_reg_2016_679_art_37_1_b)).
+designation_limb_citation(special_category, cite(eu_reg_2016_679_art_37_1_c)).
+
+judgement_limb_citation(monitoring_is_core_activity, cite(eu_reg_2016_679_art_37_1_b)).
+judgement_limb_citation(monitoring_is_large_scale, cite(eu_reg_2016_679_art_37_1_b)).
+judgement_limb_citation(processing_requires_regular_and_systematic_monitoring, cite(eu_reg_2016_679_art_37_1_b)).
+judgement_limb_citation(special_category_processing_is_core_activity, cite(eu_reg_2016_679_art_37_1_c)).
+judgement_limb_citation(special_category_processing_is_large_scale, cite(eu_reg_2016_679_art_37_1_c)).
+
+officer_task(informing_and_advising, officer_tasks_include_informing_and_advising, cite(eu_reg_2016_679_art_39_1_a)).
+officer_task(monitoring_compliance, officer_tasks_include_monitoring_compliance, cite(eu_reg_2016_679_art_39_1_b)).
+officer_task(advising_on_impact_assessment, officer_tasks_include_advising_on_impact_assessment, cite(eu_reg_2016_679_art_39_1_c)).
+officer_task(cooperating_with_supervisory_authority, officer_tasks_include_cooperating_with_supervisory_authority, cite(eu_reg_2016_679_art_39_1_d)).
+officer_task(acting_as_contact_point, officer_tasks_include_acting_as_contact_point, cite(eu_reg_2016_679_art_39_1_e)).
+
+officer_position_duty(involvement, officer_involved_properly_and_in_time, statement(cite(eu_reg_2016_679_art_38_1), officer_involvement_statement)).
+officer_position_duty(resources_and_access, officer_supported_with_resources_and_access, statement(cite(eu_reg_2016_679_art_38_2), officer_resources_statement)).
+officer_position_duty(no_instructions_or_penalty, officer_free_of_instructions_and_penalty, statement(cite(eu_reg_2016_679_art_38_3), officer_independence_statement)).
+officer_position_duty(direct_reporting, officer_reports_to_highest_management_level, statement(cite(eu_reg_2016_679_art_38_3), officer_reporting_line_statement)).
+officer_position_duty(conflict_of_interests, officer_other_tasks_result_in_conflict_of_interests, judgement(cite(eu_reg_2016_679_art_38_6))).
+
+met.
+
+not_met.
+
+missing_record_item(Role, Item, Citation) :-
+    record_content_item(Role, _, Item, Citation).
+
+missing_officer_task(Item, Citation) :-
+    officer_task(Item, _, Citation).
+
+keep_controller_record(cite(eu_reg_2016_679_art_30_1)).
+
+keep_processor_record(cite(eu_reg_2016_679_art_30_2)).
+
+no_record_required(cite(eu_reg_2016_679_art_30_5)).
+
+designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_a)).
+designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_b)).
+designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_c)).
+designate_data_protection_officer(cite(eu_reg_2016_679_art_37_4)).
+
+no_designation_required(cite(eu_reg_2016_679_art_37_4)).
+
+input_problems([_|_]).
+
+unknown_key(ProfileKey) :-
+    ground(ProfileKey).
+
+wrong_type(ProfileKey) :-
+    atom(ProfileKey).
+
+indeterminate([_|_]).
+
+needs_legal_review(Reason, [_|_]) :-
+    compound(Reason).
+
+open_textured(JudgementKey, cite(_)) :-
+    atom(JudgementKey).
+
+cross_reference_unresolved(cite(_), cite(_)).
+
+not_governed_here([_|_]).
+
+resolution(cite(_), not_attempted).
+
+inputs_relied_on(RelianceList) :-
+    is_list(RelianceList).
+
+outside_fact(FactKey, absent) :-
+    atom(FactKey).
+outside_fact(FactKey, attested(_, _)) :-
+    atom(FactKey).
+
+attested(true, attestation(_, _, _, _)).
+attested(false, attestation(_, _, _, _)).
+
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_a)) :-
+    implements(eu_reg_2016_679_art_30_1_a).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_b)) :-
+    implements(eu_reg_2016_679_art_30_1_b).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_c)) :-
+    implements(eu_reg_2016_679_art_30_1_c).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_d)) :-
+    implements(eu_reg_2016_679_art_30_1_d).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_e)) :-
+    implements(eu_reg_2016_679_art_30_1_e).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_f)) :-
+    implements(eu_reg_2016_679_art_30_1_f).
+record_item_provenance(cite(eu_reg_2016_679_art_30_1_g)) :-
+    implements(eu_reg_2016_679_art_30_1_g).
+record_item_provenance(cite(eu_reg_2016_679_art_30_2_a)) :-
+    implements(eu_reg_2016_679_art_30_2_a).
+record_item_provenance(cite(eu_reg_2016_679_art_30_2_b)) :-
+    implements(eu_reg_2016_679_art_30_2_b).
+record_item_provenance(cite(eu_reg_2016_679_art_30_2_c)) :-
+    implements(eu_reg_2016_679_art_30_2_c).
+record_item_provenance(cite(eu_reg_2016_679_art_30_2_d)) :-
+    implements(eu_reg_2016_679_art_30_2_d).
+
+task_provenance(cite(eu_reg_2016_679_art_39_1_a)) :-
+    implements(eu_reg_2016_679_art_39_1_a).
+task_provenance(cite(eu_reg_2016_679_art_39_1_b)) :-
+    implements(eu_reg_2016_679_art_39_1_b).
+task_provenance(cite(eu_reg_2016_679_art_39_1_c)) :-
+    implements(eu_reg_2016_679_art_39_1_c).
+task_provenance(cite(eu_reg_2016_679_art_39_1_d)) :-
+    implements(eu_reg_2016_679_art_39_1_d).
+task_provenance(cite(eu_reg_2016_679_art_39_1_e)) :-
+    implements(eu_reg_2016_679_art_39_1_e).
+
+position_provenance(cite(eu_reg_2016_679_art_38_1)) :-
+    implements(eu_reg_2016_679_art_38_1).
+position_provenance(cite(eu_reg_2016_679_art_38_2)) :-
+    implements(eu_reg_2016_679_art_38_2).
+position_provenance(cite(eu_reg_2016_679_art_38_3)) :-
+    implements(eu_reg_2016_679_art_38_3).
+position_provenance(cite(eu_reg_2016_679_art_38_6)) :-
+    implements(eu_reg_2016_679_art_38_6).
+
+key_reading(Profile, Key, value(Value)) :-
+    profile_get(Profile, Key, Value).
+key_reading(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+readings_absent_keys(KeyReadings, AbsentKeys) :-
+    findall(AbsentKey, member(AbsentKey - absent, KeyReadings), AbsentKeys).
+
+record_state(Profile, State) :-
+    implements(eu_reg_2016_679_art_4_7),
+    key_reading(Profile, acts_as_controller, ControllerReading),
+    key_reading(Profile, acts_as_processor, ProcessorReading),
+    readings_absent_keys([acts_as_controller - ControllerReading, acts_as_processor - ProcessorReading], AbsentRoleKeys),
+    role_state(AbsentRoleKeys, ControllerReading, ProcessorReading, Profile, State).
+
+role_state([FirstKey|OtherKeys], _, _, _, keys_missing([FirstKey|OtherKeys])).
+role_state([], value(ControllerRole), value(ProcessorRole), Profile, State) :-
+    implements(eu_reg_2016_679_art_4_8),
+    role_combination(ControllerRole, ProcessorRole, Profile, State).
+
+role_combination(false, false, _, not_governed) :-
+    implements(eu_reg_2016_679_art_30_1).
+role_combination(true, true, Profile, State) :-
+    implements(eu_reg_2016_679_art_30_1),
+    governed_state(true, true, Profile, State).
+role_combination(true, false, Profile, State) :-
+    implements(eu_reg_2016_679_art_30_1),
+    governed_state(true, false, Profile, State).
+role_combination(false, true, Profile, State) :-
+    implements(eu_reg_2016_679_art_30_2),
+    governed_state(false, true, Profile, State).
+
+record_trigger(Profile, trigger(Key, Kind, Reading, Status)) :-
+    implements(eu_reg_2016_679_art_30_5),
+    record_exemption_trigger(Key, Kind, _Citation),
+    key_reading(Profile, Key, Reading),
+    trigger_status(Kind, Reading, Status).
+
+trigger_status(_, absent, absent).
+trigger_status(judgement, value(true), holds) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(judgement, value(false), does_not_hold) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(judgement, value(unsure), unsure) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(negated_judgement, value(true), does_not_hold) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(negated_judgement, value(false), holds) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(negated_judgement, value(unsure), unsure) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(flag, value(true), holds) :-
+    implements(eu_reg_2016_679_art_30_5).
+trigger_status(flag, value(false), does_not_hold) :-
+    implements(eu_reg_2016_679_art_30_5).
+
+governed_state(ControllerRole, ProcessorRole, Profile, State) :-
+    implements(eu_reg_2016_679_art_4_18),
+    implements(eu_reg_2016_679_art_30_5),
+    findall(Trigger, record_trigger(Profile, Trigger), Triggers),
+    findall(TriggerStatus, member(trigger(_, _, _, TriggerStatus), Triggers), TriggerStatuses),
+    memberd_t(holds, TriggerStatuses, AnyTriggerHolds),
+    persons_employed_state(Profile, PersonsState),
+    exemption_pairs(PersonsState, Triggers, ExemptionPairs),
+    exemption_state(AnyTriggerHolds, PersonsState, Triggers, ControllerRole, ProcessorRole, ExemptionPairs, State).
+
+persons_employed_state(Profile, PersonsState) :-
+    key_reading(Profile, persons_employed, Reading),
+    persons_reading_state(Reading, PersonsState).
+
+persons_reading_state(absent, absent).
+persons_reading_state(value(Persons), below(Persons)) :-
+    implements(eu_reg_2016_679_art_30_5),
+    Persons #< 250.
+persons_reading_state(value(Persons), at_or_above(Persons)) :-
+    implements(eu_reg_2016_679_art_30_5),
+    Persons #>= 250.
+
+exemption_pairs(absent, Triggers, Pairs) :-
+    judgement_trigger_pairs(Triggers, Pairs).
+exemption_pairs(below(Persons), Triggers, [persons_employed - Persons|Pairs]) :-
+    judgement_trigger_pairs(Triggers, Pairs).
+exemption_pairs(at_or_above(Persons), _, [persons_employed - Persons]).
+
+judgement_trigger_pairs(Triggers, Pairs) :-
+    findall(TriggerKey - TriggerValue, (member(trigger(TriggerKey, TriggerKind, value(TriggerValue), _), Triggers), trigger_has_pair(TriggerKind)), UnsortedPairs),
+    sort(UnsortedPairs, Pairs).
+
+trigger_has_pair(judgement).
+trigger_has_pair(negated_judgement).
+
+absent_trigger_keys(Triggers, AbsentKeys) :-
+    findall(AbsentKey, member(trigger(AbsentKey, _, absent, _), Triggers), UnsortedKeys),
+    sort(UnsortedKeys, AbsentKeys).
+
+exemption_state(true, _, _, ControllerRole, ProcessorRole, Pairs, owed(ControllerRole, ProcessorRole, Pairs)) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_state(false, at_or_above(_), _, ControllerRole, ProcessorRole, Pairs, owed(ControllerRole, ProcessorRole, Pairs)) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_state(false, absent, Triggers, _, _, _, keys_missing(MissingKeys)) :-
+    implements(eu_reg_2016_679_art_30_5),
+    absent_trigger_keys(Triggers, AbsentKeys),
+    sort([persons_employed|AbsentKeys], MissingKeys).
+exemption_state(false, below(_), Triggers, ControllerRole, ProcessorRole, Pairs, State) :-
+    implements(eu_reg_2016_679_art_30_5),
+    absent_trigger_keys(Triggers, AbsentKeys),
+    below_limit_state(AbsentKeys, Triggers, ControllerRole, ProcessorRole, Pairs, State).
+
+below_limit_state([FirstKey|OtherKeys], _, _, _, _, keys_missing([FirstKey|OtherKeys])).
+below_limit_state([], Triggers, ControllerRole, ProcessorRole, Pairs, State) :-
+    findall(UnsureKey, member(trigger(UnsureKey, _, _, unsure), Triggers), UnsortedUnsureKeys),
+    sort(UnsortedUnsureKeys, UnsureKeys),
+    exemption_judgement_state(UnsureKeys, ControllerRole, ProcessorRole, Pairs, State).
+
+exemption_judgement_state([], _, _, _, exempt) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_judgement_state([UnsureKey|_], ControllerRole, ProcessorRole, Pairs, unsure_trigger(UnsureKey, Pairs, ControllerRole, ProcessorRole)) :-
+    implements(eu_reg_2016_679_art_30_5).
+
+record_obligation(Profile, input_problems([Problem|Problems])) :-
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+record_obligation(Profile, Obligation) :-
+    gdpr_records_and_officer_input_problems(Profile, []),
+    record_state(Profile, State),
+    record_obligation_answer(State, Obligation).
+
+record_obligation_answer(keys_missing(MissingKeys), indeterminate(MissingKeys)).
+record_obligation_answer(not_governed, Referral) :-
+    not_governed_referral(Referral).
+record_obligation_answer(owed(ControllerRole, ProcessorRole, _), Obligation) :-
+    owed_records(ControllerRole, ProcessorRole, Obligation).
+record_obligation_answer(exempt, [no_record_required(cite(eu_reg_2016_679_art_30_5))]).
+record_obligation_answer(unsure_trigger(UnsureKey, Pairs, _, _), needs_legal_review(open_textured(UnsureKey, cite(eu_reg_2016_679_art_30_5)), [inputs_relied_on(Pairs)])).
+
+not_governed_referral(needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_30_1), cite(eu_reg_2016_679_art_30_2)]), [inputs_relied_on([acts_as_controller - false, acts_as_processor - false])])).
+
+owed_records(true, true, [keep_controller_record(cite(eu_reg_2016_679_art_30_1)), keep_processor_record(cite(eu_reg_2016_679_art_30_2))]).
+owed_records(true, false, [keep_controller_record(cite(eu_reg_2016_679_art_30_1))]).
+owed_records(false, true, [keep_processor_record(cite(eu_reg_2016_679_art_30_2))]).
+
+record_missing_items(Profile, input_problems([Problem|Problems])) :-
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+record_missing_items(Profile, Missing) :-
+    gdpr_records_and_officer_input_problems(Profile, []),
+    record_state(Profile, State),
+    record_missing_answer(State, Profile, Missing).
+
+record_missing_answer(keys_missing(MissingKeys), _, indeterminate(MissingKeys)).
+record_missing_answer(not_governed, _, Referral) :-
+    not_governed_referral(Referral).
+record_missing_answer(exempt, _, []).
+record_missing_answer(owed(ControllerRole, ProcessorRole, ExemptionPairs), Profile, Missing) :-
+    owed_record_outcomes(ControllerRole, ProcessorRole, Profile, Outcomes),
+    checklist_summary(Outcomes, AbsentKeys, UnsureJudgements, Items, ReadPairs),
+    checklist_answer(AbsentKeys, UnsureJudgements, Items, ReadPairs, ExemptionPairs, Missing).
+record_missing_answer(unsure_trigger(UnsureKey, Pairs, ControllerRole, ProcessorRole), Profile, Missing) :-
+    owed_record_outcomes(ControllerRole, ProcessorRole, Profile, Outcomes),
+    checklist_summary(Outcomes, AbsentKeys, _, _, _),
+    unsure_trigger_answer(AbsentKeys, UnsureKey, Pairs, Missing).
+
+unsure_trigger_answer([FirstKey|OtherKeys], _, _, indeterminate([FirstKey|OtherKeys])).
+unsure_trigger_answer([], UnsureKey, Pairs, Referral) :-
+    record_obligation_answer(unsure_trigger(UnsureKey, Pairs, true, true), Referral).
+
+owed_record_outcomes(true, true, Profile, Outcomes) :-
+    role_record_outcomes(controller, Profile, ControllerOutcomes),
+    role_record_outcomes(processor, Profile, ProcessorOutcomes),
+    append(ControllerOutcomes, ProcessorOutcomes, Outcomes).
+owed_record_outcomes(true, false, Profile, Outcomes) :-
+    role_record_outcomes(controller, Profile, Outcomes).
+owed_record_outcomes(false, true, Profile, Outcomes) :-
+    role_record_outcomes(processor, Profile, Outcomes).
+
+role_record_outcomes(Role, Profile, Outcomes) :-
+    findall(row(Test, Item, Citation), record_content_item(Role, Test, Item, Citation), Rows),
+    maplist(record_row_outcome(Profile, Role), Rows, Outcomes).
+
+record_row_outcome(Profile, Role, row(Test, Item, Citation), Outcome) :-
+    record_item_outcome(Test, Profile, Role, Item, Citation, Outcome).
+
+record_item_outcome(flag(Flag), Profile, Role, Item, cite(CitationKey), Outcome) :-
+    record_item_provenance(cite(CitationKey)),
+    key_reading(Profile, Flag, Reading),
+    flag_outcome(Reading, Flag, Role, Item, cite(CitationKey), Outcome).
+record_item_outcome(transfer(Condition, Flag), Profile, Role, Item, cite(CitationKey), Outcome) :-
+    record_item_provenance(cite(CitationKey)),
+    key_reading(Profile, Condition, ConditionReading),
+    condition_outcome(ConditionReading, Condition, Flag, Profile, Role, Item, cite(CitationKey), Outcome).
+record_item_outcome(safeguards(Condition, Reliance, Flag), Profile, Role, Item, cite(CitationKey), Outcome) :-
+    record_item_provenance(cite(CitationKey)),
+    key_reading(Profile, Condition, ConditionReading),
+    safeguards_outcome(ConditionReading, Condition, Reliance, Flag, Profile, Role, Item, cite(CitationKey), Outcome).
+record_item_outcome(where_possible(Flag, Judgement), Profile, Role, Item, cite(CitationKey), Outcome) :-
+    record_item_provenance(cite(CitationKey)),
+    key_reading(Profile, Flag, FlagReading),
+    key_reading(Profile, Judgement, JudgementReading),
+    where_possible_outcome(FlagReading, JudgementReading, Flag, Judgement, Role, Item, cite(CitationKey), Outcome).
+
+flag_outcome(value(true), _, _, _, _, outcome(satisfied, [])).
+flag_outcome(value(false), _, Role, Item, Citation, outcome(item_missing(missing_record_item(Role, Item, Citation)), [])).
+flag_outcome(absent, Flag, _, _, _, outcome(keys_absent([Flag]), [])).
+
+condition_outcome(value(false), _, _, _, _, _, _, outcome(satisfied, [])).
+condition_outcome(absent, Condition, _, _, _, _, _, outcome(keys_absent([Condition]), [])).
+condition_outcome(value(true), _, Flag, Profile, Role, Item, Citation, Outcome) :-
+    key_reading(Profile, Flag, Reading),
+    flag_outcome(Reading, Flag, Role, Item, Citation, Outcome).
+
+safeguards_outcome(value(false), _, _, _, _, _, _, _, outcome(satisfied, [])).
+safeguards_outcome(absent, Condition, _, _, _, _, _, _, outcome(keys_absent([Condition]), [])).
+safeguards_outcome(value(true), _, Reliance, Flag, Profile, Role, Item, Citation, Outcome) :-
+    key_reading(Profile, Reliance, RelianceReading),
+    condition_outcome(RelianceReading, Reliance, Flag, Profile, Role, Item, Citation, Outcome).
+
+where_possible_outcome(value(true), _, _, _, _, _, _, outcome(satisfied, [])).
+where_possible_outcome(value(false), value(false), _, Judgement, _, _, _, outcome(satisfied, [Judgement - false])).
+where_possible_outcome(absent, value(false), _, Judgement, _, _, _, outcome(satisfied, [Judgement - false])).
+where_possible_outcome(absent, value(true), Flag, _, _, _, _, outcome(keys_absent([Flag]), [])).
+where_possible_outcome(absent, value(unsure), Flag, _, _, _, _, outcome(keys_absent([Flag]), [])).
+where_possible_outcome(absent, absent, Flag, _, _, _, _, outcome(keys_absent([Flag]), [])).
+where_possible_outcome(value(false), absent, _, Judgement, _, _, _, outcome(keys_absent([Judgement]), [])).
+where_possible_outcome(value(false), value(true), _, Judgement, Role, Item, Citation, outcome(item_missing(missing_record_item(Role, Item, Citation)), [Judgement - true])).
+where_possible_outcome(value(false), value(unsure), _, Judgement, _, _, Citation, outcome(judgement_unsure(Judgement, Citation), [Judgement - unsure])).
+
+checklist_summary(Outcomes, AbsentKeys, UnsureJudgements, Items, ReadPairs) :-
+    findall(AbsentKey, (member(outcome(keys_absent(OutcomeKeys), _), Outcomes), member(AbsentKey, OutcomeKeys)), UnsortedAbsentKeys),
+    sort(UnsortedAbsentKeys, AbsentKeys),
+    findall(UnsureKey - UnsureCitation, member(outcome(judgement_unsure(UnsureKey, UnsureCitation), _), Outcomes), UnsortedUnsure),
+    sort(UnsortedUnsure, UnsureJudgements),
+    findall(MissingItem, member(outcome(item_missing(MissingItem), _), Outcomes), Items),
+    findall(ReadPair, (member(outcome(_, OutcomePairs), Outcomes), member(ReadPair, OutcomePairs)), ReadPairs).
+
+checklist_answer([FirstKey|OtherKeys], _, _, _, _, indeterminate([FirstKey|OtherKeys])).
+checklist_answer([], [UnsureKey - Citation|_], _, ReadPairs, ExemptionPairs, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)])) :-
+    append(ExemptionPairs, ReadPairs, AllPairs),
+    sort(AllPairs, Pairs).
+checklist_answer([], [], Items, _, _, Items).
+
+data_protection_officer_designation(Profile, input_problems([Problem|Problems])) :-
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+data_protection_officer_designation(Profile, Obligation) :-
+    gdpr_records_and_officer_input_problems(Profile, []),
+    designation_answer(Profile, Obligation).
+
+designation_answer(Profile, Obligation) :-
+    implements(eu_reg_2016_679_art_37_1),
+    public_body_limb(Profile, PublicBodyLimb),
+    monitoring_limb(Profile, MonitoringLimb),
+    special_category_limb(Profile, SpecialCategoryLimb),
+    key_reading(Profile, union_or_member_state_law_requires_data_protection_officer, LawReading),
+    law_requirement_state(LawReading, LawState),
+    Limbs = [PublicBodyLimb, MonitoringLimb, SpecialCategoryLimb],
+    findall(LimbName, member(limb(LimbName, met, _, _), Limbs), MetLimbs),
+    designation_step(MetLimbs, LawState, Limbs, Obligation).
+
+law_requirement_state(value(attested(true, _)), required) :-
+    implements(eu_reg_2016_679_art_37_4).
+law_requirement_state(value(attested(false, _)), not_required) :-
+    implements(eu_reg_2016_679_art_37_4).
+law_requirement_state(absent, absent).
+
+limb_summary(LimbName, Conditions, Pairs, limb(LimbName, Status, OpenConditions, LimbPairs)) :-
+    implements(eu_reg_2016_679_art_37_1),
+    memberd_t(unsatisfied, Conditions, AnyUnsatisfied),
+    findall(Condition, (member(Condition, Conditions), dif(Condition, satisfied)), UnsettledConditions),
+    limb_status(AnyUnsatisfied, UnsettledConditions, Pairs, Status, OpenConditions, LimbPairs).
+
+limb_status(true, _, _, unmet, [], []) :-
+    implements(eu_reg_2016_679_art_37_1).
+limb_status(false, [], _, met, [], []) :-
+    implements(eu_reg_2016_679_art_37_1).
+limb_status(false, [FirstCondition|OtherConditions], Pairs, open, [FirstCondition|OtherConditions], Pairs) :-
+    implements(eu_reg_2016_679_art_37_1).
+
+public_body_limb(Profile, Limb) :-
+    implements(eu_reg_2016_679_art_37_1_a),
+    key_reading(Profile, is_public_authority_or_body, PublicReading),
+    key_reading(Profile, processing_is_by_court_in_judicial_capacity, CourtReading),
+    public_body_condition(PublicReading, PublicCondition),
+    court_condition(CourtReading, CourtCondition),
+    limb_summary(public_body, [PublicCondition, CourtCondition], [], Limb).
+
+public_body_condition(value(attested(true, _)), satisfied) :-
+    implements(eu_reg_2016_679_art_37_1_a).
+public_body_condition(value(attested(false, _)), unsatisfied) :-
+    implements(eu_reg_2016_679_art_37_1_a).
+public_body_condition(absent, cross_reference(is_public_authority_or_body)).
+
+court_condition(value(true), unsatisfied) :-
+    implements(eu_reg_2016_679_art_37_1_a).
+court_condition(value(false), satisfied) :-
+    implements(eu_reg_2016_679_art_37_1_a).
+court_condition(absent, keys_absent([processing_is_by_court_in_judicial_capacity])).
+
+monitoring_limb(Profile, Limb) :-
+    implements(eu_reg_2016_679_art_37_1_b),
+    judgement_conditions(Profile, [monitoring_is_core_activity, processing_requires_regular_and_systematic_monitoring, monitoring_is_large_scale], Conditions, Pairs),
+    limb_summary(monitoring, Conditions, Pairs, Limb).
+
+special_category_limb(Profile, Limb) :-
+    implements(eu_reg_2016_679_art_37_1_c),
+    key_reading(Profile, processing_includes_special_categories, SpecialReading),
+    key_reading(Profile, processing_includes_criminal_offence_data, CriminalReading),
+    data_category_condition(SpecialReading, CriminalReading, DataCondition),
+    judgement_conditions(Profile, [special_category_processing_is_core_activity, special_category_processing_is_large_scale], JudgementConditions, Pairs),
+    limb_summary(special_category, [DataCondition|JudgementConditions], Pairs, Limb).
+
+data_category_condition(value(true), _, satisfied) :-
+    implements(eu_reg_2016_679_art_37_1_c).
+data_category_condition(value(false), value(true), satisfied) :-
+    implements(eu_reg_2016_679_art_37_1_c).
+data_category_condition(absent, value(true), satisfied) :-
+    implements(eu_reg_2016_679_art_37_1_c).
+data_category_condition(value(false), value(false), unsatisfied) :-
+    implements(eu_reg_2016_679_art_37_1_c).
+data_category_condition(value(false), absent, keys_absent([processing_includes_criminal_offence_data])).
+data_category_condition(absent, value(false), keys_absent([processing_includes_special_categories])).
+data_category_condition(absent, absent, keys_absent([processing_includes_criminal_offence_data, processing_includes_special_categories])).
+
+judgement_conditions(Profile, Keys, Conditions, Pairs) :-
+    maplist(judgement_condition(Profile), Keys, Conditions),
+    findall(JudgementKey - JudgementValue, (member(JudgementKey, Keys), key_reading(Profile, JudgementKey, value(JudgementValue))), UnsortedPairs),
+    sort(UnsortedPairs, Pairs).
+
+judgement_condition(Profile, Key, Condition) :-
+    key_reading(Profile, Key, Reading),
+    judgement_reading_condition(Reading, Key, Condition).
+
+judgement_reading_condition(value(true), _, satisfied).
+judgement_reading_condition(value(false), _, unsatisfied).
+judgement_reading_condition(value(unsure), Key, judgement_unsure(Key)).
+judgement_reading_condition(absent, Key, keys_absent([Key])).
+
+designation_step([LimbName|_], _, _, [designate_data_protection_officer(Citation)]) :-
+    implements(eu_reg_2016_679_art_37_1),
+    designation_limb_citation(LimbName, Citation).
+designation_step([], required, _, [designate_data_protection_officer(cite(eu_reg_2016_679_art_37_4))]) :-
+    implements(eu_reg_2016_679_art_37_4).
+designation_step([], not_required, Limbs, Obligation) :-
+    open_limb_step(Limbs, not_required, Obligation).
+designation_step([], absent, Limbs, Obligation) :-
+    open_limb_step(Limbs, absent, Obligation).
+
+open_limb_step(Limbs, LawState, Obligation) :-
+    findall(AbsentKey, (member(limb(_, open, AbsentOpen, _), Limbs), member(keys_absent(ConditionKeys), AbsentOpen), member(AbsentKey, ConditionKeys)), UnsortedAbsentKeys),
+    sort(UnsortedAbsentKeys, AbsentKeys),
+    findall(CrossKey, (member(limb(_, open, CrossOpen, _), Limbs), member(cross_reference(CrossKey), CrossOpen)), CrossKeys),
+    findall(UnsureKey, (member(limb(_, open, UnsureOpen, _), Limbs), member(judgement_unsure(UnsureKey), UnsureOpen)), UnsortedUnsureKeys),
+    sort(UnsortedUnsureKeys, UnsureKeys),
+    findall(LimbPair, (member(limb(_, open, _, LimbPairs), Limbs), member(LimbPair, LimbPairs)), UnsortedPairs),
+    sort(UnsortedPairs, JudgementPairs),
+    open_step(AbsentKeys, CrossKeys, UnsureKeys, JudgementPairs, LawState, Obligation).
+
+law_absent_pairs(not_required, []).
+law_absent_pairs(absent, [union_or_member_state_law_requires_data_protection_officer - absent]).
+
+open_step([FirstKey|OtherKeys], _, _, _, _, indeterminate([FirstKey|OtherKeys])).
+open_step([], [is_public_authority_or_body], _, JudgementPairs, LawState, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_37_1_a), cite(eu_reg_2016_679_art_37_1_a)), [resolution(cite(eu_reg_2016_679_art_37_1_a), not_attempted), inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_37_1_a),
+    law_absent_pairs(LawState, LawPairs),
+    append(JudgementPairs, [is_public_authority_or_body - absent|LawPairs], Pairs).
+open_step([], [], [UnsureKey|_], JudgementPairs, LawState, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_37_1),
+    judgement_limb_citation(UnsureKey, Citation),
+    law_absent_pairs(LawState, LawPairs),
+    append(JudgementPairs, LawPairs, Pairs).
+open_step([], [], [], _, not_required, [no_designation_required(cite(eu_reg_2016_679_art_37_4))]) :-
+    implements(eu_reg_2016_679_art_37_4).
+open_step([], [], [], _, absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_37_4), cite(eu_reg_2016_679_art_37_4)), [resolution(cite(eu_reg_2016_679_art_37_4), not_attempted), inputs_relied_on([union_or_member_state_law_requires_data_protection_officer - absent])])) :-
+    implements(eu_reg_2016_679_art_37_4).
+
+officer_missing_tasks(Profile, input_problems([Problem|Problems])) :-
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+officer_missing_tasks(Profile, Missing) :-
+    gdpr_records_and_officer_input_problems(Profile, []),
+    officer_task_answer(Profile, Missing).
+
+officer_task_answer(Profile, Missing) :-
+    implements(eu_reg_2016_679_art_39_1),
+    findall(task(Item, Key, Citation), officer_task(Item, Key, Citation), Tasks),
+    maplist(task_outcome(Profile), Tasks, Outcomes),
+    findall(AbsentKey, member(keys_absent([AbsentKey]), Outcomes), UnsortedAbsentKeys),
+    sort(UnsortedAbsentKeys, AbsentKeys),
+    findall(MissingTask, member(item_missing(MissingTask), Outcomes), MissingTasks),
+    task_answer(AbsentKeys, MissingTasks, Missing).
+
+task_outcome(Profile, task(Item, Key, cite(CitationKey)), Outcome) :-
+    task_provenance(cite(CitationKey)),
+    key_reading(Profile, Key, Reading),
+    task_reading_outcome(Reading, Key, Item, cite(CitationKey), Outcome).
+
+task_reading_outcome(value(true), _, _, _, satisfied).
+task_reading_outcome(value(false), _, Item, Citation, item_missing(missing_officer_task(Item, Citation))).
+task_reading_outcome(absent, Key, _, _, keys_absent([Key])).
+
+task_answer([FirstKey|OtherKeys], _, indeterminate([FirstKey|OtherKeys])).
+task_answer([], MissingTasks, MissingTasks).
+
+data_protection_officer_outside_facts(Profile, input_problems([Problem|Problems])) :-
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+data_protection_officer_outside_facts(Profile, [outside_fact(is_public_authority_or_body, PublicAttested), outside_fact(union_or_member_state_law_requires_data_protection_officer, LawAttested)]) :-
+    gdpr_records_and_officer_input_problems(Profile, []),
+    outside_fact_term(Profile, is_public_authority_or_body, PublicAttested),
+    outside_fact_term(Profile, union_or_member_state_law_requires_data_protection_officer, LawAttested).
+
+outside_fact_term(Profile, Key, Attested) :-
+    key_reading(Profile, Key, Reading),
+    reading_attested(Reading, Attested).
+
+reading_attested(value(Attested), Attested).
+reading_attested(absent, absent).
+
+officer_position_status(Profile, Duty, input_problems([Problem|Problems]), [], []) :-
+    admissible_duty(Duty),
+    gdpr_records_and_officer_input_problems(Profile, [Problem|Problems]).
+officer_position_status(Profile, Duty, Result, Basis, Citations) :-
+    officer_position_duty(Duty, Key, Test),
+    gdpr_records_and_officer_input_problems(Profile, []),
+    key_reading(Profile, Key, Reading),
+    position_result(Test, Key, Reading, Result, Basis, Citations).
+
+admissible_duty(Duty) :-
+    var(Duty).
+admissible_duty(Duty) :-
+    nonvar(Duty),
+    officer_position_duty(Duty, _, _).
+
+position_result(statement(Citation, Target), Key, absent, needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([Key - absent])]), [], []).
+position_result(statement(cite(CitationKey), _), Key, value(attested(true, Attestation)), met, [outside_fact(Key, attested(true, Attestation))], [cite(CitationKey)]) :-
+    position_provenance(cite(CitationKey)).
+position_result(statement(cite(CitationKey), _), Key, value(attested(false, Attestation)), not_met, [outside_fact(Key, attested(false, Attestation))], [cite(CitationKey)]) :-
+    position_provenance(cite(CitationKey)).
+position_result(judgement(_), Key, absent, indeterminate([Key]), [], []).
+position_result(judgement(Citation), Key, value(unsure), needs_legal_review(open_textured(Key, Citation), [inputs_relied_on([Key - unsure])]), [], []).
+position_result(judgement(cite(CitationKey)), _, value(false), met, [], [cite(CitationKey)]) :-
+    position_provenance(cite(CitationKey)).
+position_result(judgement(cite(CitationKey)), _, value(true), not_met, [], [cite(CitationKey)]) :-
+    position_provenance(cite(CitationKey)).
+
+decide_gdpr_records_and_officer(Profile, gdpr_records_and_officer_verdict(Status, Citations)) :-
+    record_obligation(Profile, Obligation),
+    facade_verdict(Obligation, Status, Citations).
+
+facade_verdict([keep_controller_record(ControllerCitation), keep_processor_record(ProcessorCitation)], record_required, [ControllerCitation, ProcessorCitation]).
+facade_verdict([keep_controller_record(Citation)], record_required, [Citation]).
+facade_verdict([keep_processor_record(Citation)], record_required, [Citation]).
+facade_verdict([no_record_required(Citation)], record_not_required, [Citation]).
+facade_verdict(indeterminate(_), record_unresolved, []).
+facade_verdict(needs_legal_review(_, _), record_unresolved, []).
+facade_verdict(input_problems(_), record_unresolved, []).
+
+gdpr_records_and_officer_status(Profile, Status) :-
+    decide_gdpr_records_and_officer(Profile, gdpr_records_and_officer_verdict(Status, _Citations)).
+
+gdpr_records_and_officer_checklist(Profile, [item(record_of_processing_activities, RecordStatus, cite(eu_reg_2016_679_art_30_1)), item(data_protection_officer_designation, DesignationStatus, cite(eu_reg_2016_679_art_37_1)), item(data_protection_officer_tasks, TaskStatus, cite(eu_reg_2016_679_art_39_1))]) :-
+    record_obligation(Profile, Obligation),
+    obligation_item_status(Obligation, RecordStatus),
+    data_protection_officer_designation(Profile, Designation),
+    designation_item_status(Designation, DesignationStatus),
+    officer_missing_tasks(Profile, Tasks),
+    task_item_status(Tasks, TaskStatus).
+
+obligation_item_status([keep_controller_record(_)|_], met).
+obligation_item_status([keep_processor_record(_)], met).
+obligation_item_status([no_record_required(_)], unmet(record_not_required)).
+obligation_item_status(indeterminate(Keys), unknown(Keys)).
+obligation_item_status(needs_legal_review(_, _), unknown([])).
+obligation_item_status(input_problems(_), unmet(malformed_profile)).
+
+designation_item_status([designate_data_protection_officer(_)], met).
+designation_item_status([no_designation_required(_)], unmet(designation_not_required)).
+designation_item_status(indeterminate(Keys), unknown(Keys)).
+designation_item_status(needs_legal_review(_, _), unknown([])).
+designation_item_status(input_problems(_), unmet(malformed_profile)).
+
+task_item_status([], met).
+task_item_status([missing_officer_task(_, _)|_], unmet(tasks_missing)).
+task_item_status(indeterminate(Keys), unknown(Keys)).
+task_item_status(input_problems(_), unmet(malformed_profile)).
+
+gdpr_records_and_officer_decision_resolvable(Profile) :-
+    gdpr_records_and_officer_status(Profile, record_required).
+gdpr_records_and_officer_decision_resolvable(Profile) :-
+    gdpr_records_and_officer_status(Profile, record_not_required).
+
+example_attestation(attestation(host_system, recorded_moment, stated_reason, none)).
+
+small_exempt_controller(Persons, [attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(persons_employed, Persons), attribute(processing_likely_to_result_in_risk, false), attribute(processing_is_occasional, true), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false)]).
+
+large_controller([attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(persons_employed, 300)]).
+
+controller_record_core([attribute(controller_record_has_contact_details, true), attribute(controller_record_has_purposes, true), attribute(controller_record_has_categories_of_data_subjects_and_personal_data, true), attribute(controller_record_has_categories_of_recipients, true), attribute(controller_transfers_to_third_countries, false), attribute(controller_record_has_security_measures_description, true)]).
+
+large_controller_with(Extra, Profile) :-
+    large_controller(Base),
+    controller_record_core(Core),
+    append(Base, Core, Start),
+    append(Start, Extra, Profile).
+
+unsure_trigger_controller([attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(persons_employed, 100), attribute(processing_is_occasional, unsure), attribute(processing_likely_to_result_in_risk, false), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false)]).
+
+unsure_trigger_referral(needs_legal_review(open_textured(processing_is_occasional, cite(eu_reg_2016_679_art_30_5)), [inputs_relied_on([persons_employed - 100, processing_is_occasional - unsure, processing_likely_to_result_in_risk - false])])).
+
+test(absent_roles_are_named_alone) :-
+    findall(Answer, record_obligation([attribute(persons_employed, 10)], Answer), Answers),
+    Answers == [indeterminate([acts_as_controller, acts_as_processor])].
+test(neither_role_is_not_governed_here) :-
+    findall(Answer, record_obligation([attribute(acts_as_controller, false), attribute(acts_as_processor, false)], Answer), Answers),
+    Answers == [needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_30_1), cite(eu_reg_2016_679_art_30_2)]), [inputs_relied_on([acts_as_controller - false, acts_as_processor - false])])].
+test(two_hundred_forty_nine_without_trigger_is_exempt) :-
+    small_exempt_controller(249, Profile),
+    findall(Answer, record_obligation(Profile, Answer), Answers),
+    Answers == [[no_record_required(cite(eu_reg_2016_679_art_30_5))]].
+test(two_hundred_fifty_owes_the_controller_record) :-
+    small_exempt_controller(250, Profile),
+    findall(Answer, record_obligation(Profile, Answer), Answers),
+    Answers == [[keep_controller_record(cite(eu_reg_2016_679_art_30_1))]].
+test(one_true_trigger_owes_both_records) :-
+    Profile = [attribute(acts_as_controller, true), attribute(acts_as_processor, true), attribute(processing_includes_special_categories, true)],
+    findall(Answer, record_obligation(Profile, Answer), Answers),
+    Answers == [[keep_controller_record(cite(eu_reg_2016_679_art_30_1)), keep_processor_record(cite(eu_reg_2016_679_art_30_2))]].
+test(absent_headcount_and_triggers_are_named) :-
+    Profile = [attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(processing_likely_to_result_in_risk, false)],
+    findall(Answer, record_obligation(Profile, Answer), Answers),
+    Answers == [indeterminate([persons_employed, processing_includes_criminal_offence_data, processing_includes_special_categories, processing_is_occasional])].
+test(unsure_occasional_refers) :-
+    unsure_trigger_controller(Profile),
+    unsure_trigger_referral(Referral),
+    findall(Answer, record_obligation(Profile, Answer), Answers),
+    Answers == [Referral].
+test(a_complete_controller_record_misses_nothing) :-
+    large_controller_with([attribute(controller_record_has_erasure_time_limits, true)], Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[]].
+test(missing_purposes_and_erasure_limits_are_listed) :-
+    Profile = [attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(persons_employed, 300), attribute(controller_record_has_contact_details, true), attribute(controller_record_has_purposes, false), attribute(controller_record_has_categories_of_data_subjects_and_personal_data, true), attribute(controller_record_has_categories_of_recipients, true), attribute(controller_transfers_to_third_countries, false), attribute(controller_record_has_erasure_time_limits, false), attribute(controller_erasure_time_limits_possible, true), attribute(controller_record_has_security_measures_description, true)],
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[missing_record_item(controller, purposes_of_the_processing, cite(eu_reg_2016_679_art_30_1_b)), missing_record_item(controller, erasure_time_limits, cite(eu_reg_2016_679_art_30_1_f))]].
+test(false_possible_judgement_decides_before_absent_flag) :-
+    large_controller_with([attribute(controller_erasure_time_limits_possible, false)], Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[]].
+test(absent_flag_is_named_when_possible_is_true) :-
+    large_controller_with([attribute(controller_erasure_time_limits_possible, true)], Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [indeterminate([controller_record_has_erasure_time_limits])].
+test(unsure_possible_judgement_refers) :-
+    large_controller_with([attribute(controller_record_has_erasure_time_limits, false), attribute(controller_erasure_time_limits_possible, unsure)], Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [needs_legal_review(open_textured(controller_erasure_time_limits_possible, cite(eu_reg_2016_679_art_30_1_f)), [inputs_relied_on([controller_erasure_time_limits_possible - unsure, persons_employed - 300])])].
+test(article_49_documentation_is_listed) :-
+    Profile = [attribute(acts_as_controller, true), attribute(acts_as_processor, false), attribute(persons_employed, 300), attribute(controller_record_has_contact_details, true), attribute(controller_record_has_purposes, true), attribute(controller_record_has_categories_of_data_subjects_and_personal_data, true), attribute(controller_record_has_categories_of_recipients, true), attribute(controller_transfers_to_third_countries, true), attribute(controller_record_has_transfer_details, true), attribute(controller_transfers_rely_on_article_49_1_second_subparagraph, true), attribute(controller_record_has_article_49_safeguards_documentation, false), attribute(controller_record_has_erasure_time_limits, true), attribute(controller_record_has_security_measures_description, true)],
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[missing_record_item(controller, article_49_safeguards_documentation, cite(eu_reg_2016_679_art_30_1_e))]].
+test(processor_categories_are_listed) :-
+    Profile = [attribute(acts_as_controller, false), attribute(acts_as_processor, true), attribute(persons_employed, 300), attribute(processor_record_has_contact_details, true), attribute(processor_record_has_categories_of_processing, false), attribute(processor_transfers_to_third_countries, false), attribute(processor_record_has_security_measures_description, true)],
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[missing_record_item(processor, categories_of_processing, cite(eu_reg_2016_679_art_30_2_b))]].
+test(unsure_trigger_names_absent_content_keys_first) :-
+    unsure_trigger_controller(Base),
+    append(Base, [attribute(controller_record_has_contact_details, true), attribute(controller_record_has_categories_of_data_subjects_and_personal_data, true), attribute(controller_record_has_categories_of_recipients, true), attribute(controller_transfers_to_third_countries, false), attribute(controller_record_has_erasure_time_limits, true), attribute(controller_record_has_security_measures_description, true)], Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [indeterminate([controller_record_has_purposes])].
+test(unsure_trigger_with_full_record_keeps_the_referral) :-
+    unsure_trigger_controller(Base),
+    controller_record_core(Core),
+    append(Base, Core, Start),
+    append(Start, [attribute(controller_record_has_erasure_time_limits, true)], Profile),
+    unsure_trigger_referral(Referral),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [Referral].
+test(public_body_must_designate) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(true, Attestation)), attribute(processing_is_by_court_in_judicial_capacity, false)],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [[designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_a))]].
+test(all_limbs_unmet_and_law_false_needs_no_designation) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(false, Attestation)), attribute(monitoring_is_core_activity, false), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false), attribute(union_or_member_state_law_requires_data_protection_officer, attested(false, Attestation))],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [[no_designation_required(cite(eu_reg_2016_679_art_37_4))]].
+test(all_limbs_unmet_and_law_absent_refers) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(false, Attestation)), attribute(monitoring_is_core_activity, false), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false)],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_37_4), cite(eu_reg_2016_679_art_37_4)), [resolution(cite(eu_reg_2016_679_art_37_4), not_attempted), inputs_relied_on([union_or_member_state_law_requires_data_protection_officer - absent])])].
+test(absent_public_body_refers_by_cross_reference) :-
+    example_attestation(Attestation),
+    Profile = [attribute(processing_is_by_court_in_judicial_capacity, false), attribute(monitoring_is_core_activity, false), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false), attribute(union_or_member_state_law_requires_data_protection_officer, attested(false, Attestation))],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_37_1_a), cite(eu_reg_2016_679_art_37_1_a)), [resolution(cite(eu_reg_2016_679_art_37_1_a), not_attempted), inputs_relied_on([is_public_authority_or_body - absent])])].
+test(law_requirement_decides_while_limbs_are_open) :-
+    example_attestation(Attestation),
+    Profile = [attribute(union_or_member_state_law_requires_data_protection_officer, attested(true, Attestation))],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [[designate_data_protection_officer(cite(eu_reg_2016_679_art_37_4))]].
+test(unsure_monitoring_judgement_refers) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(false, Attestation)), attribute(monitoring_is_core_activity, unsure), attribute(processing_requires_regular_and_systematic_monitoring, true), attribute(monitoring_is_large_scale, true), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false), attribute(union_or_member_state_law_requires_data_protection_officer, attested(false, Attestation))],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [needs_legal_review(open_textured(monitoring_is_core_activity, cite(eu_reg_2016_679_art_37_1_b)), [inputs_relied_on([monitoring_is_core_activity - unsure, monitoring_is_large_scale - true, processing_requires_regular_and_systematic_monitoring - true])])].
+test(absent_monitoring_judgements_are_named) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(false, Attestation)), attribute(processing_includes_special_categories, false), attribute(processing_includes_criminal_offence_data, false), attribute(union_or_member_state_law_requires_data_protection_officer, attested(false, Attestation))],
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers),
+    Answers == [indeterminate([monitoring_is_core_activity, monitoring_is_large_scale, processing_requires_regular_and_systematic_monitoring])].
+test(all_tasks_assigned_misses_nothing) :-
+    Profile = [attribute(officer_tasks_include_informing_and_advising, true), attribute(officer_tasks_include_monitoring_compliance, true), attribute(officer_tasks_include_advising_on_impact_assessment, true), attribute(officer_tasks_include_cooperating_with_supervisory_authority, true), attribute(officer_tasks_include_acting_as_contact_point, true)],
+    findall(Answer, officer_missing_tasks(Profile, Answer), Answers),
+    Answers == [[]].
+test(unassigned_task_is_listed) :-
+    Profile = [attribute(officer_tasks_include_informing_and_advising, false), attribute(officer_tasks_include_monitoring_compliance, true), attribute(officer_tasks_include_advising_on_impact_assessment, true), attribute(officer_tasks_include_cooperating_with_supervisory_authority, true), attribute(officer_tasks_include_acting_as_contact_point, true)],
+    findall(Answer, officer_missing_tasks(Profile, Answer), Answers),
+    Answers == [[missing_officer_task(informing_and_advising, cite(eu_reg_2016_679_art_39_1_a))]].
+test(absent_task_flag_is_named) :-
+    Profile = [attribute(officer_tasks_include_informing_and_advising, true), attribute(officer_tasks_include_monitoring_compliance, true), attribute(officer_tasks_include_cooperating_with_supervisory_authority, true), attribute(officer_tasks_include_acting_as_contact_point, true)],
+    findall(Answer, officer_missing_tasks(Profile, Answer), Answers),
+    Answers == [indeterminate([officer_tasks_include_advising_on_impact_assessment])].
+test(outside_facts_are_listed_as_given) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(true, Attestation))],
+    findall(Answer, data_protection_officer_outside_facts(Profile, Answer), Answers),
+    Answers == [[outside_fact(is_public_authority_or_body, attested(true, Attestation)), outside_fact(union_or_member_state_law_requires_data_protection_officer, absent)]].
+test(absent_involvement_statement_refers) :-
+    findall(Result - Basis - Citations, officer_position_status([], involvement, Result, Basis, Citations), Answers),
+    Answers = [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_38_1), TargetCite), [resolution(ResolutionCite, not_attempted), inputs_relied_on([officer_involved_properly_and_in_time - absent])]) - [] - []],
+    TargetCite = cite(Target),
+    ResolutionCite == TargetCite,
+    Target == officer_involvement_statement.
+test(attested_involvement_is_met) :-
+    example_attestation(Attestation),
+    Profile = [attribute(officer_involved_properly_and_in_time, attested(true, Attestation))],
+    findall(Result - Basis - Citations, officer_position_status(Profile, involvement, Result, Basis, Citations), Answers),
+    Answers == [met - [outside_fact(officer_involved_properly_and_in_time, attested(true, Attestation))] - [cite(eu_reg_2016_679_art_38_1)]].
+test(conflict_of_interests_true_is_not_met) :-
+    Profile = [attribute(officer_other_tasks_result_in_conflict_of_interests, true)],
+    findall(Result - Basis - Citations, officer_position_status(Profile, conflict_of_interests, Result, Basis, Citations), Answers),
+    Answers == [not_met - [] - [cite(eu_reg_2016_679_art_38_6)]].
+test(conflict_of_interests_false_is_met) :-
+    Profile = [attribute(officer_other_tasks_result_in_conflict_of_interests, false)],
+    officer_position_status(Profile, conflict_of_interests, met, [], [cite(eu_reg_2016_679_art_38_6)]).
+test(a_malformed_profile_with_an_unbound_duty_answers_once) :-
+    findall(Result, officer_position_status(not_a_list, _Duty, Result, _Basis, _Citations), Results),
+    Results == [input_problems([wrong_type(profile)])].
+test(a_known_duty_has_a_solution_on_the_same_profile) :-
+    officer_position_status([], direct_reporting, needs_legal_review(_, _), [], []).
+test(unknown_key_is_an_input_problem) :-
+    findall(Answer, record_obligation([attribute(colour, red)], Answer), Answers),
+    Answers == [input_problems([unknown_key(colour)])].
+test(a_non_list_profile_is_wrong_type) :-
+    findall(Answer, data_protection_officer_designation(not_a_list, Answer), Answers),
+    Answers == [input_problems([wrong_type(profile)])].
+test(facade_verdict_for_an_owing_controller) :-
+    small_exempt_controller(250, Profile),
+    findall(Verdict, decide_gdpr_records_and_officer(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_verdict(record_required, [cite(eu_reg_2016_679_art_30_1)])].
+test(facade_is_resolvable_for_an_exempt_controller) :-
+    small_exempt_controller(249, Profile),
+    gdpr_records_and_officer_decision_resolvable(Profile).
+test(facade_status_for_a_referral_is_unresolved) :-
+    unsure_trigger_controller(Profile),
+    gdpr_records_and_officer_status(Profile, record_unresolved).
+
+test(two_hundred_forty_nine_does_not_owe_the_record, fail) :-
+    small_exempt_controller(249, Profile),
+    record_obligation(Profile, [keep_controller_record(_)]).
+test(court_in_judicial_capacity_is_not_limb_a, fail) :-
+    example_attestation(Attestation),
+    Profile = [attribute(is_public_authority_or_body, attested(true, Attestation)), attribute(processing_is_by_court_in_judicial_capacity, true)],
+    data_protection_officer_designation(Profile, [designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_a))]).
+test(a_duty_outside_the_five_has_no_solution, fail) :-
+    officer_position_status([], publication_of_contact_details, _, _, _).
+test(a_duty_outside_the_five_has_no_solution_on_a_malformed_profile, fail) :-
+    officer_position_status(not_a_list, publication_of_contact_details, _, _, _).
+test(facade_is_not_resolvable_for_a_referral, fail) :-
+    unsure_trigger_controller(Profile),
+    gdpr_records_and_officer_decision_resolvable(Profile).

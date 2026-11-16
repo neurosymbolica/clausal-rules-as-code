@@ -1,0 +1,49 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor loads and its result terms and
+% one real citation record resolve. Self-contained: no slice is referenced.
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_common_definitions_data_and_processing/kernel, [gdpr_common_definitions_data_and_processing_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_common_definitions_data_and_processing/citations, [citation/2, implements/1]).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_common_definitions_data_and_processing_input_problems([], Problems),
+    Problems == [].
+
+test(an_unknown_key_is_named) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(no_such_key, true)], Problems),
+    Problems == [unknown_key(no_such_key)].
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(natural_person_identified, unsure)], Problems),
+    Problems == [wrong_type(natural_person_identified)].
+
+test(a_repeated_key_is_a_duplicate) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(natural_person_identified, true), attribute(natural_person_identified, false)], Problems),
+    Problems == [duplicate_key(natural_person_identified)].
+
+test(a_non_list_profile_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_input_problems(not_a_list, Problems),
+    Problems == [wrong_type(profile)].
+
+test(the_answer_term_builds_and_destructures) :-
+    Answer = definition_answer(met, none, [cite(eu_reg_2016_679_art_4_1)]),
+    Answer = definition_answer(Status, Ground, Citations),
+    Status == met,
+    Ground == none,
+    Citations == [cite(eu_reg_2016_679_art_4_1)].
+
+test(the_status_atoms_are_distinct) :-
+    dif(met, not_met).
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_4_1, _Record).
+
+test(implements_accepts_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_4_26).
+
+test(implements_refuses_an_unrecorded_key, fail) :-
+    implements(eu_reg_2016_679_art_4_99).
+
+:- end_module(test_load).

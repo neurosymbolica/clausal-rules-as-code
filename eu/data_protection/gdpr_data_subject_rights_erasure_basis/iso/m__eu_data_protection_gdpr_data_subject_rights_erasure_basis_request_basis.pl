@@ -1,0 +1,414 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_erasure_basis_request_basis, [request_basis/2, decide_request_basis/2, request_basis_status/2, request_basis_checklist/2, request_basis_decision_resolvable/1, request_basis_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_basis_kernel, [gdpr_data_subject_rights_erasure_basis_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_basis_citations, [implements/1]).
+
+request_basis_status_values([art17_1_a, art17_1_b, art17_1_c, art17_1_d, art17_1_e, art17_1_f, none]).
+
+point_order([art17_1_a, art17_1_b, art17_1_c, art17_1_d, art17_1_e, art17_1_f]).
+
+exception_order([art17_3_a, art17_3_b, art17_3_c, art17_3_d, art17_3_e, art12_5_manifestly_unfounded_or_excessive, art12_2_unable_to_identify, art23_legislative_restriction]).
+
+basis_citation(art17_1_a, cite(eu_reg_2016_679_art_17_1_a)).
+basis_citation(art17_1_b, cite(eu_reg_2016_679_art_17_1_b)).
+basis_citation(art17_1_c, cite(eu_reg_2016_679_art_17_1_c)).
+basis_citation(art17_1_d, cite(eu_reg_2016_679_art_17_1_d)).
+basis_citation(art17_1_e, cite(eu_reg_2016_679_art_17_1_e)).
+basis_citation(art17_1_f, cite(eu_reg_2016_679_art_17_1_f)).
+
+exception_citation(art17_3_a, cite(eu_reg_2016_679_art_17_3_a)).
+exception_citation(art17_3_b, cite(eu_reg_2016_679_art_17_3_b)).
+exception_citation(art17_3_c, cite(eu_reg_2016_679_art_17_3_c)).
+exception_citation(art17_3_d, cite(eu_reg_2016_679_art_17_3_d)).
+exception_citation(art17_3_e, cite(eu_reg_2016_679_art_17_3_e)).
+exception_citation(art12_5_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)).
+exception_citation(art12_2_unable_to_identify, cite(eu_reg_2016_679_art_12_2)).
+exception_citation(art23_legislative_restriction, cite(eu_reg_2016_679_art_23_1)).
+
+missing_key_order([identity_confirmed, consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed]).
+
+judgement_key_order([reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed, processing_necessary_for_freedom_of_expression_and_information, processing_necessary_for_public_task_or_official_authority, processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, erasure_would_render_impossible_or_seriously_impair_processing_objectives, processing_necessary_for_legal_claims]).
+
+referral_citation(reasonable_doubts_about_identity, eu_reg_2016_679_art_12_6).
+referral_citation(request_manifestly_unfounded_or_excessive, eu_reg_2016_679_art_12_5).
+referral_citation(data_no_longer_necessary_for_purposes, eu_reg_2016_679_art_17_1_a).
+referral_citation(overriding_legitimate_grounds_exist, eu_reg_2016_679_art_17_1_c).
+referral_citation(personal_data_unlawfully_processed, eu_reg_2016_679_art_17_1_d).
+referral_citation(processing_necessary_for_freedom_of_expression_and_information, eu_reg_2016_679_art_17_3_a).
+referral_citation(processing_necessary_for_public_task_or_official_authority, eu_reg_2016_679_art_17_3_b).
+referral_citation(processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, eu_reg_2016_679_art_17_3_c).
+referral_citation(processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, eu_reg_2016_679_art_17_3_d).
+referral_citation(erasure_would_render_impossible_or_seriously_impair_processing_objectives, eu_reg_2016_679_art_17_3_d).
+referral_citation(processing_necessary_for_legal_claims, eu_reg_2016_679_art_17_3_e).
+
+limb_reads(engagement, [data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed]).
+limb_reads(suspension, [reasonable_doubts_about_identity]).
+limb_reads(art17_3_a, [processing_necessary_for_freedom_of_expression_and_information]).
+limb_reads(art17_3_b, [processing_necessary_for_public_task_or_official_authority]).
+limb_reads(art17_3_c, [processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i]).
+limb_reads(art17_3_d, [processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, erasure_would_render_impossible_or_seriously_impair_processing_objectives]).
+limb_reads(art17_3_e, [processing_necessary_for_legal_claims]).
+limb_reads(art12_5_manifestly_unfounded_or_excessive, [request_manifestly_unfounded_or_excessive]).
+limb_reads(art12_2_unable_to_identify, []).
+limb_reads(art23_legislative_restriction, []).
+
+request_basis(Profile, Basis) :-
+    decide_erasure_request(Profile, gdpr_data_subject_request_verdict(_Comply, Basis, _Exception, _Conditions, _Citations)).
+
+decide_request_basis(Profile, request_basis_verdict(Basis, Citations)) :-
+    decide_erasure_request(Profile, gdpr_data_subject_request_verdict(_Comply, Basis, _Exception, _Conditions, Citations)).
+
+request_basis_status(Profile, Status) :-
+    decide_request_basis(Profile, request_basis_verdict(Status, _Citations)).
+
+request_basis_decision_resolvable(Profile) :-
+    decide_request_basis(Profile, _Verdict).
+
+decide_erasure_request(Profile, Verdict) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems(Profile, Problems),
+    decide_after_input_check(Problems, Profile, Verdict).
+
+decide_after_input_check([Problem|Problems], _, gdpr_data_subject_request_verdict(input_problems([Problem|Problems]), none, none, [], [])).
+decide_after_input_check([], Profile, Verdict) :-
+    request_type_case(Profile, TypeCase),
+    decide_by_type(TypeCase, Profile, Verdict).
+
+request_type_case(Profile, erasure) :-
+    profile_get(Profile, request_type, erasure).
+request_type_case(Profile, other) :-
+    profile_get(Profile, request_type, Type),
+    dif(Type, erasure).
+request_type_case(Profile, absent) :-
+    profile_lacks(Profile, request_type).
+
+decide_by_type(erasure, Profile, Verdict) :-
+    decide_erasure(Profile, Verdict).
+decide_by_type(other, _, gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])).
+decide_by_type(absent, _, gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])).
+
+decide_erasure(Profile, Verdict) :-
+    point_order(PointIdentifiers),
+    evaluate_points(PointIdentifiers, Profile, PointLimbs),
+    or_limbs(PointLimbs, outcome(EngagementTruth, EngagementLeaves)),
+    first_met_limb(PointLimbs, Basis),
+    exception_order(ExceptionIdentifiers),
+    evaluate_exceptions(ExceptionIdentifiers, Profile, ExceptionLimbs),
+    first_met_limb(ExceptionLimbs, Exception),
+    limbs_leaves(ExceptionLimbs, ExceptionLeaves),
+    leaves_open(ExceptionLeaves, ExceptionsOpen),
+    suspension(Profile, outcome(SuspensionTruth, SuspensionLeaves)),
+    route(EngagementTruth, Exception, SuspensionTruth, ExceptionsOpen, Route),
+    append([EngagementLeaves, SuspensionLeaves, ExceptionLeaves], OpenLeaves),
+    open_reads(EngagementTruth, SuspensionTruth, ExceptionLimbs, ReadKeys),
+    assemble(Route, Basis, Exception, OpenLeaves, ReadKeys, Profile, Verdict).
+
+route(unmet, _, _, _, unengaged) :-
+    implements(eu_reg_2016_679_art_17_1).
+route(met, Exception, _, _, relieved) :-
+    implements(eu_reg_2016_679_art_17_3_a),
+    dif(Exception, none).
+route(open, Exception, _, _, relieved) :-
+    implements(eu_reg_2016_679_art_17_3_a),
+    dif(Exception, none).
+route(met, none, met, _, suspended) :-
+    implements(eu_reg_2016_679_art_12_6).
+route(open, none, met, _, suspended) :-
+    implements(eu_reg_2016_679_art_12_6).
+route(met, none, open, _, open) :-
+    implements(eu_reg_2016_679_art_17_1).
+route(open, none, open, _, open) :-
+    implements(eu_reg_2016_679_art_17_1).
+route(open, none, unmet, _, open) :-
+    implements(eu_reg_2016_679_art_17_1).
+route(met, none, unmet, true, open) :-
+    implements(eu_reg_2016_679_art_17_1).
+route(met, none, unmet, false, must_comply) :-
+    implements(eu_reg_2016_679_art_17_1).
+
+assemble(unengaged, _, _, _, _, _, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_17_1)])) :-
+    implements(eu_reg_2016_679_art_17_1).
+assemble(relieved, Basis, Exception, _, _, _, gdpr_data_subject_request_verdict(need_not_comply, Basis, Exception, Conditions, Citations)) :-
+    implements(eu_reg_2016_679_art_17_1),
+    exception_conditions(Exception, Conditions),
+    basis_citations(Basis, BasisCitations),
+    exception_citation(Exception, ExceptionCitation),
+    append(BasisCitations, [ExceptionCitation], Citations).
+assemble(suspended, _, _, _, _, _, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])) :-
+    implements(eu_reg_2016_679_art_12_6).
+assemble(must_comply, Basis, _, _, _, _, gdpr_data_subject_request_verdict(must_comply, Basis, none, [], Citations)) :-
+    implements(eu_reg_2016_679_art_17_1),
+    basis_citations(Basis, Citations).
+assemble(open, _, _, OpenLeaves, ReadKeys, Profile, gdpr_data_subject_request_verdict(Comply, none, none, [], [])) :-
+    implements(eu_reg_2016_679_art_17_1),
+    open_comply(OpenLeaves, ReadKeys, Profile, Comply).
+
+exception_conditions(art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged]) :-
+    implements(eu_reg_2016_679_art_12_5).
+exception_conditions(Exception, []) :-
+    dif(Exception, art12_5_manifestly_unfounded_or_excessive).
+
+basis_citations(none, []).
+basis_citations(Basis, [Citation]) :-
+    dif(Basis, none),
+    basis_citation(Basis, Citation).
+
+open_comply(OpenLeaves, ReadKeys, Profile, Comply) :-
+    missing_key_order(KeyOrder),
+    missing_in_order(KeyOrder, OpenLeaves, Missing),
+    open_by_missing(Missing, OpenLeaves, ReadKeys, Profile, Comply).
+
+open_by_missing([Key|Keys], _, _, _, indeterminate([Key|Keys])).
+open_by_missing([], OpenLeaves, ReadKeys, Profile, Comply) :-
+    memberd_t(outside(erasure_required_by_union_or_member_state_law), OpenLeaves, HasOutside),
+    open_by_outside(HasOutside, OpenLeaves, ReadKeys, Profile, Comply).
+
+open_by_outside(true, _, ReadKeys, Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), cite(union_or_member_state_law_requiring_erasure)), [resolution(cite(union_or_member_state_law_requiring_erasure), not_attempted), inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_17_1_e),
+    relied_pairs(ReadKeys, [erasure_required_by_union_or_member_state_law - absent], Profile, Pairs).
+open_by_outside(false, OpenLeaves, ReadKeys, Profile, needs_legal_review(open_textured(Key, cite(Reference)), [inputs_relied_on(Pairs)])) :-
+    judgement_key_order(Order),
+    first_unsure(Order, OpenLeaves, Key),
+    referral_citation(Key, Reference),
+    relied_pairs(ReadKeys, [], Profile, Pairs).
+
+missing_in_order([], _, []).
+missing_in_order([Key|Keys], Leaves, Missing) :-
+    memberd_t(absent(Key), Leaves, IsMissing),
+    missing_in_order(Keys, Leaves, Later),
+    missing_step(IsMissing, Key, Later, Missing).
+
+missing_step(true, Key, Later, [Key|Later]).
+missing_step(false, _, Later, Later).
+
+first_unsure([Key|Keys], Leaves, Unsure) :-
+    memberd_t(unsure(Key), Leaves, IsUnsure),
+    first_unsure_step(IsUnsure, Key, Keys, Leaves, Unsure).
+
+first_unsure_step(true, Key, _, _, Key).
+first_unsure_step(false, _, Keys, Leaves, Unsure) :-
+    first_unsure(Keys, Leaves, Unsure).
+
+relied_pairs(ReadKeys, OutsidePairs, Profile, [request_type - erasure|AllPairs]) :-
+    judgement_key_order(Order),
+    judgement_pairs(Order, ReadKeys, Profile, JudgementPairs),
+    append(JudgementPairs, OutsidePairs, AllPairs).
+
+judgement_pairs([], _, _, []).
+judgement_pairs([Key|Keys], ReadKeys, Profile, Pairs) :-
+    memberd_t(Key, ReadKeys, IsRead),
+    judgement_pairs(Keys, ReadKeys, Profile, Later),
+    pair_step(IsRead, Profile, Key, Later, Pairs).
+
+pair_step(false, _, _, Later, Later).
+pair_step(true, Profile, Key, Later, [Key - Value|Later]) :-
+    profile_get(Profile, Key, Value).
+pair_step(true, Profile, Key, Later, Later) :-
+    profile_lacks(Profile, Key).
+
+open_reads(EngagementTruth, SuspensionTruth, ExceptionLimbs, ReadKeys) :-
+    truth_reads(EngagementTruth, engagement, EngagementReads),
+    truth_reads(SuspensionTruth, suspension, SuspensionReads),
+    exception_reads(ExceptionLimbs, ExceptionReads),
+    append([EngagementReads, SuspensionReads, ExceptionReads], ReadKeys).
+
+truth_reads(open, Limb, Keys) :-
+    limb_reads(Limb, Keys).
+truth_reads(met, _, []).
+truth_reads(unmet, _, []).
+
+exception_reads([], []).
+exception_reads([limb(Identifier, outcome(Truth, _))|Limbs], Keys) :-
+    truth_reads(Truth, Identifier, Own),
+    exception_reads(Limbs, Later),
+    append(Own, Later, Keys).
+
+engagement_point(art17_1_a, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_a),
+    required_leaf(Profile, data_no_longer_necessary_for_purposes, Outcome).
+engagement_point(art17_1_b, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_b),
+    required_leaf(Profile, consent_is_the_basis_of_processing, ConsentBasis),
+    required_leaf(Profile, consent_withdrawn, Withdrawn),
+    required_leaf(Profile, other_legal_ground_for_processing_exists, OtherGround),
+    negate_outcome(OtherGround, NoOtherGround),
+    and_outcomes(Withdrawn, NoOtherGround, WithdrawnWithoutOtherGround),
+    and_outcomes(ConsentBasis, WithdrawnWithoutOtherGround, Outcome).
+engagement_point(art17_1_c, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_c),
+    required_leaf(Profile, objection_under_art21_1_made, ObjectedUnderArt21One),
+    required_leaf(Profile, overriding_legitimate_grounds_exist, Overriding),
+    negate_outcome(Overriding, NoOverriding),
+    and_outcomes(ObjectedUnderArt21One, NoOverriding, UnderArt21One),
+    required_leaf(Profile, objection_under_art21_2_made, UnderArt21Two),
+    or_outcomes(UnderArt21One, UnderArt21Two, Outcome).
+engagement_point(art17_1_d, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_d),
+    required_leaf(Profile, personal_data_unlawfully_processed, Outcome).
+engagement_point(art17_1_e, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_e),
+    enabling_outside_leaf(Profile, erasure_required_by_union_or_member_state_law, Outcome).
+engagement_point(art17_1_f, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_1_f),
+    required_leaf(Profile, collected_in_relation_to_information_society_services_offer, Outcome).
+
+evaluate_points([], _, []).
+evaluate_points([Point|Points], Profile, [limb(Point, Outcome)|Limbs]) :-
+    engagement_point(Point, Profile, Outcome),
+    evaluate_points(Points, Profile, Limbs).
+
+exception_limb(art17_3_a, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_3_a),
+    defeater_leaf(Profile, processing_necessary_for_freedom_of_expression_and_information, Outcome).
+exception_limb(art17_3_b, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_3_b),
+    blocking_outside_leaf(Profile, processing_required_by_union_or_member_state_law, RequiredByLaw),
+    defeater_leaf(Profile, processing_necessary_for_public_task_or_official_authority, PublicTask),
+    or_outcomes(RequiredByLaw, PublicTask, Outcome).
+exception_limb(art17_3_c, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_3_c),
+    defeater_leaf(Profile, processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, Outcome).
+exception_limb(art17_3_d, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_3_d),
+    defeater_leaf(Profile, processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, Archiving),
+    defeater_leaf(Profile, erasure_would_render_impossible_or_seriously_impair_processing_objectives, Impairment),
+    and_outcomes(Archiving, Impairment, Outcome).
+exception_limb(art17_3_e, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_17_3_e),
+    defeater_leaf(Profile, processing_necessary_for_legal_claims, Outcome).
+exception_limb(art12_5_manifestly_unfounded_or_excessive, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_12_5),
+    defeater_leaf(Profile, request_manifestly_unfounded_or_excessive, Outcome).
+exception_limb(art12_2_unable_to_identify, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_12_2),
+    defeater_leaf(Profile, controller_demonstrates_unable_to_identify_data_subject, Outcome).
+exception_limb(art23_legislative_restriction, Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_23_1),
+    blocking_outside_leaf(Profile, legislative_restriction_applies_to_the_right, Outcome).
+
+evaluate_exceptions([], _, []).
+evaluate_exceptions([Exception|Exceptions], Profile, [limb(Exception, Outcome)|Limbs]) :-
+    exception_limb(Exception, Profile, Outcome),
+    evaluate_exceptions(Exceptions, Profile, Limbs).
+
+suspension(Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_12_6),
+    defeater_leaf(Profile, reasonable_doubts_about_identity, Doubts),
+    required_leaf(Profile, identity_confirmed, Confirmed),
+    negate_outcome(Confirmed, NotConfirmed),
+    and_outcomes(Doubts, NotConfirmed, Outcome).
+
+required_leaf(Profile, Key, outcome(met, [])) :-
+    profile_get(Profile, Key, true).
+required_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_get(Profile, Key, false).
+required_leaf(Profile, Key, outcome(open, [unsure(Key)])) :-
+    profile_get(Profile, Key, unsure).
+required_leaf(Profile, Key, outcome(open, [absent(Key)])) :-
+    profile_lacks(Profile, Key).
+
+defeater_leaf(Profile, Key, outcome(met, [])) :-
+    profile_get(Profile, Key, true).
+defeater_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_get(Profile, Key, false).
+defeater_leaf(Profile, Key, outcome(open, [unsure(Key)])) :-
+    profile_get(Profile, Key, unsure).
+defeater_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_lacks(Profile, Key).
+
+enabling_outside_leaf(Profile, Key, outcome(met, [])) :-
+    profile_get(Profile, Key, attested(true, _)).
+enabling_outside_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_get(Profile, Key, attested(false, _)).
+enabling_outside_leaf(Profile, Key, outcome(open, [outside(Key)])) :-
+    profile_lacks(Profile, Key).
+
+blocking_outside_leaf(Profile, Key, outcome(met, [])) :-
+    profile_get(Profile, Key, attested(true, _)).
+blocking_outside_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_get(Profile, Key, attested(false, _)).
+blocking_outside_leaf(Profile, Key, outcome(unmet, [])) :-
+    profile_lacks(Profile, Key).
+
+negate_outcome(outcome(met, _), outcome(unmet, [])).
+negate_outcome(outcome(unmet, _), outcome(met, [])).
+negate_outcome(outcome(open, Leaves), outcome(open, Leaves)).
+
+and_outcomes(outcome(unmet, _), _, outcome(unmet, [])).
+and_outcomes(outcome(met, _), Other, Other).
+and_outcomes(outcome(open, _), outcome(unmet, _), outcome(unmet, [])).
+and_outcomes(outcome(open, Leaves), outcome(met, _), outcome(open, Leaves)).
+and_outcomes(outcome(open, First), outcome(open, Second), outcome(open, Leaves)) :-
+    append(First, Second, Leaves).
+
+or_outcomes(outcome(met, _), _, outcome(met, [])).
+or_outcomes(outcome(unmet, _), Other, Other).
+or_outcomes(outcome(open, _), outcome(met, _), outcome(met, [])).
+or_outcomes(outcome(open, Leaves), outcome(unmet, _), outcome(open, Leaves)).
+or_outcomes(outcome(open, First), outcome(open, Second), outcome(open, Leaves)) :-
+    append(First, Second, Leaves).
+
+or_limbs([limb(_, Last)], Last).
+or_limbs([limb(_, First), Next|Others], Outcome) :-
+    or_limbs([Next|Others], LaterOutcome),
+    or_outcomes(First, LaterOutcome, Outcome).
+
+first_met_limb([], none).
+first_met_limb([limb(Identifier, Outcome)|Limbs], Met) :-
+    outcome_met_t(Outcome, IsMet),
+    first_met_step(IsMet, Identifier, Limbs, Met).
+
+first_met_step(true, Identifier, _, Identifier).
+first_met_step(false, _, Limbs, Met) :-
+    first_met_limb(Limbs, Met).
+
+outcome_met_t(outcome(met, _), true).
+outcome_met_t(outcome(unmet, _), false).
+outcome_met_t(outcome(open, _), false).
+
+limbs_leaves([], []).
+limbs_leaves([limb(_, outcome(_, Leaves))|Limbs], AllLeaves) :-
+    limbs_leaves(Limbs, Later),
+    append(Leaves, Later, AllLeaves).
+
+leaves_open([], false).
+leaves_open([_|_], true).
+
+request_basis_checklist(Profile, Items) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems(Profile, Problems),
+    checklist_after_input_check(Problems, Profile, Items).
+
+checklist_after_input_check([_|_], _, [item(input_check, unmet, cite(eu_reg_2016_679_art_17_1))]).
+checklist_after_input_check([], Profile, Items) :-
+    request_type_case(Profile, TypeCase),
+    checklist_by_type(TypeCase, Profile, Items).
+
+checklist_by_type(erasure, Profile, Items) :-
+    erasure_checklist(Profile, Items).
+checklist_by_type(other, _, [item(request_type, unmet, cite(eu_reg_2016_679_art_17_1))]).
+checklist_by_type(absent, _, [item(request_type, open, cite(eu_reg_2016_679_art_17_1))]).
+
+erasure_checklist(Profile, Items) :-
+    point_order(PointIdentifiers),
+    evaluate_points(PointIdentifiers, Profile, PointLimbs),
+    exception_order(ExceptionIdentifiers),
+    evaluate_exceptions(ExceptionIdentifiers, Profile, ExceptionLimbs),
+    suspension(Profile, outcome(SuspensionTruth, _)),
+    limb_items(PointLimbs, PointItems),
+    limb_items(ExceptionLimbs, ExceptionItems),
+    append([PointItems, ExceptionItems, [item(art12_6_identity_not_confirmed, SuspensionTruth, cite(eu_reg_2016_679_art_12_6))]], Items).
+
+limb_items([], []).
+limb_items([limb(Identifier, outcome(Truth, _))|Limbs], [item(Identifier, Truth, Citation)|Items]) :-
+    limb_citation(Identifier, Citation),
+    limb_items(Limbs, Items).
+
+limb_citation(Identifier, Citation) :-
+    basis_citation(Identifier, Citation).
+limb_citation(Identifier, Citation) :-
+    exception_citation(Identifier, Citation).

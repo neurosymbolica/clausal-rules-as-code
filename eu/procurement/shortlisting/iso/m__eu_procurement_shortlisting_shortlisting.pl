@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_shortlisting_shortlisting, [decide_shortlisting/2, shortlisting_status/2, shortlisting_checklist/2, shortlisting_decision_resolvable/1, shortlisting_status_values/1, statutory_minimum_candidates/2, shortlisting_limitation_modality/4, shortlisting_invitation_floor/4, shortlisting_inclusion_modality/2, shortlisting_what_if/4, shortlisting_profile_keys/1, shortlisting_input_problem/2, shortlisting_input_acceptable/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

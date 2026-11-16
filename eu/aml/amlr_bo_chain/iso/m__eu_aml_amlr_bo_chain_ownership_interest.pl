@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_bo_chain_ownership_interest, [effective_ownership/4, ubo_status/4, ubo_threshold_bps/1, bo_chain_input_problem/4, bo_chain_input_complete/3, holding_whole_basis_points/2, holding_difference/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

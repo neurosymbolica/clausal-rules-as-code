@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_shortlisting_fixtures, [shortlisting_subject/1, shortlisting_profile_for/2, shortlisting_assess/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

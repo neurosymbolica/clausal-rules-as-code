@@ -1,0 +1,311 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/nis2_implementing_regulation_significant_incidents (deontic family).
+% Source: Commission Implementing Regulation (EU) 2024/2690 of 17 October 2024
+% (CELEX 32024R2690, original act, source sha256
+% 1d10f42c31a2b3c6b929b4696a04093ee1d84a298c0c0437a22f8718a9ffb3cd), Art 3(1) and
+% Art 3(2) (the result atoms and their citations) and the order's typed input
+% contract (THE INPUT CHECK).
+%
+% DAG root of the determination-slices layout. This order has ONE determination
+% slice (nis2_implementing_regulation_significant_incidents.clausal), so no
+% decision predicate is shared. The kernel holds:
+%   - the order's input check
+%     nis2_implementing_regulation_significant_incidents_input_problems/2, written
+%     from the typed input contract, exported for the slice and queries to import;
+%   - the RESULT CONSTRUCTORS and the two RESULT ATOMS the order names as public
+%     (indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1,
+%     provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1,
+%     significant/0, not_significant/0). They are exported so the package root can
+%     expose them; they are never called as queries.
+%
+% Result term the slice builds (the scaffold verdict term):
+%   nis2_implementing_regulation_significant_incidents_verdict(Status, Citations)
+%     Status    -- argument 2 of significant_incident_criteria/3: ONE of
+%                  significant | not_significant (final atoms), or a status
+%                  compound ITSELF (never in a list, never the bare atom):
+%                    indeterminate([Key])          one bare missing key atom;
+%                    needs_legal_review(open_textured(Key, cite(Cite)),
+%                                       [inputs_relied_on(Pairs)])
+%                                                  Pairs: Key-Value of the
+%                                                  judgement keys present,
+%                                                  root_exports order;
+%                    input_problems(Problems)      Problems non-empty, items
+%                                                  duplicate_key(Key),
+%                                                  wrong_type(Key),
+%                                                  unknown_key(Key).
+%     Citations -- a flat set-like list of cite(Key) terms, FIXED per result:
+%                  significant      [cite(eu_reg_2024_2690_art_3_1)]
+%                  not_significant  [cite(eu_reg_2024_2690_art_3_1),
+%                                    cite(eu_reg_2024_2690_art_3_2)]
+%                  any status       []
+% The judgement value besides true and false is the atom unsure.
+% =====================================================================
+
+:- module(kernel, [
+    nis2_implementing_regulation_significant_incidents_input_problems/2,
+    significant/0,
+    not_significant/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- result atoms and result constructors (data shapes, never queried) ----
+% Each constructor holds for the shape the order gives it: a non-empty list of
+% missing keys, a referral reason over a key and its cite(...) term, a list of
+% Key-Value pairs, a non-empty list of problems, a key named by a problem.
+% A constructor accepts ANY given trailing argument (a CONTEXT list or a
+% provenance detail), and, called with that argument unbound, answers with a
+% ground one ([]), never a variable. Exactly one clause holds per call.
+significant.
+not_significant.
+indeterminate([_|_]).
+% Choice (a) THE LOGIC IS WRONG: the constructor refused a bound CONTEXT such as [inputs_relied_on(Pairs)].
+needs_legal_review(_Reason, Context) :-
+    nonvar(Context).
+needs_legal_review(_Reason, Context) :-
+    var(Context),
+    Context = [].
+open_textured(Key, cite(Cite)) :-
+    atom(Key),
+    atom(Cite).
+inputs_relied_on([]).
+inputs_relied_on([_|_]).
+% Choice (a) THE LOGIC IS WRONG: the constructor refused a bound provenance detail.
+provenance(_Source, Detail) :-
+    nonvar(Detail).
+provenance(_Source, Detail) :-
+    var(Detail),
+    Detail = [].
+input_problems([_|_]).
+unknown_key(Key) :-
+    nonvar(Key).
+wrong_type(Key) :-
+    atom(Key).
+duplicate_key(Key) :-
+    atom(Key).
+
+% ---- input checks: the problems a profile has, if any -----------
+% nis2_implementing_regulation_significant_incidents_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] (an unbound
+%   Profile, a partial list, a list with an unbound element or an element that is not
+%   attribute/2) gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type (an unbound value included); then unknown_key(Key) for each key
+%   outside the contract, in the order of its first occurrence in Profile. A Key that is
+%   not an atom (a number, a string, a compound, an unbound variable) is a key outside
+%   the contract and is named as given (INTERFACE - THE INPUT CHECK). Each key is named
+%   once. An absent key is not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+nis2_implementing_regulation_significant_incidents_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [scheduled_interruption_or_maintenance, relevant_entity_type, direct_financial_loss_euro_cents, annual_turnover_preceding_financial_year_euro_cents, trade_secret_exfiltration, death_of_natural_person, considerable_damage_to_natural_person_health, suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption, recurring_incidents_within_six_months, same_apparent_root_cause, recurring_collective_direct_financial_loss_euro_cents, complete_unavailability_seconds, average_response_time_above_ten_seconds_seconds, limited_availability_seconds, weekly_unavailability_seconds, complete_unavailability_users, limited_availability_users, data_compromise_users, service_users_in_union, data_compromised, data_compromise_suspectedly_malicious, physical_access_compromised, incorrect_data_only_by_misconfiguration, incorrect_domain_names, managed_domain_names],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(scheduled_interruption_or_maintenance, boolean).
+key_type(relevant_entity_type, relevant_entity_type).
+key_type(direct_financial_loss_euro_cents, non_negative_integer).
+key_type(annual_turnover_preceding_financial_year_euro_cents, non_negative_integer).
+key_type(trade_secret_exfiltration, judgement).
+key_type(death_of_natural_person, judgement).
+key_type(considerable_damage_to_natural_person_health, judgement).
+key_type(suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption, judgement).
+key_type(recurring_incidents_within_six_months, non_negative_integer).
+key_type(same_apparent_root_cause, judgement).
+key_type(recurring_collective_direct_financial_loss_euro_cents, non_negative_integer).
+key_type(complete_unavailability_seconds, non_negative_integer).
+key_type(average_response_time_above_ten_seconds_seconds, non_negative_integer).
+key_type(limited_availability_seconds, non_negative_integer).
+key_type(weekly_unavailability_seconds, non_negative_integer).
+key_type(complete_unavailability_users, non_negative_integer).
+key_type(limited_availability_users, non_negative_integer).
+key_type(data_compromise_users, non_negative_integer).
+key_type(service_users_in_union, non_negative_integer).
+key_type(data_compromised, judgement).
+key_type(data_compromise_suspectedly_malicious, judgement).
+key_type(physical_access_compromised, judgement).
+key_type(incorrect_data_only_by_misconfiguration, boolean).
+key_type(incorrect_domain_names, non_negative_integer).
+key_type(managed_domain_names, non_negative_integer).
+
+% attribute_list_t(Term, T): T is true when Term is a proper list of attribute(Key, Value)
+% items (any Key: a non-atom Key is an unknown key, not a malformed profile); false for
+% anything else, an unbound Term, a partial list or an unbound element included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% identical_member_t(Key, Keys, Truth): Truth is true when Key is identical (==) to an
+% element of Keys. Identity, not unification, so an unbound or non-ground Key is
+% compared as given and never bound.
+identical_member_t(_, [], false).
+identical_member_t(Key, [Known|_], true) :-
+    Key == Known.
+identical_member_t(Key, [Known|Knowns], Truth) :-
+    Key \== Known,
+    identical_member_t(Key, Knowns, Truth).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    identical_member_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(relevant_entity_type, Value, T) :-
+    in_type_t(enum([dns_service_provider, tld_name_registry, cloud_computing_service_provider, data_centre_service_provider, content_delivery_network_provider, managed_service_provider, managed_security_service_provider, online_marketplace_provider, online_search_engine_provider, social_networking_services_platform_provider, trust_service_provider]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term (profile values are atoms, numbers or compounds).
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+:- end_module(kernel).

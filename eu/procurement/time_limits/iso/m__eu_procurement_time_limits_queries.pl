@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_time_limits_queries, [time_limits_profile_keys/1, time_limits_what_if/4, time_limits_enumerate/4, time_limits_floor/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(date_guard, [must_be_date/1]).
 
 :- set_prolog_flag(double_quotes, chars).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_profiles.pl
 % Generated-companion providing tri_get/3 (three-valued profile read) over
 % Task 2's attribute-list profile shape: [attribute(Key, Value), ...]. Pure,

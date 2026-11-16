@@ -1,0 +1,105 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, through
+% the generated package facade.
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards, [
+    decide_safeguards/2,
+    safeguards_status/2,
+    unmet_requirements/2,
+    safeguards_status_checklist/2,
+    gdpr_art89_research_safeguards_input_problems/2,
+    gdpr_art89_research_safeguards_subject/1,
+    gdpr_art89_research_safeguards_profile_for/2,
+    gdpr_art89_research_safeguards_assess/2,
+    gdpr_art89_research_safeguards_what_if/4,
+    gdpr_art89_research_safeguards_compliance_check/2
+]).
+
+test(compliant_research_is_in_accordance) :-
+    gdpr_art89_research_safeguards_assess(compliant_research, gdpr_art89_verdict(in_accordance, [], [cite(eu_reg_2016_679_art_89_1)])).
+
+test(no_measures_is_not_in_accordance) :-
+    gdpr_art89_research_safeguards_assess(no_measures, gdpr_art89_verdict(not_in_accordance, [measures], [cite(eu_reg_2016_679_art_89_1)])).
+
+test(no_measures_is_not_in_accordance_control, fail) :-
+    gdpr_art89_research_safeguards_assess(no_measures, gdpr_art89_verdict(in_accordance, _, _)).
+
+test(no_minimisation_is_not_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(no_minimisation, Profile),
+    unmet_requirements(Profile, [minimisation]).
+
+test(identifiable_and_sufficient_is_unmet_identification) :-
+    gdpr_art89_research_safeguards_profile_for(identifiable_and_sufficient, Profile),
+    unmet_requirements(Profile, [identification]).
+
+test(identifiable_not_sufficient_is_in_accordance) :-
+    gdpr_art89_research_safeguards_profile_for(identifiable_not_sufficient, Profile),
+    findall(Status, safeguards_status(Profile, Status), Statuses),
+    Statuses == [in_accordance].
+
+test(inappropriate_safeguards_is_unmet_appropriateness) :-
+    gdpr_art89_research_safeguards_profile_for(inappropriate_safeguards, Profile),
+    unmet_requirements(Profile, [appropriateness]).
+
+test(several_unmet_come_in_fixed_order) :-
+    gdpr_art89_research_safeguards_profile_for(measures_and_minimisation_unmet, Profile),
+    unmet_requirements(Profile, [measures, minimisation]).
+
+test(purpose_absent_is_indeterminate) :-
+    gdpr_art89_research_safeguards_assess(purpose_absent, gdpr_art89_verdict(indeterminate([purpose]), [], [])).
+
+test(other_purpose_is_not_applicable) :-
+    gdpr_art89_research_safeguards_assess(other_purpose_case, gdpr_art89_verdict(not_applicable, [], [])).
+
+test(measures_key_absent_is_indeterminate) :-
+    gdpr_art89_research_safeguards_assess(measures_key_absent, gdpr_art89_verdict(indeterminate([technical_organisational_measures_in_place]), [], [])).
+
+test(identification_keys_absent_are_both_missing) :-
+    gdpr_art89_research_safeguards_assess(identification_keys_absent, gdpr_art89_verdict(indeterminate([identifiable_data_processed, non_identifying_processing_sufficient]), [], [])).
+
+test(sufficiency_unsure_needs_legal_review) :-
+    gdpr_art89_research_safeguards_assess(sufficiency_unsure, gdpr_art89_verdict(needs_legal_review(open_textured(non_identifying_processing_sufficient, cite(eu_reg_2016_679_art_89_1)), [inputs_relied_on([identifiable_data_processed-true, non_identifying_processing_sufficient-unsure])]), [], [])).
+
+test(appropriateness_unsure_needs_legal_review) :-
+    gdpr_art89_research_safeguards_assess(appropriateness_unsure, gdpr_art89_verdict(needs_legal_review(open_textured(safeguards_appropriate, cite(eu_reg_2016_679_art_89_1)), [inputs_relied_on([safeguards_appropriate-unsure])]), [], [])).
+
+test(first_unsure_judgement_is_the_input) :-
+    gdpr_art89_research_safeguards_assess(both_judgements_unsure, gdpr_art89_verdict(needs_legal_review(open_textured(non_identifying_processing_sufficient, _), _), [], [])).
+
+test(unknown_key_is_an_input_problem) :-
+    gdpr_art89_research_safeguards_assess(unknown_key_given, gdpr_art89_verdict(input_problems([unknown_key(extra_note)]), [], [])).
+
+test(input_check_is_exposed) :-
+    gdpr_art89_research_safeguards_profile_for(unknown_key_given, Profile),
+    gdpr_art89_research_safeguards_input_problems(Profile, [unknown_key(extra_note)]).
+
+test(unmet_dominates_an_absent_key) :-
+    gdpr_art89_research_safeguards_assess(unmet_dominates_absence, gdpr_art89_verdict(not_in_accordance, [measures], _)).
+
+test(checklist_is_non_empty_with_provenance) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    safeguards_status_checklist(Profile, [item(measures, met, cite(eu_reg_2016_679_art_89_1))|_]).
+
+test(what_if_removing_measures_flips_the_status) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_what_if(Profile, technical_organisational_measures_in_place, false, not_in_accordance).
+
+test(compliance_check_permits_the_compliant_case) :-
+    gdpr_art89_research_safeguards_profile_for(compliant_research, Profile),
+    gdpr_art89_research_safeguards_compliance_check(Profile, permitted).
+
+test(compliance_check_prohibits_the_unmet_case) :-
+    gdpr_art89_research_safeguards_profile_for(no_measures, Profile),
+    gdpr_art89_research_safeguards_compliance_check(Profile, prohibited).
+
+test(compliance_check_is_undetermined_for_unsure) :-
+    gdpr_art89_research_safeguards_profile_for(appropriateness_unsure, Profile),
+    gdpr_art89_research_safeguards_compliance_check(Profile, undetermined).
+
+test(every_subject_has_a_profile) :-
+    gdpr_art89_research_safeguards_subject(Subject),
+    gdpr_art89_research_safeguards_profile_for(Subject, _Profile).
+
+:- end_module(test_public_interface).

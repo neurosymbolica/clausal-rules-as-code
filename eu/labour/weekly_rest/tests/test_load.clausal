@@ -1,0 +1,123 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of eu/labour/weekly_rest
+% loads, and what it guarantees holds: the kernel's input check
+% weekly_rest_input_problems/2 answers once for every term, the result
+% terms of the order build and destructure, the verdict atoms are
+% distinct, and the real citation records of Directive 2003/88/EC
+% resolve through citation/2 and implements/1.
+% The determination slice is not referenced here (it is authored later).
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/labour/weekly_rest/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/labour/weekly_rest/kernel, [weekly_rest_input_problems/2]).
+:- use_module(eu/labour/weekly_rest/citations, [citation/2, implements/1]).
+
+% ---- the verdict vocabulary ------------------------------------------
+
+test(the_four_result_atoms_are_distinct) :-
+    dif(weekly_rest_given, weekly_rest_not_given),
+    dif(weekly_rest_given, weekly_rest_not_applied_to_worker),
+    dif(weekly_rest_given, weekly_rest_derogation_applies),
+    dif(weekly_rest_not_given, weekly_rest_not_applied_to_worker),
+    dif(weekly_rest_not_given, weekly_rest_derogation_applies),
+    dif(weekly_rest_not_applied_to_worker, weekly_rest_derogation_applies).
+
+test(no_period_without_weekly_rest_is_not_a_result_atom) :-
+    dif(no_period_without_weekly_rest, weekly_rest_given),
+    dif(no_period_without_weekly_rest, weekly_rest_not_given).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = weekly_rest_verdict(weekly_rest_given, [cite(eu_dir_2003_88_art_5_first_subpara)]),
+    Verdict = weekly_rest_verdict(Status, Citations),
+    Status == weekly_rest_given,
+    Citations == [cite(eu_dir_2003_88_art_5_first_subpara)].
+
+test(the_verdict_term_does_not_take_another_status, fail) :-
+    Verdict = weekly_rest_verdict(weekly_rest_given, []),
+    Verdict = weekly_rest_verdict(weekly_rest_not_given, _).
+
+test(an_indeterminate_status_names_one_key) :-
+    Status = indeterminate([worker_category]),
+    Status = indeterminate([Key]),
+    Key == worker_category.
+
+test(a_referral_builds_and_destructures) :-
+    Status = needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time-unsure])]),
+    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == on_call_on_site_counts_as_working_time,
+    CitationKey == eu_dir_2003_88_art_2_1,
+    Pairs == [on_call_on_site_counts_as_working_time-unsure].
+
+test(an_input_problems_status_carries_its_list) :-
+    Status = input_problems([wrong_type(period_end)]),
+    Status = input_problems(Problems),
+    Problems == [wrong_type(period_end)].
+
+% ---- the real citation records ---------------------------------------
+
+test(the_weekly_rest_citation_is_recorded) :-
+    citation(eu_dir_2003_88_art_5_first_subpara, _Record).
+
+test(the_working_time_citation_is_recorded) :-
+    citation(eu_dir_2003_88_art_2_1, _Record).
+
+test(the_record_has_label_reference_and_verbatim) :-
+    citation(eu_dir_2003_88_art_20_1, Record),
+    Record = [label-_, ref-_, verbatim-Verbatim],
+    Verbatim == 'Articles 3, 4, 5 and 8 shall not apply to mobile workers.'.
+
+test(implements_succeeds_for_a_recorded_key) :-
+    implements(eu_dir_2003_88_art_16_a).
+
+test(implements_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_todo_primary_source).
+
+% ---- the kernel's input check ----------------------------------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, weekly_rest_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_full_good_profile_has_no_problem) :-
+    Profile = [attribute(on_call_on_site_counts_as_working_time, unsure),
+               attribute(on_call_standby_counts_as_working_time, false),
+               attribute(weekly_rest_minimum, rest_of_24_plus_11_hours),
+               attribute(weekly_rest_reference_period, seven_day_period),
+               attribute(worker_category, other_worker),
+               attribute(derogation_from_article_5, no_derogation)],
+    findall(Problems, weekly_rest_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+
+test(an_unbound_profile_is_the_wrong_type) :-
+    findall(Problems, weekly_rest_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_atom_is_not_an_attribute_list) :-
+    findall(Problems, weekly_rest_input_problems(profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_list_with_a_foreign_element_is_not_an_attribute_list) :-
+    findall(Problems, weekly_rest_input_problems([attribute(worker_category, other_worker), worker_category], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_value_outside_its_type_then_an_unknown_key) :-
+    findall(Problems, weekly_rest_input_problems([attribute(extra_key, 1), attribute(weekly_rest_minimum, forty_hours)], Problems), Answers),
+    Answers == [[wrong_type(weekly_rest_minimum), unknown_key(extra_key)]].
+
+test(a_repeated_key_is_a_duplicate_only) :-
+    findall(Problems, weekly_rest_input_problems([attribute(worker_category, other_worker), attribute(worker_category, sailor)], Problems), Answers),
+    Answers == [[duplicate_key(worker_category)]].
+
+test(an_unbound_value_is_the_wrong_type) :-
+    findall(Problems, weekly_rest_input_problems([attribute(derogation_from_article_5, _)], Problems), Answers),
+    Answers == [[wrong_type(derogation_from_article_5)]].
+
+test(a_good_profile_is_not_reported_as_wrong, fail) :-
+    weekly_rest_input_problems([attribute(worker_category, mobile_worker)], [_|_]).
+
+test(a_good_profile_is_reported_as_clean) :-
+    weekly_rest_input_problems([attribute(worker_category, mobile_worker)], []).
+
+:- end_module(test_load).

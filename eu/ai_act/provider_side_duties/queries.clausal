@@ -1,0 +1,303 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/provider_side_duties.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act), the
+% consolidated text 02024R1689-20260727, as pinned. Every statutory
+% condition is decided in the slice provider_side_duties.clausal; this
+% layer only projects and combines its answers. It decides no statutory
+% condition, so it carries no implements/1 marker.
+%
+% The question term is duty_case(Profile, Duty, AssessmentDate), an INPUT
+% constructor only.
+%
+% provider_side_duties_profile_keys/1      the profile key schema, in contract order
+% provider_side_duties_input_problems/2    THE INPUT CHECK (re-exported from kernel)
+% provider_side_duties_what_if/4           (#16 what-if) one key overridden, re-decided
+% provider_side_duties_compliance_check/3  (#13 compliance check) is a proposed action
+%                                          (omit_duty or perform_duty) compliant
+% provider_side_duties_obligations/3       (#14 obligation surfacing) the duties that
+%                                          apply to the actor on the day
+% Status determination (#3) and justification (#7) are the slice's
+% provider_side_duties_status/2 and provider_side_duties_checklist/2.
+%
+% The what-if override is local: the profile is an attribute list (the kit's
+% override_key/4 works on dicts), and the override removes every occurrence
+% of the key and adds the new value, so a duplicate key is resolved by the
+% hypothesis itself.
+%
+% RESULT CONSTRUCTORS and RESULT atoms: the order names the ten RESULT atoms
+% and the constructors date/3, indeterminate/1, needs_legal_review/2,
+% open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1,
+% unknown_key/1, wrong_type/1 and duplicate_key/1 as exported names. The
+% constructors are data: they are declared with constructors/1 and have no
+% clauses; they are never called as queries.
+% =====================================================================
+
+:- module(queries, [
+    provider_side_duties_profile_keys/1,
+    provider_side_duties_input_problems/2,
+    provider_side_duties_what_if/4,
+    provider_side_duties_compliance_check/3,
+    provider_side_duties_obligations/3,
+    not_applicable_on_date/0,
+    earlier_text_not_formalised/0,
+    not_an_ai_system/0,
+    not_a_high_risk_ai_system/0,
+    not_the_addressee_of_the_duty/0,
+    compliance_required_by_31_december_2030/0,
+    compliance_required_by_2_august_2030/0,
+    system_already_placed_without_significant_change/0,
+    duty_not_triggered/0,
+    duty_applies/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/ai_act/provider_side_duties/kernel, [provider_side_duties_input_problems/2]).
+:- use_module(eu/ai_act/provider_side_duties/provider_side_duties, [
+    provider_side_duties_status/2,
+    provider_side_duties_status_values/1
+]).
+
+:- constructors([
+    date(year, month, day),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- RESULT atoms and RESULT constructors (never called as queries) ----
+
+not_applicable_on_date.
+earlier_text_not_formalised.
+not_an_ai_system.
+not_a_high_risk_ai_system.
+not_the_addressee_of_the_duty.
+compliance_required_by_31_december_2030.
+compliance_required_by_2_august_2030.
+system_already_placed_without_significant_change.
+duty_not_triggered.
+duty_applies.
+
+indeterminate([_MissingKey]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+provider_side_duties_profile_keys([ai_system, high_risk_ai_system, high_risk_route, actor_role, component_of_a_large_scale_it_system_listed_in_annex_x, placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, intended_to_be_used_by_public_authorities, provider_established_in_a_third_country, logs_under_the_providers_control, reasoned_request_from_a_competent_authority, request_from_a_market_surveillance_authority_for_a_copy_of_the_mandate, competent_authority_action_in_relation_to_the_system, system_under_the_operators_responsibility, provider_considers_or_has_reason_to_consider_the_system_not_in_conformity, presents_a_risk_within_the_meaning_of_article_79_1, provider_aware_of_the_risk, representative_considers_or_has_reason_to_consider_the_provider_acting_contrary_to_its_obligations, importer_has_sufficient_reason_to_consider_the_system_not_in_conformity_or_falsified, distributor_considers_or_has_reason_to_consider_the_system_not_in_conformity, distributor_has_made_the_system_available_on_the_market]).
+
+% The forty DUTY atoms, in the order of THE DUTY TABLE, then ai_literacy_measures.
+duty_atoms([
+    compliance_with_the_requirements_of_section_2,
+    provider_name_and_contact_address,
+    quality_management_system,
+    documentation_keeping,
+    log_keeping,
+    conformity_assessment_before_placing_on_the_market,
+    eu_declaration_of_conformity,
+    ce_marking,
+    registration,
+    corrective_actions_and_information,
+    investigation_and_information_on_a_risk,
+    demonstration_of_conformity_on_request,
+    access_to_logs_on_request,
+    accessibility_requirements,
+    appointment_of_an_authorised_representative,
+    enabling_the_authorised_representative,
+    performance_of_the_mandate_tasks,
+    copy_of_the_mandate_on_request,
+    verification_of_the_declaration_documentation_and_conformity_assessment,
+    keeping_of_the_provider_contact_details_and_documents,
+    representative_information_on_request,
+    representative_cooperation_with_authorities,
+    representative_registration,
+    termination_of_the_mandate,
+    importer_verification_before_placing_on_the_market,
+    importer_withholding_of_a_non_conforming_system,
+    importer_information_on_a_risk,
+    importer_name_and_contact_address,
+    importer_storage_and_transport_conditions,
+    importer_keeping_of_copies,
+    importer_information_on_request,
+    importer_cooperation_with_authorities,
+    distributor_verification_before_making_available,
+    distributor_withholding_of_a_non_conforming_system,
+    distributor_information_on_a_risk,
+    distributor_storage_and_transport_conditions,
+    distributor_corrective_actions,
+    distributor_information_on_request,
+    distributor_cooperation_with_authorities,
+    ai_literacy_measures
+]).
+
+% ---- #16 what-if: re-decide with one key hypothetically overridden ----
+
+provider_side_duties_what_if(duty_case(Profile, Duty, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    provider_side_duties_input_problems(Profile, Problems),
+    override_attribute(Problems, Profile, OverriddenKey, NewValue, Hypothesis),
+    provider_side_duties_status(duty_case(Hypothesis, Duty, AssessmentDate), NewStatus).
+
+% A term that is not an attribute list is kept as it is (its status stays
+% input_problems); an attribute list loses every occurrence of the key and
+% gains the new value.
+override_attribute([wrong_type(profile)], Profile, _, _, Profile).
+override_attribute(Problems, Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|Kept]) :-
+    dif(Problems, [wrong_type(profile)]),
+    exclude(same_attribute_key(OverriddenKey), Profile, Kept).
+
+same_attribute_key(OverriddenKey, Element) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey.
+
+% ---- #13 compliance check: is the proposed action compliant ----------
+% Action omit_duty: non_compliant when the duty applies, compliant for any
+% other final answer. Action perform_duty: compliant for any final answer.
+% A not-final answer (indeterminate, needs_legal_review, input_problems) is
+% passed through itself. Any other Action is input_problems([wrong_type(action)]).
+
+provider_side_duties_compliance_check(Case, Action, Verdict) :-
+    provider_side_duties_status(Case, Status),
+    provider_side_duties_status_values(FinalValues),
+    memberd_t(Status, FinalValues, IsFinal),
+    proposed_action_t(Action, IsAction),
+    compliance_verdict(IsAction, IsFinal, Action, Status, Verdict).
+
+proposed_action_t(Action, false) :-
+    var(Action).
+proposed_action_t(Action, IsAction) :-
+    nonvar(Action),
+    memberd_t(Action, [omit_duty, perform_duty], IsAction).
+
+compliance_verdict(false, _, _, _, input_problems([wrong_type(action)])).
+compliance_verdict(true, false, _, Status, Status).
+compliance_verdict(true, true, perform_duty, _, compliant).
+compliance_verdict(true, true, omit_duty, Status, Verdict) :-
+    omission_verdict(Status, Verdict).
+
+omission_verdict(duty_applies, non_compliant).
+omission_verdict(Status, compliant) :-
+    dif(Status, duty_applies).
+
+% ---- #14 obligation surfacing: the duties the actor owes on the day ----
+% One solution: the DUTY atoms, in duty-table order, whose status is
+% duty_applies. Each status is deterministic, so no duty is listed twice.
+
+provider_side_duties_obligations(Profile, AssessmentDate, Duties) :-
+    duty_atoms(AllDuties),
+    findall(Duty, owed_duty(AllDuties, Profile, AssessmentDate, Duty), Duties).
+
+owed_duty(AllDuties, Profile, AssessmentDate, Duty) :-
+    member(Duty, AllDuties),
+    provider_side_duties_status(duty_case(Profile, Duty, AssessmentDate), duty_applies).
+
+% ---- tests --------------------------------------------------------
+
+complete_provider_profile([
+    attribute(ai_system, true),
+    attribute(high_risk_ai_system, true),
+    attribute(high_risk_route, annex_iii),
+    attribute(actor_role, provider),
+    attribute(component_of_a_large_scale_it_system_listed_in_annex_x, false),
+    attribute(placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+    attribute(placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, false),
+    attribute(significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, false),
+    attribute(intended_to_be_used_by_public_authorities, false),
+    attribute(provider_established_in_a_third_country, false),
+    attribute(logs_under_the_providers_control, false),
+    attribute(reasoned_request_from_a_competent_authority, false),
+    attribute(request_from_a_market_surveillance_authority_for_a_copy_of_the_mandate, false),
+    attribute(competent_authority_action_in_relation_to_the_system, false),
+    attribute(system_under_the_operators_responsibility, false),
+    attribute(provider_considers_or_has_reason_to_consider_the_system_not_in_conformity, false),
+    attribute(presents_a_risk_within_the_meaning_of_article_79_1, false),
+    attribute(provider_aware_of_the_risk, false),
+    attribute(representative_considers_or_has_reason_to_consider_the_provider_acting_contrary_to_its_obligations, false),
+    attribute(importer_has_sufficient_reason_to_consider_the_system_not_in_conformity_or_falsified, false),
+    attribute(distributor_considers_or_has_reason_to_consider_the_system_not_in_conformity, false),
+    attribute(distributor_has_made_the_system_available_on_the_market, false)
+]).
+
+importer_profile([
+    attribute(high_risk_ai_system, true),
+    attribute(high_risk_route, annex_iii),
+    attribute(actor_role, importer),
+    attribute(component_of_a_large_scale_it_system_listed_in_annex_x, false),
+    attribute(placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+    attribute(placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, false),
+    attribute(significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, false),
+    attribute(importer_has_sufficient_reason_to_consider_the_system_not_in_conformity_or_falsified, false),
+    attribute(presents_a_risk_within_the_meaning_of_article_79_1, false),
+    attribute(system_under_the_operators_responsibility, false),
+    attribute(reasoned_request_from_a_competent_authority, false),
+    attribute(competent_authority_action_in_relation_to_the_system, false)
+]).
+
+test(omitting_an_applicable_duty_is_non_compliant) :-
+    complete_provider_profile(Profile),
+    findall(Verdict, provider_side_duties_compliance_check(duty_case(Profile, ce_marking, date(2029, 1, 1)), omit_duty, Verdict), Verdicts),
+    Verdicts == [non_compliant].
+
+test(omitting_an_applicable_duty_is_not_compliant, fail) :-
+    complete_provider_profile(Profile),
+    provider_side_duties_compliance_check(duty_case(Profile, ce_marking, date(2029, 1, 1)), omit_duty, compliant).
+
+test(performing_the_duty_is_compliant) :-
+    complete_provider_profile(Profile),
+    provider_side_duties_compliance_check(duty_case(Profile, ce_marking, date(2029, 1, 1)), perform_duty, compliant).
+
+test(omitting_an_untriggered_duty_is_compliant) :-
+    complete_provider_profile(Profile),
+    provider_side_duties_compliance_check(duty_case(Profile, log_keeping, date(2029, 1, 1)), omit_duty, compliant).
+
+test(a_not_final_status_passes_through) :-
+    provider_side_duties_compliance_check(duty_case([], ce_marking, date(2029, 1, 1)), omit_duty, Verdict),
+    Verdict == indeterminate([high_risk_ai_system]).
+
+test(an_unknown_action_is_an_input_problem) :-
+    complete_provider_profile(Profile),
+    provider_side_duties_compliance_check(duty_case(Profile, ce_marking, date(2029, 1, 1)), ignore_duty, input_problems([wrong_type(action)])).
+
+test(the_importer_owes_three_unconditional_duties) :-
+    importer_profile(Profile),
+    findall(Duties, provider_side_duties_obligations(Profile, date(2028, 1, 1), Duties), AllDuties),
+    AllDuties == [[importer_verification_before_placing_on_the_market, importer_name_and_contact_address, importer_keeping_of_copies]].
+
+test(before_chapter_three_no_importer_duty_is_owed) :-
+    importer_profile(Profile),
+    provider_side_duties_obligations(Profile, date(2027, 12, 1), []).
+
+test(what_if_logs_come_under_control) :-
+    complete_provider_profile(Profile),
+    provider_side_duties_status(duty_case(Profile, log_keeping, date(2029, 1, 1)), duty_not_triggered),
+    provider_side_duties_what_if(duty_case(Profile, log_keeping, date(2029, 1, 1)), logs_under_the_providers_control, true, NewStatus),
+    NewStatus == duty_applies.
+
+test(what_if_on_a_non_list_profile_keeps_the_input_problem) :-
+    provider_side_duties_what_if(duty_case(profile, ce_marking, date(2029, 1, 1)), actor_role, provider, NewStatus),
+    NewStatus == input_problems([wrong_type(profile)]).
+
+test(the_key_schema_has_twenty_two_keys) :-
+    provider_side_duties_profile_keys(Keys),
+    length(Keys, 22).
+
+test(there_are_forty_duty_atoms) :-
+    duty_atoms(Duties),
+    length(Duties, 40).
+
+:- end_module(queries).

@@ -1,0 +1,83 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_chapter_v_extras_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [second_subparagraph_duty/5, foreign_judgment_or_decision_recognition/4, onward_transfer_condition/4, gdpr_chapter_v_extras_status/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_fixtures, [gdpr_chapter_v_extras_profile_for/2]).
+
+test(a_met_duty_holds_with_the_result_bound) :-
+    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
+    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_met, _, _).
+test(an_unmet_documentation_duty_holds_with_basis_and_citations_bound) :-
+    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
+    second_subparagraph_duty(Profile, document_assessment_and_safeguards, duty_not_met, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, _))], [cite(eu_reg_2016_679_art_49_6)]).
+test(the_processor_answer_holds_bound) :-
+    gdpr_chapter_v_extras_profile_for(processor_documentation_met, Profile),
+    second_subparagraph_duty(Profile, inform_data_subject, not_a_processor_duty, [], [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
+test(the_article_48_bar_holds_bound) :-
+    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
+    foreign_judgment_or_decision_recognition(Profile, not_recognisable_or_enforceable, _, [cite(eu_reg_2016_679_art_48)]).
+test(the_onward_answer_holds_bound) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_without_basis, Profile),
+    onward_transfer_condition(Profile, onward_transfer_may_not_take_place, _, [cite(eu_reg_2016_679_art_44)]).
+test(the_facade_status_holds_bound) :-
+    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
+    gdpr_chapter_v_extras_status(Profile, condition_breached).
+test(a_duty_outside_the_three_is_an_input_problem) :-
+    second_subparagraph_duty([], inform_everyone, input_problems([wrong_type(duty)]), [], []).
+test(an_unbound_duty_is_an_input_problem) :-
+    findall(Result - Basis - Citations, second_subparagraph_duty([], _, Result, Basis, Citations), Answers),
+    Answers == [input_problems([wrong_type(duty)]) - [] - []].
+test(a_profile_that_is_not_a_list_is_wrong_type) :-
+    onward_transfer_condition(not_a_list, input_problems([wrong_type(profile)]), [], []).
+test(an_unbound_profile_is_wrong_type) :-
+    findall(Result, foreign_judgment_or_decision_recognition(_, Result, _, _), Answers),
+    Answers == [input_problems([wrong_type(profile)])].
+test(a_list_element_that_is_not_an_attribute_is_wrong_type) :-
+    gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), party_role], [wrong_type(profile)]).
+test(a_key_outside_the_contract_is_unknown) :-
+    onward_transfer_condition([attribute(colour, blue)], input_problems([unknown_key(colour)]), [], []).
+test(a_repeated_contract_key_is_a_duplicate) :-
+    foreign_judgment_or_decision_recognition([attribute(party_role, controller), attribute(party_role, controller)], input_problems([duplicate_key(party_role)]), [], []).
+test(contract_problems_come_before_unknown_keys) :-
+    gdpr_chapter_v_extras_input_problems([attribute(colour, blue), attribute(party_role, owner)], [wrong_type(party_role), unknown_key(colour)]).
+test(a_crisp_key_given_an_attested_term_is_wrong_type) :-
+    gdpr_chapter_v_extras_input_problems([attribute(duty_placeholder_never_used, x)|[]], [unknown_key(duty_placeholder_never_used)]),
+    gdpr_chapter_v_extras_input_problems([attribute(assessment_documented_in_records, attested(true, attestation(by, at, reason, none)))], [wrong_type(assessment_documented_in_records)]).
+test(an_attestation_with_three_arguments_is_wrong_type) :-
+    gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason)))], [wrong_type(transfer_is_onward_transfer)]).
+test(a_numeric_party_role_is_wrong_type) :-
+    gdpr_chapter_v_extras_input_problems([attribute(party_role, 7)], [wrong_type(party_role)]).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
+    gdpr_chapter_v_extras_input_problems(Profile, []).
+test(a_bad_profile_and_a_bad_duty_are_both_named) :-
+    second_subparagraph_duty(42, inform_everyone, input_problems([wrong_type(profile), wrong_type(duty)]), [], []).
+
+test(a_met_duty_rejects_duty_not_met_bound, fail) :-
+    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
+    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_not_met, _, _).
+test(an_unmet_documentation_duty_rejects_the_wrong_citation, fail) :-
+    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
+    second_subparagraph_duty(Profile, document_assessment_and_safeguards, duty_not_met, _, [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
+test(the_article_48_bar_rejects_not_barred_bound, fail) :-
+    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
+    foreign_judgment_or_decision_recognition(Profile, not_barred_by_article_48, _, _).
+test(the_onward_answer_rejects_may_take_place_bound, fail) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_without_basis, Profile),
+    onward_transfer_condition(Profile, onward_transfer_may_take_place, _, _).
+test(the_facade_status_rejects_clear_bound, fail) :-
+    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
+    gdpr_chapter_v_extras_status(Profile, no_condition_breached).
+
+cp_test_names([a_met_duty_holds_with_the_result_bound, an_unmet_documentation_duty_holds_with_basis_and_citations_bound, the_processor_answer_holds_bound, the_article_48_bar_holds_bound, the_onward_answer_holds_bound, the_facade_status_holds_bound, a_duty_outside_the_three_is_an_input_problem, an_unbound_duty_is_an_input_problem, a_profile_that_is_not_a_list_is_wrong_type, an_unbound_profile_is_wrong_type, a_list_element_that_is_not_an_attribute_is_wrong_type, a_key_outside_the_contract_is_unknown, a_repeated_contract_key_is_a_duplicate, contract_problems_come_before_unknown_keys, a_crisp_key_given_an_attested_term_is_wrong_type, an_attestation_with_three_arguments_is_wrong_type, a_numeric_party_role_is_wrong_type, a_well_formed_profile_has_no_problem, a_bad_profile_and_a_bad_duty_are_both_named]).
+cp_test_fail_names([a_met_duty_rejects_duty_not_met_bound, an_unmet_documentation_duty_rejects_the_wrong_citation, the_article_48_bar_rejects_not_barred_bound, the_onward_answer_rejects_may_take_place_bound, the_facade_status_rejects_clear_bound]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

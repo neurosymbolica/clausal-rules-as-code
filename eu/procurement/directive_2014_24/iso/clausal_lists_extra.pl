@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_lists_extra.pl
 % List predicates the Clausal Prolog (.clausal) ISO export needs that Scryer's
 % library(lists) lacks (Trealla has them built in): sizing doc 2026-10-07, step 9.

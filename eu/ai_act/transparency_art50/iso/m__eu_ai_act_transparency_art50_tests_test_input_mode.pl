@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_transparency_art50_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_transparency_art50_transparency_art50, [transparency_duty_status/5, transparency_compliance/5]).
+:- use_module(m__eu_ai_act_transparency_art50_kernel, [transparency_art50_input_problems/2]).
+:- use_module(m__eu_ai_act_transparency_art50_fixtures, [transparency_art50_profile_for/2]).
+
+test(the_date_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(interaction_before_application_day, Profile),
+    transparency_duty_status(Profile, interaction_information, date(2026, 8, 1), not_applicable_on_date, [cite(eu_reg_2024_1689_art_113)]).
+test(the_duty_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(conversational_assistant_duty_applies, Profile),
+    transparency_duty_status(Profile, interaction_information, date(2027, 1, 1), duty_applies, [cite(eu_reg_2024_1689_art_50_1)]).
+test(the_not_applying_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(emotion_recognition_personal_use, Profile),
+    transparency_duty_status(Profile, emotion_recognition_or_biometric_categorisation_information, date(2027, 1, 1), duty_does_not_apply, [cite(eu_reg_2024_1689_art_50_3), cite(eu_reg_2024_1689_art_3_4)]).
+test(the_ai_system_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(rule_based_assistant_outside_definition, Profile),
+    transparency_duty_status(Profile, interaction_information, date(2027, 1, 1), not_an_ai_system, [cite(eu_reg_2024_1689_art_3_1)]).
+test(the_limited_disclosure_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(deep_fake_artistic_work, Profile),
+    transparency_duty_status(Profile, deep_fake_disclosure, date(2027, 1, 1), limited_disclosure_applies, [cite(eu_reg_2024_1689_art_50_4)]).
+test(the_transitional_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(marking_legacy_last_transitional_day, Profile),
+    transparency_duty_status(Profile, machine_readable_marking, date(2026, 12, 1), in_transitional_period, [cite(eu_reg_2024_1689_art_50_2), cite(eu_reg_2024_1689_art_111_4)]).
+test(the_compliant_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(assistant_informed_on_time, Profile),
+    transparency_compliance(Profile, interaction_information, date(2027, 1, 1), compliant, [cite(eu_reg_2024_1689_art_50_1), cite(eu_reg_2024_1689_art_50_5)]).
+test(the_not_compliant_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(emotion_recognition_informed_late, Profile),
+    transparency_compliance(Profile, emotion_recognition_or_biometric_categorisation_information, date(2027, 1, 1), not_compliant, [cite(eu_reg_2024_1689_art_50_3), cite(eu_reg_2024_1689_art_50_5)]).
+test(the_indeterminate_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(assistant_system_status_unknown, Profile),
+    transparency_duty_status(Profile, interaction_information, date(2027, 1, 1), indeterminate([ai_system]), []).
+test(the_referral_route_holds_with_its_verdict_bound) :-
+    transparency_art50_profile_for(deep_fake_artistic_judgement_unsure, Profile),
+    transparency_duty_status(Profile, deep_fake_disclosure, date(2027, 1, 1), needs_legal_review(open_textured(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, cite(eu_reg_2024_1689_art_50_4)), _Context), []).
+test(the_input_problems_route_holds_with_its_verdict_bound) :-
+    transparency_compliance([attribute(colour, red)], interaction_information, date(2027, 1, 1), input_problems([unknown_key(colour)]), []).
+test(the_first_missing_key_is_named_alone) :-
+    transparency_duty_status([], interaction_information, date(2027, 1, 1), indeterminate([intended_to_interact_directly_with_natural_persons]), []).
+test(a_number_is_not_an_attribute_list) :-
+    transparency_art50_input_problems(42, [wrong_type(profile)]).
+test(an_improper_list_is_not_an_attribute_list) :-
+    transparency_art50_input_problems([attribute(ai_system, true)|tail], [wrong_type(profile)]).
+test(a_list_with_a_number_element_is_not_an_attribute_list) :-
+    transparency_art50_input_problems([attribute(ai_system, true), 7], [wrong_type(profile)]).
+test(a_list_with_a_foreign_element_is_not_an_attribute_list) :-
+    transparency_art50_input_problems([attribute(ai_system, true), ai_system], [wrong_type(profile)]).
+test(an_atom_is_not_an_attribute_list) :-
+    transparency_art50_input_problems(profile, [wrong_type(profile)]).
+test(a_number_key_is_an_unknown_key) :-
+    transparency_art50_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(a_compound_key_is_an_unknown_key) :-
+    transparency_art50_input_problems([attribute(colour(red), true)], [unknown_key(colour(red))]).
+test(a_compound_value_is_a_wrong_type) :-
+    transparency_art50_input_problems([attribute(ai_system, maybe(true))], [wrong_type(ai_system)]).
+test(a_duplicate_key_is_named_once_whatever_its_values) :-
+    transparency_art50_input_problems([attribute(ai_system, true), attribute(ai_system, maybe)], [duplicate_key(ai_system)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    transparency_art50_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(contract_problems_come_in_contract_order_before_unknown_keys) :-
+    transparency_art50_input_problems([attribute(colour, red), attribute(information_timing, later), attribute(required_information_given, unsure)], [wrong_type(required_information_given), wrong_type(information_timing), unknown_key(colour)]).
+test(the_enumeration_key_rejects_true) :-
+    transparency_art50_input_problems([attribute(information_timing, true)], [wrong_type(information_timing)]).
+test(the_enumeration_key_accepts_its_two_atoms) :-
+    transparency_art50_input_problems([attribute(information_timing, after_first_interaction_or_exposure)], []),
+    transparency_art50_input_problems([attribute(information_timing, at_or_before_first_interaction_or_exposure)], []).
+test(a_judgement_accepts_unsure) :-
+    transparency_art50_input_problems([attribute(ai_system, unsure)], []).
+test(an_absent_key_is_not_a_problem) :-
+    transparency_art50_input_problems([], []).
+test(the_input_check_answers_once_on_every_shape) :-
+    maplist(one_input_answer, [_, [], profile, [profile], [attribute(colour, red), attribute(colour, red)], [attribute(ai_system, true)|_]]).
+test(a_number_duty_is_a_wrong_type) :-
+    transparency_duty_status([], 42, date(2027, 1, 1), input_problems([wrong_type(duty)]), []).
+test(a_two_part_date_is_a_wrong_type) :-
+    transparency_compliance([], interaction_information, date(2027, 1), input_problems([wrong_type(assessment_date)]), []).
+test(a_thirteenth_month_is_a_wrong_type) :-
+    transparency_duty_status([], interaction_information, date(2027, 13, 1), input_problems([wrong_type(assessment_date)]), []).
+test(an_iso_atom_is_not_a_date) :-
+    transparency_duty_status([], interaction_information, '2027-01-01', input_problems([wrong_type(assessment_date)]), []).
+test(a_leap_day_is_a_real_day) :-
+    transparency_duty_status([], interaction_information, date(2028, 2, 29), indeterminate([intended_to_interact_directly_with_natural_persons]), []).
+test(the_twenty_ninth_of_february_2027_is_not_a_real_day) :-
+    transparency_duty_status([], interaction_information, date(2027, 2, 29), input_problems([wrong_type(assessment_date)]), []).
+test(profile_problems_come_before_the_duty_and_the_date) :-
+    transparency_compliance([attribute(colour, red)], unknown_duty, date(2026, 2, 30), input_problems([unknown_key(colour), wrong_type(duty), wrong_type(assessment_date)]), []).
+
+test(the_date_route_rejects_a_bound_duty_applies, fail) :-
+    transparency_art50_profile_for(interaction_before_application_day, Profile),
+    transparency_duty_status(Profile, interaction_information, date(2026, 8, 1), duty_applies, _).
+test(the_not_applying_route_rejects_a_short_citation_list, fail) :-
+    transparency_art50_profile_for(emotion_recognition_personal_use, Profile),
+    transparency_duty_status(Profile, emotion_recognition_or_biometric_categorisation_information, date(2027, 1, 1), duty_does_not_apply, [cite(eu_reg_2024_1689_art_50_3)]).
+test(a_bare_indeterminate_atom_is_never_the_answer, fail) :-
+    transparency_duty_status([], interaction_information, date(2027, 1, 1), indeterminate, _).
+
+one_input_answer(Term) :-
+    findall(Problems, transparency_art50_input_problems(Term, Problems), Answers),
+    length(Answers, 1).
+
+cp_test_names([the_date_route_holds_with_its_verdict_bound, the_duty_route_holds_with_its_verdict_bound, the_not_applying_route_holds_with_its_verdict_bound, the_ai_system_route_holds_with_its_verdict_bound, the_limited_disclosure_route_holds_with_its_verdict_bound, the_transitional_route_holds_with_its_verdict_bound, the_compliant_route_holds_with_its_verdict_bound, the_not_compliant_route_holds_with_its_verdict_bound, the_indeterminate_route_holds_with_its_verdict_bound, the_referral_route_holds_with_its_verdict_bound, the_input_problems_route_holds_with_its_verdict_bound, the_first_missing_key_is_named_alone, a_number_is_not_an_attribute_list, an_improper_list_is_not_an_attribute_list, a_list_with_a_number_element_is_not_an_attribute_list, a_list_with_a_foreign_element_is_not_an_attribute_list, an_atom_is_not_an_attribute_list, a_number_key_is_an_unknown_key, a_compound_key_is_an_unknown_key, a_compound_value_is_a_wrong_type, a_duplicate_key_is_named_once_whatever_its_values, a_repeated_unknown_key_is_named_once, contract_problems_come_in_contract_order_before_unknown_keys, the_enumeration_key_rejects_true, the_enumeration_key_accepts_its_two_atoms, a_judgement_accepts_unsure, an_absent_key_is_not_a_problem, the_input_check_answers_once_on_every_shape, a_number_duty_is_a_wrong_type, a_two_part_date_is_a_wrong_type, a_thirteenth_month_is_a_wrong_type, an_iso_atom_is_not_a_date, a_leap_day_is_a_real_day, the_twenty_ninth_of_february_2027_is_not_a_real_day, profile_problems_come_before_the_duty_and_the_date]).
+cp_test_fail_names([the_date_route_rejects_a_bound_duty_applies, the_not_applying_route_rejects_a_short_citation_list, a_bare_indeterminate_atom_is_never_the_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_life_cycle_costing_tests_test_negative_controls, [run_tests/0]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

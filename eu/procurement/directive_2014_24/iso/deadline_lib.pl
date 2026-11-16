@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(deadline_lib, [deadline/4, date_before/2, date_after/2, date_on_or_before/2, date_on_or_after/2, within_deadline/2, deadline_status/6, days_until_deadline/5, next_day/2, prev_day/2, month_last_day/3, add_business_days/3, business_day_step/3, deadline_months_after/3, deadline_months_result/5]).
 :- use_module(library(dif), [dif/2]).
 

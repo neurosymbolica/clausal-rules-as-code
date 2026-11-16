@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_lists.pl
 % Generated-companion supplying the list ENGINE builtins that Scryer has no
 % library for at all. Trealla has them built in, so the failure is
@@ -5,7 +6,7 @@
 % (G2) -- the same class as export.py's LIBRARY_INJECTIONS, one step further
 % out: there is no library(...) to import from on the Scryer side, so a
 % companion has to carry the definition. Measured 2026-09-06 (Phase D
-% residue "missing ISO/library builtin"):
+% residue "missing ISO/library builtin", the ISO export pilot notes):
 %
 %   Scryer  msort([b,a,a],X)              -> existence_error(procedure, msort/2)
 %   Scryer  use_module(library(lists)), msort(...) -> the same error

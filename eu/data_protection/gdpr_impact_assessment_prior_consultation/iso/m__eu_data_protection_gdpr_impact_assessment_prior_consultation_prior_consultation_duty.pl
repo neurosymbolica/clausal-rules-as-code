@@ -1,0 +1,286 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_prior_consultation_duty, [decide_prior_consultation_duty/2, prior_consultation_duty_status/2, prior_consultation_duty_checklist/2, prior_consultation_duty_decision_resolvable/1, prior_consultation_duty_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists, [msort/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_kernel, [gdpr_impact_assessment_prior_consultation_input_problems/2, gdpr_impact_assessment_prior_consultation_outside_fact_reading/3]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_citations, [implements/1, basis_citation/2]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+prior_consultation_duty_status_values([required, not_required]).
+
+prior_consultation_judgement(assessment_indicates_high_risk_absent_mitigation, cite(eu_reg_2016_679_art_36_1)).
+prior_consultation_judgement(measures_reduce_residual_risk_below_high, cite(eu_reg_2016_679_art_36_1)).
+
+prior_consultation_outside_fact(member_state_requires_prior_authorisation, cite(eu_reg_2016_679_art_36_5), member_state_law_requiring_prior_consultation_and_authorisation).
+
+not_governed_here_citations([cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_36_1)]).
+
+checklist_requirement(impact_assessment_carried_out, cite(eu_reg_2016_679_art_36_1)).
+checklist_requirement(assessment_indicates_high_risk_absent_mitigation, cite(eu_reg_2016_679_art_36_1)).
+checklist_requirement(residual_risk_stays_high, cite(eu_reg_2016_679_art_36_1)).
+checklist_requirement(art36_1_residual_high_risk, cite(eu_reg_2016_679_art_36_1)).
+checklist_requirement(processing_for_public_interest_task, cite(eu_reg_2016_679_art_36_5)).
+checklist_requirement(member_state_requires_prior_authorisation, cite(eu_reg_2016_679_art_36_5)).
+checklist_requirement(art36_5_member_state_prior_authorisation, cite(eu_reg_2016_679_art_36_5)).
+
+crisp_limb(Profile, InputKey, open([leaf(absence, InputKey)])) :-
+    profile_lacks(Profile, InputKey).
+crisp_limb(Profile, InputKey, LimbStatus) :-
+    profile_has(Profile, InputKey),
+    profile_get(Profile, InputKey, InputValue),
+    crisp_value_status(InputValue, LimbStatus).
+
+crisp_value_status(true, met).
+crisp_value_status(false, unmet).
+
+judgement_limb(Profile, InputKey, open([leaf(absence, InputKey)])) :-
+    profile_lacks(Profile, InputKey).
+judgement_limb(Profile, InputKey, LimbStatus) :-
+    profile_has(Profile, InputKey),
+    profile_get(Profile, InputKey, InputValue),
+    judgement_value_status(InputValue, InputKey, LimbStatus).
+
+judgement_value_status(true, _, met).
+judgement_value_status(false, _, unmet).
+judgement_value_status(unsure, InputKey, open([leaf(judgement, InputKey)])).
+
+enabling_fact_limb(Profile, InputKey, LimbStatus) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, InputKey, Reading),
+    enabling_reading_status(Reading, InputKey, LimbStatus).
+
+enabling_reading_status(absent, InputKey, open([leaf(cross_reference, InputKey)])).
+enabling_reading_status(attested(true, _), _, met).
+enabling_reading_status(attested(false, _), _, unmet).
+
+negated_status(met, unmet).
+negated_status(unmet, met).
+negated_status(open(Leaves), open(Leaves)).
+
+and_combined(unmet, _, unmet).
+and_combined(met, RightStatus, RightStatus).
+and_combined(open(_), unmet, unmet).
+and_combined(open(Leaves), met, open(Leaves)).
+and_combined(open(LeftLeaves), open(RightLeaves), open(Leaves)) :-
+    append(LeftLeaves, RightLeaves, Leaves).
+
+or_combined(met, _, met).
+or_combined(unmet, RightStatus, RightStatus).
+or_combined(open(_), met, met).
+or_combined(open(Leaves), unmet, open(Leaves)).
+or_combined(open(LeftLeaves), open(RightLeaves), open(Leaves)) :-
+    append(LeftLeaves, RightLeaves, Leaves).
+
+assessment_carried_out_limb(Profile, LimbStatus) :-
+    implements(eu_reg_2016_679_art_36_1),
+    crisp_limb(Profile, impact_assessment_carried_out, LimbStatus).
+
+high_risk_indicated_limb(Profile, LimbStatus) :-
+    implements(eu_reg_2016_679_art_36_1),
+    judgement_limb(Profile, assessment_indicates_high_risk_absent_mitigation, LimbStatus).
+
+residual_risk_stays_high(Profile, LimbStatus) :-
+    implements(eu_reg_2016_679_art_36_1),
+    crisp_limb(Profile, mitigating_measures_taken, MeasuresTaken),
+    judgement_limb(Profile, measures_reduce_residual_risk_below_high, MeasuresReduceRisk),
+    negated_status(MeasuresTaken, NoMeasuresTaken),
+    negated_status(MeasuresReduceRisk, MeasuresLeaveRiskHigh),
+    or_combined(NoMeasuresTaken, MeasuresLeaveRiskHigh, LimbStatus).
+
+article_36_1_way(Profile, WayStatus) :-
+    implements(eu_reg_2016_679_art_36_1),
+    assessment_carried_out_limb(Profile, CarriedStatus),
+    high_risk_indicated_limb(Profile, IndicatedStatus),
+    residual_risk_stays_high(Profile, ResidualStatus),
+    and_combined(CarriedStatus, IndicatedStatus, CarriedAndIndicated),
+    and_combined(CarriedAndIndicated, ResidualStatus, WayStatus).
+
+public_interest_task_limb(Profile, LimbStatus) :-
+    implements(eu_reg_2016_679_art_36_5),
+    crisp_limb(Profile, processing_for_public_interest_task, LimbStatus).
+
+member_state_prior_authorisation_limb(Profile, LimbStatus) :-
+    implements(eu_reg_2016_679_art_36_5),
+    enabling_fact_limb(Profile, member_state_requires_prior_authorisation, LimbStatus).
+
+article_36_5_way(Profile, WayStatus) :-
+    implements(eu_reg_2016_679_art_36_5),
+    public_interest_task_limb(Profile, TaskStatus),
+    member_state_prior_authorisation_limb(Profile, AuthorisationStatus),
+    and_combined(TaskStatus, AuthorisationStatus, WayStatus).
+
+decide_prior_consultation_duty(Profile, Verdict) :-
+    gdpr_impact_assessment_prior_consultation_input_problems(Profile, Problems),
+    verdict_for_problems(Problems, Profile, Verdict).
+
+verdict_for_problems([Problem|Problems], _, prior_consultation_verdict(input_problems([Problem|Problems]), [], [], [])).
+verdict_for_problems([], Profile, Verdict) :-
+    article_36_1_way(Profile, FirstWayStatus),
+    article_36_5_way(Profile, SecondWayStatus),
+    or_combined(FirstWayStatus, SecondWayStatus, ConsultationStatus),
+    assessment_carried_out_limb(Profile, CarriedStatus),
+    consultation_verdict(ConsultationStatus, FirstWayStatus, CarriedStatus, Profile, Verdict).
+
+consultation_verdict(met, FirstWayStatus, _, Profile, prior_consultation_verdict(required, [Basis], Context, [Citation])) :-
+    required_basis(FirstWayStatus, Basis),
+    basis_citation(Basis, Citation),
+    final_context(Profile, Context).
+consultation_verdict(unmet, _, met, Profile, prior_consultation_verdict(not_required, [art36_1_condition_not_met], Context, [Citation])) :-
+    implements(eu_reg_2016_679_art_36_1),
+    basis_citation(art36_1_condition_not_met, Citation),
+    final_context(Profile, Context).
+consultation_verdict(unmet, _, open(_), Profile, prior_consultation_verdict(not_required, [art36_1_condition_not_met], Context, [Citation])) :-
+    implements(eu_reg_2016_679_art_36_1),
+    basis_citation(art36_1_condition_not_met, Citation),
+    final_context(Profile, Context).
+consultation_verdict(unmet, _, unmet, Profile, prior_consultation_verdict(needs_legal_review(not_governed_here(Citations), [inputs_relied_on(Pairs)]), [], [], [])) :-
+    implements(eu_reg_2016_679_art_35_1),
+    not_governed_here_citations(Citations),
+    judgement_pairs(Profile, Pairs).
+consultation_verdict(open(Leaves), _, _, Profile, prior_consultation_verdict(Status, [], [], [])) :-
+    open_status(Leaves, Profile, Status).
+
+required_basis(met, art36_1_residual_high_risk) :-
+    implements(eu_reg_2016_679_art_36_1).
+required_basis(unmet, art36_5_member_state_prior_authorisation) :-
+    implements(eu_reg_2016_679_art_36_5).
+required_basis(open(_), art36_5_member_state_prior_authorisation) :-
+    implements(eu_reg_2016_679_art_36_5).
+
+open_status(Leaves, Profile, Status) :-
+    leaf_keys(absence, Leaves, MissingKeys),
+    leaf_keys(cross_reference, Leaves, AbsentFacts),
+    leaf_keys(judgement, Leaves, UnsureJudgements),
+    open_kind(MissingKeys, AbsentFacts, UnsureJudgements, Profile, Status).
+
+leaf_keys(LeafKind, Leaves, InputKeys) :-
+    findall(InputKey, member(leaf(LeafKind, InputKey), Leaves), FoundKeys),
+    sort(FoundKeys, InputKeys).
+
+open_kind([MissingKey|MissingKeys], _, _, _, indeterminate([MissingKey|MissingKeys])).
+open_kind([], [FactKey|FactKeys], _, Profile, needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_36_5),
+    prior_consultation_outside_fact(FactKey, Citation, Target),
+    referral_pairs(Profile, [FactKey|FactKeys], Pairs).
+open_kind([], [], [Judgement|_], Profile, needs_legal_review(open_textured(Judgement, Citation), [inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_36_1),
+    prior_consultation_judgement(Judgement, Citation),
+    judgement_pairs(Profile, Pairs).
+
+present_judgement(Profile, InputKey, InputValue) :-
+    prior_consultation_judgement(InputKey, _),
+    profile_has(Profile, InputKey),
+    profile_get(Profile, InputKey, InputValue).
+
+judgement_pairs(Profile, Pairs) :-
+    findall(InputKey - InputValue, present_judgement(Profile, InputKey, InputValue), FoundPairs),
+    msort(FoundPairs, Pairs).
+
+referral_pairs(Profile, AbsentFacts, Pairs) :-
+    findall(InputKey - InputValue, present_judgement(Profile, InputKey, InputValue), JudgementPairs),
+    findall(FactKey - absent, member(FactKey, AbsentFacts), AbsentPairs),
+    append(JudgementPairs, AbsentPairs, FoundPairs),
+    msort(FoundPairs, Pairs).
+
+final_context(Profile, Context) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, member_state_requires_prior_authorisation, Reading),
+    judgement_pairs(Profile, Pairs),
+    final_context_items(Reading, Pairs, Context).
+
+final_context_items(absent, Pairs, [inputs_relied_on(Pairs)]).
+final_context_items(attested(FactValue, Attestation), Pairs, [outside_fact(member_state_requires_prior_authorisation, attested(FactValue, Attestation)), inputs_relied_on(Pairs)]).
+
+prior_consultation_duty_status(Profile, Status) :-
+    decide_prior_consultation_duty(Profile, prior_consultation_verdict(Status, _, _, _)).
+
+prior_consultation_duty_checklist(Profile, Items) :-
+    gdpr_impact_assessment_prior_consultation_input_problems(Profile, Problems),
+    checklist_for_problems(Problems, Profile, Items).
+
+checklist_for_problems([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2016_679_art_36_1))]).
+checklist_for_problems([], Profile, Items) :-
+    findall(item(RequirementId, ItemStatus, Citation), checklist_row(Profile, RequirementId, ItemStatus, Citation), Items).
+
+checklist_row(Profile, RequirementId, ItemStatus, Citation) :-
+    checklist_requirement(RequirementId, Citation),
+    requirement_status(RequirementId, Profile, LimbStatus),
+    item_status(LimbStatus, RequirementId, ItemStatus).
+
+requirement_status(impact_assessment_carried_out, Profile, LimbStatus) :-
+    assessment_carried_out_limb(Profile, LimbStatus).
+requirement_status(assessment_indicates_high_risk_absent_mitigation, Profile, LimbStatus) :-
+    high_risk_indicated_limb(Profile, LimbStatus).
+requirement_status(residual_risk_stays_high, Profile, LimbStatus) :-
+    residual_risk_stays_high(Profile, LimbStatus).
+requirement_status(art36_1_residual_high_risk, Profile, LimbStatus) :-
+    article_36_1_way(Profile, LimbStatus).
+requirement_status(processing_for_public_interest_task, Profile, LimbStatus) :-
+    public_interest_task_limb(Profile, LimbStatus).
+requirement_status(member_state_requires_prior_authorisation, Profile, LimbStatus) :-
+    member_state_prior_authorisation_limb(Profile, LimbStatus).
+requirement_status(art36_5_member_state_prior_authorisation, Profile, LimbStatus) :-
+    article_36_5_way(Profile, LimbStatus).
+
+item_status(met, _, met).
+item_status(unmet, RequirementId, unmet(RequirementId)).
+item_status(open(Leaves), _, unknown(OpenKeys)) :-
+    findall(InputKey, member(leaf(_, InputKey), Leaves), FoundKeys),
+    sort(FoundKeys, OpenKeys).
+
+prior_consultation_duty_decision_resolvable(Profile) :-
+    decide_prior_consultation_duty(Profile, _Verdict).
+
+processing_permission(Profile, process_without_consultation, prohibited) :-
+    implements(eu_reg_2016_679_art_36_1),
+    prior_consultation_duty_status(Profile, required).
+processing_permission(Profile, process_without_consultation, permitted) :-
+    implements(eu_reg_2016_679_art_36_1),
+    prior_consultation_duty_status(Profile, not_required).
+
+test(residual_high_risk_is_required_under_article_36_1) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_1_residual_high_risk], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - true])], [cite(eu_reg_2016_679_art_36_1)])].
+test(measures_that_leave_the_risk_high_require_consultation) :-
+    decide_prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, true), attribute(measures_reduce_residual_risk_below_high, false), attribute(processing_for_public_interest_task, false)], Verdict),
+    Verdict == prior_consultation_verdict(required, [art36_1_residual_high_risk], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - true, measures_reduce_residual_risk_below_high - false])], [cite(eu_reg_2016_679_art_36_1)]).
+test(measures_below_high_with_no_public_task_is_not_required) :-
+    prior_consultation_duty_status([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, true), attribute(measures_reduce_residual_risk_below_high, true), attribute(processing_for_public_interest_task, false)], not_required).
+test(an_absent_assessment_with_both_ways_unmet_is_not_required) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(assessment_indicates_high_risk_absent_mitigation, false), attribute(processing_for_public_interest_task, false)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(not_required, [art36_1_condition_not_met], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - false])], [cite(eu_reg_2016_679_art_36_1)])].
+test(no_assessment_carried_out_refers_not_governed_here) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(impact_assessment_carried_out, false), attribute(assessment_indicates_high_risk_absent_mitigation, false), attribute(processing_for_public_interest_task, false)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_36_1)]), [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - false])]), [], [], [])].
+test(member_state_authorisation_requires_consultation_under_article_36_5) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(impact_assessment_carried_out, false), attribute(processing_for_public_interest_task, true), attribute(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none)))], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_5_member_state_prior_authorisation], [outside_fact(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none))), inputs_relied_on([])], [cite(eu_reg_2016_679_art_36_5)])].
+test(an_absent_member_state_law_is_an_unresolved_cross_reference) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(impact_assessment_carried_out, false), attribute(processing_for_public_interest_task, true)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_36_5), cite(member_state_law_requiring_prior_consultation_and_authorisation)), [resolution(cite(member_state_law_requiring_prior_consultation_and_authorisation), not_attempted), inputs_relied_on([member_state_requires_prior_authorisation - absent])]), [], [], [])].
+test(an_unsure_deciding_judgement_is_open_textured) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, unsure), attribute(mitigating_measures_taken, false), attribute(processing_for_public_interest_task, false)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(open_textured(assessment_indicates_high_risk_absent_mitigation, cite(eu_reg_2016_679_art_36_1)), [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - unsure])]), [], [], [])].
+test(an_empty_profile_names_every_missing_key) :-
+    findall(Status, prior_consultation_duty_status([], Status), Statuses),
+    Statuses == [indeterminate([assessment_indicates_high_risk_absent_mitigation, impact_assessment_carried_out, measures_reduce_residual_risk_below_high, mitigating_measures_taken, processing_for_public_interest_task])].
+test(an_unknown_key_is_an_input_problem) :-
+    findall(Verdict, decide_prior_consultation_duty([attribute(stray_key, 1)], Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(input_problems([unknown_key(stray_key)]), [], [], [])].
+test(a_criteria_key_changes_no_answer) :-
+    decide_prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false), attribute(highly_personal_data_processed, unsure)], Verdict),
+    Verdict == prior_consultation_verdict(required, [art36_1_residual_high_risk], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation - true])], [cite(eu_reg_2016_679_art_36_1)]).
+test(the_checklist_has_one_cited_row_per_requirement) :-
+    prior_consultation_duty_checklist([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false)], Items),
+    length(Items, 7),
+    member(item(art36_1_residual_high_risk, met, cite(eu_reg_2016_679_art_36_1)), Items).
+test(required_consultation_prohibits_processing_without_it) :-
+    processing_permission([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false)], process_without_consultation, prohibited).
+
+test(residual_high_risk_is_not_not_required, fail) :-
+    decide_prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false)], prior_consultation_verdict(not_required, _, _, _)).
+test(no_assessment_carried_out_is_not_not_required, fail) :-
+    prior_consultation_duty_status([attribute(impact_assessment_carried_out, false), attribute(assessment_indicates_high_risk_absent_mitigation, false), attribute(processing_for_public_interest_task, false)], not_required).
+test(required_consultation_does_not_permit_processing_without_it, fail) :-
+    processing_permission([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false)], process_without_consultation, permitted).

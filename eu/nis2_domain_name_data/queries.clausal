@@ -1,0 +1,75 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_domain_name_data.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% #2  eligibility   : decide_nis2_domain_name_data/2 (slice)
+% #7  justification: nis2_domain_name_data_checklist/2 (slice), cite per item
+% #15 deadline      : access_reply_deadline/2, access_reply_hours_elapsed/3,
+%                     access_reply_outcome/4 (native datetime)
+% #16 what-if       : nis2_domain_name_data_what_if/4
+% =====================================================================
+
+:- module(queries, [
+    nis2_domain_name_data_profile_keys/1,
+    nis2_domain_name_data_input_problems/2,
+    nis2_domain_name_data_what_if/4,
+    access_reply_deadline/2,
+    access_reply_hours_elapsed/3,
+    access_reply_outcome/4
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(datetime), [date_add/3, date_diff/3, timedelta/3]).
+:- use_module(eu/nis2_domain_name_data/citations, [implements/1]).
+:- use_module(eu/nis2_domain_name_data/kernel, [nis2_domain_name_data_input_problems/2]).
+:- use_module(eu/nis2_domain_name_data/nis2_domain_name_data, [
+    nis2_domain_name_data_status/2,
+    access_reply_timeliness/3
+]).
+
+% Art 28(5): the 72-hour reply limit, declared once; seconds per hour.
+:- constant_value(reply_limit_hours, 72).
+:- constant_value(seconds_per_hour, 3600).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+nis2_domain_name_data_profile_keys([provider_type, point_of_contact_email_address_differs_from_registrant, point_of_contact_telephone_number_differs_from_registrant, registration_data_is_personal_data, requester_is_legitimate_access_seeker, request_is_lawful_and_duly_substantiated, reply_without_undue_delay]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+nis2_domain_name_data_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    nis2_domain_name_data_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, NewProfile): drop every attribute
+% for Key and append the new one.
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(Key, _)|Rest], Key, Value, NewProfile) :-
+    override_attribute(Rest, Key, Value, NewProfile).
+override_attribute([attribute(OtherKey, OtherValue)|Rest], Key, Value, [attribute(OtherKey, OtherValue)|NewRest]) :-
+    dif(OtherKey, Key),
+    override_attribute(Rest, Key, Value, NewRest).
+
+% #15 deadline: the reply is due 72 hours after receipt of the request.
+% Consequence of missing it: late(hour_limit), no exception (Art 28(5)).
+access_reply_deadline(ReceiptDatetime, DeadlineDatetime) :-
+    implements(eu_dir_2022_2555_art_28_5),
+    PeriodSeconds #= constant(reply_limit_hours) * constant(seconds_per_hour),
+    timedelta(0, PeriodSeconds, ReplyPeriod),
+    date_add(ReceiptDatetime, ReplyPeriod, DeadlineDatetime).
+
+% Elapsed time from receipt to reply, rounded UP to whole hours.
+access_reply_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed) :-
+    implements(eu_dir_2022_2555_art_28_5),
+    date_diff(ReplyDatetime, ReceiptDatetime, Difference),
+    timedelta(Days, DaySeconds, Difference),
+    TotalSeconds #= Days * 86400 + DaySeconds,
+    TotalSeconds #>= 0,
+    HoursElapsed #= (TotalSeconds + constant(seconds_per_hour) - 1) // constant(seconds_per_hour).
+
+% Timeliness of a reply from its two instants.
+access_reply_outcome(Profile, ReceiptDatetime, ReplyDatetime, Result) :-
+    access_reply_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed),
+    access_reply_timeliness(Profile, HoursElapsed, Result).
+
+:- end_module(queries).

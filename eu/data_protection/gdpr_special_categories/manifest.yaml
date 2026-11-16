@@ -1,0 +1,232 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_special_categories
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "processing_permitted"
+  - "permitted_bases"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal -- (gdpr_special_categories_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- processing_permitted.clausal --
+  - "decide_processing_permitted/2"
+  - "processing_permitted_status/2"
+  - "processing_permitted_checklist/2"
+  - "processing_permitted_decision_resolvable/1"
+  - "processing_permitted_status_values/1"
+  - "decide_special_category_processing/2"
+  - "processing_permitted/2"
+  - "special_category_scope/2"
+  - "special_category_outside_facts/2"
+  # -- permitted_bases.clausal --
+  - "decide_permitted_bases/2"
+  - "permitted_bases_status/2"
+  - "permitted_bases_checklist/2"
+  - "permitted_bases_decision_resolvable/1"
+  - "permitted_bases_status_values/1"
+  - "permitted_bases/2"
+  # -- queries.clausal --
+  - "gdpr_special_categories_profile_keys/1"
+  - "gdpr_special_categories_input_problems/2"
+  - "gdpr_special_categories_what_if/4"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "special_category_verdict/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_special_categories_subject/1"
+  - "gdpr_special_categories_profile_for/2"
+  - "gdpr_special_categories_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. None: the domain imports only the kit (formalize_lib).
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 9(1)-(4) and Art 10: is the proposed
+  processing barred by the Art 9(1) prohibition on special categories of personal
+  data (unless the one exception claimed under Art 9(2)(a)-(j) applies, with the
+  Art 9(3) professional-secrecy condition for point (h) and the Art 9(4) Member
+  State further conditions for genetic, biometric and health data), or by the
+  Art 10 limits on personal data relating to criminal convictions and offences
+  (official authority, or authorisation by Union or Member State law with
+  appropriate safeguards; no comprehensive register outside official authority)?
+  eligible means only that Art 9 and Art 10 do not bar the processing. Open-textured
+  terms are the user's judgements and the existence of Union or Member State law is
+  an attested outside fact; both are referred, never invented. Out of scope: the
+  Art 6 lawful basis (sibling eu/data-protection/gdpr-art6-lawfulness), the Art 7
+  consent conditions and withdrawal, the Art 89(1) safeguards (a judgement here),
+  the content of national law, and Arts 5, 22(4), 35 and 37."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504: Art 9(1), Art 9(2) points (a)-(j), Art 9(3), Art 9(4)"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504: Art 10 (processing of personal data relating to criminal convictions and offences)"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504: Art 4(11) (consent), Art 4(13) (genetic data), Art 4(14) (biometric data), Art 4(15) (data concerning health), applied as definitions and never cited in a verdict"
+
+query_interface:
+  3: "processing_permitted_status/2"         # status_determination: the STATUS of the verdict
+  7: "processing_permitted_checklist/2"      # justification: item(Id, Outcome, cite(Key)) per requirement
+  13: "processing_permitted/2"               # compliance_check: is the proposed processing allowed
+  16: "gdpr_special_categories_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_009
+  reason: 'The titles of Articles 4 and 9 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for. (Art 10 is a single unit whose operative text is quoted; it has no separate
+    heading unit.)'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: definitions_not_applied
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: 'Art 4 is pinned whole because the smallest document element that contains
+    Art 4(11), (13), (14) and (15) is the article. Points (1)-(10), (12) and (16)-(26)
+    define terms (personal data, processing, controller, third party, personal data
+    breach, main establishment, supervisory authority, ...) that no limb reads: the
+    profile states the facts in those terms already.'
+  consequence: whether the data is 'personal data' (Art 4(1)) and who the controller
+    is are not tested. The caller must establish both itself before relying on any
+    answer.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- not_formalized_because: in_sibling
+  decided_in: gdpr-art6-lawfulness
+  what: art6_lawful_basis
+  instrument: Regulation (EU) 2016/679 Art 6
+  reason: Art 9 prohibits special-category processing and Art 10 limits offence-data
+    processing in addition to the Art 6 lawful basis; the sibling eu/data-protection/gdpr-art6-lawfulness
+    owns that determination.
+  consequence: eligible here does not mean lawful. The caller must still establish
+    an Art 6(1) lawful basis itself (for example with the sibling Article 6 order),
+    and Art 10 reaches only processing based on Article 6(1).
+  declaration: answered_with_caveat
+- debt: true
+  what: art_89_safeguards_for_research
+  instrument: Regulation (EU) 2016/679 Art 89(1)
+  reason: Art 9(2)(j) requires processing 'in accordance with Article 89(1)'; Art
+    89 is not pinned, so compliance is the judgement accordance_with_article_89_1.
+  consequence: For an Art 9(2)(j) claim the answer takes accordance_with_article_89_1
+    as the caller's judgement; the caller must check the Art 89(1) safeguards itself
+    before judging it true. No effect on any other claim.
+  declaration: exception_modelled
+- not_formalized_because: national_law
+  what: member_state_law_content
+  instrument: Union and Member State law referred to in Art 9(2)(a), (b), (g), (h),
+    (i), (j), Art 9(4) and Art 10
+  reason: The existence of the law is an outside fact (attested; fetcher none); its
+    content and the conditions it sets are not formalized here.
+  consequence: The caller must find the Union or Member State law itself and attest
+    whether it exists for this processing, and must check the conditions that law
+    sets; an eligible answer does not say they are met, and an attested Art 9(4) condition
+    refers instead of being checked.
+  declaration: exception_modelled
+- debt: true
+  what: genetic_and_biometric_definitions_stated_by_user
+  units:
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  reason: 'Open question Q8: genetic data (Art 4(13)) and biometric data (Art 4(14))
+    are crisp flags (genetic_data_present, biometric_data_present) that the user states
+    from the definitions; the definitions are not decomposed into their elements and
+    no limb tests them.'
+  consequence: The caller must apply the Art 4(13) and Art 4(14) definitions itself
+    when setting genetic_data_present and biometric_data_present; the answer takes
+    those flags as given.
+  declaration: answered_with_caveat
+
+excluded_set:
+- what: consent_withdrawal_and_conditions
+  instrument: Regulation (EU) 2016/679 Art 7
+  cites:
+  - 02016R0679-20160504#art_007
+  reason: Art 7(1)-(4) (demonstrating consent, withdrawal, conditionality) are not
+    pinned here. Art 9(2)(a) reads Art 4(11) through the judgement consent_satisfies_definition;
+    a withdrawn consent is not tested (open question Q12).
+  consequence: The order does not test how consent is demonstrated, whether it was
+    withdrawn or whether it was made a condition; a caller checks Art 7 itself.
+- what: recitals_51_to_56_and_other_provisions
+  instrument: Regulation (EU) 2016/679 recitals and Arts 5, 22(4), 35, 37
+  cites:
+  - 32016R0679#rct_51
+  - 32016R0679#rct_52
+  - 32016R0679#rct_53
+  - 32016R0679#rct_54
+  - 32016R0679#rct_55
+  - 32016R0679#rct_56
+  - 02016R0679-20160504#art_005
+  - 02016R0679-20160504#parag_022.004
+  - 02016R0679-20160504#art_035
+  - 02016R0679-20160504#art_037
+  reason: Not pinned. Recitals on special categories (for example photographs not
+    automatically biometric data), the accountability principle, the Art 22(4) limits
+    on profiling by special categories, the Art 35 impact assessment duty and the
+    Art 37 data protection officer duty are separate questions.
+  consequence: The order says only whether an Art 9 exception applies; a caller checks
+    the principles, the profiling limits, the impact assessment and the data protection
+    officer duties of Arts 5, 22(4), 35 and 37 itself.

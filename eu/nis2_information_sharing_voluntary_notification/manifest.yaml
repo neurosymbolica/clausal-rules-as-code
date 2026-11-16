@@ -1,0 +1,189 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_information_sharing_voluntary_notification
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_information_sharing_voluntary_notification"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (nis2_information_sharing_voluntary_notification_input_problems/2 is defined here and
+  #  re-exported by queries.clausal; listed once, below)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_information_sharing_voluntary_notification.clausal --
+  - "voluntary_notification_possible/3"
+  - "information_exchange_permitted/3"
+  - "arrangement_notification_duty/3"
+  - "decide_nis2_information_sharing_voluntary_notification/2"
+  - "nis2_information_sharing_voluntary_notification_status/2"
+  - "nis2_information_sharing_voluntary_notification_checklist/2"
+  - "nis2_information_sharing_voluntary_notification_decision_resolvable/1"
+  - "nis2_information_sharing_voluntary_notification_status_values/1"
+  - "essential_entity/0"
+  - "important_entity/0"
+  - "out_of_scope/0"
+  - "incident/0"
+  - "significant_incident/0"
+  - "cyber_threat/0"
+  - "near_miss/0"
+  - "entered/0"
+  - "withdrew/0"
+  - "no_arrangement_event/0"
+  - "voluntary_notification_possible/0"
+  - "voluntary_notification_not_possible/0"
+  - "information_exchange_permitted/0"
+  - "information_exchange_not_permitted/0"
+  - "must_notify_on_entering/0"
+  - "must_notify_on_withdrawal_taking_effect/0"
+  - "no_notification_duty/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "nis2_information_sharing_voluntary_notification_profile_keys/1"
+  - "nis2_information_sharing_voluntary_notification_input_problems/2"
+  - "nis2_information_sharing_voluntary_notification_what_if/4"
+  # -- fixtures.clausal --
+  - "nis2_information_sharing_voluntary_notification_subject/1"
+  - "nis2_information_sharing_voluntary_notification_profile_for/2"
+  - "nis2_information_sharing_voluntary_notification_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The order imports only the kit (formalize_lib) and library(reif),
+# no shared backbone package.
+uses: []
+
+scope: "Directive (EU) 2022/2555 (NIS 2) Arts 29(1), 29(2), 29(4) and 30(1): what the
+  Directive requires a Member State to ensure (national law says what an entity must
+  do in fact). Three questions are decided: whether a voluntary notification of an
+  incident, significant incident, cyber threat or near miss can be submitted under
+  Art 30(1) (point (a) essential and important entities, any event; point (b) every
+  other entity, significant incidents, cyber threats and near misses only); whether a
+  voluntary exchange of cybersecurity information is one the Member States must let
+  entities carry out under Art 29(1) (relevant information, and point (a) or point (b)
+  read as alternatives); and whether Art 29(4) requires an essential or important entity
+  to notify the competent authorities on entering, or on the withdrawal from, an
+  information-sharing arrangement of Art 29(2). The open-textured judgements (relevance,
+  the aims of points (a) and (b), whether an arrangement is one of Art 29(2)) are the
+  caller's: an unsure judgement that decides is referred as needs_legal_review. Out of
+  scope: the entity class (Arts 2 and 3, sibling scope order), significance and the
+  mandatory duty (Art 23, sibling incident reporting order), the recipient authority or
+  CSIRT (Arts 8 to 10), the processing of voluntary notifications and the no-additional-
+  obligation rule of Art 30(2) (deferred), and Art 29(3) and (5) (institutional)."
+
+sources:
+  - "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December 2022
+    on measures for a high common level of cybersecurity across the Union (NIS 2 Directive),
+    OJ L 333, 27.12.2022, p. 80 (CELEX 32022L2555), Art 29(1) (points (a) and (b)),
+    Art 29(2), Art 29(4), Art 30(1) (points (a) and (b)); Art 30(2) deferred."
+
+query_interface:
+  2: "nis2_information_sharing_voluntary_notification_status/2"      # eligibility: eligible | ineligible | eligibility_undetermined (Art 30(1))
+  7: "nis2_information_sharing_voluntary_notification_checklist/2"   # justification: every checklist item carries cite(...)
+  16: "nis2_information_sharing_voluntary_notification_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32022L2555#art_029
+  - 32022L2555#art_030
+  reason: 'The titles of Articles 29 and 30 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: member_state_facilitation_and_enisa
+  units:
+  - 32022L2555#parag_029.003
+  - 32022L2555#parag_029.005
+  reason: Art 29(3) (Member States facilitate the establishment of information-sharing
+    arrangements, may set conditions on information made available by the competent
+    authorities or CSIRTs and offer assistance) and Art 29(5) (ENISA assists with
+    best practices and guidance) bind the Member States and ENISA, not the entity,
+    and change no answer of this order.
+  consequence: 'None for an entity caller: these paragraphs bind the Member States
+    and ENISA.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: processing_of_voluntary_notifications_and_no_additional_obligations
+  units:
+  - 32022L2555#parag_030.002
+  reason: Art 30(2) requires the Member States to process voluntary notifications
+    under the Art 23 procedure, lets them prioritise mandatory notifications, requires
+    the CSIRTs to inform the single points of contact and says that voluntary reporting
+    imposes no additional obligation on the notifying entity. The processing and the
+    priority are authority-side; the last sentence is a constant answer (none) that
+    this order does not ask as a query.
+  consequence: The answers never say how a voluntary notification is processed; a
+    voluntary notification adds no obligation to the entity (reading (6)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: article_30_1_chapeau
+  units:
+  - 32022L2555#parag_030.001
+  reason: 'The chapeau of Art 30(1) (''in addition to the notification obligation
+    provided for in Article 23, notifications can be submitted ... on a voluntary
+    basis, by:'') introduces points (a) and (b); its operative content is decided
+    through those points (units point_030.001_a and point_030.001_b, cited by every
+    answer of voluntary_notification_possible/3), and no citation key of the order
+    names the chapeau unit itself. Its ''in addition to Article 23'' is reading (3)
+    and Q3: a mandatory duty is not read.'
+  consequence: 'None for a caller: every answer of the voluntary route cites point
+    (a) or point (b), which carry the chapeau''s condition.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: entity_class_and_scope
+  instrument: Directive (EU) 2022/2555 Arts 2 and 3
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  reason: Whether the entity is an essential or important entity, or neither, is decided
+    by the sibling order on scope and entity class (nis2-scope-entity-class); this
+    order takes entity_class as given, with its answer out_of_scope as the third atom.
+  consequence: The caller establishes the class first.
+- what: mandatory_notification_and_significance
+  instrument: Directive (EU) 2022/2555 Art 23
+  cites:
+  - 32022L2555#art_023
+  reason: Whether an incident is significant, and whether a notification is mandatory,
+    are decided by the sibling order on incident reporting (nis2-incident-reporting);
+    this order takes the event kind as given and does not read whether a notification
+    is also mandatory.
+  consequence: The caller states the event kind; a voluntary notification is in addition
+    to any Art 23 notification.
+- what: competent_authorities_and_csirts
+  instrument: Directive (EU) 2022/2555 Arts 8 to 10
+  cites:
+  - 32022L2555#art_008
+  - 32022L2555#art_010
+  reason: Which authority or CSIRT receives a notification is for the Member States;
+    this order does not model the recipient.
+  consequence: The caller picks the recipient under national law.

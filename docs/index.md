@@ -3,9 +3,9 @@ hide:
   - navigation
 ---
 
-# EU law as executable, tested, traceable logic
+# EU, Swiss and UK law as executable, tested, traceable logic
 
-<p class="hero">This repository holds EU legal provisions written as small logic programs that
+<p class="hero">This repository holds EU, Swiss and UK legal provisions written as small logic programs that
 answer one legal question each: <em>is this person a beneficial owner?</em>, <em>what is the
 minimum time limit for receipt of tenders?</em>, <em>does this aid stay under the de minimis
 ceiling?</em> Each domain covers one narrowly scoped question, drawn from one or a few
@@ -15,11 +15,14 @@ written in [Clausal Prolog](https://clausal.pl), a restricted subset of ISO Prol
 engines.</p>
 
 <div class="facts" markdown>
-<div><strong>8</strong><span>EU domains in this release</span></div>
-<div><strong>1,193</strong><span>tests, all passing</span></div>
-<div><strong>121</strong><span>statute units tracked: 65 formalized, 56 left out with a stated reason</span></div>
+<div><strong>74</strong><span>domains: 72 EU, 1 Swiss, 1 UK</span></div>
+<div><strong>14,502</strong><span>domain tests, all passing</span></div>
+<div><strong>121</strong><span>statute units tracked in the first eight domains: 65 formalized, 56 left out with a stated reason</span></div>
 <div><strong>EUPL-1.2</strong><span>open source, the EU's own licence</span></div>
 </div>
+
+!!! warning "Disclaimer"
+    These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
 ## What this is, and what it is not
 

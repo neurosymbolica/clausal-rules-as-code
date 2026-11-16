@@ -1,0 +1,47 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_automated_decision/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_automated_decision/request_basis, [
+    request_basis_status/2,
+    request_basis/2,
+    decide_data_subject_request/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_automated_decision/fixtures, [gdpr_data_subject_rights_automated_decision_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    request_basis_status(Profile, art22_1).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    request_basis_status(Profile, none).
+
+test(basis_none_when_not_engaged) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(not_solely_automated, Profile),
+    request_basis(Profile, none).
+
+test(basis_is_input_problems_for_unknown_key) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(unknown_key_input_problem, Profile),
+    request_basis(Profile, input_problems([unknown_key(bogus_key)])).
+
+test(bound_must_comply_verdict) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])).
+
+test(bound_suspended_verdict) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(identity_suspended, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])).
+
+test(bound_wrong_comply_is_rejected, fail) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(need_not_comply, _, _, _, _)).
+
+test(bound_indeterminate_verdict) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(request_type_missing, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])).
+
+:- end_module(test_input_mode).

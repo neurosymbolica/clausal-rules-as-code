@@ -1,0 +1,77 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism (exactly one verdict per subject), agreement of
+% the field relations with the package verdict, citation hygiene.
+% Run: python -m clausal.testing eu/data_protection/gdpr_territorial_material_scope/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/gdpr_applies, [gdpr_applies/2]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/gdpr_scope_ground, [gdpr_scope_ground/2]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/representative_requirement, [representative_requirement/2]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/fixtures, [
+    gdpr_territorial_material_scope_subject/1,
+    gdpr_territorial_material_scope_profile_for/2,
+    gdpr_territorial_material_scope_assess/2
+]).
+
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_territorial_material_scope_subject(Subject), Collected),
+    sort(Collected, Subjects).
+
+verdict_count(Subject, Count) :-
+    findall(Verdict, gdpr_territorial_material_scope_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, Count).
+
+relations_agree(Subject) :-
+    gdpr_territorial_material_scope_profile_for(Subject, Profile),
+    gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(Applies, Ground, Representative, _Citations)),
+    gdpr_applies(Profile, Applies),
+    gdpr_scope_ground(Profile, Ground),
+    representative_requirement(Profile, Representative).
+
+citations_unique(Subject) :-
+    gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(_, _, _, Citations)),
+    sort(Citations, Sorted),
+    length(Citations, Count),
+    length(Sorted, Count).
+
+ground_names_a_limb(Subject) :-
+    gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(applies, Ground, _, _)),
+    member(Ground, [art3_1, art3_2_a, art3_2_b, art3_3]).
+
+test(totality_and_determinism_exactly_one_verdict_each) :-
+    findall(Subject-Count, (gdpr_territorial_material_scope_subject(Subject), verdict_count(Subject, Count)), Pairs),
+    findall(Subject-1, gdpr_territorial_material_scope_subject(Subject), Expected),
+    Pairs == Expected.
+
+test(the_subject_registry_is_not_empty) :-
+    all_subjects([_|_]).
+
+test(field_relations_agree_with_the_package_verdict) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), relations_agree(Subject)), Agreeing),
+    sort(Agreeing, Subjects).
+
+test(citations_never_repeat) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), citations_unique(Subject)), Unique),
+    sort(Unique, Subjects).
+
+test(citations_are_non_empty_unless_the_input_is_refused) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(_, _, _, [_|_]))), WithCitations),
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(input_problems(_), _, _, _))), Refused),
+    append(WithCitations, Refused, Both),
+    sort(Both, Subjects).
+
+test(applies_always_names_an_art3_limb) :-
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(applies, _, _, _))), Applying),
+    findall(Subject, (gdpr_territorial_material_scope_subject(Subject), ground_names_a_limb(Subject)), Named),
+    Applying == Named.
+
+test(a_non_application_never_carries_a_representative_duty) :-
+    findall(Representative, (gdpr_territorial_material_scope_subject(Subject), gdpr_territorial_material_scope_assess(Subject, gdpr_scope_verdict(does_not_apply, _, Representative, _))), Representatives),
+    sort(Representatives, [not_applicable]).
+
+:- end_module(test_properties).

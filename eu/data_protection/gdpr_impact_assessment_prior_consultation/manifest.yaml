@@ -1,0 +1,201 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_impact_assessment_prior_consultation
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "prior_consultation_duty"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (the input check is re-exported by queries.clausal and listed there)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- prior_consultation_duty.clausal --
+  - "decide_prior_consultation_duty/2"
+  - "prior_consultation_duty_status/2"
+  - "prior_consultation_duty_checklist/2"
+  - "prior_consultation_duty_decision_resolvable/1"
+  - "prior_consultation_duty_status_values/1"
+  # -- queries.clausal --
+  - "decide_prior_consultation/2"
+  - "prior_consultation_duty/2"
+  - "impact_assessment_outside_facts/2"
+  - "gdpr_impact_assessment_prior_consultation_profile_keys/1"
+  - "gdpr_impact_assessment_prior_consultation_input_problems/2"
+  - "gdpr_impact_assessment_prior_consultation_what_if/4"
+  - "gdpr_impact_assessment_prior_consultation_compliance_check/3"
+  - "prior_consultation_verdict/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "not_governed_here/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "approvals/2"
+  - "approval/5"
+  - "viewer/1"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_impact_assessment_prior_consultation_subject/1"
+  - "gdpr_impact_assessment_prior_consultation_profile_for/2"
+  - "gdpr_impact_assessment_prior_consultation_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The package imports only the kit library formalize_lib (profile
+# access) and library(reif); no shared backbone package.
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 36(1) and Art 36(5), split order SPLIT
+  2026-11-03 of eu/data-protection/gdpr-impact-assessment: whether the controller must
+  consult the supervisory authority prior to processing (decide_prior_consultation/2,
+  prior_consultation_duty/2), on the residual-risk reading of Art 36(1) (Q1 RULED
+  2026-11-01, WP29 WP248 rev.01 section III.E) or because attested Member State law
+  under Art 36(5) requires consultation and prior authorisation for public-interest
+  processing; plus the outside facts as given (impact_assessment_outside_facts/2) and
+  the typed input check of the original order. The high-risk and residual-risk
+  judgements are the user's. Out of scope: whether an impact assessment is owed under
+  Art 35 (a missing assessment is referred, not_governed_here, Q5), its bases, contents
+  and proof routes (the sibling split orders), the Art 36(2) authority periods, the
+  Art 36(3) request contents, Art 36(4), and the content of Member State law or
+  supervisory-authority lists (attested outside facts, fetcher none)."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated
+    text 02016R0679-20160504, Article 36(1) [parag_036.001]"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504, Article 36(5)
+    [parag_036.005]"
+  - "Reference only (authority of the residual-risk reading, not cited as a provision):
+    Article 29 Working Party, Guidelines on Data Protection Impact Assessment, WP248
+    rev.01, section III.E"
+
+query_interface:
+  2: "prior_consultation_duty/2"      # status verdict of entry B
+  7: "prior_consultation_duty_checklist/2"      # justification: every checklist item carries cite(...)
+  13: "gdpr_impact_assessment_prior_consultation_compliance_check/3"      # compliance check: is a proposed processing action allowed now
+  16: "gdpr_impact_assessment_prior_consultation_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_036
+  reason: 'The title of Article 36 carry no obligation: document structure, not operative
+    law. Deferred so every unit of the pinned extracts is accounted for.'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: authority_response_periods
+  units:
+  - 02016R0679-20160504#parag_036.002
+  reason: Art 36(2) (written advice within up to eight weeks, extension by six weeks,
+    suspension) binds the supervisory authority after a request. No deadline is computed
+    here.
+  consequence: 'None for a caller as a duty: the Art 36(2) periods bind the supervisory
+    authority; a caller who needs the date by which the written advice is due must
+    compute it from Art 36(2) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: consultation_request_contents
+  units:
+  - 02016R0679-20160504#parag_036.003
+  - 02016R0679-20160504#point_036.003_a
+  - 02016R0679-20160504#point_036.003_b
+  - 02016R0679-20160504#point_036.003_c
+  - 02016R0679-20160504#point_036.003_d
+  - 02016R0679-20160504#point_036.003_e
+  - 02016R0679-20160504#point_036.003_f
+  reason: Art 36(3)(a)-(f) lists what the controller provides when consulting. A checklist
+    like the Art 35(7) one is possible but is not asked by the order; deferred as
+    a candidate extension.
+  consequence: 'A required consultation answer does not say what to send: the caller
+    must check itself that its request gives the supervisory authority the Art 36(3)(a)
+    to (f) information.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: member_state_legislative_consultation
+  units:
+  - 02016R0679-20160504#parag_036.004
+  reason: Art 36(4) binds Member States in preparing legislative measures, not controllers.
+  consequence: 'None for a caller: Art 36(4) binds Member States preparing legislative
+    measures, not controllers.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- not_formalized_because: institutional
+  what: member_state_and_authority_law_content
+  instrument: Union and Member State law and supervisory authority lists referred
+    to in Art 35(4), (5), (10) and Art 36(5)
+  reason: The existence of the list or law as it applies to this processing is an
+    outside fact (attested; fetcher none); its content is not formalized here.
+  consequence: The caller must find the supervisory authority list or the Union or
+    Member State law itself and attest whether it applies to this processing; the
+    answer copies the attestation and never checks the content of the list or law.
+  declaration: exception_modelled
+
+excluded_set:
+- what: recitals_and_guidelines
+  instrument: Regulation (EU) 2016/679 recitals and supervisory-authority or Board
+    guidelines on impact assessments
+  cites:
+  - 32016R0679#rct_84
+  - 32016R0679#rct_89
+  - 32016R0679#rct_90
+  - 32016R0679#rct_91
+  - 32016R0679#rct_92
+  - 32016R0679#rct_93
+  - 32016R0679#rct_94
+  - 32016R0679#rct_95
+  - 32016R0679#rct_96
+  - 02016R0679-20160504#parag_070.001
+  reason: No recital is pinned, and no guideline is pinned as law, so none is quoted
+    or cited as a provision; the residual-risk reading (7) names WP29 WP248 rev.01,
+    section III.E (kept under sources/reference), as its authority only. They bear
+    on what a high risk, a large scale and a residual risk are; that is why those
+    are judgements.
+  consequence: The order gives no test of high risk, large scale or residual risk;
+    the caller states those judgements itself, reading the recitals and any list or
+    guidelines of the supervisory authority or the Board.
+- what: competence_and_powers
+  instrument: Regulation (EU) 2016/679 Arts 55, 56, 58, 63, 68
+  cites:
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_058
+  - 02016R0679-20160504#art_063
+  - 02016R0679-20160504#art_068
+  reason: Which authority is competent for the lists, its powers after a consultation,
+    the consistency mechanism and the Board are not pinned. The authority whose list
+    is meant is named in the attestation of the outside fact.
+  consequence: The order does not identify the competent supervisory authority or
+    say what it may do after a consultation; a caller works out competence, powers
+    and the consistency mechanism under Arts 55, 56, 58, 63 and 68 itself.

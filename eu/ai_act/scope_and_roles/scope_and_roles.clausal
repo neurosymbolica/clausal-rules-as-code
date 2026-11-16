@@ -1,0 +1,1205 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% scope_and_roles.clausal -- the scope_and_roles DETERMINATION for
+% eu/ai_act/scope_and_roles, self-contained top to bottom: its statutory
+% VALUE facts (the application days of Art 113), its ladders (one per
+% query, THE LIMBS of the order), the status rule,
+% its checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act),
+% consolidated text 02024R1689-20260727 (as amended by Regulation (EU)
+% 2026/1744): Art 2(1) to (4), (6), (8), (10), (12); Art 3, points (1),
+% (3) to (11) and (23); Art 25(1) to (4); Art 113, third paragraph,
+% points (a) and (c).
+%
+% HOW AN ANSWER IS MADE. Each query builds its LADDER: a list of
+% step(Test, Result, Citations), first match wins. A Test is a formula:
+% always, holds(Key, Value), day_before(Date, day(Y, M, D)), all_of(List),
+% any_of(List), negation(Formula). The ladder is read in three-valued
+% (Kleene) logic over the values the profile fixes; an absent key and an
+% unsure judgement are FREE. When the ladder settles, that is the answer
+% (S1). Otherwise the witness search decides which free key MATTERS and
+% which absent key is BEHIND another (THE STATUS RULE): the first absent
+% key that matters and is not behind another is named (S2); else the
+% first unsure judgement that matters goes to a lawyer (S3).
+% Every query yields exactly one solution: all steps are complementary
+% clauses, no cut, no if-then-else, no negation as failure.
+% =====================================================================
+
+:- module(scope_and_roles, [
+    decide_scope_and_roles/2,
+    scope_and_roles_status/2,
+    scope_and_roles_checklist/2,
+    scope_and_roles_decision_resolvable/1,
+    scope_and_roles_status_values/1,
+    regulation_scope_status/4,
+    defined_role_status/5,
+    value_chain_provider_status/4,
+    initial_provider_status/4,
+    supplier_agreement_status/4,
+    not_applicable_on_date/0,
+    earlier_text_not_formalised/0,
+    out_of_scope/0,
+    only_listed_provisions_apply/0,
+    regulation_applies/0,
+    role_does_not_hold/0,
+    role_holds/0,
+    not_considered_provider/0,
+    considered_provider/0,
+    initial_provider_unaffected/0,
+    paragraph_2_not_applied/0,
+    no_longer_provider_must_cooperate/0,
+    no_written_agreement_duty/0,
+    written_agreement_required/0,
+    provider/0,
+    deployer/0,
+    authorised_representative/0,
+    importer/0,
+    distributor/0,
+    operator/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/ai_act/scope_and_roles/kernel, [scope_and_roles_input_problems/2]).
+:- use_module(eu/ai_act/scope_and_roles/citations, [implements/1]).
+
+% ---- result constructors (exported data terms) ----------------------------
+% provenance/2 is owned and exported by queries.clausal (a ground answer).
+% The constructors date/3, indeterminate/1, needs_legal_review/2,
+% open_textured/2, inputs_relied_on/1, input_problems/1, unknown_key/1,
+% wrong_type/1 and duplicate_key/1 are exported as predicates defined by
+% the typed clauses below (so they are not also declared constructors).
+
+% One typed clause per constructor: it holds for a term of the constructor's
+% shape only. Data, never called as queries; it decides nothing.
+date(Year, Month, Day) :-
+    integer(Year),
+    integer(Month),
+    integer(Day).
+
+indeterminate([MissingKey]) :-
+    atom(MissingKey).
+
+needs_legal_review(open_textured(Input, cite(CitationKey)), [inputs_relied_on(Pairs)|_]) :-
+    atom(Input),
+    atom(CitationKey),
+    is_list(Pairs).
+
+open_textured(Input, cite(CitationKey)) :-
+    atom(Input),
+    atom(CitationKey).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+input_problems([Problem|Problems]) :-
+    is_list([Problem|Problems]).
+
+unknown_key(Key) :-
+    nonvar(Key).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+% ---- result atoms (exported, never called as queries) ----------------------
+not_applicable_on_date.
+earlier_text_not_formalised.
+out_of_scope.
+only_listed_provisions_apply.
+regulation_applies.
+role_does_not_hold.
+role_holds.
+not_considered_provider.
+considered_provider.
+initial_provider_unaffected.
+paragraph_2_not_applied.
+no_longer_provider_must_cooperate.
+no_written_agreement_duty.
+written_agreement_required.
+provider.
+deployer.
+authorised_representative.
+importer.
+distributor.
+operator.
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The application days (Art 113, third paragraph, points (a) and (c)) and
+% the day from which the pinned consolidated text is valid.
+application_day(chapters_one_and_two, day(2025, 2, 2), cite(eu_reg_2024_1689_art_113_a)).
+application_day(pinned_consolidated_text, day(2026, 7, 27), cite(eu_reg_2024_1689_art_113_a)).
+application_day(chapter_three_annex_iii, day(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
+application_day(chapter_three_annex_i, day(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
+
+article_113_c_citations(every_route, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]).
+article_113_c_citations(annex_i_route, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
+
+out_of_scope_citations([cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_2_1), cite(eu_reg_2024_1689_art_2_3), cite(eu_reg_2024_1689_art_2_4), cite(eu_reg_2024_1689_art_2_6), cite(eu_reg_2024_1689_art_2_8), cite(eu_reg_2024_1689_art_2_10), cite(eu_reg_2024_1689_art_2_12)]).
+
+% THE ROLE POINTS of actor_role (Art 2(1)).
+role_points(provider, [cite(eu_reg_2024_1689_art_2_1_a), cite(eu_reg_2024_1689_art_2_1_c)]).
+role_points(deployer, [cite(eu_reg_2024_1689_art_2_1_b), cite(eu_reg_2024_1689_art_2_1_c)]).
+role_points(importer, [cite(eu_reg_2024_1689_art_2_1_d)]).
+role_points(distributor, [cite(eu_reg_2024_1689_art_2_1_d)]).
+role_points(product_manufacturer, [cite(eu_reg_2024_1689_art_2_1_e)]).
+role_points(authorised_representative, [cite(eu_reg_2024_1689_art_2_1_f)]).
+role_points(affected_person, [cite(eu_reg_2024_1689_art_2_1_g)]).
+
+% THE ROLE CITATIONS of DEFINED_ROLE (Art 3).
+role_citations(provider, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_3)]).
+role_citations(deployer, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_4)]).
+role_citations(authorised_representative, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_5)]).
+role_citations(importer, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_6)]).
+role_citations(distributor, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_7), cite(eu_reg_2024_1689_art_3_3), cite(eu_reg_2024_1689_art_3_6)]).
+role_citations(operator, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_8), cite(eu_reg_2024_1689_art_3_3), cite(eu_reg_2024_1689_art_3_4), cite(eu_reg_2024_1689_art_3_5), cite(eu_reg_2024_1689_art_3_6), cite(eu_reg_2024_1689_art_3_7)]).
+
+value_chain_citations([cite(eu_reg_2024_1689_art_25_1), cite(eu_reg_2024_1689_art_25_1_a), cite(eu_reg_2024_1689_art_25_1_b), cite(eu_reg_2024_1689_art_25_1_c), cite(eu_reg_2024_1689_art_25_3), cite(eu_reg_2024_1689_art_25_3_a), cite(eu_reg_2024_1689_art_25_3_b)]).
+
+initial_provider_cooperation_citations([cite(eu_reg_2024_1689_art_25_2), cite(eu_reg_2024_1689_art_25_2_a), cite(eu_reg_2024_1689_art_25_2_b), cite(eu_reg_2024_1689_art_25_2_c)]).
+
+% The referral rows: the citation of each judgement key.
+referral_citation(ai_system, cite(eu_reg_2024_1689_art_3_1)).
+referral_citation(places_the_system_on_the_union_market, cite(eu_reg_2024_1689_art_3_9)).
+referral_citation(puts_the_system_into_service_in_the_union, cite(eu_reg_2024_1689_art_3_11)).
+referral_citation(output_used_in_the_union, cite(eu_reg_2024_1689_art_2_1_c)).
+referral_citation(exclusively_for_military_defence_or_national_security_purposes, cite(eu_reg_2024_1689_art_2_3)).
+referral_citation(adequate_safeguards_for_fundamental_rights_and_freedoms, cite(eu_reg_2024_1689_art_2_4)).
+referral_citation(specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development, cite(eu_reg_2024_1689_art_2_6)).
+referral_citation(use_in_a_personal_non_professional_activity, cite(eu_reg_2024_1689_art_3_4)).
+referral_citation(makes_the_system_available_on_the_union_market, cite(eu_reg_2024_1689_art_3_10)).
+referral_citation(makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service, cite(eu_reg_2024_1689_art_3_23)).
+referral_citation(modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service, cite(eu_reg_2024_1689_art_25_1_c)).
+referral_citation(initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, cite(eu_reg_2024_1689_art_25_2)).
+
+% The twelve judgement keys, in root_exports order.
+judgement_keys([
+    ai_system,
+    exclusively_for_military_defence_or_national_security_purposes,
+    adequate_safeguards_for_fundamental_rights_and_freedoms,
+    specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development,
+    use_in_a_personal_non_professional_activity,
+    makes_the_system_available_on_the_union_market,
+    places_the_system_on_the_union_market,
+    puts_the_system_into_service_in_the_union,
+    output_used_in_the_union,
+    makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service,
+    modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service,
+    initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk
+]).
+
+actor_roles([provider, deployer, importer, distributor, product_manufacturer, authorised_representative, affected_person]).
+
+enumeration_domain(actor_role, [provider, deployer, importer, distributor, product_manufacturer, authorised_representative, affected_person]).
+enumeration_domain(high_risk_route, [annex_iii, annex_i]).
+
+% domain_of(Key, Values): the values a completion may give a free key.
+domain_of(Key, Values) :-
+    memberd_t(Key, [actor_role, high_risk_route], IsEnumeration),
+    domain_by_kind(IsEnumeration, Key, Values).
+
+domain_by_kind(true, Key, Values) :-
+    enumeration_domain(Key, Values).
+domain_by_kind(false, _, [true, false]).
+
+% ---- THE QUERY'S KEYS, in decision order --------------------------------
+query_keys(regulation_scope(_), [
+    ai_system,
+    exclusively_for_military_defence_or_national_security_purposes,
+    third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation,
+    adequate_safeguards_for_fundamental_rights_and_freedoms,
+    specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development,
+    research_testing_or_development_before_placing_on_the_market_or_putting_into_service,
+    testing_in_real_world_conditions,
+    released_under_free_and_open_source_licence,
+    placed_on_the_market_or_put_into_service_as_high_risk_or_under_article_5_or_50,
+    actor_role,
+    use_in_a_personal_non_professional_activity,
+    places_or_puts_into_service_the_system_together_with_its_product,
+    under_its_own_name_or_trademark,
+    places_the_system_on_the_union_market,
+    puts_the_system_into_service_in_the_union,
+    established_or_located_in_the_union,
+    located_in_the_union,
+    output_used_in_the_union,
+    represented_provider_established_in_the_union,
+    high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i
+]).
+query_keys(defined_role(Role, _), Keys) :-
+    role_keys(Role, Keys).
+query_keys(value_chain_provider(_), [
+    high_risk_route,
+    product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component,
+    system_is_high_risk_after_the_change,
+    puts_its_name_or_trademark_on_a_high_risk_system_already_placed_or_in_service,
+    makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service,
+    modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service,
+    system_placed_on_the_market_together_with_the_product_under_the_manufacturer_name,
+    system_put_into_service_under_the_manufacturer_name_after_the_product_was_placed
+]).
+query_keys(initial_provider(_), [
+    high_risk_route,
+    another_person_became_the_provider_under_paragraph_1,
+    initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk
+]).
+query_keys(supplier_agreement(_), [
+    high_risk_route,
+    supplies_items_used_or_integrated_in_a_high_risk_system,
+    makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence,
+    supplied_items_include_a_general_purpose_ai_model
+]).
+
+role_keys(provider, [
+    ai_system,
+    develops_or_has_developed_the_system,
+    under_its_own_name_or_trademark,
+    places_the_system_on_the_union_market,
+    puts_the_system_into_service_in_the_union
+]).
+role_keys(deployer, [
+    ai_system,
+    use_in_a_personal_non_professional_activity,
+    uses_the_system_under_its_authority
+]).
+role_keys(authorised_representative, [
+    ai_system,
+    written_mandate_from_a_provider_received_and_accepted,
+    established_or_located_in_the_union
+]).
+role_keys(importer, [
+    ai_system,
+    places_the_system_on_the_union_market,
+    established_or_located_in_the_union,
+    system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country
+]).
+role_keys(distributor, [
+    ai_system,
+    develops_or_has_developed_the_system,
+    under_its_own_name_or_trademark,
+    in_the_supply_chain,
+    makes_the_system_available_on_the_union_market,
+    places_the_system_on_the_union_market,
+    puts_the_system_into_service_in_the_union,
+    established_or_located_in_the_union,
+    system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country
+]).
+role_keys(operator, [
+    ai_system,
+    use_in_a_personal_non_professional_activity,
+    develops_or_has_developed_the_system,
+    under_its_own_name_or_trademark,
+    uses_the_system_under_its_authority,
+    written_mandate_from_a_provider_received_and_accepted,
+    in_the_supply_chain,
+    makes_the_system_available_on_the_union_market,
+    is_a_product_manufacturer,
+    places_the_system_on_the_union_market,
+    puts_the_system_into_service_in_the_union,
+    established_or_located_in_the_union,
+    system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country
+]).
+
+% ---- Art 2: the grounds that take a case out of scope -------------------
+% excluded_by(Ground, Formula, Citation): the ground holds when Formula holds.
+scope_grounds([
+    not_an_ai_system,
+    military_defence_or_national_security,
+    third_country_law_enforcement_and_judicial_cooperation,
+    sole_purpose_of_scientific_research_and_development,
+    research_testing_or_development_before_the_market,
+    free_and_open_source_licence,
+    actor_not_covered
+]).
+
+excluded_by(not_an_ai_system, holds(ai_system, false), cite(eu_reg_2024_1689_art_3_1)) :-
+    implements(eu_reg_2024_1689_art_3_1).
+excluded_by(military_defence_or_national_security, holds(exclusively_for_military_defence_or_national_security_purposes, true), cite(eu_reg_2024_1689_art_2_3)) :-
+    implements(eu_reg_2024_1689_art_2_3).
+excluded_by(third_country_law_enforcement_and_judicial_cooperation,
+        all_of([
+            holds(third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation, true),
+            holds(adequate_safeguards_for_fundamental_rights_and_freedoms, true)
+        ]),
+        cite(eu_reg_2024_1689_art_2_4)) :-
+    implements(eu_reg_2024_1689_art_2_4).
+excluded_by(sole_purpose_of_scientific_research_and_development, holds(specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development, true), cite(eu_reg_2024_1689_art_2_6)) :-
+    implements(eu_reg_2024_1689_art_2_6).
+excluded_by(research_testing_or_development_before_the_market,
+        all_of([
+            holds(research_testing_or_development_before_placing_on_the_market_or_putting_into_service, true),
+            holds(testing_in_real_world_conditions, false)
+        ]),
+        cite(eu_reg_2024_1689_art_2_8)) :-
+    implements(eu_reg_2024_1689_art_2_8).
+excluded_by(free_and_open_source_licence,
+        all_of([
+            holds(released_under_free_and_open_source_licence, true),
+            holds(placed_on_the_market_or_put_into_service_as_high_risk_or_under_article_5_or_50, false)
+        ]),
+        cite(eu_reg_2024_1689_art_2_12)) :-
+    implements(eu_reg_2024_1689_art_2_12).
+excluded_by(actor_not_covered, negation(Coverage), cite(eu_reg_2024_1689_art_2_1)) :-
+    implements(eu_reg_2024_1689_art_2_1),
+    coverage_formula(Coverage).
+
+ground_formula(Ground, Formula) :-
+    excluded_by(Ground, Formula, _Citation).
+
+% THE COVERAGE TEST (Art 2(1)), one branch per value of actor_role.
+coverage_formula(any_of(Branches)) :-
+    implements(eu_reg_2024_1689_art_2_1),
+    actor_roles(Roles),
+    maplist(coverage_branch, Roles, Branches).
+
+coverage_branch(Role, all_of([holds(actor_role, Role), Test])) :-
+    coverage_test(Role, Test).
+
+coverage_test(provider,
+        any_of([
+            holds(places_the_system_on_the_union_market, true),
+            holds(puts_the_system_into_service_in_the_union, true),
+            all_of([
+                holds(established_or_located_in_the_union, false),
+                holds(output_used_in_the_union, true)
+            ])
+        ])) :-
+    implements(eu_reg_2024_1689_art_2_1_a).
+coverage_test(deployer,
+        all_of([
+            any_of([
+                holds(established_or_located_in_the_union, true),
+                holds(output_used_in_the_union, true)
+            ]),
+            holds(use_in_a_personal_non_professional_activity, false)
+        ])) :-
+    implements(eu_reg_2024_1689_art_2_1_b).
+coverage_test(importer, always) :-
+    implements(eu_reg_2024_1689_art_2_1_d).
+coverage_test(distributor, always) :-
+    implements(eu_reg_2024_1689_art_2_1_d).
+coverage_test(product_manufacturer,
+        all_of([
+            any_of([
+                holds(places_the_system_on_the_union_market, true),
+                holds(puts_the_system_into_service_in_the_union, true)
+            ]),
+            holds(places_or_puts_into_service_the_system_together_with_its_product, true),
+            holds(under_its_own_name_or_trademark, true)
+        ])) :-
+    implements(eu_reg_2024_1689_art_2_1_e).
+coverage_test(authorised_representative, holds(represented_provider_established_in_the_union, false)) :-
+    implements(eu_reg_2024_1689_art_2_1_f).
+coverage_test(affected_person, holds(located_in_the_union, true)) :-
+    implements(eu_reg_2024_1689_art_2_1_g).
+
+section_b_step(Role,
+        step(all_of([
+                holds(high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i, true),
+                holds(actor_role, Role)
+            ]),
+            only_listed_provisions_apply,
+            [cite(eu_reg_2024_1689_art_2_2)|Points])) :-
+    implements(eu_reg_2024_1689_art_2_2),
+    role_points(Role, Points).
+
+applies_step(Role, step(holds(actor_role, Role), regulation_applies, Points)) :-
+    implements(eu_reg_2024_1689_art_2_1),
+    role_points(Role, Points).
+
+% ---- Art 3: THE ROLE TESTS ----------------------------------------------
+provider_definition_test(all_of([
+        holds(develops_or_has_developed_the_system, true),
+        any_of([
+            holds(places_the_system_on_the_union_market, true),
+            holds(puts_the_system_into_service_in_the_union, true)
+        ]),
+        holds(under_its_own_name_or_trademark, true)
+    ])) :-
+    implements(eu_reg_2024_1689_art_3_3).
+
+deployer_definition_test(all_of([
+        holds(uses_the_system_under_its_authority, true),
+        holds(use_in_a_personal_non_professional_activity, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_3_4).
+
+authorised_representative_definition_test(all_of([
+        holds(established_or_located_in_the_union, true),
+        holds(written_mandate_from_a_provider_received_and_accepted, true)
+    ])) :-
+    implements(eu_reg_2024_1689_art_3_5).
+
+importer_definition_test(all_of([
+        holds(established_or_located_in_the_union, true),
+        holds(places_the_system_on_the_union_market, true),
+        holds(system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country, true)
+    ])) :-
+    implements(eu_reg_2024_1689_art_3_6).
+
+role_test(provider, Test) :-
+    implements(eu_reg_2024_1689_art_3_3),
+    provider_definition_test(Test).
+role_test(deployer, Test) :-
+    implements(eu_reg_2024_1689_art_3_4),
+    deployer_definition_test(Test).
+role_test(authorised_representative, Test) :-
+    implements(eu_reg_2024_1689_art_3_5),
+    authorised_representative_definition_test(Test).
+role_test(importer, Test) :-
+    implements(eu_reg_2024_1689_art_3_6),
+    importer_definition_test(Test).
+role_test(distributor,
+        all_of([
+            holds(in_the_supply_chain, true),
+            holds(makes_the_system_available_on_the_union_market, true),
+            negation(any_of([ProviderTest, ImporterTest]))
+        ])) :-
+    implements(eu_reg_2024_1689_art_3_7),
+    provider_definition_test(ProviderTest),
+    importer_definition_test(ImporterTest).
+role_test(operator,
+        any_of([
+            ProviderTest,
+            DeployerTest,
+            RepresentativeTest,
+            ImporterTest,
+            all_of([
+                holds(in_the_supply_chain, true),
+                holds(makes_the_system_available_on_the_union_market, true)
+            ]),
+            holds(is_a_product_manufacturer, true)
+        ])) :-
+    implements(eu_reg_2024_1689_art_3_8),
+    provider_definition_test(ProviderTest),
+    deployer_definition_test(DeployerTest),
+    authorised_representative_definition_test(RepresentativeTest),
+    importer_definition_test(ImporterTest).
+
+% ---- Art 25: becoming the provider --------------------------------------
+paragraph_1_formula(any_of([
+        holds(puts_its_name_or_trademark_on_a_high_risk_system_already_placed_or_in_service, true),
+        all_of([
+            any_of([
+                holds(makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service, true),
+                holds(modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service, true)
+            ]),
+            holds(system_is_high_risk_after_the_change, true)
+        ])
+    ])) :-
+    implements(eu_reg_2024_1689_art_25_1).
+
+paragraph_3_formula(all_of([
+        holds(product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component, true),
+        any_of([
+            holds(system_placed_on_the_market_together_with_the_product_under_the_manufacturer_name, true),
+            holds(system_put_into_service_under_the_manufacturer_name_after_the_product_was_placed, true)
+        ])
+    ])) :-
+    implements(eu_reg_2024_1689_art_25_3).
+
+% ---- THE LADDERS (THE LIMBS) --------------------------------------------
+query_ladder(regulation_scope(AssessmentDate),
+        [ step(day_before(AssessmentDate, ChaptersDay), not_applicable_on_date, [ChaptersCitation]),
+          step(day_before(AssessmentDate, TextDay), earlier_text_not_formalised, [ChaptersCitation]),
+          step(any_of(ExclusionFormulas), out_of_scope, OutOfScopeCitations)
+        | RoleSteps ]) :-
+    implements(eu_reg_2024_1689_art_2_1),
+    application_day(chapters_one_and_two, ChaptersDay, ChaptersCitation),
+    application_day(pinned_consolidated_text, TextDay, _TextCitation),
+    scope_grounds(Grounds),
+    maplist(ground_formula, Grounds, ExclusionFormulas),
+    out_of_scope_citations(OutOfScopeCitations),
+    actor_roles(Roles),
+    maplist(section_b_step, Roles, SectionSteps),
+    maplist(applies_step, Roles, AppliesSteps),
+    append(SectionSteps, AppliesSteps, RoleSteps).
+query_ladder(defined_role(Role, AssessmentDate),
+        [ step(day_before(AssessmentDate, ChaptersDay), not_applicable_on_date, [ChaptersCitation]),
+          step(day_before(AssessmentDate, TextDay), earlier_text_not_formalised, [ChaptersCitation]),
+          step(negation(all_of([holds(ai_system, true), Test])), role_does_not_hold, Citations),
+          step(always, role_holds, Citations) ]) :-
+    implements(eu_reg_2024_1689_art_3_1),
+    application_day(chapters_one_and_two, ChaptersDay, ChaptersCitation),
+    application_day(pinned_consolidated_text, TextDay, _TextCitation),
+    role_test(Role, Test),
+    role_citations(Role, Citations).
+query_ladder(value_chain_provider(AssessmentDate),
+        [ step(day_before(AssessmentDate, AnnexThreeDay), not_applicable_on_date, EveryRouteCitations),
+          step(all_of([
+                  day_before(AssessmentDate, AnnexOneDay),
+                  any_of([
+                      holds(high_risk_route, annex_i),
+                      holds(product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component, true)
+                  ])
+              ]),
+              not_applicable_on_date,
+              AnnexOneCitations),
+          step(negation(any_of([ParagraphOne, ParagraphThree])), not_considered_provider, ValueChainCitations),
+          step(always, considered_provider, ValueChainCitations) ]) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    application_day(chapter_three_annex_iii, AnnexThreeDay, _AnnexThreeCitation),
+    application_day(chapter_three_annex_i, AnnexOneDay, _AnnexOneCitation),
+    article_113_c_citations(every_route, EveryRouteCitations),
+    article_113_c_citations(annex_i_route, AnnexOneCitations),
+    paragraph_1_formula(ParagraphOne),
+    paragraph_3_formula(ParagraphThree),
+    value_chain_citations(ValueChainCitations).
+query_ladder(initial_provider(AssessmentDate),
+        [ step(day_before(AssessmentDate, AnnexThreeDay), not_applicable_on_date, EveryRouteCitations),
+          step(all_of([day_before(AssessmentDate, AnnexOneDay), holds(high_risk_route, annex_i)]), not_applicable_on_date, AnnexOneCitations),
+          step(holds(another_person_became_the_provider_under_paragraph_1, false), initial_provider_unaffected, [cite(eu_reg_2024_1689_art_25_2)]),
+          step(holds(initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, true), paragraph_2_not_applied, [cite(eu_reg_2024_1689_art_25_2)]),
+          step(always, no_longer_provider_must_cooperate, CooperationCitations) ]) :-
+    implements(eu_reg_2024_1689_art_25_2),
+    application_day(chapter_three_annex_iii, AnnexThreeDay, _AnnexThreeCitation),
+    application_day(chapter_three_annex_i, AnnexOneDay, _AnnexOneCitation),
+    article_113_c_citations(every_route, EveryRouteCitations),
+    article_113_c_citations(annex_i_route, AnnexOneCitations),
+    initial_provider_cooperation_citations(CooperationCitations).
+query_ladder(supplier_agreement(AssessmentDate),
+        [ step(day_before(AssessmentDate, AnnexThreeDay), not_applicable_on_date, EveryRouteCitations),
+          step(all_of([day_before(AssessmentDate, AnnexOneDay), holds(high_risk_route, annex_i)]), not_applicable_on_date, AnnexOneCitations),
+          step(any_of([
+                  holds(supplies_items_used_or_integrated_in_a_high_risk_system, false),
+                  all_of([
+                      holds(makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, true),
+                      holds(supplied_items_include_a_general_purpose_ai_model, false)
+                  ])
+              ]),
+              no_written_agreement_duty,
+              [cite(eu_reg_2024_1689_art_25_4)]),
+          step(always, written_agreement_required, [cite(eu_reg_2024_1689_art_25_4)]) ]) :-
+    implements(eu_reg_2024_1689_art_25_4),
+    application_day(chapter_three_annex_iii, AnnexThreeDay, _AnnexThreeCitation),
+    application_day(chapter_three_annex_i, AnnexOneDay, _AnnexOneCitation),
+    article_113_c_citations(every_route, EveryRouteCitations),
+    article_113_c_citations(annex_i_route, AnnexOneCitations).
+
+% ---- the public queries -------------------------------------------------
+regulation_scope_status(Profile, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_2_1),
+    scope_and_roles_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    query_outcome(Problems, regulation_scope(AssessmentDate), Profile, Result, Citations).
+
+defined_role_status(Profile, DefinedRole, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_3_1),
+    scope_and_roles_input_problems(Profile, ProfileProblems),
+    defined_role_problems(DefinedRole, RoleProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append([ProfileProblems, RoleProblems, DateProblems], Problems),
+    query_outcome(Problems, defined_role(DefinedRole, AssessmentDate), Profile, Result, Citations).
+
+value_chain_provider_status(Profile, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_25_1),
+    scope_and_roles_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    query_outcome(Problems, value_chain_provider(AssessmentDate), Profile, Result, Citations).
+
+initial_provider_status(Profile, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_25_2),
+    scope_and_roles_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    query_outcome(Problems, initial_provider(AssessmentDate), Profile, Result, Citations).
+
+supplier_agreement_status(Profile, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_25_4),
+    scope_and_roles_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    query_outcome(Problems, supplier_agreement(AssessmentDate), Profile, Result, Citations).
+
+% Step (0): input problems come first.
+query_outcome([], Query, Profile, Result, Citations) :-
+    query_ladder(Query, Steps),
+    query_keys(Query, Keys),
+    resolve_status(Steps, Keys, Profile, Result, Citations).
+query_outcome([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+
+% ---- step (0) for the arguments (the input contract, no provision) -----
+defined_role_problems(DefinedRole, Problems) :-
+    term_variables(DefinedRole, Variables),
+    ground_role_problems(Variables, DefinedRole, Problems).
+
+ground_role_problems([_|_], _, [wrong_type(defined_role)]).
+ground_role_problems([], DefinedRole, Problems) :-
+    memberd_t(DefinedRole, [provider, deployer, authorised_representative, importer, distributor, operator], IsRole),
+    truth_problems(IsRole, wrong_type(defined_role), Problems).
+
+assessment_date_problems(AssessmentDate, Problems) :-
+    term_variables(AssessmentDate, Variables),
+    ground_date_problems(Variables, AssessmentDate, Problems).
+
+ground_date_problems([_|_], _, [wrong_type(assessment_date)]).
+ground_date_problems([], AssessmentDate, Problems) :-
+    calendar_date_truth(AssessmentDate, IsDate),
+    truth_problems(IsDate, wrong_type(assessment_date), Problems).
+
+truth_problems(true, _, []).
+truth_problems(false, Problem, [Problem]).
+
+calendar_date_truth(AssessmentDate, Truth) :-
+    functor(AssessmentDate, Name, Arity),
+    memberd_t(Name/Arity, [date/3], IsShaped),
+    shaped_date_truth(IsShaped, AssessmentDate, Truth).
+
+shaped_date_truth(false, _, false).
+shaped_date_truth(true, date(Year, Month, Day), Truth) :-
+    integer_truth(Year, YearIsInteger),
+    integer_truth(Month, MonthIsInteger),
+    integer_truth(Day, DayIsInteger),
+    boolean_and(YearIsInteger, MonthIsInteger, FirstTwo),
+    boolean_and(FirstTwo, DayIsInteger, AllIntegers),
+    integer_date_truth(AllIntegers, Year, Month, Day, Truth).
+
+integer_truth(Value, true) :-
+    integer(Value).
+integer_truth(Value, false) :-
+    catch((must_be(integer, Value), fail), _, true).
+
+boolean_and(true, Truth, Truth).
+boolean_and(false, _, false).
+
+integer_date_truth(false, _, _, _, false).
+integer_date_truth(true, Year, Month, Day, Truth) :-
+    calendar_day_truth(Year, Month, Day, Truth).
+
+calendar_day_truth(_, Month, _, false) :-
+    Month #< 1.
+calendar_day_truth(_, Month, _, false) :-
+    Month #> 12.
+calendar_day_truth(Year, Month, Day, Truth) :-
+    Month #>= 1,
+    Month #=< 12,
+    month_length(Year, Month, Length),
+    day_in_month_truth(Day, Length, Truth).
+
+day_in_month_truth(Day, Length, true) :-
+    Day #>= 1,
+    Day #=< Length.
+day_in_month_truth(Day, _, false) :-
+    Day #< 1.
+day_in_month_truth(Day, Length, false) :-
+    Day #> Length.
+
+month_length(Year, 2, Length) :-
+    leap_year_truth(Year, Leap),
+    february_length(Leap, Length).
+month_length(_, Month, Length) :-
+    month_days(Month, Length).
+
+month_days(1, 31).
+month_days(3, 31).
+month_days(4, 30).
+month_days(5, 31).
+month_days(6, 30).
+month_days(7, 31).
+month_days(8, 31).
+month_days(9, 30).
+month_days(10, 31).
+month_days(11, 30).
+month_days(12, 31).
+
+february_length(true, 29).
+february_length(false, 28).
+
+leap_year_truth(Year, true) :-
+    Year mod 400 #= 0.
+leap_year_truth(Year, true) :-
+    Year mod 400 #> 0,
+    Year mod 100 #> 0,
+    Year mod 4 #= 0.
+leap_year_truth(Year, false) :-
+    Year mod 400 #> 0,
+    Year mod 100 #= 0.
+leap_year_truth(Year, false) :-
+    Year mod 4 #> 0.
+
+% ---- the profile, read by presence first and then by value -------------
+key_state_of(Profile, Key, key_state(Key, State)) :-
+    read_state(Profile, Key, State).
+
+read_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+read_state(Profile, Key, State) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    value_state(Value, State).
+
+value_state(Value, unsure) :-
+    Value == unsure.
+value_state(Value, given(Value)) :-
+    dif(Value, unsure).
+
+fixed_assignment([], []).
+fixed_assignment([key_state(Key, State)|States], Assignment) :-
+    fixed_assignment(States, Rest),
+    add_fixed(State, Key, Rest, Assignment).
+
+add_fixed(given(Value), Key, Rest, [Key-Value|Rest]).
+add_fixed(absent, _, Rest, Rest).
+add_fixed(unsure, _, Rest, Rest).
+
+state_keys([], _, []).
+state_keys([key_state(Key, State)|States], Wanted, Keys) :-
+    state_keys(States, Wanted, Rest),
+    keep_key(State, Wanted, Key, Rest, Keys).
+
+keep_key(State, Wanted, Key, Rest, [Key|Rest]) :-
+    State == Wanted.
+keep_key(State, Wanted, _, Rest, Rest) :-
+    dif(State, Wanted).
+
+% ---- three-valued reading of a formula -----------------------------------
+lookup([], _, missing).
+lookup([Present-Value|_], Key, found(Value)) :-
+    Present == Key.
+lookup([Present-_|Rest], Key, Result) :-
+    dif(Present, Key),
+    lookup(Rest, Key, Result).
+
+truth(always, _, true).
+truth(holds(Key, Value), Assignment, Truth) :-
+    lookup(Assignment, Key, Found),
+    holds_truth(Found, Value, Truth).
+truth(day_before(AssessmentDate, Limit), _, Truth) :-
+    day_order_truth(AssessmentDate, Limit, Truth).
+truth(all_of(Formulas), Assignment, Truth) :-
+    all_truth(Formulas, Assignment, Truth).
+truth(any_of(Formulas), Assignment, Truth) :-
+    any_truth(Formulas, Assignment, Truth).
+truth(negation(Formula), Assignment, Truth) :-
+    truth(Formula, Assignment, Inner),
+    negate(Inner, Truth).
+
+holds_truth(missing, _, unknown).
+holds_truth(found(Given), Value, true) :-
+    Given == Value.
+holds_truth(found(Given), Value, false) :-
+    dif(Given, Value).
+
+day_order_truth(date(Year, Month, Day), day(LimitYear, LimitMonth, LimitDay), Truth) :-
+    DateNumber #= Year * 10000 + Month * 100 + Day,
+    LimitNumber #= LimitYear * 10000 + LimitMonth * 100 + LimitDay,
+    earlier_truth(DateNumber, LimitNumber, Truth).
+
+earlier_truth(Earlier, Later, true) :-
+    Earlier #< Later.
+earlier_truth(Earlier, Later, false) :-
+    Earlier #>= Later.
+
+all_truth([], _, true).
+all_truth([Formula|Formulas], Assignment, Truth) :-
+    truth(Formula, Assignment, First),
+    all_truth(Formulas, Assignment, Rest),
+    conjoin(First, Rest, Truth).
+
+any_truth([], _, false).
+any_truth([Formula|Formulas], Assignment, Truth) :-
+    truth(Formula, Assignment, First),
+    any_truth(Formulas, Assignment, Rest),
+    disjoin(First, Rest, Truth).
+
+conjoin(false, _, false).
+conjoin(true, Truth, Truth).
+conjoin(unknown, false, false).
+conjoin(unknown, true, unknown).
+conjoin(unknown, unknown, unknown).
+
+disjoin(true, _, true).
+disjoin(false, Truth, Truth).
+disjoin(unknown, true, true).
+disjoin(unknown, false, unknown).
+disjoin(unknown, unknown, unknown).
+
+negate(true, false).
+negate(false, true).
+negate(unknown, unknown).
+
+% pending_key(Formula, Assignment, Key): a free key that keeps an unknown
+% formula unknown (called for unknown formulas only).
+pending_key(holds(Key, _), _, Key).
+pending_key(negation(Formula), Assignment, Key) :-
+    pending_key(Formula, Assignment, Key).
+pending_key(all_of(Formulas), Assignment, Key) :-
+    first_pending(Formulas, Assignment, Key).
+pending_key(any_of(Formulas), Assignment, Key) :-
+    first_pending(Formulas, Assignment, Key).
+
+first_pending([Formula|Formulas], Assignment, Key) :-
+    truth(Formula, Assignment, Truth),
+    pending_choice(Truth, Formula, Formulas, Assignment, Key).
+
+pending_choice(unknown, Formula, _, Assignment, Key) :-
+    pending_key(Formula, Assignment, Key).
+pending_choice(true, _, Formulas, Assignment, Key) :-
+    first_pending(Formulas, Assignment, Key).
+pending_choice(false, _, Formulas, Assignment, Key) :-
+    first_pending(Formulas, Assignment, Key).
+
+% ladder_outcome(Steps, Assignment, Outcome): known(answer(Result, Citations))
+% when the ladder settles, pending(Key) otherwise.
+ladder_outcome([step(Test, Result, Citations)|Steps], Assignment, Outcome) :-
+    truth(Test, Assignment, Truth),
+    step_outcome(Truth, Test, Result, Citations, Steps, Assignment, Outcome).
+
+step_outcome(true, _, Result, Citations, _, _, known(answer(Result, Sorted))) :-
+    sort(Citations, Sorted).
+step_outcome(false, _, _, _, Steps, Assignment, Outcome) :-
+    ladder_outcome(Steps, Assignment, Outcome).
+step_outcome(unknown, Test, _, _, _, Assignment, pending(Key)) :-
+    pending_key(Test, Assignment, Key).
+
+% ---- THE STATUS RULE (the status rule; no provision of the Act) ----
+resolve_status(Steps, Keys, Profile, Result, Citations) :-
+    maplist(key_state_of(Profile), Keys, States),
+    fixed_assignment(States, Fixed),
+    state_keys(States, absent, Absent),
+    state_keys(States, unsure, Unsure),
+    ladder_outcome(Steps, Fixed, Outcome),
+    settle(Outcome, Steps, States, Fixed, Absent, Unsure, Result, Citations).
+
+% (S1) settled at once.
+settle(known(answer(Result, Citations)), _, _, _, _, _, Result, Citations).
+settle(pending(_), Steps, States, Fixed, Absent, Unsure, Result, Citations) :-
+    first_missing_key(Absent, Absent, Steps, Fixed, Missing),
+    missing_outcome(Missing, Steps, States, Fixed, Absent, Unsure, Result, Citations).
+
+% (S2) the missing key.
+missing_outcome(found(Key), _, _, _, _, _, indeterminate([Key]), []).
+missing_outcome(none, Steps, States, Fixed, Absent, Unsure, Result, Citations) :-
+    first_referral(Unsure, Steps, Fixed, Referral),
+    referral_outcome(Referral, Steps, States, Fixed, Absent, Unsure, Result, Citations).
+
+% (S3) the referral; else no free key matters and every completion agrees (S1).
+referral_outcome(found(Judgement), _, States, _, _, _,
+        needs_legal_review(open_textured(Judgement, Citation), [inputs_relied_on(Pairs)]),
+        []) :-
+    referral_citation(Judgement, Citation),
+    relied_pairs(States, Pairs).
+referral_outcome(none, Steps, _, Fixed, Absent, Unsure, Result, Citations) :-
+    append(Absent, Unsure, FreeKeys),
+    default_assignment(FreeKeys, Fixed, Complete),
+    ladder_outcome(Steps, Complete, known(answer(Result, Citations))).
+
+default_assignment([], Assignment, Assignment).
+default_assignment([Key|Keys], Assignment, Complete) :-
+    domain_of(Key, [Value|_]),
+    default_assignment(Keys, [Key-Value|Assignment], Complete).
+
+% witness_search(Steps, Key, Assignment, Found): found when some completion
+% of Assignment gives two values of Key different answers, else none.
+witness_search(Steps, Key, Assignment, Found) :-
+    domain_of(Key, Values),
+    maplist(valued_outcome(Steps, Key, Assignment), Values, Outcomes),
+    outcomes_class(Outcomes, Class),
+    witness_class(Class, Steps, Key, Assignment, Found).
+
+valued_outcome(Steps, Key, Assignment, Value, Outcome) :-
+    ladder_outcome(Steps, [Key-Value|Assignment], Outcome).
+
+outcomes_class([], known_answers([])).
+outcomes_class([Outcome|Outcomes], Class) :-
+    outcomes_class(Outcomes, Rest),
+    merge_class(Outcome, Rest, Class).
+
+merge_class(known(Answer), known_answers(Answers), known_answers([Answer|Answers])).
+merge_class(known(_), pending(Pending), pending(Pending)).
+merge_class(pending(Pending), _, pending(Pending)).
+
+witness_class(known_answers(Answers), _, _, _, Found) :-
+    answers_same_truth(Answers, Same),
+    same_found(Same, Found).
+witness_class(pending(Pending), Steps, Key, Assignment, Found) :-
+    domain_of(Pending, Values),
+    branch_search(Values, Steps, Key, Pending, Assignment, Found).
+
+same_found(true, none).
+same_found(false, found).
+
+answers_same_truth([Answer|Answers], Truth) :-
+    same_as(Answers, Answer, Truth).
+
+same_as([], _, true).
+same_as([Other|Others], Answer, Truth) :-
+    Other == Answer,
+    same_as(Others, Answer, Truth).
+same_as([Other|_], Answer, false) :-
+    dif(Other, Answer).
+
+branch_search([], _, _, _, _, none).
+branch_search([Value|Values], Steps, Key, Pending, Assignment, Found) :-
+    witness_search(Steps, Key, [Pending-Value|Assignment], Branch),
+    branch_continue(Branch, Values, Steps, Key, Pending, Assignment, Found).
+
+branch_continue(found, _, _, _, _, _, found).
+branch_continue(none, Values, Steps, Key, Pending, Assignment, Found) :-
+    branch_search(Values, Steps, Key, Pending, Assignment, Found).
+
+% The first absent key that matters and is not behind another absent key.
+first_missing_key([], _, _, _, none).
+first_missing_key([Key|Keys], Absent, Steps, Fixed, Result) :-
+    witness_search(Steps, Key, Fixed, Found),
+    missing_candidate(Found, Key, Keys, Absent, Steps, Fixed, Result).
+
+missing_candidate(none, _, Keys, Absent, Steps, Fixed, Result) :-
+    first_missing_key(Keys, Absent, Steps, Fixed, Result).
+missing_candidate(found, Key, Keys, Absent, Steps, Fixed, Result) :-
+    behind_any(Absent, Key, Steps, Fixed, Behind),
+    behind_outcome(Behind, Key, Keys, Absent, Steps, Fixed, Result).
+
+behind_outcome(true, _, Keys, Absent, Steps, Fixed, Result) :-
+    first_missing_key(Keys, Absent, Steps, Fixed, Result).
+behind_outcome(false, Key, _, _, _, _, found(Key)).
+
+behind_any([], _, _, _, false).
+behind_any([Other|Others], Key, Steps, Fixed, Truth) :-
+    behind_pair(Other, Key, Steps, Fixed, First),
+    behind_rest(First, Others, Key, Steps, Fixed, Truth).
+
+behind_rest(true, _, _, _, _, true).
+behind_rest(false, Others, Key, Steps, Fixed, Truth) :-
+    behind_any(Others, Key, Steps, Fixed, Truth).
+
+% Key is behind Other: some value of Other leaves Key no witness, while
+% every value of Key leaves Other a witness.
+behind_pair(Other, Key, _, _, false) :-
+    Other == Key.
+behind_pair(Other, Key, Steps, Fixed, Truth) :-
+    dif(Other, Key),
+    domain_of(Other, OtherValues),
+    restricted(OtherValues, Other, Key, Steps, Fixed, Restricted),
+    behind_when(Restricted, Other, Key, Steps, Fixed, Truth).
+
+restricted([], _, _, _, _, false).
+restricted([Value|Values], Other, Key, Steps, Fixed, Truth) :-
+    witness_search(Steps, Key, [Other-Value|Fixed], Found),
+    restricted_step(Found, Values, Other, Key, Steps, Fixed, Truth).
+
+restricted_step(none, _, _, _, _, _, true).
+restricted_step(found, Values, Other, Key, Steps, Fixed, Truth) :-
+    restricted(Values, Other, Key, Steps, Fixed, Truth).
+
+behind_when(false, _, _, _, _, false).
+behind_when(true, Other, Key, Steps, Fixed, Truth) :-
+    domain_of(Key, KeyValues),
+    every_value_witnessed(KeyValues, Other, Key, Steps, Fixed, Truth).
+
+every_value_witnessed([], _, _, _, _, true).
+every_value_witnessed([Value|Values], Other, Key, Steps, Fixed, Truth) :-
+    witness_search(Steps, Other, [Key-Value|Fixed], Found),
+    every_value_step(Found, Values, Other, Key, Steps, Fixed, Truth).
+
+every_value_step(none, _, _, _, _, _, false).
+every_value_step(found, Values, Other, Key, Steps, Fixed, Truth) :-
+    every_value_witnessed(Values, Other, Key, Steps, Fixed, Truth).
+
+% The first unsure judgement that matters.
+first_referral([], _, _, none).
+first_referral([Key|Keys], Steps, Fixed, Result) :-
+    witness_search(Steps, Key, Fixed, Found),
+    referral_candidate(Found, Key, Keys, Steps, Fixed, Result).
+
+referral_candidate(found, Key, _, _, _, found(Key)).
+referral_candidate(none, _, Keys, Steps, Fixed, Result) :-
+    first_referral(Keys, Steps, Fixed, Result).
+
+% THE PAIRS RULE: the present judgement keys of the query, root order.
+relied_pairs([], []).
+relied_pairs([key_state(Key, State)|States], Pairs) :-
+    judgement_keys(Judgements),
+    memberd_t(Key, Judgements, IsJudgement),
+    relied_pairs(States, Rest),
+    add_pair(IsJudgement, State, Key, Rest, Pairs).
+
+add_pair(false, _, _, Pairs, Pairs).
+add_pair(true, absent, _, Pairs, Pairs).
+add_pair(true, unsure, Key, Pairs, [Key-unsure|Pairs]).
+add_pair(true, given(Value), Key, Pairs, [Key-Value|Pairs]).
+
+% ---- facade: verdict, status projection, checklist ---------------------
+% A case is case(Profile, AssessmentDate); the leading question is
+% regulation_scope_status/4.
+scope_and_roles_status_values([not_applicable_on_date, earlier_text_not_formalised, out_of_scope, only_listed_provisions_apply, regulation_applies]).
+
+decide_scope_and_roles(case(Profile, AssessmentDate), scope_and_roles_verdict(Status, Citations)) :-
+    regulation_scope_status(Profile, AssessmentDate, Status, Citations).
+
+scope_and_roles_status(Case, Status) :-
+    decide_scope_and_roles(Case, scope_and_roles_verdict(Status, _Citations)).
+
+scope_and_roles_decision_resolvable(Case) :-
+    decide_scope_and_roles(Case, scope_and_roles_verdict(Status, _Citations)),
+    scope_and_roles_status_values(Values),
+    memberd_t(Status, Values, true).
+
+% One row per ground of Art 2: met when the ground does not take the case
+% out of scope, unmet(Ground) when it does, unknown([Key]) when open.
+scope_and_roles_checklist(case(Profile, _AssessmentDate), Items) :-
+    scope_and_roles_input_problems(Profile, Problems),
+    checklist_for(Problems, Profile, Items).
+
+checklist_for([], Profile, Items) :-
+    query_keys(regulation_scope(_), Keys),
+    maplist(key_state_of(Profile), Keys, States),
+    fixed_assignment(States, Fixed),
+    scope_grounds(Grounds),
+    maplist(ground_item(Fixed), Grounds, Items).
+checklist_for([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2024_1689_art_2_1))]).
+
+ground_item(Fixed, Ground, item(Ground, Status, Citation)) :-
+    excluded_by(Ground, Formula, Citation),
+    truth(Formula, Fixed, Truth),
+    ground_status(Truth, Ground, Formula, Fixed, Status).
+
+ground_status(false, _, _, _, met).
+ground_status(true, Ground, _, _, unmet(Ground)).
+ground_status(unknown, _, Formula, Fixed, unknown([Key])) :-
+    pending_key(Formula, Fixed, Key).
+
+% ---- tests ----------------------------------------------------------------
+provider_case([
+    attribute(ai_system, true),
+    attribute(exclusively_for_military_defence_or_national_security_purposes, false),
+    attribute(third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation, false),
+    attribute(specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development, false),
+    attribute(research_testing_or_development_before_placing_on_the_market_or_putting_into_service, false),
+    attribute(released_under_free_and_open_source_licence, false),
+    attribute(actor_role, provider),
+    attribute(places_the_system_on_the_union_market, true),
+    attribute(high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i, false)
+]).
+
+unsure_provider_case([
+    attribute(ai_system, unsure),
+    attribute(exclusively_for_military_defence_or_national_security_purposes, false),
+    attribute(third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation, false),
+    attribute(specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development, false),
+    attribute(research_testing_or_development_before_placing_on_the_market_or_putting_into_service, false),
+    attribute(released_under_free_and_open_source_licence, false),
+    attribute(actor_role, provider),
+    attribute(places_the_system_on_the_union_market, true),
+    attribute(high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i, false)
+]).
+
+test(before_chapter_one_applies) :-
+    findall(Result-Citations, regulation_scope_status([], date(2025, 1, 1), Result, Citations), Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_a)]].
+
+test(earlier_text_is_not_formalised) :-
+    findall(Result-Citations, regulation_scope_status([], date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [earlier_text_not_formalised-[cite(eu_reg_2024_1689_art_113_a)]].
+
+test(a_provider_placing_on_the_market_is_covered) :-
+    provider_case(Profile),
+    findall(Result-Citations, regulation_scope_status(Profile, date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [regulation_applies-[cite(eu_reg_2024_1689_art_2_1_a), cite(eu_reg_2024_1689_art_2_1_c)]].
+
+test(a_covered_provider_is_not_out_of_scope, fail) :-
+    provider_case(Profile),
+    regulation_scope_status(Profile, date(2026, 8, 1), out_of_scope, _).
+
+test(not_an_ai_system_is_out_of_scope) :-
+    findall(Result-Citations, regulation_scope_status([attribute(ai_system, false)], date(2026, 8, 1), Result, Citations), Answers),
+    out_of_scope_citations(Expected),
+    sort(Expected, SortedExpected),
+    Answers == [out_of_scope-SortedExpected].
+
+test(an_empty_profile_asks_for_the_ai_system) :-
+    findall(Result-Citations, regulation_scope_status([], date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [indeterminate([ai_system])-[]].
+
+test(an_unsure_ai_system_goes_to_a_lawyer) :-
+    unsure_provider_case(Profile),
+    findall(Result, regulation_scope_status(Profile, date(2026, 8, 1), Result, []), Answers),
+    Answers == [needs_legal_review(open_textured(ai_system, cite(eu_reg_2024_1689_art_3_1)),
+        [inputs_relied_on([
+            ai_system-unsure,
+            exclusively_for_military_defence_or_national_security_purposes-false,
+            specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development-false,
+            places_the_system_on_the_union_market-true
+        ])])].
+
+test(a_wrong_value_is_an_input_problem) :-
+    findall(Result-Citations, regulation_scope_status([attribute(ai_system, maybe)], date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(ai_system)])-[]].
+
+test(an_impossible_date_is_an_input_problem) :-
+    findall(Result-Citations, regulation_scope_status([], date(2026, 2, 30), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(assessment_date)])-[]].
+
+test(a_provider_role_holds) :-
+    Profile = [
+        attribute(ai_system, true),
+        attribute(develops_or_has_developed_the_system, true),
+        attribute(places_the_system_on_the_union_market, true),
+        attribute(under_its_own_name_or_trademark, true)
+    ],
+    findall(Result-Citations, defined_role_status(Profile, provider, date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [role_holds-[cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_3)]].
+
+test(an_unknown_role_is_an_input_problem) :-
+    findall(Result-Citations, defined_role_status([], manufacturer, date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(defined_role)])-[]].
+
+test(article_25_before_december_2027) :-
+    findall(Result-Citations, value_chain_provider_status([], date(2027, 1, 1), Result, Citations), Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+test(annex_i_route_waits_until_august_2028) :-
+    findall(Result-Citations, value_chain_provider_status([attribute(high_risk_route, annex_i)], date(2028, 1, 1), Result, Citations), Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+test(a_supplier_needs_a_written_agreement) :-
+    Profile = [
+        attribute(high_risk_route, annex_i),
+        attribute(supplies_items_used_or_integrated_in_a_high_risk_system, true),
+        attribute(makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, false)
+    ],
+    findall(Result-Citations, supplier_agreement_status(Profile, date(2028, 9, 1), Result, Citations), Answers),
+    Answers == [written_agreement_required-[cite(eu_reg_2024_1689_art_25_4)]].
+
+test(a_clear_specification_goes_to_a_lawyer_when_unsure) :-
+    Profile = [
+        attribute(high_risk_route, annex_iii),
+        attribute(another_person_became_the_provider_under_paragraph_1, true),
+        attribute(initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, unsure)
+    ],
+    findall(Result-Citations, initial_provider_status(Profile, date(2028, 9, 1), Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, cite(eu_reg_2024_1689_art_25_2)),
+        [inputs_relied_on([initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk-unsure])])-[]].
+
+test(the_checklist_marks_every_ground) :-
+    provider_case(Profile),
+    scope_and_roles_checklist(case(Profile, date(2026, 8, 1)), Items),
+    length(Items, 7),
+    member(item(actor_not_covered, met, cite(eu_reg_2024_1689_art_2_1)), Items).
+
+test(the_constructors_hold_for_their_shapes) :-
+    date(2026, 8, 1),
+    indeterminate([ai_system]),
+    input_problems([wrong_type(ai_system)]),
+    wrong_type(ai_system),
+    duplicate_key(ai_system),
+    unknown_key(colour).
+
+test(a_constructor_does_not_hold_for_another_shape, fail) :-
+    indeterminate([]).
+
+:- end_module(scope_and_roles).

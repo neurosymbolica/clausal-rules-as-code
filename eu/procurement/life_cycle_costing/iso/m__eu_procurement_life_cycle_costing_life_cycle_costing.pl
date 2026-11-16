@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_life_cycle_costing_life_cycle_costing, [decide_lcc_method_validity/2, decide_lcc_mandatory_method/2, decide_lcc_computation/2, lcc_method_validity_limb_status/4, lcc_externality_assessment/2, lcc_mandatory_method_status/3, lcc_union_act_listing/2, lcc_total/2, lcc_component_admissibility/3, lcc_cost_category/1, life_cycle_costing_input_problem/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

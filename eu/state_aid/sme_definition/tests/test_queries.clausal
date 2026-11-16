@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one or more per
+% query-taxonomy predicate registered in manifest.yaml query_interface
+% (#3 sme_definition_status/2, #7 sme_definition_checklist/2, #16
+% sme_definition_what_if/4), plus the profile key schema and the re-exported
+% input check.
+% Run: python -m clausal.testing eu/state_aid/sme_definition/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/state_aid/sme_definition/queries, [
+    sme_definition_profile_keys/1,
+    sme_definition_input_problems/2,
+    sme_definition_what_if/4
+]).
+:- use_module(eu/state_aid/sme_definition/sme_definition, [
+    sme_definition_status/2,
+    sme_definition_checklist/2
+]).
+:- use_module(eu/state_aid/sme_definition/fixtures, [sme_definition_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    sme_definition_profile_keys(ProfileKeys),
+    ProfileKeys == [is_enterprise, public_bodies_control_25_percent_or_more, accounting_basis, own_staff_annual_work_units_hundredths, own_annual_turnover_cents, own_annual_balance_sheet_total_cents, partner_enterprises, linked_enterprises, previous_period_size_class, size_class_held, majority_of_voting_rights, right_to_appoint_or_remove_majority_of_board, dominant_influence_by_contract_or_articles, majority_of_voting_rights_by_shareholder_agreement, relationship_only_through_natural_persons, same_or_adjacent_market, holding_basis_points, investor_category, investor_involved_in_management, business_angels_total_investment_cents, local_authority_annual_budget_cents, local_authority_inhabitants].
+
+% #3 status determination.
+test(status_of_a_request) :-
+    sme_definition_profile_for(holding_at_partner_threshold, Request),
+    findall(Status, sme_definition_status(Request, Status), Statuses),
+    Statuses == [partner_enterprise].
+
+% #7 justification: one item for the determination, one per provision.
+test(checklist_carries_a_cite_per_item) :-
+    sme_definition_profile_for(entity_not_an_enterprise, Request),
+    sme_definition_checklist(Request, Checklist),
+    Checklist == [item(determination, not_an_enterprise, [cite(eu_rec_2003_361_annex_art_1_t1)]), item(eu_rec_2003_361_annex_art_1_t1, met, cite(eu_rec_2003_361_annex_art_1_t1))].
+test(a_non_final_checklist_has_only_the_determination) :-
+    sme_definition_profile_for(linked_list_not_given, Request),
+    sme_definition_checklist(Request, Checklist),
+    Checklist == [item(determination, indeterminate([linked_enterprises]), [])].
+
+% #16 what-if.
+test(what_if_one_point_below_the_holding_threshold) :-
+    sme_definition_profile_for(holding_at_partner_threshold, Request),
+    sme_definition_what_if(Request, holding_basis_points, 2499, Status),
+    Status == neither_partner_nor_linked.
+test(what_if_one_point_below_is_not_partner, fail) :-
+    sme_definition_profile_for(holding_at_partner_threshold, Request),
+    sme_definition_what_if(Request, holding_basis_points, 2499, partner_enterprise).
+test(what_if_public_bodies_take_control) :-
+    sme_definition_profile_for(public_body_control_not_reached, Request),
+    sme_definition_what_if(Request, public_bodies_control_25_percent_or_more, true, Status),
+    Status == not_sme_public_control.
+test(what_if_staff_reaches_the_medium_ceiling) :-
+    sme_definition_profile_for(sme_staff_just_below_medium_ceiling, Request),
+    sme_definition_what_if(Request, own_staff_annual_work_units_hundredths, 25000, Status),
+    Status == not_sme.
+test(what_if_the_dominant_influence_is_decided) :-
+    sme_definition_profile_for(dominant_influence_unsure, Request),
+    sme_definition_what_if(Request, dominant_influence_by_contract_or_articles, true, Linked),
+    Linked == linked_enterprise,
+    sme_definition_what_if(Request, dominant_influence_by_contract_or_articles, false, Partner),
+    Partner == partner_enterprise.
+test(what_if_replaces_a_duplicated_key) :-
+    sme_definition_what_if(query(size_class, recommendation_2003_361_annex, [attribute(is_enterprise, true), attribute(is_enterprise, unsure)]), is_enterprise, false, Status),
+    Status == not_an_enterprise.
+
+% The re-exported input check.
+test(the_reexported_input_check_names_an_unknown_key) :-
+    sme_definition_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+:- end_module(test_queries).

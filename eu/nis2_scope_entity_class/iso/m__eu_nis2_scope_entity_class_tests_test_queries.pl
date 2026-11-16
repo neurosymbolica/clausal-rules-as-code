@@ -1,0 +1,73 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_nis2_scope_entity_class_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_nis2_scope_entity_class_queries, [nis2_scope_entity_class_profile_keys/1, nis2_scope_entity_class_what_if/4, microenterprise/0, small_enterprise/0, medium_sized_enterprise/0, large_enterprise/0, in_scope/0, out_of_scope/0, essential_entity/0, important_entity/0, unsure/0, not_a_trust_service_provider/0, central_government/0]).
+:- use_module(m__eu_nis2_scope_entity_class_kernel, [nis2_scope_entity_class_input_problems/2]).
+:- use_module(m__eu_nis2_scope_entity_class_fixtures, [nis2_scope_entity_class_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    nis2_scope_entity_class_profile_keys(ProfileKeys),
+    ProfileKeys == [annex_i_type, annex_ii_type, services_or_activities_in_union, staff_headcount, annual_turnover_eur, annual_balance_sheet_total_eur, public_electronic_communications_provider, trust_service_provider_status, tld_name_registry, dns_service_provider, sole_provider_of_an_essential_service_in_a_member_state, disruption_could_significantly_impact_public_safety_security_or_health, disruption_could_induce_a_significant_systemic_risk, critical_by_specific_national_or_regional_importance, public_administration_kind, public_administration_in_national_security_defence_or_law_enforcement, critical_entity_under_directive_2022_2557, domain_name_registration_service_entity, exempted_from_dora_scope_by_member_state, identified_by_member_state_as_essential_entity, former_operator_of_essential_services_kept_essential_by_member_state].
+test(what_if_a_critical_entity_flips_out_of_scope_to_eligible) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, true, Status),
+    Status == eligible.
+test(what_if_the_unchanged_value_keeps_the_baseline) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, false, Status),
+    Status == ineligible.
+test(what_if_a_dora_exemption_flips_a_critical_entity_out) :-
+    nis2_scope_entity_class_profile_for(critical_entity, Profile),
+    nis2_scope_entity_class_what_if(Profile, exempted_from_dora_scope_by_member_state, true, Status),
+    Status == ineligible.
+test(what_if_staff_at_fifty_flips_the_size_rule) :-
+    nis2_scope_entity_class_profile_for(small_annex_just_below, Profile),
+    nis2_scope_entity_class_what_if(Profile, staff_headcount, 50, Status),
+    Status == eligible.
+test(what_if_staff_at_forty_nine_keeps_it_out) :-
+    nis2_scope_entity_class_profile_for(small_annex_just_below, Profile),
+    nis2_scope_entity_class_what_if(Profile, staff_headcount, 49, Status),
+    Status == ineligible.
+test(what_if_an_unsure_judgement_needs_review) :-
+    nis2_scope_entity_class_profile_for(sole_provider, Profile),
+    nis2_scope_entity_class_what_if(Profile, sole_provider_of_an_essential_service_in_a_member_state, unsure, Status),
+    Status = needs_legal_review(open_textured(sole_provider_of_an_essential_service_in_a_member_state, cite(eu_dir_2022_2555_art_2_2_b)), _).
+test(what_if_exactly_one_answer) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    findall(Status, nis2_scope_entity_class_what_if(Profile, domain_name_registration_service_entity, true, Status), Statuses),
+    Statuses == [eligible].
+test(what_if_an_invalid_value_is_an_input_problem) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_what_if(Profile, tld_name_registry, unsure, Status),
+    Status == input_problems([wrong_type(tld_name_registry)]).
+test(input_problems_empty_for_a_good_profile) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_input_problems(Profile, Problems),
+    Problems == [].
+test(input_problems_name_an_unknown_key) :-
+    nis2_scope_entity_class_input_problems([attribute(bogus, true)], Problems),
+    Problems == [unknown_key(bogus)].
+test(vocabulary_atoms_are_exported) :-
+    microenterprise,
+    small_enterprise,
+    medium_sized_enterprise,
+    large_enterprise,
+    in_scope,
+    out_of_scope,
+    essential_entity,
+    important_entity,
+    unsure,
+    not_a_trust_service_provider,
+    central_government.
+
+cp_test_names([profile_keys_are_the_contract_keys, what_if_a_critical_entity_flips_out_of_scope_to_eligible, what_if_the_unchanged_value_keeps_the_baseline, what_if_a_dora_exemption_flips_a_critical_entity_out, what_if_staff_at_fifty_flips_the_size_rule, what_if_staff_at_forty_nine_keeps_it_out, what_if_an_unsure_judgement_needs_review, what_if_exactly_one_answer, what_if_an_invalid_value_is_an_input_problem, input_problems_empty_for_a_good_profile, input_problems_name_an_unknown_key, vocabulary_atoms_are_exported]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

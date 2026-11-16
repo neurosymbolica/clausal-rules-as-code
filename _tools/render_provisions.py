@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """render_provisions.py -- the provision tracking report a human actually reads.
 
 Reads one domain's `provisions.yaml` and writes a self-contained HTML report.

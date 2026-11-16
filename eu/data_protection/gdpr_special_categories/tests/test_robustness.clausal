@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the input check gdpr_special_categories_input_problems/2 for a
+% PROFILE that is an attribute list [attribute(Key, Value), ...]: an empty list, a
+% value that is not a list, an unknown key and a value outside its type each get exactly
+% one answer. Written by the scaffold from the order's typed input contract
+% (input_contract.types.profile: attribute_list), not by the producer;
+% do not edit or delete.
+% Run: python -m clausal.testing eu/data_protection/gdpr_special_categories/tests/test_robustness.clausal
+% =====================================================================
+:- module(test_robustness, []).
+:- use_module(eu/data_protection/gdpr_special_categories/queries, [gdpr_special_categories_input_problems/2]).
+
+test(an_empty_attribute_list_gets_exactly_one_answer) :-
+    findall(Problems, gdpr_special_categories_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_profile_that_is_not_a_list_gets_one_non_empty_answer) :-
+    findall(Problems, gdpr_special_categories_input_problems(not_a_profile, Problems), Answers),
+    Answers = [[_|_]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, gdpr_special_categories_input_problems([attribute(not_a_key_of_the_contract, true)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(unknown_key(not_a_key_of_the_contract), Problems).
+
+test(a_value_outside_the_type_of_accordance_with_article_89_1_is_named) :-
+    findall(Problems, gdpr_special_categories_input_problems([attribute(accordance_with_article_89_1, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(accordance_with_article_89_1), Problems).
+
+test(a_value_outside_the_type_of_biometric_data_present_is_named) :-
+    findall(Problems, gdpr_special_categories_input_problems([attribute(biometric_data_present, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(biometric_data_present), Problems).
+
+test(a_value_outside_the_type_of_exception_claimed_is_named) :-
+    findall(Problems, gdpr_special_categories_input_problems([attribute(exception_claimed, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(exception_claimed), Problems).
+
+:- end_module(test_robustness).

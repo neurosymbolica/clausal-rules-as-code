@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2, profile_set/3, profile_keys/2, check_gte/5, check_lte/5, status_gte/4, status_gt/4, status_lte/4, status_lt/4, check_ratio_gte/6, check_ratio_lte/6, ratio_bps/4, required_numerator_gte/3, max_denom_gte/3, max_numerator_lte/3, min_denom_lte/3, check_tri/4, check_tri_neg/4, sum_list/2, first_applicable/2, not_member/2, member_matching/2, memberd/2, term_mismatch/2, usable_positive/3, missing_keys/3, all_present/2, check_eq/5, check_true/4, check_false/4, check_holds/5, or_status/2, and_status/2, collect_unknown/2, member_unmet/1, mark_unmet/3, mark_unknown/3, assess/6, eval_requirements/4, decide_labeled/3, summarize/3, classify_labeled/4, has_unmet/1, has_unknown/1, not_defeated/3, int_min/3, int_max/3, int_abs/2]).
 
 :- use_module(library(lists), [append/3]).
@@ -257,25 +258,25 @@ ratio_bps(PROFILE, NUM_KEY, DENOM_KEY, RATIO_BPS) :-
     profile_get(PROFILE, NUM_KEY, NUMERATOR),
     usable_positive(PROFILE, DENOM_KEY, DENOMINATOR),
     bps_full_scale(SCALE),
-    #=(RATIO_BPS, div(NUMERATOR * SCALE, DENOMINATOR)).
+    #=(RATIO_BPS, NUMERATOR * SCALE div DENOMINATOR).
 
 required_numerator_gte(DENOM, MIN_BPS, REQ_NUM) :-
     bps_full_scale(SCALE),
-    #=(REQ_NUM, div(MIN_BPS * DENOM + SCALE - 1, SCALE)).
+    #=(REQ_NUM, (MIN_BPS * DENOM + SCALE - 1) div SCALE).
 
 max_denom_gte(NUM, MIN_BPS, MAX_DENOM) :-
     MIN_BPS > 0,
     bps_full_scale(SCALE),
-    #=(MAX_DENOM, div(NUM * SCALE, MIN_BPS)).
+    #=(MAX_DENOM, NUM * SCALE div MIN_BPS).
 
 max_numerator_lte(DENOM, MAX_BPS, MAX_NUM) :-
     bps_full_scale(SCALE),
-    #=(MAX_NUM, div(MAX_BPS * DENOM, SCALE)).
+    #=(MAX_NUM, MAX_BPS * DENOM div SCALE).
 
 min_denom_lte(NUM, MAX_BPS, MIN_DENOM) :-
     MAX_BPS > 0,
     bps_full_scale(SCALE),
-    #=(MIN_DENOM, div(NUM * SCALE + MAX_BPS - 1, MAX_BPS)).
+    #=(MIN_DENOM, (NUM * SCALE + MAX_BPS - 1) div MAX_BPS).
 
 check_tri(PROFILE, KEY, _, STATUS) :-
     tri_get(PROFILE, KEY, VALUE),

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_directive_2014_24_vocabulary, [contracting_authority_type/1, contract_type/1, procedure_type/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

@@ -1,0 +1,281 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_art15_access_copy.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else (plus the provenance marker).
+%
+% gdpr_art15_access_copy_what_if/4      (#16 what-if): override one key -> re-evaluate.
+%   The profile is an ATTRIBUTE LIST (not a dict), so the override is the
+%   local attribute-list override override_attribute/4 (kit override_key/4
+%   takes a dict and raises a type error on an attribute list).
+% gdpr_art15_access_copy_profile_keys/1: top-level profile key schema
+% gdpr_art15_access_copy_input_problems/2: the problems a profile has ([] = none),
+%   re-exported from the kernel exactly as the scaffold wrote it
+% gdpr_art15_access_copy_compliance/4   (#13 compliance check): is a proposed
+%   controller action allowed in the current state? Derived from the five
+%   queries of the order; a status compound passes through unchanged.
+% gdpr_art15_access_copy_deadline/3     (#15 deadline): Art 15 sets no time
+%   limit; the response period of Art 12(3) and (4) is deferred to the order
+%   gdpr-data-subject-rights-response-period, so no date is computed here and
+%   no consequence is invented.
+% The eligibility verdict (#2) is decide_gdpr_art15_access_copy/2 of the slice,
+% with its cited checklist gdpr_art15_access_copy_checklist/2.
+%
+% Closed set of compliance actions:
+%   omit_item(Item), refuse_copy, provide_full_copy, provide_limited_copy,
+%   charge_fee_for_copy, provide_answer_in_other_form.
+% Compliance results: action_permitted | action_not_permitted |
+%   action_not_permitted_under_article_15 | action_not_applicable, or a
+%   status compound (indeterminate/1, needs_legal_review/2, input_problems/1).
+%
+% ROOT EXPORTS: the item atoms and the result atoms of the order are
+% declared at the end of this file as facts and exported, so the package
+% root resolves every one of them. The result constructors are exported
+% too, but they are DATA: they are declared with constructors/1 and have
+% no clauses.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_art15_access_copy_profile_keys/1,
+    gdpr_art15_access_copy_input_problems/2,
+    gdpr_art15_access_copy_what_if/4,
+    gdpr_art15_access_copy_compliance/4,
+    gdpr_art15_access_copy_deadline/3,
+    confirmation_of_processing/0,
+    access_to_personal_data/0,
+    purposes_of_processing/0,
+    categories_of_personal_data/0,
+    recipients_or_categories_of_recipients/0,
+    storage_period_or_criteria/0,
+    rights_to_rectification_erasure_restriction_and_objection/0,
+    right_to_lodge_complaint/0,
+    source_of_personal_data/0,
+    automated_decision_making_information/0,
+    transfer_safeguards_information/0,
+    copy_of_personal_data/0,
+    no_item_missing/0,
+    no_personal_data_to_copy/0,
+    full_copy/0,
+    copy_limited_by_rights_and_freedoms_of_others/0,
+    no_fee_under_article_15_3/0,
+    reasonable_fee_permitted/0,
+    no_electronic_request/0,
+    other_form_requested/0,
+    commonly_used_electronic_form/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/data_protection/gdpr_art15_access_copy/kernel, [gdpr_art15_access_copy_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art15_access_copy/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_art15_access_copy/gdpr_art15_access_copy, [
+    gdpr_art15_access_copy_status/2,
+    access_answer_items/4,
+    copy_scope/3,
+    copy_fee/3,
+    information_form/3
+]).
+
+% The result constructors of the order: data terms, with no clauses.
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, resolution_status),
+    inputs_relied_on(pairs),
+    outside_fact(key, attested),
+    attested(attested_value, attestation),
+    attestation(by, at, reason, evidence),
+    url(url, retrieved_at),
+    document(upload_identifier, content_hash),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_art15_access_copy_profile_keys([items_provided, personal_data_concerning_data_subject_processed, disclosure_to_recipients_made_or_envisaged, some_personal_data_not_collected_from_data_subject, source_information_available, automated_decision_making_referred_to_in_article_22, transfer_to_third_country_or_international_organisation, transfer_subject_to_article_46_safeguards, copy_would_adversely_affect_rights_and_freedoms_of_others, further_copy_requested, request_made_by_electronic_means, other_form_requested_by_data_subject]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+gdpr_art15_access_copy_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_art15_access_copy_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, NewProfile): every attribute of Key
+% is dropped and attribute(Key, Value) is added once, at the end (list plumbing).
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Rest]) :-
+    dif(ElementKey, Key),
+    override_attribute(Elements, Key, Value, Rest).
+override_attribute([attribute(Key, _)|Elements], Key, Value, Rest) :-
+    override_attribute(Elements, Key, Value, Rest).
+
+% =====================================================================
+% #13 compliance check
+% =====================================================================
+
+% The citation of each item (INTERFACE - THE ITEMS), ready-made.
+item_citation(confirmation_of_processing, cite(eu_reg_2016_679_art_15_1)).
+item_citation(access_to_personal_data, cite(eu_reg_2016_679_art_15_1)).
+item_citation(purposes_of_processing, cite(eu_reg_2016_679_art_15_1_a)).
+item_citation(categories_of_personal_data, cite(eu_reg_2016_679_art_15_1_b)).
+item_citation(recipients_or_categories_of_recipients, cite(eu_reg_2016_679_art_15_1_c)).
+item_citation(storage_period_or_criteria, cite(eu_reg_2016_679_art_15_1_d)).
+item_citation(rights_to_rectification_erasure_restriction_and_objection, cite(eu_reg_2016_679_art_15_1_e)).
+item_citation(right_to_lodge_complaint, cite(eu_reg_2016_679_art_15_1_f)).
+item_citation(source_of_personal_data, cite(eu_reg_2016_679_art_15_1_g)).
+item_citation(automated_decision_making_information, cite(eu_reg_2016_679_art_15_1_h)).
+item_citation(transfer_safeguards_information, cite(eu_reg_2016_679_art_15_2)).
+item_citation(copy_of_personal_data, cite(eu_reg_2016_679_art_15_3)).
+
+% The outcome of an action for each settled answer of its query.
+action_outcome(provide_full_copy, full_copy, action_permitted).
+action_outcome(provide_full_copy, copy_limited_by_rights_and_freedoms_of_others, action_not_permitted).
+action_outcome(provide_full_copy, no_personal_data_to_copy, action_not_applicable).
+action_outcome(provide_limited_copy, copy_limited_by_rights_and_freedoms_of_others, action_permitted).
+action_outcome(provide_limited_copy, full_copy, action_not_permitted).
+action_outcome(provide_limited_copy, no_personal_data_to_copy, action_not_applicable).
+action_outcome(charge_fee_for_copy, reasonable_fee_permitted, action_permitted).
+action_outcome(charge_fee_for_copy, no_fee_under_article_15_3, action_not_permitted_under_article_15).
+action_outcome(charge_fee_for_copy, no_personal_data_to_copy, action_not_applicable).
+action_outcome(provide_answer_in_other_form, commonly_used_electronic_form, action_not_permitted).
+action_outcome(provide_answer_in_other_form, other_form_requested, action_permitted).
+action_outcome(provide_answer_in_other_form, no_electronic_request, action_permitted).
+
+% The query each copy, fee or form action reads.
+action_query_result(provide_full_copy, Profile, Result, Citations) :-
+    copy_scope(Profile, Result, Citations).
+action_query_result(provide_limited_copy, Profile, Result, Citations) :-
+    copy_scope(Profile, Result, Citations).
+action_query_result(charge_fee_for_copy, Profile, Result, Citations) :-
+    copy_fee(Profile, Result, Citations).
+action_query_result(provide_answer_in_other_form, Profile, Result, Citations) :-
+    information_form(Profile, Result, Citations).
+
+% A status compound passes through unchanged, with CITATIONS [].
+status_passthrough(indeterminate(Keys), indeterminate(Keys)).
+status_passthrough(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+status_passthrough(input_problems(Problems), input_problems(Problems)).
+
+% omit_item(Item): not permitted when the item is owed (Art 15(1) to (3)).
+gdpr_art15_access_copy_compliance(Profile, omit_item(Item), Outcome, Citations) :-
+    item_citation(Item, Citation),
+    access_answer_items(Profile, Result, _Basis, _ItemCitations),
+    omit_outcome(Result, Item, Citation, Outcome, Citations).
+% refuse_copy: Art 15(3), first sentence, owes the copy whenever data are processed.
+gdpr_art15_access_copy_compliance(Profile, refuse_copy, Outcome, Citations) :-
+    refuse_copy_outcome(Profile, Outcome, Citations).
+% The copy, fee and form actions, read from their own query.
+gdpr_art15_access_copy_compliance(Profile, Action, Outcome, Citations) :-
+    action_query_result(Action, Profile, Result, QueryCitations),
+    action_outcome_of(Result, Action, QueryCitations, Outcome, Citations).
+
+omit_outcome([First|Remaining], Item, Citation, Outcome, [Citation]) :-
+    implements(eu_reg_2016_679_art_15_1),
+    memberd_t(Item, [First|Remaining], Owed),
+    omit_by_owed(Owed, Outcome).
+omit_outcome(Status, _, _, Outcome, []) :-
+    status_passthrough(Status, Outcome).
+
+omit_by_owed(true, action_not_permitted).
+omit_by_owed(false, action_permitted).
+
+action_outcome_of(Result, Action, Citations, Outcome, Citations) :-
+    implements(eu_reg_2016_679_art_15_3),
+    atom(Result),
+    action_outcome(Action, Result, Outcome).
+action_outcome_of(Status, _, _, Outcome, []) :-
+    status_passthrough(Status, Outcome).
+
+refuse_copy_outcome(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+refuse_copy_outcome(Profile, Outcome, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    processing_state(Profile, State),
+    refuse_by_processing(State, Outcome, Citations).
+
+processing_state(Profile, absent) :-
+    profile_lacks(Profile, personal_data_concerning_data_subject_processed).
+processing_state(Profile, value(Value)) :-
+    profile_has(Profile, personal_data_concerning_data_subject_processed),
+    profile_get(Profile, personal_data_concerning_data_subject_processed, Value).
+
+refuse_by_processing(absent, indeterminate([personal_data_concerning_data_subject_processed]), []).
+refuse_by_processing(value(true), action_not_permitted, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+refuse_by_processing(value(false), action_not_applicable, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+
+% =====================================================================
+% #15 deadline: decided by the sibling order, never computed here
+% =====================================================================
+gdpr_art15_access_copy_deadline(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+gdpr_art15_access_copy_deadline(Profile, deadline_decided_by_sibling_order(gdpr_data_subject_rights_response_period), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, []).
+
+% =====================================================================
+% ROOT EXPORTS: item atoms and result atoms (data)
+% =====================================================================
+confirmation_of_processing.
+access_to_personal_data.
+purposes_of_processing.
+categories_of_personal_data.
+recipients_or_categories_of_recipients.
+storage_period_or_criteria.
+rights_to_rectification_erasure_restriction_and_objection.
+right_to_lodge_complaint.
+source_of_personal_data.
+automated_decision_making_information.
+transfer_safeguards_information.
+copy_of_personal_data.
+no_item_missing.
+no_personal_data_to_copy.
+full_copy.
+copy_limited_by_rights_and_freedoms_of_others.
+no_fee_under_article_15_3.
+reasonable_fee_permitted.
+no_electronic_request.
+other_form_requested.
+commonly_used_electronic_form.
+
+% =====================================================================
+% tests
+% =====================================================================
+test(omitting_the_copy_when_no_data_is_processed_is_permitted) :-
+    gdpr_art15_access_copy_compliance([attribute(personal_data_concerning_data_subject_processed, false)], omit_item(copy_of_personal_data), action_permitted, [cite(eu_reg_2016_679_art_15_3)]).
+
+test(omitting_the_confirmation_is_not_permitted) :-
+    gdpr_art15_access_copy_compliance([attribute(personal_data_concerning_data_subject_processed, false)], omit_item(confirmation_of_processing), action_not_permitted, [cite(eu_reg_2016_679_art_15_1)]).
+
+test(refusing_a_copy_of_processed_data_is_not_permitted) :-
+    gdpr_art15_access_copy_compliance([attribute(personal_data_concerning_data_subject_processed, true)], refuse_copy, action_not_permitted, [cite(eu_reg_2016_679_art_15_3)]).
+
+test(refusing_a_copy_of_processed_data_is_not_permitted_only, fail) :-
+    gdpr_art15_access_copy_compliance([attribute(personal_data_concerning_data_subject_processed, true)], refuse_copy, action_permitted, _).
+
+test(the_override_replaces_the_key_once) :-
+    override_attribute([attribute(items_provided, []), attribute(further_copy_requested, true)], items_provided, [confirmation_of_processing], Hypothesis),
+    Hypothesis == [attribute(further_copy_requested, true), attribute(items_provided, [confirmation_of_processing])].
+
+test(deadline_names_the_sibling_order) :-
+    gdpr_art15_access_copy_deadline([], deadline_decided_by_sibling_order(gdpr_data_subject_rights_response_period), []).
+
+:- end_module(queries).

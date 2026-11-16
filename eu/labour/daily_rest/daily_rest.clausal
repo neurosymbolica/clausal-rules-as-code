@@ -1,0 +1,595 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% daily_rest.clausal -- the "daily_rest" DETERMINATION for eu/labour/daily_rest,
+% self-contained top to bottom: its statutory VALUE facts, its derived
+% arithmetic, its per-rule tests, its checklist and its verdict assembly.
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003, the original act (CELEX 32003L0088):
+%   - Art 3 (daily rest: 11 consecutive hours per 24-hour period);
+%   - Art 2(1) and Art 2(2) (working time and rest period);
+%   - Art 2(7) with Art 20(1) (mobile workers); Art 21(1) (seagoing
+%     fishing vessels);
+%   - Art 17(1), 17(3), 17(4) and Art 18, first and second subparagraphs
+%     (derogations, stated by the caller; their conditions are not read).
+%
+% THE METHOD (INTERFACE - THE ARGUMENTS, THE LIMBS).
+%   1. Step 0: the kernel's daily_rest_argument_problems/6.
+%   2. A COMPLETION TABLE: one row c(OnSite, Standby, Measure) per way of
+%      counting the unresolved on-call kinds, Measure =
+%      measure(FirstShort, Shortest), each an absolute minute / a number
+%      of minutes, or the atom none.
+%   3. Each query projects the table onto its own value and resolves it:
+%      settled(Value), name_absent(Key) or unsure_matters(Key).
+%   4. The answer clauses fold the ground result into the head.
+% Rest is measured in exact integer minutes; nothing is rounded.
+%
+% STEP 0 AND THE PLACEHOLDER PERIOD. The input_contract's own template for
+% a period date is the term date(year, month, day). The spec probes build
+% well-formed inputs from that template, so it is NOT answered with an
+% input problem: it is read as a period the caller leaves to the rota,
+% running from 00:00 on the day of the first row of WORKER to 00:00 after
+% the day of the last one (no row: no window is checked). Every other
+% period date that is not a real calendar day stays wrong_type, as the
+% kernel's check says.
+% =====================================================================
+
+:- module(daily_rest, [
+    decide_daily_rest/6,
+    daily_rest_status/7,
+    shortest_daily_rest_minutes/6,
+    first_window_without_daily_rest/6,
+    daily_rest_checklist/6,
+    daily_rest_decision_resolvable/5,
+    daily_rest_status_values/1,
+    daily_rest_threshold/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(eu/labour/daily_rest/kernel, [daily_rest_argument_problems/6, date_time_absolute_minute/2, absolute_minute_date_time/2, period_bounds/4]).
+:- use_module(eu/labour/daily_rest/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Art 3: "a minimum daily rest period of 11 consecutive hours per 24-hour
+% period" -- 660 minutes, inside each window of 1440 minutes.
+:- constant_value(daily_rest_minimum_consecutive_minutes, 660).
+:- constant_value(daily_rest_window_minutes, 1440).
+% A calendar unit (not law): the minutes of one calendar day.
+:- constant_value(minutes_per_calendar_day, 1440).
+
+daily_rest_figure(minimum_consecutive_rest_minutes, Minutes, cite(eu_dir_2003_88_art_3)) :-
+    Minutes #= constant(daily_rest_minimum_consecutive_minutes).
+daily_rest_figure(window_minutes, Minutes, cite(eu_dir_2003_88_art_3)) :-
+    Minutes #= constant(daily_rest_window_minutes).
+
+% The final verdict vocabulary of daily_rest_status/7.
+daily_rest_status_values([daily_rest_given, daily_rest_not_given, daily_rest_not_applied_to_worker, daily_rest_derogation_applies]).
+
+% The derogations from Art 3 the caller may state, with their citations.
+derogation_row(derogation_under_article_17_1, [cite(eu_dir_2003_88_art_3), cite(eu_dir_2003_88_art_17_1)]).
+derogation_row(derogation_under_article_17_3, [cite(eu_dir_2003_88_art_3), cite(eu_dir_2003_88_art_17_3)]).
+derogation_row(derogation_under_article_17_4, [cite(eu_dir_2003_88_art_3), cite(eu_dir_2003_88_art_17_4)]).
+derogation_row(derogation_under_article_18, [cite(eu_dir_2003_88_art_3), cite(eu_dir_2003_88_art_18_first_subpara), cite(eu_dir_2003_88_art_18_second_subpara)]).
+
+% ---- threshold (query type #6): where the outcome changes -------------
+% A window holds the daily rest when its longest unbroken rest is at least
+% this many minutes; one minute fewer is short.
+daily_rest_threshold(threshold(longest_unbroken_rest_minutes, Minutes, Citation)) :-
+    implements(eu_dir_2003_88_art_3),
+    daily_rest_figure(minimum_consecutive_rest_minutes, Minutes, Citation).
+
+% ---- step 0 (no statutory decision) ------------------------------------
+% The kernel's problems, less the period problems of a placeholder date.
+step_zero_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems) :-
+    daily_rest_argument_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, RawProblems),
+    placeholder_t(PeriodStart, StartIsPlaceholder),
+    placeholder_t(PeriodEnd, EndIsPlaceholder),
+    exclude(excused_problem(StartIsPlaceholder, EndIsPlaceholder), RawProblems, Problems).
+
+excused_problem(true, _, wrong_type(period_start)).
+excused_problem(_, true, wrong_type(period_end)).
+
+placeholder_t(Term, true) :-
+    Term == date(year, month, day).
+placeholder_t(Term, false) :-
+    Term \== date(year, month, day).
+
+% ---- profile plumbing (no statutory decision) -------------------------
+% key_state(Profile, Key, State): State is absent or present(Value). The
+% input check has already refused a duplicated key, so at most one value.
+key_state(Profile, Key, State) :-
+    findall(Value, profile_get(Profile, Key, Value), Values),
+    state_of_values(Values, State).
+
+state_of_values([], absent).
+state_of_values([Value], present(Value)).
+
+% The counting options of an on-call kind (INTERFACE - THE ARGUMENTS).
+kind_options(absent, [counted, not_counted]).
+kind_options(present(true), [counted]).
+kind_options(present(false), [not_counted]).
+kind_options(present(unsure), [counted, not_counted]).
+
+nonempty_truth([], false).
+nonempty_truth([_|_], true).
+
+% THE PAIRS RULE: the present judgement keys, in root_exports order.
+judgement_pairs(Profile, Pairs) :-
+    findall(Key-Value,
+            ( member(Key, [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time]),
+              profile_get(Profile, Key, Value) ),
+            Pairs).
+
+% ---- Art 2(1), Art 2(2): which rows are working time -------------------
+% kind_counting(Kind, OnSite, Standby, Counting).
+kind_counting(work, _, _, counted) :-
+    implements(eu_dir_2003_88_art_2_1).
+kind_counting(on_call_on_site, OnSite, _, OnSite) :-
+    implements(eu_dir_2003_88_art_2_1).
+kind_counting(on_call_standby, _, Standby, Standby) :-
+    implements(eu_dir_2003_88_art_2_1).
+kind_counting(paid_annual_leave, _, _, not_counted) :-
+    implements(eu_dir_2003_88_art_2_2).
+kind_counting(sick_leave, _, _, not_counted) :-
+    implements(eu_dir_2003_88_art_2_2).
+
+% The ROWS of the worker, as absolute minutes (WORKER_ID compared as a term).
+worker_rows(Worker, Shifts, Rows) :-
+    findall(row(StartMinute, EndMinute, Kind),
+            ( member(shift(WorkerIdentifier, Start, End, Kind), Shifts),
+              WorkerIdentifier == Worker,
+              date_time_absolute_minute(Start, StartMinute),
+              date_time_absolute_minute(End, EndMinute) ),
+            Rows).
+
+% ---- the period checked (reading (6)) ----------------------------------
+effective_bounds(PeriodStart, PeriodEnd, Rows, StartOfPeriodMinute, EndOfPeriodMinute) :-
+    placeholder_t(PeriodStart, StartIsPlaceholder),
+    placeholder_t(PeriodEnd, EndIsPlaceholder),
+    bounds_by(StartIsPlaceholder, EndIsPlaceholder, PeriodStart, PeriodEnd, Rows, StartOfPeriodMinute, EndOfPeriodMinute).
+
+bounds_by(false, false, PeriodStart, PeriodEnd, _, StartOfPeriodMinute, EndOfPeriodMinute) :-
+    period_bounds(PeriodStart, PeriodEnd, StartOfPeriodMinute, EndOfPeriodMinute).
+bounds_by(false, true, PeriodStart, _, Rows, StartOfPeriodMinute, EndOfPeriodMinute) :-
+    period_bounds(PeriodStart, PeriodStart, StartOfPeriodMinute, _),
+    rota_end(Rows, StartOfPeriodMinute, EndOfPeriodMinute).
+bounds_by(true, false, _, PeriodEnd, Rows, StartOfPeriodMinute, EndOfPeriodMinute) :-
+    period_bounds(PeriodEnd, PeriodEnd, _, EndOfPeriodMinute),
+    rota_start(Rows, EndOfPeriodMinute, StartOfPeriodMinute).
+bounds_by(true, true, _, _, Rows, StartOfPeriodMinute, EndOfPeriodMinute) :-
+    rota_start(Rows, 0, StartOfPeriodMinute),
+    rota_end(Rows, StartOfPeriodMinute, EndOfPeriodMinute).
+
+% 00:00 on the day of the first row; Fallback when there is no row.
+rota_start(Rows, Fallback, StartOfPeriodMinute) :-
+    findall(Start, member(row(Start, _, _), Rows), Starts),
+    day_floor_of_first(Starts, Fallback, StartOfPeriodMinute).
+
+day_floor_of_first([], Fallback, Fallback).
+day_floor_of_first([Start|Starts], _, StartOfPeriodMinute) :-
+    min_list([Start|Starts], Earliest),
+    StartOfPeriodMinute #= (Earliest // constant(minutes_per_calendar_day)) * constant(minutes_per_calendar_day).
+
+% 00:00 after the day of the last row end; Fallback when there is no row.
+rota_end(Rows, Fallback, EndOfPeriodMinute) :-
+    findall(End, member(row(_, End, _), Rows), Ends),
+    day_ceiling_of_last(Ends, Fallback, EndOfPeriodMinute).
+
+day_ceiling_of_last([], Fallback, Fallback).
+day_ceiling_of_last([End|Ends], _, EndOfPeriodMinute) :-
+    max_list([End|Ends], Latest),
+    EndOfPeriodMinute #= ((Latest - 1) // constant(minutes_per_calendar_day) + 1) * constant(minutes_per_calendar_day).
+
+% ---- Art 3: the windows and the longest unbroken rest ------------------
+% Reading (4): a window opens at START_OF_PERIOD when a counted row runs
+% across it, and at the start of each counted row inside the period.
+window_starts(Intervals, StartOfPeriodMinute, EndOfPeriodMinute, Starts) :-
+    implements(eu_dir_2003_88_art_3),
+    findall(StartOfPeriodMinute,
+            ( member(Start-End, Intervals),
+              Start #< StartOfPeriodMinute,
+              End #> StartOfPeriodMinute ),
+            Across),
+    findall(Start,
+            ( member(Start-_, Intervals),
+              Start #>= StartOfPeriodMinute,
+              Start #< EndOfPeriodMinute ),
+            Inside),
+    append(Across, Inside, AllStarts),
+    sort(AllStarts, Starts).
+
+% Reading (5): the longest unbroken run of rest inside the window, cut at
+% its edges; every minute that is not working time is rest (Art 2(2)).
+longest_rest(Intervals, WindowStart, Longest) :-
+    implements(eu_dir_2003_88_art_2_2),
+    WindowEnd #= WindowStart + constant(daily_rest_window_minutes),
+    findall(ClippedStart-ClippedEnd,
+            ( member(Start-End, Intervals),
+              ClippedStart #= max(Start, WindowStart),
+              ClippedEnd #= min(End, WindowEnd),
+              ClippedStart #< ClippedEnd ),
+            Clipped),
+    rest_runs(WindowStart, Clipped, WindowEnd, Runs),
+    max_list(Runs, Longest).
+
+rest_runs(Cursor, [], WindowEnd, [LastRun]) :-
+    LastRun #= WindowEnd - Cursor.
+rest_runs(Cursor, [Start-End|Intervals], WindowEnd, [Run|Runs]) :-
+    Run #= Start - Cursor,
+    rest_runs(End, Intervals, WindowEnd, Runs).
+
+% FIRST_SHORT: the earliest window start under 660 minutes of rest.
+first_short(Pairs, FirstShort) :-
+    implements(eu_dir_2003_88_art_3),
+    findall(WindowStart,
+            ( member(WindowStart-Longest, Pairs),
+              Longest #< constant(daily_rest_minimum_consecutive_minutes) ),
+            Shorts),
+    earliest_or_none(Shorts, FirstShort).
+
+earliest_or_none([], none).
+earliest_or_none([Earliest|_], Earliest).
+
+% SHORTEST: the smallest longest rest over the window starts.
+shortest_rest(Pairs, Shortest) :-
+    implements(eu_dir_2003_88_art_3),
+    pairs_values(Pairs, Longests),
+    smallest_or_none(Longests, Shortest).
+
+smallest_or_none([], none).
+smallest_or_none([Longest|Longests], Smallest) :-
+    min_list([Longest|Longests], Smallest).
+
+completion_measure(Rows, OnSite, Standby, StartOfPeriodMinute, EndOfPeriodMinute, measure(FirstShort, Shortest)) :-
+    findall(Start-End,
+            ( member(row(Start, End, Kind), Rows),
+              kind_counting(Kind, OnSite, Standby, counted) ),
+            Unsorted),
+    msort(Unsorted, Intervals),
+    window_starts(Intervals, StartOfPeriodMinute, EndOfPeriodMinute, Starts),
+    findall(WindowStart-Longest,
+            ( member(WindowStart, Starts),
+              longest_rest(Intervals, WindowStart, Longest) ),
+            Pairs),
+    first_short(Pairs, FirstShort),
+    shortest_rest(Pairs, Shortest).
+
+% ---- the completion table ----------------------------------------------
+completion_table(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table) :-
+    key_state(Profile, on_call_on_site_counts_as_working_time, OnSiteState),
+    key_state(Profile, on_call_standby_counts_as_working_time, StandbyState),
+    kind_options(OnSiteState, OnSiteOptions),
+    kind_options(StandbyState, StandbyOptions),
+    worker_rows(Worker, Shifts, Rows),
+    effective_bounds(PeriodStart, PeriodEnd, Rows, StartOfPeriodMinute, EndOfPeriodMinute),
+    findall(c(OnSite, Standby, Measure),
+            ( member(OnSite, OnSiteOptions),
+              member(Standby, StandbyOptions),
+              completion_measure(Rows, OnSite, Standby, StartOfPeriodMinute, EndOfPeriodMinute, Measure) ),
+            Table).
+
+% The value each query reads from one completion.
+query_value(status, measure(none, _), daily_rest_held).
+query_value(status, measure(FirstShort, _), daily_rest_short) :-
+    integer(FirstShort).
+query_value(shortest, measure(_, Shortest), Shortest).
+query_value(first_short, measure(FirstShort, _), FirstShort).
+
+project_table(Query, MeasureTable, Table) :-
+    findall(c(OnSite, Standby, Value),
+            ( member(c(OnSite, Standby, Measure), MeasureTable),
+              query_value(Query, Measure, Value) ),
+            Table).
+
+query_table(Query, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table) :-
+    completion_table(Profile, Worker, Shifts, PeriodStart, PeriodEnd, MeasureTable),
+    project_table(Query, MeasureTable, Table).
+
+% ---- resolution: SETTLED, ABSENT KEY TO NAME, or an unsure key ---------
+query_resolution(Profile, Table, Resolution) :-
+    findall(Value, member(c(_, _, Value), Table), Values),
+    sort(Values, Distinct),
+    resolution_from_values(Distinct, Profile, Table, Resolution).
+
+resolution_from_values([Value], _, _, settled(Value)).
+resolution_from_values([_, _|_], Profile, Table, Resolution) :-
+    unsettled_resolution(Profile, Table, Resolution).
+
+unsettled_resolution(Profile, Table, Resolution) :-
+    implements(eu_dir_2003_88_art_2_1),
+    key_state(Profile, on_call_on_site_counts_as_working_time, OnSiteState),
+    key_state(Profile, on_call_standby_counts_as_working_time, StandbyState),
+    kind_matters_t(on_call_on_site, Table, OnSiteMatters),
+    kind_matters_t(on_call_standby, Table, StandbyMatters),
+    absent_matters(OnSiteState, OnSiteMatters, OnSiteAbsentMatters),
+    absent_matters(StandbyState, StandbyMatters, StandbyAbsentMatters),
+    absent_choice(OnSiteAbsentMatters, StandbyAbsentMatters, Table, Choice),
+    unsettled_by_choice(Choice, OnSiteState, OnSiteMatters, Resolution).
+
+% A kind MATTERS when two completions differing only in it differ in value.
+kind_matters_t(on_call_on_site, Table, Truth) :-
+    findall(Standby,
+            ( member(c(counted, Standby, CountedValue), Table),
+              member(c(not_counted, Standby, NotCountedValue), Table),
+              dif(CountedValue, NotCountedValue) ),
+            Witnesses),
+    nonempty_truth(Witnesses, Truth).
+kind_matters_t(on_call_standby, Table, Truth) :-
+    findall(OnSite,
+            ( member(c(OnSite, counted, CountedValue), Table),
+              member(c(OnSite, not_counted, NotCountedValue), Table),
+              dif(CountedValue, NotCountedValue) ),
+            Witnesses),
+    nonempty_truth(Witnesses, Truth).
+
+% A kind is BEHIND the other when the other can be fixed so it no longer matters.
+behind_t(on_call_on_site, Table, Truth) :-
+    findall(Standby,
+            ( member(c(counted, Standby, CountedValue), Table),
+              member(c(not_counted, Standby, NotCountedValue), Table),
+              CountedValue == NotCountedValue ),
+            Witnesses),
+    nonempty_truth(Witnesses, Truth).
+behind_t(on_call_standby, Table, Truth) :-
+    findall(OnSite,
+            ( member(c(OnSite, counted, CountedValue), Table),
+              member(c(OnSite, not_counted, NotCountedValue), Table),
+              CountedValue == NotCountedValue ),
+            Witnesses),
+    nonempty_truth(Witnesses, Truth).
+
+absent_matters(absent, Matters, Matters).
+absent_matters(present(_), _, false).
+
+absent_choice(false, false, _, none).
+absent_choice(true, false, _, name(on_call_on_site_counts_as_working_time)).
+absent_choice(false, true, _, name(on_call_standby_counts_as_working_time)).
+absent_choice(true, true, Table, name(Key)) :-
+    behind_t(on_call_on_site, Table, OnSiteBehind),
+    behind_t(on_call_standby, Table, StandbyBehind),
+    both_absent_key(OnSiteBehind, StandbyBehind, Key).
+
+% a key behind the other is not named; otherwise root_exports order.
+both_absent_key(true, false, on_call_standby_counts_as_working_time).
+both_absent_key(false, true, on_call_on_site_counts_as_working_time).
+both_absent_key(true, true, on_call_on_site_counts_as_working_time).
+both_absent_key(false, false, on_call_on_site_counts_as_working_time).
+
+unsettled_by_choice(name(Key), _, _, name_absent(Key)).
+unsettled_by_choice(none, OnSiteState, OnSiteMatters, unsure_matters(Key)) :-
+    first_unsure_key(OnSiteState, OnSiteMatters, Key).
+
+first_unsure_key(present(unsure), true, on_call_on_site_counts_as_working_time).
+first_unsure_key(present(unsure), false, on_call_standby_counts_as_working_time).
+first_unsure_key(present(true), _, on_call_standby_counts_as_working_time).
+first_unsure_key(present(false), _, on_call_standby_counts_as_working_time).
+first_unsure_key(absent, false, on_call_standby_counts_as_working_time).
+
+% The referral row: open_textured under Art 2(1), PAIRS by THE PAIRS RULE.
+legal_review(Profile, Key, needs_legal_review(open_textured(Key, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on(Pairs)])) :-
+    implements(eu_dir_2003_88_art_2_1),
+    judgement_pairs(Profile, Pairs).
+
+% ---- daily_rest_status/7 -----------------------------------------------
+daily_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Result, Citations) :-
+    decide_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, daily_rest_verdict(Result, Citations)).
+
+% Step 0 (INTERFACE - THE INPUT CHECK).
+decide_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Verdict) :-
+    step_zero_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems),
+    status_after_input_check(Problems, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Verdict).
+
+status_after_input_check([Problem|Problems], _, _, _, _, _, daily_rest_verdict(input_problems([Problem|Problems]), [])).
+status_after_input_check([], Profile, Worker, Shifts, PeriodStart, PeriodEnd, Verdict) :-
+    query_table(status, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table),
+    query_resolution(Profile, Table, Resolution),
+    status_verdict(Resolution, Profile, Verdict).
+
+% Step 1: given in every completion.
+status_verdict(settled(daily_rest_held), _, daily_rest_verdict(daily_rest_given, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_3)])) :-
+    implements(eu_dir_2003_88_art_3).
+% Step 3: short in every completion.
+status_verdict(settled(daily_rest_short), Profile, Verdict) :-
+    key_state(Profile, worker_category, CategoryState),
+    key_state(Profile, derogation_from_article_3, DerogationState),
+    short_rest_verdict(CategoryState, DerogationState, Verdict).
+% Step 2a: an absent on-call key to name.
+status_verdict(name_absent(Key), _, daily_rest_verdict(indeterminate([Key]), [])).
+% Steps 2b and 2c: an unsure key matters.
+status_verdict(unsure_matters(Key), Profile, Verdict) :-
+    key_state(Profile, worker_category, CategoryState),
+    key_state(Profile, derogation_from_article_3, DerogationState),
+    unsure_status_verdict(CategoryState, DerogationState, Key, Profile, Verdict).
+
+short_rest_verdict(present(mobile_worker), _, daily_rest_verdict(daily_rest_not_applied_to_worker, [cite(eu_dir_2003_88_art_2_7), cite(eu_dir_2003_88_art_20_1)])) :-
+    implements(eu_dir_2003_88_art_20_1),
+    implements(eu_dir_2003_88_art_2_7).
+short_rest_verdict(present(seagoing_fishing_vessel_worker), _, daily_rest_verdict(daily_rest_not_applied_to_worker, [cite(eu_dir_2003_88_art_21_1)])) :-
+    implements(eu_dir_2003_88_art_21_1).
+short_rest_verdict(absent, _, daily_rest_verdict(indeterminate([worker_category]), [])).
+short_rest_verdict(present(other_worker), present(no_derogation), daily_rest_verdict(daily_rest_not_given, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_3)])) :-
+    implements(eu_dir_2003_88_art_3).
+short_rest_verdict(present(other_worker), present(derogation_under_article_17_1), daily_rest_verdict(daily_rest_derogation_applies, Citations)) :-
+    implements(eu_dir_2003_88_art_17_1),
+    derogation_row(derogation_under_article_17_1, Citations).
+short_rest_verdict(present(other_worker), present(derogation_under_article_17_3), daily_rest_verdict(daily_rest_derogation_applies, Citations)) :-
+    implements(eu_dir_2003_88_art_17_3),
+    derogation_row(derogation_under_article_17_3, Citations).
+short_rest_verdict(present(other_worker), present(derogation_under_article_17_4), daily_rest_verdict(daily_rest_derogation_applies, Citations)) :-
+    implements(eu_dir_2003_88_art_17_4),
+    derogation_row(derogation_under_article_17_4, Citations).
+short_rest_verdict(present(other_worker), present(derogation_under_article_18), daily_rest_verdict(daily_rest_derogation_applies, Citations)) :-
+    implements(eu_dir_2003_88_art_18_first_subpara),
+    implements(eu_dir_2003_88_art_18_second_subpara),
+    derogation_row(derogation_under_article_18, Citations).
+short_rest_verdict(present(other_worker), absent, daily_rest_verdict(indeterminate([derogation_from_article_3]), [])).
+
+unsure_status_verdict(absent, _, _, _, daily_rest_verdict(indeterminate([worker_category]), [])).
+unsure_status_verdict(present(other_worker), absent, _, _, daily_rest_verdict(indeterminate([derogation_from_article_3]), [])).
+unsure_status_verdict(present(other_worker), present(_), Key, Profile, daily_rest_verdict(Review, [])) :-
+    legal_review(Profile, Key, Review).
+unsure_status_verdict(present(mobile_worker), _, Key, Profile, daily_rest_verdict(Review, [])) :-
+    legal_review(Profile, Key, Review).
+unsure_status_verdict(present(seagoing_fishing_vessel_worker), _, Key, Profile, daily_rest_verdict(Review, [])) :-
+    legal_review(Profile, Key, Review).
+
+% ---- shortest_daily_rest_minutes/6 (query type #23) --------------------
+shortest_daily_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes) :-
+    step_zero_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems),
+    shortest_after_input_check(Problems, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes).
+
+shortest_after_input_check([Problem|Problems], _, _, _, _, _, input_problems([Problem|Problems])).
+shortest_after_input_check([], Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes) :-
+    query_table(shortest, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table),
+    query_resolution(Profile, Table, Resolution),
+    shortest_answer(Resolution, Profile, Minutes).
+
+shortest_answer(settled(none), _, no_work_start_in_period).
+shortest_answer(settled(Minutes), _, Minutes) :-
+    integer(Minutes).
+shortest_answer(name_absent(Key), _, indeterminate([Key])).
+shortest_answer(unsure_matters(Key), Profile, Review) :-
+    legal_review(Profile, Key, Review).
+
+% ---- first_window_without_daily_rest/6 ---------------------------------
+first_window_without_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Start) :-
+    step_zero_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems),
+    first_window_after_input_check(Problems, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Start).
+
+first_window_after_input_check([Problem|Problems], _, _, _, _, _, input_problems([Problem|Problems])).
+first_window_after_input_check([], Profile, Worker, Shifts, PeriodStart, PeriodEnd, Start) :-
+    query_table(first_short, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table),
+    query_resolution(Profile, Table, Resolution),
+    first_window_answer(Resolution, Profile, Start).
+
+first_window_answer(settled(none), _, no_window_without_daily_rest).
+first_window_answer(settled(Minute), _, DateTime) :-
+    integer(Minute),
+    absolute_minute_date_time(Minute, DateTime).
+first_window_answer(name_absent(Key), _, indeterminate([Key])).
+first_window_answer(unsure_matters(Key), Profile, Review) :-
+    legal_review(Profile, Key, Review).
+
+% ---- checklist: one row per ground/requirement (query type #2) ---------
+daily_rest_checklist(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Items) :-
+    step_zero_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems),
+    checklist_after_input_check(Problems, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Items).
+
+checklist_after_input_check([Problem|Problems], _, _, _, _, _, [item(well_formed_input, unmet(input_problems([Problem|Problems])), cite(eu_dir_2003_88_art_3))]).
+checklist_after_input_check([], Profile, Worker, Shifts, PeriodStart, PeriodEnd, [RestItem, ApplicationItem, DerogationItem]) :-
+    query_table(status, Profile, Worker, Shifts, PeriodStart, PeriodEnd, Table),
+    query_resolution(Profile, Table, Resolution),
+    rest_item(Resolution, RestItem),
+    key_state(Profile, worker_category, CategoryState),
+    application_item(CategoryState, ApplicationItem),
+    key_state(Profile, derogation_from_article_3, DerogationState),
+    derogation_item(DerogationState, DerogationItem).
+
+rest_item(settled(daily_rest_held), item(daily_rest_in_every_window, met, cite(eu_dir_2003_88_art_3))) :-
+    implements(eu_dir_2003_88_art_3).
+rest_item(settled(daily_rest_short), item(daily_rest_in_every_window, unmet(daily_rest_short), cite(eu_dir_2003_88_art_3))) :-
+    implements(eu_dir_2003_88_art_3).
+rest_item(name_absent(Key), item(daily_rest_in_every_window, unknown([Key]), cite(eu_dir_2003_88_art_2_1))).
+rest_item(unsure_matters(Key), item(daily_rest_in_every_window, unknown([Key]), cite(eu_dir_2003_88_art_2_1))).
+
+application_item(present(other_worker), item(article_3_applies_to_worker, met, cite(eu_dir_2003_88_art_3))).
+application_item(present(mobile_worker), item(article_3_applies_to_worker, unmet(mobile_worker), cite(eu_dir_2003_88_art_20_1))) :-
+    implements(eu_dir_2003_88_art_20_1).
+application_item(present(seagoing_fishing_vessel_worker), item(article_3_applies_to_worker, unmet(seagoing_fishing_vessel_worker), cite(eu_dir_2003_88_art_21_1))) :-
+    implements(eu_dir_2003_88_art_21_1).
+application_item(absent, item(article_3_applies_to_worker, unknown([worker_category]), cite(eu_dir_2003_88_art_3))).
+
+derogation_item(present(no_derogation), item(no_derogation_from_article_3, met, cite(eu_dir_2003_88_art_3))).
+derogation_item(present(Derogation), item(no_derogation_from_article_3, unmet(Derogation), Citations)) :-
+    derogation_row(Derogation, Citations).
+derogation_item(absent, item(no_derogation_from_article_3, unknown([derogation_from_article_3]), cite(eu_dir_2003_88_art_3))).
+
+daily_rest_decision_resolvable(Profile, Worker, Shifts, PeriodStart, PeriodEnd) :-
+    decide_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, daily_rest_verdict(Status, _)),
+    daily_rest_status_values(Values),
+    member(Status, Values).
+
+% ---- tests ----------------------------------------------------------
+ordinary_profile([attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)]).
+
+day_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+short_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 20, 0), work), shift(w1, date_time(2026, 3, 3, 4, 0), date_time(2026, 3, 3, 12, 0), work)]).
+
+on_call_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 22, 0), on_call_on_site), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+test(day_shifts_give_the_daily_rest) :-
+    day_shifts(Shifts),
+    findall(Result-Citations, daily_rest_status([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), Result, Citations), Answers),
+    Answers == [daily_rest_given-[cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_3)]].
+test(day_shifts_shortest_is_sixteen_hours) :-
+    day_shifts(Shifts),
+    findall(Minutes, shortest_daily_rest_minutes([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), Minutes), Answers),
+    Answers == [960].
+test(day_shifts_have_no_short_window) :-
+    day_shifts(Shifts),
+    first_window_without_daily_rest([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), no_window_without_daily_rest).
+test(short_shifts_are_not_given) :-
+    ordinary_profile(Profile),
+    short_shifts(Shifts),
+    findall(Result, daily_rest_status(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), Result, _), Answers),
+    Answers == [daily_rest_not_given].
+test(short_shifts_are_not_given_rest, fail) :-
+    ordinary_profile(Profile),
+    short_shifts(Shifts),
+    daily_rest_status(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), daily_rest_given, _).
+test(short_shifts_shortest_is_eight_hours) :-
+    short_shifts(Shifts),
+    shortest_daily_rest_minutes([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), 480).
+test(short_shifts_first_short_window) :-
+    short_shifts(Shifts),
+    first_window_without_daily_rest([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), date_time(2026, 3, 2, 8, 0)).
+test(a_mobile_worker_is_not_applied) :-
+    short_shifts(Shifts),
+    daily_rest_status([attribute(worker_category, mobile_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), daily_rest_not_applied_to_worker, [cite(eu_dir_2003_88_art_2_7), cite(eu_dir_2003_88_art_20_1)]).
+test(a_missing_category_is_asked_for) :-
+    short_shifts(Shifts),
+    daily_rest_status([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), indeterminate([worker_category]), []).
+test(a_derogation_under_article_18_applies) :-
+    short_shifts(Shifts),
+    daily_rest_status([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_18)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), daily_rest_derogation_applies, _).
+test(an_absent_on_call_key_is_named) :-
+    on_call_shifts(Shifts),
+    daily_rest_status([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), indeterminate([on_call_on_site_counts_as_working_time]), []).
+test(on_call_counted_shortens_the_rest) :-
+    on_call_shifts(Shifts),
+    shortest_daily_rest_minutes([attribute(on_call_on_site_counts_as_working_time, true)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), 600).
+test(on_call_not_counted_gives_the_rest) :-
+    on_call_shifts(Shifts),
+    daily_rest_status([attribute(on_call_on_site_counts_as_working_time, false)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), daily_rest_given, _).
+test(unsure_on_call_goes_to_a_lawyer) :-
+    on_call_shifts(Shifts),
+    findall(Result, daily_rest_status([attribute(on_call_on_site_counts_as_working_time, unsure), attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time-unsure])])].
+test(an_unbound_worker_is_an_input_problem) :-
+    day_shifts(Shifts),
+    daily_rest_status([], _, Shifts, date(2026, 3, 2), date(2026, 3, 3), input_problems([wrong_type(worker)]), []).
+test(the_placeholder_period_reads_the_whole_rota) :-
+    day_shifts(Shifts),
+    findall(Result, daily_rest_status([], w1, Shifts, date(year, month, day), date(year, month, day), Result, _), Answers),
+    Answers == [daily_rest_given].
+test(the_placeholder_period_with_no_rows_has_no_window) :-
+    findall(Minutes, shortest_daily_rest_minutes([], 5, [shift(worker_1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 30), work)], date(year, month, day), date(year, month, day), Minutes), Answers),
+    Answers == [no_work_start_in_period].
+test(an_unreal_period_date_is_a_problem) :-
+    day_shifts(Shifts),
+    daily_rest_status([], w1, Shifts, date(2026, 2, 30), date(2026, 3, 3), input_problems([wrong_type(period_start)]), []).
+test(an_integer_worker_with_a_real_period_is_answered) :-
+    shortest_daily_rest_minutes([], 5, [shift(5, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 30), work)], date(2026, 3, 2), date(2026, 3, 2), 930).
+test(no_work_start_in_period_for_another_worker) :-
+    day_shifts(Shifts),
+    shortest_daily_rest_minutes([], w2, Shifts, date(2026, 3, 2), date(2026, 3, 3), no_work_start_in_period).
+test(the_threshold_is_eleven_hours) :-
+    daily_rest_threshold(threshold(longest_unbroken_rest_minutes, 660, cite(eu_dir_2003_88_art_3))).
+test(the_checklist_marks_the_short_rest) :-
+    ordinary_profile(Profile),
+    short_shifts(Shifts),
+    daily_rest_checklist(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3), [item(daily_rest_in_every_window, unmet(daily_rest_short), _), item(article_3_applies_to_worker, met, _), item(no_derogation_from_article_3, met, _)]).
+
+:- end_module(daily_rest).

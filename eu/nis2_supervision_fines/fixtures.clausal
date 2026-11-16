@@ -1,0 +1,215 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/nis2_supervision_fines.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract); no dates are used.
+%
+% Every route has a positive case and a one-unit near-miss control:
+%   facade (Art 32(5) escalation): exercisable vs action taken within the
+%     deadline, and one subject per failing condition, plus the unsure
+%     judgement, the missing keys, an absent class and two input problems;
+%   Art 34(4) boundary: turnover 499 999 999 / 500 000 000 / 500 000 001;
+%   Art 34(5) boundary: turnover 500 000 000 / 500 000 001;
+%   Art 34 scope: art_21 / art_23 vs other;
+%   Art 35(2) bar: barred vs not the same conduct vs same conduct unsure;
+%   Art 35(1), (3) duty: other Member State vs own vs not aware.
+% =====================================================================
+
+:- module(fixtures, [
+    nis2_supervision_fines_subject/1,
+    nis2_supervision_fines_profile_for/2,
+    nis2_supervision_fines_assess/2
+]).
+
+:- use_module(eu/nis2_supervision_fines/nis2_supervision_fines, [decide_nis2_supervision_fines/2]).
+
+% ---- Subject registry ------------------------------------------------
+nis2_supervision_fines_subject(escalation_exercisable).
+nis2_supervision_fines_subject(escalation_action_taken_within_deadline).
+nis2_supervision_fines_subject(escalation_public_administration_entity).
+nis2_supervision_fines_subject(escalation_measures_not_ineffective).
+nis2_supervision_fines_subject(escalation_no_deadline_set).
+nis2_supervision_fines_subject(escalation_measures_unsure).
+nis2_supervision_fines_subject(escalation_deadline_keys_missing).
+nis2_supervision_fines_subject(entity_class_absent).
+nis2_supervision_fines_subject(important_fine_at_tie).
+nis2_supervision_fines_subject(important_fine_above_tie).
+nis2_supervision_fines_subject(essential_fine_below_tie).
+nis2_supervision_fines_subject(essential_fine_at_tie).
+nis2_supervision_fines_subject(essential_fine_above_tie).
+nis2_supervision_fines_subject(other_infringement).
+nis2_supervision_fines_subject(gdpr_fine_barred).
+nis2_supervision_fines_subject(gdpr_not_same_conduct).
+nis2_supervision_fines_subject(gdpr_same_conduct_unsure).
+nis2_supervision_fines_subject(information_other_member_state).
+nis2_supervision_fines_subject(information_own_member_state).
+nis2_supervision_fines_subject(information_not_aware).
+nis2_supervision_fines_subject(duplicate_entity_class).
+nis2_supervision_fines_subject(unknown_key_present).
+
+% ---- Profiles: the Art 32(5) escalation route ------------------------
+% Positive: every condition holds.
+nis2_supervision_fines_profile_for(escalation_exercisable, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, true),
+    attribute(deadline_set_for_necessary_action, true),
+    attribute(required_action_taken_within_deadline, false)
+]).
+% Near-miss: the action was taken within the deadline (C4 fails).
+nis2_supervision_fines_profile_for(escalation_action_taken_within_deadline, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, true),
+    attribute(deadline_set_for_necessary_action, true),
+    attribute(required_action_taken_within_deadline, true)
+]).
+% Near-miss: a public administration entity (C1 fails).
+nis2_supervision_fines_profile_for(escalation_public_administration_entity, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, true),
+    attribute(earlier_measures_ineffective, true),
+    attribute(deadline_set_for_necessary_action, true),
+    attribute(required_action_taken_within_deadline, false)
+]).
+% Near-miss: the earlier measures were not ineffective (C2 fails).
+nis2_supervision_fines_profile_for(escalation_measures_not_ineffective, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, false),
+    attribute(deadline_set_for_necessary_action, true),
+    attribute(required_action_taken_within_deadline, false)
+]).
+% Near-miss: no deadline was set (C3 fails).
+nis2_supervision_fines_profile_for(escalation_no_deadline_set, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, true),
+    attribute(deadline_set_for_necessary_action, false),
+    attribute(required_action_taken_within_deadline, false)
+]).
+% The open-textured judgement is unsure: handed to the user.
+nis2_supervision_fines_profile_for(escalation_measures_unsure, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, unsure),
+    attribute(deadline_set_for_necessary_action, true),
+    attribute(required_action_taken_within_deadline, false)
+]).
+% Two keys of Art 32(5) absent.
+nis2_supervision_fines_profile_for(escalation_deadline_keys_missing, [
+    attribute(entity_class, essential),
+    attribute(entity_is_public_administration, false),
+    attribute(earlier_measures_ineffective, true)
+]).
+% Nothing known.
+nis2_supervision_fines_profile_for(entity_class_absent, []).
+
+% ---- Profiles: the Art 34(5) boundary (important) ---------------------
+% 1,4 % of 500 000 000 is exactly 7 000 000: a tie, basis fixed_amount.
+nis2_supervision_fines_profile_for(important_fine_at_tie, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(worldwide_annual_turnover_eur, 500000000)
+]).
+% One euro more: 7 000 000,014 rounded up to 7 000 001, turnover_percentage.
+nis2_supervision_fines_profile_for(important_fine_above_tie, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(worldwide_annual_turnover_eur, 500000001)
+]).
+
+% ---- Profiles: the Art 34(4) boundary (essential) ---------------------
+% 2 % of 499 999 999 is 9 999 999,98, rounded up to 10 000 000: fixed_amount.
+nis2_supervision_fines_profile_for(essential_fine_below_tie, [
+    attribute(entity_class, essential),
+    attribute(infringed_provision, art_23),
+    attribute(worldwide_annual_turnover_eur, 499999999)
+]).
+% 2 % of 500 000 000 is exactly 10 000 000: a tie, basis fixed_amount.
+nis2_supervision_fines_profile_for(essential_fine_at_tie, [
+    attribute(entity_class, essential),
+    attribute(infringed_provision, art_23),
+    attribute(worldwide_annual_turnover_eur, 500000000)
+]).
+% One euro more: 10 000 000,02 rounded up to 10 000 001, turnover_percentage.
+nis2_supervision_fines_profile_for(essential_fine_above_tie, [
+    attribute(entity_class, essential),
+    attribute(infringed_provision, art_23),
+    attribute(worldwide_annual_turnover_eur, 500000001)
+]).
+% Near-miss on scope: an infringement of another provision has no Union minimum.
+nis2_supervision_fines_profile_for(other_infringement, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, other),
+    attribute(worldwide_annual_turnover_eur, 500000001)
+]).
+
+% ---- Profiles: the Art 35(2) GDPR bar ----------------------------------
+nis2_supervision_fines_profile_for(gdpr_fine_barred, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(gdpr_fine_imposed_under_art_58_2_i, true),
+    attribute(gdpr_fine_for_same_conduct, true)
+]).
+% Near-miss: not the same conduct.
+nis2_supervision_fines_profile_for(gdpr_not_same_conduct, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(gdpr_fine_imposed_under_art_58_2_i, true),
+    attribute(gdpr_fine_for_same_conduct, false)
+]).
+% The same-conduct judgement is unsure: handed to the user.
+nis2_supervision_fines_profile_for(gdpr_same_conduct_unsure, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(gdpr_fine_imposed_under_art_58_2_i, true),
+    attribute(gdpr_fine_for_same_conduct, unsure)
+]).
+
+% ---- Profiles: the Art 35(1), (3) duty to inform -----------------------
+nis2_supervision_fines_profile_for(information_other_member_state, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_23),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(authority_became_aware_in_supervision_or_enforcement, true),
+    attribute(data_protection_authority_in_other_member_state, true)
+]).
+% Near-miss: the GDPR authority is in the same Member State.
+nis2_supervision_fines_profile_for(information_own_member_state, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_23),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(authority_became_aware_in_supervision_or_enforcement, true),
+    attribute(data_protection_authority_in_other_member_state, false)
+]).
+% Near-miss: the authority did not become aware in supervision or enforcement.
+nis2_supervision_fines_profile_for(information_not_aware, [
+    attribute(entity_class, important),
+    attribute(infringed_provision, art_21),
+    attribute(infringement_may_entail_notifiable_personal_data_breach, true),
+    attribute(authority_became_aware_in_supervision_or_enforcement, false)
+]).
+
+% ---- Profiles: input problems ------------------------------------------
+nis2_supervision_fines_profile_for(duplicate_entity_class, [
+    attribute(entity_class, essential),
+    attribute(entity_class, important)
+]).
+nis2_supervision_fines_profile_for(unknown_key_present, [
+    attribute(entity_class, important),
+    attribute(sector, energy)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+nis2_supervision_fines_assess(Subject, Result) :-
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    decide_nis2_supervision_fines(Profile, Result).
+
+:- end_module(fixtures).

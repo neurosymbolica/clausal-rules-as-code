@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_queries, [gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_keys/1, gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if/4, indeterminate/1, needs_legal_review/2, open_textured/2, cross_reference_unresolved/2, resolution/2, inputs_relied_on/1, provenance/2, suspended/1, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, attested/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_kernel, [gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_request_exception, [request_exception_status/2, request_exception_checklist/2, request_decision/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_fixtures, [gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_keys(ProfileKeys),
+    ProfileKeys == [request_type, objection_ground_claimed, request_received_on, extension_claimed, controller_demonstrates_unable_to_identify_data_subject, identity_confirmed, personal_data_inaccurate, consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, accuracy_contested_by_data_subject, data_subject_opposes_erasure, data_required_by_data_subject_for_legal_claims, verification_of_overriding_grounds_pending, personal_data_provided_by_data_subject, processing_based_on_consent_or_contract, processing_carried_out_by_automated_means, processing_based_on_art6_1_e_or_f, processing_for_direct_marketing, processing_for_research_or_statistics_pursuant_to_art89_1, data_subject_gave_explicit_consent, decision_based_on_special_categories, special_category_condition_and_safeguards_met_for_decision, personal_data_disclosed_to_recipients, data_subject_asks_who_the_recipients_are, extension_necessary_for_complexity_and_number, reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, personal_data_incomplete_in_light_of_purposes, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed, processing_necessary_for_freedom_of_expression_and_information, processing_necessary_for_public_task_or_official_authority, processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, erasure_would_render_impossible_or_seriously_impair_processing_objectives, processing_necessary_for_legal_claims, controller_no_longer_needs_data_for_processing_purposes, transmission_would_adversely_affect_rights_and_freedoms_of_others, objection_grounds_relate_to_particular_situation, controller_demonstrates_compelling_legitimate_grounds, decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects, decision_necessary_for_contract_with_data_subject, recipient_notification_impossible_or_disproportionate_effort, legislative_restriction_applies_to_the_right, erasure_required_by_union_or_member_state_law, processing_required_by_union_or_member_state_law, decision_authorised_by_union_or_member_state_law, public_holidays].
+test(compliance_check_not_acting_is_allowed_when_relieved) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_controller_cannot_identify, Profile),
+    findall(Status, request_exception_status(Profile, Status), Statuses),
+    Statuses == [need_not_comply].
+test(compliance_check_not_acting_is_forbidden_when_owed) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request, Profile),
+    findall(Status, request_exception_status(Profile, Status), Statuses),
+    Statuses == [must_comply].
+test(justification_access_checklist_cites_every_row) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request, Profile),
+    findall(Items, request_exception_checklist(Profile, Items), Checklists),
+    Checklists == [[item(right_engaged, met, cite(eu_reg_2016_679_art_15_1)), item(identity_suspension, unmet(identity_suspension), cite(eu_reg_2016_679_art_12_6)), item(art12_5_manifestly_unfounded_or_excessive, unmet(art12_5_manifestly_unfounded_or_excessive), cite(eu_reg_2016_679_art_12_5)), item(art12_2_unable_to_identify, unmet(art12_2_unable_to_identify), cite(eu_reg_2016_679_art_12_2)), item(art23_legislative_restriction, unmet(art23_legislative_restriction), cite(eu_reg_2016_679_art_23_1))]].
+test(justification_erasure_checklist_has_eight_exception_rows) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(erasure_freedom_of_expression, Profile),
+    request_exception_checklist(Profile, Items),
+    length(Items, 10),
+    member(item(art17_3_a, met, cite(eu_reg_2016_679_art_17_3_a)), Items).
+test(justification_open_limb_names_its_keys) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_identity_doubts_unsure, Profile),
+    request_exception_checklist(Profile, [_, item(identity_suspension, unknown([reasonable_doubts_about_identity]), cite(eu_reg_2016_679_art_12_6))|_]).
+test(what_if_attesting_the_erasure_law_settles_the_referral) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(erasure_no_ground_law_not_attested, Profile),
+    findall(Status, gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if(Profile, erasure_required_by_union_or_member_state_law, attested(true, attestation(by, at, reason, none)), Status), Statuses),
+    Statuses == [must_comply].
+test(what_if_a_legal_claim_relieves_erasure) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(erasure_legal_claims_not_necessary, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if(Profile, processing_necessary_for_legal_claims, true, need_not_comply).
+test(what_if_confirming_identity_lifts_the_suspension) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_identity_unconfirmed, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if(Profile, identity_confirmed, true, must_comply).
+test(what_if_leaves_the_original_profile_unchanged) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if(Profile, request_manifestly_unfounded_or_excessive, true, need_not_comply),
+    request_decision(Profile, must_comply).
+test(the_input_check_finds_no_problem_in_a_clean_profile) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems([attribute(request_type, erasure)], []).
+test(the_input_check_names_a_duplicate_key_once) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems([attribute(identity_confirmed, true), attribute(identity_confirmed, false), attribute(identity_confirmed, true)], [duplicate_key(identity_confirmed)]).
+test(the_result_constructors_recognise_their_shapes) :-
+    indeterminate([request_type]),
+    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), cite(union_or_member_state_law_requiring_erasure)), []),
+    open_textured(reasonable_doubts_about_identity, cite(eu_reg_2016_679_art_12_6)),
+    cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), cite(union_or_member_state_law_requiring_erasure)),
+    resolution(cite(union_or_member_state_law_requiring_erasure), not_attempted),
+    inputs_relied_on([request_type - erasure]),
+    provenance(step_four, []),
+    suspended(art12_6_identity_not_confirmed),
+    input_problems([unknown_key(colour)]),
+    unknown_key(colour),
+    wrong_type(profile),
+    duplicate_key(request_type),
+    attested(true, attestation(by, at, reason, none)).
+test(the_evidence_constructors_build_data_terms) :-
+    Evidence = url(address, retrieved),
+    Evidence = url(Address, _),
+    Address == address,
+    Document = document(upload, digest),
+    Document = document(_, Digest),
+    Digest == digest.
+
+test(compliance_check_owed_request_is_not_allowed, fail) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request, Profile),
+    request_exception_status(Profile, need_not_comply).
+test(justification_has_no_checklist_for_an_input_problem, fail) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_unknown_key, Profile),
+    request_exception_checklist(Profile, _).
+test(what_if_confirming_identity_is_not_suspended, fail) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_identity_unconfirmed, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_what_if(Profile, identity_confirmed, true, suspended(_)).
+test(an_empty_problem_list_is_not_input_problems, fail) :-
+    input_problems([]).
+test(another_resolution_status_is_refused, fail) :-
+    resolution(cite(union_or_member_state_law_requiring_erasure), resolved).
+
+cp_test_names([profile_keys_are_the_contract_keys, compliance_check_not_acting_is_allowed_when_relieved, compliance_check_not_acting_is_forbidden_when_owed, justification_access_checklist_cites_every_row, justification_erasure_checklist_has_eight_exception_rows, justification_open_limb_names_its_keys, what_if_attesting_the_erasure_law_settles_the_referral, what_if_a_legal_claim_relieves_erasure, what_if_confirming_identity_lifts_the_suspension, what_if_leaves_the_original_profile_unchanged, the_input_check_finds_no_problem_in_a_clean_profile, the_input_check_names_a_duplicate_key_once, the_result_constructors_recognise_their_shapes, the_evidence_constructors_build_data_terms]).
+cp_test_fail_names([compliance_check_owed_request_is_not_allowed, justification_has_no_checklist_for_an_input_problem, what_if_confirming_identity_is_not_suspended, an_empty_problem_list_is_not_input_problems, another_resolution_status_is_refused]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

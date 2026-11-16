@@ -1,0 +1,548 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/ai_act/gpai_models
+shape_family: deontic
+kit_version: '0.1.0'
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - kernel
+  - citations
+  - parameters
+  - gpai_models
+  - queries
+  - fixtures
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The /0 entries are the result and element atoms
+# the order requires as public predicates.
+public_interface:
+  # -- kernel.clausal --
+  # (gpai_models_input_problems/2 is re-exported through queries.clausal)
+  # -- citations.clausal --
+  - citation/2
+  # -- gpai_models.clausal --
+  - decide_gpai_models/2
+  - gpai_models_status/2
+  - gpai_models_checklist/2
+  - gpai_models_decision_resolvable/1
+  - gpai_models_status_values/1
+  - systemic_risk_classification_status/4
+  - systemic_risk_notification_status/5
+  - provider_obligation_status/5
+  - documentation_elements/3
+  - not_applicable_on_date/0
+  - not_a_general_purpose_ai_model/0
+  - general_purpose_ai_model_with_systemic_risk/0
+  - general_purpose_ai_model_without_systemic_risk/0
+  - no_notification_duty/0
+  - notification_after_the_time_limit/0
+  - notification_within_the_time_limit/0
+  - obligation_does_not_apply/0
+  - compliance_required_by_2_august_2027/0
+  - obligation_applies/0
+  - intended_tasks_and_type_and_nature_of_ai_systems_for_integration/0
+  - acceptable_use_policies/0
+  - date_of_release_and_methods_of_distribution/0
+  - architecture_and_number_of_parameters/0
+  - modality_and_format_of_inputs_and_outputs/0
+  - licence/0
+  - technical_means_required_for_integration/0
+  - design_specifications_of_the_model_and_training_process/0
+  - detailed_information_on_training_testing_and_validation_data/0
+  - computational_resources_used_for_training/0
+  - known_or_estimated_energy_consumption/0
+  - evaluation_strategies_and_results/0
+  - adversarial_testing_and_model_adaptation_measures/0
+  - system_architecture/0
+  - interaction_with_hardware_or_software_outside_the_model/0
+  - versions_of_relevant_software/0
+  - modality_format_and_maximum_size_of_inputs_and_outputs/0
+  - information_on_training_testing_and_validation_data/0
+  # -- queries.clausal --
+  - gpai_models_profile_keys/1
+  - gpai_models_input_problems/2
+  - gpai_models_what_if/4
+  - date/3
+  - indeterminate/1
+  - needs_legal_review/2
+  - open_textured/2
+  - inputs_relied_on/1
+  - provenance/2
+  - input_problems/1
+  - unknown_key/1
+  - wrong_type/1
+  - duplicate_key/1
+  # -- fixtures.clausal --
+  - gpai_models_subject/1
+  - gpai_models_profile_for/2
+  - gpai_models_assess/2
+
+# root_exports: bare atoms read by the test cases as package-root module
+# attributes. Each is a /0 fact exported by queries.clausal. The ten profile
+# keys come first, in the key order of the input contract; then the ten
+# OBLIGATION atoms; then the DOCUMENT atom not already listed
+# (technical_documentation and information_for_downstream_providers are both
+# OBLIGATION and DOCUMENT atoms, listed once); then the judgement value unsure.
+root_exports:
+  - general_purpose_ai_model
+  - used_for_research_development_or_prototyping_before_being_placed_on_the_market
+  - cumulative_training_computation_in_floating_point_operations
+  - high_impact_capabilities
+  - designated_by_a_commission_decision_as_a_model_with_systemic_risk
+  - commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks
+  - released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution
+  - parameters_weights_architecture_and_usage_information_made_publicly_available
+  - provider_established_in_a_third_country
+  - placed_on_the_market_before_2_august_2025
+  - technical_documentation
+  - information_for_downstream_providers
+  - copyright_policy
+  - training_content_summary
+  - cooperation_with_authorities
+  - authorised_representative
+  - model_evaluation
+  - systemic_risk_assessment_and_mitigation
+  - serious_incident_reporting
+  - cybersecurity_protection
+  - additional_technical_documentation_for_models_with_systemic_risk
+  - unsure
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/deadline_lib) and library(datetime), which are not backbone packages.
+uses: []
+
+scope: >-
+  For one general-purpose AI model and the provider the caller names, under
+  Regulation (EU) 2024/1689 (Artificial Intelligence Act) as consolidated on
+  27 July 2026 (02024R1689-20260727): (1) whether on a day the model is a
+  general-purpose AI model with systemic risk (Art 3(63), Art 51(1) and (2),
+  Art 52(2) to (4)); (2) whether the provider's notification to the Commission
+  under Art 52(1) came within the outer limit of two weeks, read with
+  Art 111(3) and Art 113(b); (3) whether one of the ten duties of Art 53(1)(a)
+  to (d), Art 53(3), Art 54(1) and (2) and Art 55(1)(a) to (d) applies to the
+  provider on a day, with the open-source exceptions of Art 53(2) and
+  Art 54(6), the transitional period of Art 111(3) and the date of
+  Art 113(b); (4) the minimum elements Annex XI and Annex XII list for the
+  technical documentation and the information to downstream providers.
+  Out of scope and left to the caller or a lawyer: the scope of the
+  Regulation under Art 2, who the provider is and when the model is placed
+  on the market, the content of each duty and whether it is met (codes of
+  practice under Art 56, harmonised standards), the words 'without delay'
+  and the content of the notification, the criteria of Annex XIII for a
+  designation, delegated acts amending the threshold or the Annexes, and
+  fines under Art 101. Open-textured judgements (general-purpose AI model,
+  high impact capabilities, the free and open-source licence) are the
+  caller's, and an unsure judgement that matters is referred to a lawyer.
+
+sources:
+  - >-
+    Regulation (EU) 2024/1689 of the European Parliament and of the Council
+    of 13 June 2024 laying down harmonised rules on artificial intelligence
+    (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024, consolidated
+    text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744:
+    Art 3, point (63) (points (64), (65), (67) and (68) read into the keys)
+  - >-
+    Regulation (EU) 2024/1689, Art 51(1), points (a) and (b), and Art 51(2)
+    (systemic risk; the presumption above ten to the power twenty-five
+    floating-point operations)
+  - >-
+    Regulation (EU) 2024/1689, Art 52(1) to (4) (notification within two
+    weeks; the provider's arguments; designation by the Commission)
+  - >-
+    Regulation (EU) 2024/1689, Art 53(1) points (a) to (d), Art 53(2),
+    Art 53(3), Art 54(1), (2) and (6), Art 55(1) points (a) to (d)
+    (obligations of providers of general-purpose AI models)
+  - >-
+    Regulation (EU) 2024/1689, Art 111(3) and Art 113, third paragraph,
+    point (b) (dates of application and the transitional period)
+  - >-
+    Regulation (EU) 2024/1689, Annex XI Sections 1 and 2 and Annex XII
+    (minimum elements of the technical documentation and of the information
+    to downstream providers)
+
+query_interface:
+  1: documentation_elements/3                 # factual_lookup: the Annex XI and XII element lists
+  2: gpai_models_status/2                     # status projection of the facade request
+  3: systemic_risk_classification_status/4    # status_determination: systemic risk classification
+  7: gpai_models_checklist/2                  # justification: one cite(...) per checklist item
+  14: provider_obligation_status/5            # obligation_surfacing: which duty applies
+  15: systemic_risk_notification_status/5     # deadline: the two-week notification limit
+  16: gpai_models_what_if/4                   # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings_and_lead_words
+  units:
+  - 02024R1689-20260727#art_003
+  - 02024R1689-20260727#art_051
+  - 02024R1689-20260727#art_052
+  - 02024R1689-20260727#art_053
+  - 02024R1689-20260727#art_054
+  - 02024R1689-20260727#art_055
+  - 02024R1689-20260727#art_111
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'The titles of Articles 3, 51, 52, 53, 54, 55 and 111 and the lead words
+    of Article 3 (''For the purposes of this Regulation, the following definitions
+    apply'') carry no rule of their own: document structure. Deferred so every unit
+    of the pinned extract is accounted for.'
+  consequence: 'None for a caller: they carry no rule.'
+- what: definitions_not_read_by_this_order
+  units:
+  - 02024R1689-20260727#point_003_1
+  - 02024R1689-20260727#point_003_2
+  - 02024R1689-20260727#point_003_4
+  - 02024R1689-20260727#point_003_6
+  - 02024R1689-20260727#point_003_7
+  - 02024R1689-20260727#point_003_8
+  - 02024R1689-20260727#point_003_11
+  - 02024R1689-20260727#point_003_12
+  - 02024R1689-20260727#point_003_13
+  - 02024R1689-20260727#point_003_14
+  - 02024R1689-20260727#point_003_14a
+  - 02024R1689-20260727#point_003_14b
+  - 02024R1689-20260727#point_003_15
+  - 02024R1689-20260727#point_003_16
+  - 02024R1689-20260727#point_003_17
+  - 02024R1689-20260727#point_003_18
+  - 02024R1689-20260727#point_003_19
+  - 02024R1689-20260727#point_003_20
+  - 02024R1689-20260727#point_003_21
+  - 02024R1689-20260727#point_003_22
+  - 02024R1689-20260727#point_003_23
+  - 02024R1689-20260727#point_003_24
+  - 02024R1689-20260727#point_003_25
+  - 02024R1689-20260727#point_003_26
+  - 02024R1689-20260727#point_003_27
+  - 02024R1689-20260727#point_003_28
+  - 02024R1689-20260727#point_003_29
+  - 02024R1689-20260727#point_003_30
+  - 02024R1689-20260727#point_003_31
+  - 02024R1689-20260727#point_003_32
+  - 02024R1689-20260727#point_003_33
+  - 02024R1689-20260727#point_003_34
+  - 02024R1689-20260727#point_003_35
+  - 02024R1689-20260727#point_003_36
+  - 02024R1689-20260727#point_003_37
+  - 02024R1689-20260727#point_003_38
+  - 02024R1689-20260727#point_003_39
+  - 02024R1689-20260727#point_003_40
+  - 02024R1689-20260727#point_003_41
+  - 02024R1689-20260727#point_003_42
+  - 02024R1689-20260727#point_003_43
+  - 02024R1689-20260727#point_003_44
+  - 02024R1689-20260727#point_003_45
+  - 02024R1689-20260727#point_003_45_a
+  - 02024R1689-20260727#point_003_45_b
+  - 02024R1689-20260727#point_003_46
+  - 02024R1689-20260727#point_003_47
+  - 02024R1689-20260727#point_003_48
+  - 02024R1689-20260727#point_003_49
+  - 02024R1689-20260727#point_003_49_a
+  - 02024R1689-20260727#point_003_49_b
+  - 02024R1689-20260727#point_003_49_c
+  - 02024R1689-20260727#point_003_49_d
+  - 02024R1689-20260727#point_003_50
+  - 02024R1689-20260727#point_003_51
+  - 02024R1689-20260727#point_003_52
+  - 02024R1689-20260727#point_003_53
+  - 02024R1689-20260727#point_003_54
+  - 02024R1689-20260727#point_003_55
+  - 02024R1689-20260727#point_003_56
+  - 02024R1689-20260727#point_003_57
+  - 02024R1689-20260727#point_003_58
+  - 02024R1689-20260727#point_003_59
+  - 02024R1689-20260727#point_003_60
+  - 02024R1689-20260727#point_003_61
+  - 02024R1689-20260727#point_003_61_a
+  - 02024R1689-20260727#point_003_61_a_i
+  - 02024R1689-20260727#point_003_61_a_ii
+  - 02024R1689-20260727#point_003_61_a_iii
+  - 02024R1689-20260727#point_003_61_b
+  - 02024R1689-20260727#point_003_62
+  - 02024R1689-20260727#point_003_66
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'Art 3 is pinned whole; its points other than (3), (5), (9), (10) and (63)
+    to (68) define terms no query of this order reads (point (66), general-purpose
+    AI system, included: this order answers for models, not systems). 72 units.'
+  consequence: None for these answers.
+- what: definitions_read_into_the_keys
+  units:
+  - 02024R1689-20260727#point_003_64
+  - 02024R1689-20260727#point_003_65
+  - 02024R1689-20260727#point_003_67
+  - 02024R1689-20260727#point_003_68
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 3, points (64) high-impact capabilities, (65) systemic risk, (67) floating-point
+    operation and (68) downstream provider are read into the meaning of the keys high_impact_capabilities,
+    commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks
+    and cumulative_training_computation_in_floating_point_operations and of the obligation
+    information_for_downstream_providers; they add no step of their own (reading (4),
+    (6), (11)).
+  consequence: The caller applies the definitions when it gives those keys.
+- what: provider_and_placing_on_the_market_of_a_general_purpose_ai_model
+  units:
+  - 02024R1689-20260727#point_003_3
+  - 02024R1689-20260727#point_003_5
+  - 02024R1689-20260727#point_003_9
+  - 02024R1689-20260727#point_003_10
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 3, points (3) provider, (5) authorised representative, (9) placing
+    on the market and (10) making available on the market, as they apply to general-purpose
+    AI models: who is the provider of the model, and when it is placed on the market,
+    are not tested by this order; every query answers for the provider of the model
+    the caller names (reading (1), open question Q20). The AI-system parts of these
+    points are formalised elsewhere.'
+  consequence: The caller checks that the actor is the provider of the model, and
+    gives placed_on_the_market_before_2_august_2025 and the research key from the
+    definition of placing on the market.
+- what: delegated_acts_on_thresholds_criteria_and_methodologies
+  units:
+  - 02024R1689-20260727#parag_051.003
+  - 02024R1689-20260727#parag_052.004
+  - 02024R1689-20260727#parag_053.005
+  - 02024R1689-20260727#parag_053.006
+  partial: true
+  not_formalized_because: institutional
+  declaration: not_an_exception
+  reason: Art 51(3), the second sentence of Art 52(4) and Art 53(5) and (6) empower
+    the Commission to amend or supplement the thresholds, Annex XIII and Annexes XI
+    and XII by delegated acts; no such act is pinned, so the order applies the threshold
+    and the Annexes as printed (reading (4), (14), open question Q15).
+  consequence: An amendment by delegated act is not seen; the caller checks for one.
+- what: content_of_the_notification_and_without_delay
+  units:
+  - 02024R1689-20260727#parag_052.001
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 52(1) asks the provider to notify 'without delay and in any event within
+    two weeks' and says the notification shall include the information necessary to
+    demonstrate that the requirement has been met; the order checks only the outer
+    limit of two weeks (reading (8), open question Q21), not the words 'without delay'
+    and not the content.
+  consequence: An answer notification_within_the_time_limit does not say that the
+    notification was made without delay or that it holds the necessary information.
+- what: reassessment_and_list_of_models_with_systemic_risk
+  units:
+  - 02024R1689-20260727#parag_052.005
+  - 02024R1689-20260727#parag_052.006
+  not_formalized_because: institutional
+  declaration: not_an_exception
+  reason: Art 52(5) (reassessment of a designation on request) and Art 52(6) (the
+    Commission's published list) are for the Commission; the outcome of a reassessment
+    reaches the order through the designation key (reading (5)).
+  consequence: None for these answers; the caller gives the designation as it stands
+    on the day asked.
+- what: content_of_the_duties_and_the_intellectual_property_proviso
+  units:
+  - 02024R1689-20260727#parag_053.001
+  - 02024R1689-20260727#point_053.001_a
+  - 02024R1689-20260727#point_053.001_b
+  - 02024R1689-20260727#point_053.001_b_i
+  - 02024R1689-20260727#point_053.001_b_ii
+  - 02024R1689-20260727#point_053.001_c
+  - 02024R1689-20260727#point_053.001_d
+  - 02024R1689-20260727#parag_053.003
+  - 02024R1689-20260727#parag_054.001
+  - 02024R1689-20260727#parag_054.002
+  - 02024R1689-20260727#parag_055.001
+  - 02024R1689-20260727#point_055.001_a
+  - 02024R1689-20260727#point_055.001_b
+  - 02024R1689-20260727#point_055.001_c
+  - 02024R1689-20260727#point_055.001_d
+  partial: true
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 53(1) with its points, Art 53(3), Art 54(1) and (2) and Art 55(1) with
+    its points say what each duty asks (what the documentation holds, what the policy
+    and the summary cover, cooperation 'as necessary', the appointment 'by written
+    mandate' and 'Prior to placing a general-purpose AI model on the Union market',
+    enabling the representative to perform 'the tasks specified in the mandate', how
+    evaluation, mitigation, reporting and cybersecurity are done), and point (b) of
+    Art 53(1) adds 'Without prejudice to the need to observe and protect intellectual
+    property rights and confidential business information or trade secrets in accordance
+    with Union and national law'; the order says which duty applies, not its content,
+    its manner or its timing within the day (reading (10)).
+  consequence: An answer obligation_applies does not say what the duty asks in the
+    case, how or by when within the day it is met; the caller reads the duty.
+- what: codes_of_practice_and_harmonised_standards
+  units:
+  - 02024R1689-20260727#parag_053.004
+  - 02024R1689-20260727#parag_055.002
+  not_formalized_because: procedural_no_output
+  declaration: not_an_exception
+  reason: Art 53(4) and Art 55(2) say how compliance with the duties may be demonstrated
+    (codes of practice within the meaning of Art 56, harmonised standards, alternative
+    adequate means); the order says which duties apply, not whether they are met (reading
+    (10)).
+  consequence: An answer obligation_applies does not say how compliance is shown or
+    whether it is.
+- what: confidentiality_of_information_obtained
+  units:
+  - 02024R1689-20260727#parag_053.007
+  - 02024R1689-20260727#parag_055.003
+  not_formalized_because: institutional
+  declaration: not_an_exception
+  reason: Art 53(7) and Art 55(3) bind those who obtain the information (Art 78);
+    no duty of the provider follows.
+  consequence: None for these answers.
+- what: tasks_and_mandate_of_the_authorised_representative
+  units:
+  - 02024R1689-20260727#parag_054.003
+  - 02024R1689-20260727#point_054.003_a
+  - 02024R1689-20260727#point_054.003_b
+  - 02024R1689-20260727#point_054.003_c
+  - 02024R1689-20260727#point_054.003_d
+  - 02024R1689-20260727#parag_054.004
+  - 02024R1689-20260727#parag_054.005
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 54(3) to (5) set the tasks of the authorised representative and the
+    content of its mandate; they bind the representative, not the provider, and no
+    query of this order answers for the representative.
+  consequence: An answer on the obligation authorised_representative says only whether
+    the provider must appoint and enable one.
+- what: criteria_for_designation_in_annex_xiii
+  units:
+  - 02024R1689-20260727#division_annex_xiii
+  - 02024R1689-20260727#point_annex_xiii_a
+  - 02024R1689-20260727#point_annex_xiii_b
+  - 02024R1689-20260727#point_annex_xiii_c
+  - 02024R1689-20260727#point_annex_xiii_d
+  - 02024R1689-20260727#point_annex_xiii_e
+  - 02024R1689-20260727#point_annex_xiii_f
+  - 02024R1689-20260727#point_annex_xiii_g
+  not_formalized_because: institutional
+  declaration: not_an_exception
+  reason: Annex XIII lists the criteria the Commission takes into account when it
+    designates a model under Art 51(1)(b) and Art 52(4); the designation is a caller
+    fact (reading (5)), so the order does not apply the criteria.
+  consequence: The caller gives the Commission's decision; the order never decides
+    a designation.
+- what: transitional_rules_for_ai_systems
+  units:
+  - 02024R1689-20260727#parag_111.001
+  - 02024R1689-20260727#parag_111.002
+  - 02024R1689-20260727#parag_111.004
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 111(1), (2) and (4) concern AI systems already placed on the market
+    or put into service; this order answers for general-purpose AI models, and reads
+    Art 111(3) only.
+  consequence: None for these answers.
+- what: entry_into_force_and_other_dates
+  units:
+  - 02024R1689-20260727#art_113
+  - 02024R1689-20260727#point_113_a
+  - 02024R1689-20260727#point_113_c
+  - 02024R1689-20260727#point_113_c_i
+  - 02024R1689-20260727#point_113_c_ii
+  - 02024R1689-20260727#point_113_d
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'Art 113: the entry into force (first paragraph) and points (a), (c) and
+    (d) of the third paragraph date provisions this order does not read; the order
+    reads point (b) (Chapter V from 2 August 2025) and the general date of the second
+    paragraph only for Art 111(3) (reading (9)).'
+  consequence: None for these answers.
+- what: conditions_and_lead_words_in_annexes_xi_and_xii
+  units:
+  - 02024R1689-20260727#division_annex_xi-section_1
+  - 02024R1689-20260727#point_annex_xi-section_1_1
+  - 02024R1689-20260727#point_annex_xi-section_1_2
+  - 02024R1689-20260727#point_annex_xi-section_1_2_c
+  - 02024R1689-20260727#point_annex_xi-section_2_2
+  - 02024R1689-20260727#point_annex_xi-section_2_3
+  - 02024R1689-20260727#point_annex_xii_1
+  - 02024R1689-20260727#point_annex_xii_1_d
+  - 02024R1689-20260727#point_annex_xii_1_e
+  - 02024R1689-20260727#point_annex_xii_2
+  - 02024R1689-20260727#point_annex_xii_2_c
+  partial: true
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'Annex XI Section 1 asks for the information ''as appropriate to the size
+    and risk profile of the model''; points 1 and 2 of Annex XI Section 1 and of Annex
+    XII ask for a general or detailed description ''including'' the lettered elements
+    (point 2 of Annex XI Section 1: ''A detailed description of the elements of the
+    model referred to in point 1, and relevant information of the process for the
+    development''); point 2 of Annex XI Section 1 lets the energy consumption be based
+    on information about computational resources where it is unknown; and Annex XI
+    Section 1 point 2(c), Section 2 points 2 and 3 and Annex XII points 1(d), 1(e)
+    and 2(c) hold the words ''where applicable''. The order lists the lettered and
+    numbered elements as the minimum and does not judge how far each goes, whether
+    it applies to the model, or what else the open words ''including'' may require
+    (reading (14), Q23).'
+  consequence: An answer of documentation_elements/3 lists the minimum elements; it
+    does not check a document.
+
+excluded_set:
+- what: scope_of_the_regulation
+  instrument: Regulation (EU) 2024/1689 Art 2 (not in this pin; the scope order)
+  cites:
+  - 02024R1689-20260727#art_002
+  reason: Art 2(1)(a) makes the Regulation apply to providers placing on the market
+    general-purpose AI models in the Union, irrespective of where they are established;
+    Art 2 excludes, among others, AI models used exclusively for military, defence
+    or national security purposes (Art 2(3)), models specifically developed and put
+    into service for the sole purpose of scientific research and development (Art
+    2(6)) and research, testing or development activity regarding models before they
+    are placed on the market (Art 2(8)). Art 2 is not pinned in this domain. The research
+    key of this order reads only the exception in the definition of Art 3(63); whether
+    Art 2(8) or 2(6) excludes the case is the caller's check before it asks (reading
+    (1); for the notification of a model to be placed on the market, reading (8)).
+  consequence: The caller first checks that the Regulation applies to the case under
+    Art 2; the answers assume it does.
+- what: text_before_27_july_2026
+  instrument: Regulation (EU) 2026/1744 (not pinned) and the text of Regulation (EU)
+    2024/1689 in force before 27 July 2026 (not pinned)
+  cites:
+  - 32026R1744#art_001
+  reason: The order applies the consolidated text valid from 27 July 2026 to every
+    day from 2 August 2025, on the a reading that Regulation (EU) 2026/1744
+    amends none of the units this order reads (reading (2), Q8); neither the amending
+    act nor the earlier text is pinned, so the claim cannot be checked from the pin.
+  consequence: For a day before 27 July 2026 the caller checks that the text then
+    in force reads as the pinned units do; where it differs, the answer for that day
+    may differ.
+- what: codes_of_practice
+  instrument: Regulation (EU) 2024/1689 Art 56 (not in this pin)
+  cites:
+  - 02024R1689-20260727#art_056
+  reason: Art 56 governs the codes of practice that Art 53(4) and Art 55(2) let providers
+    rely on; their content is not pinned.
+  consequence: The caller looks at the codes of practice for the content of the duties.
+- what: fines_for_providers_of_general_purpose_ai_models
+  instrument: Regulation (EU) 2024/1689 Art 101 (not in this pin; the penalties order)
+  cites:
+  - 02024R1689-20260727#art_101
+  reason: Art 101 sets the fines the Commission may impose on providers of general-purpose
+    AI models; Art 113(b) excepts it from the date of 2 August 2025.
+  consequence: An answer obligation_applies says nothing about fines; the caller uses
+    the penalties rules.
+- what: copyright_reservation_of_rights
+  instrument: Directive (EU) 2019/790 Art 4(3)
+  cites:
+  - 32019L0790#art_004
+  reason: Art 53(1)(c) asks for a policy to identify and comply with a reservation
+    of rights expressed under Art 4(3) of Directive (EU) 2019/790; that Directive
+    is not pinned.
+  consequence: The caller applies Union copyright law to the content of the policy.

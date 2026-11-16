@@ -1,0 +1,155 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and INPUT TOLERANCE:
+% malformed profiles of every shape the order names are answered by THE
+% INPUT CHECK with exactly one answer, never a failure or an error.
+% Run: python -m clausal.testing eu/nis2_implementing_regulation_significant_incidents/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/nis2_implementing_regulation_significant_incidents, [
+    significant_incident_criteria/3,
+    nis2_implementing_regulation_significant_incidents_status/2,
+    nis2_implementing_regulation_significant_incidents_status_values/1
+]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/kernel, [nis2_implementing_regulation_significant_incidents_input_problems/2]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/fixtures, [nis2_implementing_regulation_significant_incidents_profile_for/2]).
+
+% ---- bound results ---------------------------------------------------
+
+test(significant_holds_with_result_and_citations_bound) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_not_scheduled, Profile),
+    significant_incident_criteria(Profile, significant, [cite(eu_reg_2024_2690_art_3_1)]).
+
+test(significant_profile_rejects_not_significant_bound, fail) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_not_scheduled, Profile),
+    significant_incident_criteria(Profile, not_significant, _).
+
+test(significant_profile_rejects_the_not_significant_citations, fail) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_not_scheduled, Profile),
+    significant_incident_criteria(Profile, significant, [cite(eu_reg_2024_2690_art_3_1), cite(eu_reg_2024_2690_art_3_2)]).
+
+test(not_significant_holds_with_result_and_citations_bound) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(scheduled_maintenance_with_loss, Profile),
+    significant_incident_criteria(Profile, not_significant, [cite(eu_reg_2024_2690_art_3_1), cite(eu_reg_2024_2690_art_3_2)]).
+
+test(scheduled_profile_rejects_significant_bound, fail) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(scheduled_maintenance_with_loss, Profile),
+    significant_incident_criteria(Profile, significant, _).
+
+test(indeterminate_holds_with_the_missing_key_bound) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_scheduled_absent, Profile),
+    significant_incident_criteria(Profile, indeterminate([scheduled_interruption_or_maintenance]), []).
+
+test(indeterminate_rejects_another_missing_key_bound, fail) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_scheduled_absent, Profile),
+    nis2_implementing_regulation_significant_incidents_status(Profile, indeterminate([annual_turnover_preceding_financial_year_euro_cents])).
+
+test(referral_holds_with_the_judgement_bound) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(death_unsure_decisive, Profile),
+    nis2_implementing_regulation_significant_incidents_status(Profile, needs_legal_review(open_textured(death_of_natural_person, cite(eu_reg_2024_2690_art_3_1_c)), _)).
+
+test(referral_rejects_another_judgement_bound, fail) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(death_unsure_decisive, Profile),
+    nis2_implementing_regulation_significant_incidents_status(Profile, needs_legal_review(open_textured(considerable_damage_to_natural_person_health, _), _)).
+
+test(only_the_baseline_status_of_the_table_holds) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(loss_above_floor_not_scheduled, Profile),
+    nis2_implementing_regulation_significant_incidents_status_values(StatusValues),
+    findall(Status, (member(Status, StatusValues), nis2_implementing_regulation_significant_incidents_status(Profile, Status)), HeldStatuses),
+    HeldStatuses == [significant].
+
+% ---- input tolerance: THE INPUT CHECK --------------------------------
+
+test(unbound_profile_is_not_an_attribute_list) :-
+    findall(Result-Citations, significant_incident_criteria(_UnboundProfile, Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(profile)])-[]].
+
+test(unbound_profile_gives_exactly_one_answer) :-
+    findall(Result-Citations, significant_incident_criteria(_UnboundProfile, Result, Citations), Answers),
+    length(Answers, 1).
+
+test(partial_list_is_not_an_attribute_list) :-
+    findall(Problems, nis2_implementing_regulation_significant_incidents_input_problems([attribute(death_of_natural_person, true)|_Tail], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(non_attribute_element_is_not_an_attribute_list) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(profile_not_attribute_list, Profile),
+    significant_incident_criteria(Profile, Result, Citations),
+    Result == input_problems([wrong_type(profile)]),
+    Citations == [].
+
+test(an_atom_is_not_an_attribute_list) :-
+    nis2_implementing_regulation_significant_incidents_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+
+test(unbound_value_is_wrong_type) :-
+    findall(Problems, nis2_implementing_regulation_significant_incidents_input_problems([attribute(death_of_natural_person, _UnboundValue)], Problems), Answers),
+    Answers == [[wrong_type(death_of_natural_person)]].
+
+test(non_atom_key_is_unknown_as_given) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+
+test(crisp_key_given_unsure_is_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(scheduled_interruption_or_maintenance, unsure)], Problems),
+    Problems == [wrong_type(scheduled_interruption_or_maintenance)].
+
+test(negative_figure_is_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(complete_unavailability_seconds, -1)], Problems),
+    Problems == [wrong_type(complete_unavailability_seconds)].
+
+test(float_figure_is_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(wrong_type_float_loss, Profile),
+    significant_incident_criteria(Profile, Result, Citations),
+    Result == input_problems([wrong_type(direct_financial_loss_euro_cents)]),
+    Citations == [].
+
+test(entity_type_outside_its_atoms_is_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(relevant_entity_type, bank)], Problems),
+    Problems == [wrong_type(relevant_entity_type)].
+
+test(judgement_outside_its_atoms_is_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(data_compromised, maybe)], Problems),
+    Problems == [wrong_type(data_compromised)].
+
+test(judgement_unsure_is_well_formed) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(data_compromised, unsure)], Problems),
+    Problems == [].
+
+test(duplicate_with_equal_values_is_duplicate_only) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(death_of_natural_person, true), attribute(death_of_natural_person, true)], Problems),
+    Problems == [duplicate_key(death_of_natural_person)].
+
+test(duplicate_with_bad_values_is_never_also_wrong_type) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(death_of_natural_person, maybe), attribute(death_of_natural_person, 7)], Problems),
+    Problems == [duplicate_key(death_of_natural_person)].
+
+test(repeated_unknown_key_is_named_once) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(colour, blue), attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+
+test(problems_follow_contract_order_then_unknown_keys) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(colour, blue), attribute(managed_domain_names, -1), attribute(scheduled_interruption_or_maintenance, unsure)], Problems),
+    Problems == [wrong_type(scheduled_interruption_or_maintenance), wrong_type(managed_domain_names), unknown_key(colour)].
+
+test(duplicate_and_unknown_keys_in_the_result_position) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(duplicate_and_unknown_keys, Profile),
+    significant_incident_criteria(Profile, Result, Citations),
+    Result == input_problems([duplicate_key(scheduled_interruption_or_maintenance), unknown_key(colour)]),
+    Citations == [].
+
+test(input_check_gives_the_bare_list) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([attribute(colour, blue)], Problems),
+    Problems == [unknown_key(colour)].
+
+test(well_formed_profile_has_no_problem) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(all_criteria_closed_dns, Profile),
+    nis2_implementing_regulation_significant_incidents_input_problems(Profile, Problems),
+    Problems == [].
+
+test(empty_profile_has_no_problem) :-
+    nis2_implementing_regulation_significant_incidents_input_problems([], Problems),
+    Problems == [].
+
+:- end_module(test_input_mode).

@@ -1,0 +1,125 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% One positive / near-miss pair per route; the near-miss flips the result.
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/request_basis, [
+    request_basis/2,
+    request_basis_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/queries, [gdpr_data_subject_rights_erasure_basis_compliance_check/3]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/fixtures, [gdpr_data_subject_rights_erasure_basis_profile_for/2]).
+
+basis_of(Subject, Basis) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(Subject, Profile),
+    request_basis(Profile, Basis).
+
+retention_of(Subject, Result) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(Subject, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, Result).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    request_basis_status_values(StatusValues),
+    member(art17_1_b, StatusValues).
+
+test(the_necessity_profile_is_art17_1_a) :-
+    basis_of(necessity_no_longer, art17_1_a).
+
+test(the_necessity_profile_is_not_art17_1_b, fail) :-
+    basis_of(necessity_no_longer, art17_1_b).
+
+% route (a)
+test(ground_a_positive_is_prohibited_retention) :-
+    retention_of(necessity_no_longer, prohibited).
+test(ground_a_near_miss_no_ground_is_permitted) :-
+    basis_of(no_ground_engaged, none),
+    retention_of(no_ground_engaged, permitted).
+test(ground_a_near_miss_is_not_art17_1_a, fail) :-
+    basis_of(no_ground_engaged, art17_1_a).
+
+% route (b)
+test(ground_b_positive) :-
+    basis_of(consent_withdrawn_no_other_ground, art17_1_b).
+test(ground_b_near_miss_other_ground_exists) :-
+    basis_of(consent_withdrawn_other_ground_exists, none),
+    retention_of(consent_withdrawn_other_ground_exists, permitted).
+
+% route (c)
+test(ground_c_positive) :-
+    basis_of(objection_21_1_without_overriding, art17_1_c).
+test(ground_c_near_miss_overriding_grounds) :-
+    basis_of(objection_21_1_with_overriding, none).
+test(ground_c_art21_2_positive) :-
+    basis_of(objection_21_2, art17_1_c).
+
+% route (d)
+test(ground_d_positive) :-
+    basis_of(unlawfully_processed, art17_1_d).
+test(ground_d_near_miss_base_profile) :-
+    basis_of(no_ground_engaged, none).
+
+% route (e): enabling outside fact
+test(ground_e_positive_attested) :-
+    basis_of(law_requires_erasure, art17_1_e),
+    retention_of(law_requires_erasure, prohibited).
+test(ground_e_near_miss_unattested_refers) :-
+    basis_of(law_requires_erasure_unattested, none),
+    retention_of(law_requires_erasure_unattested, undetermined).
+
+% route (f)
+test(ground_f_positive) :-
+    basis_of(information_society_offer, art17_1_f).
+test(ground_f_near_miss_base_profile) :-
+    retention_of(no_ground_engaged, permitted).
+
+% unsure judgement refers
+test(unsure_necessity_is_undetermined) :-
+    basis_of(necessity_unsure, none),
+    retention_of(necessity_unsure, undetermined).
+
+% Art 17(3)(a)
+test(exception_17_3_a_positive_relieves) :-
+    retention_of(freedom_of_expression_exception, permitted).
+test(exception_17_3_a_near_miss_not_necessary) :-
+    retention_of(freedom_of_expression_not_necessary, prohibited).
+
+% Art 12(5)
+test(exception_12_5_positive_relieves) :-
+    retention_of(manifestly_excessive_request, permitted).
+test(exception_12_5_near_miss_not_excessive) :-
+    retention_of(request_not_excessive, prohibited).
+
+% Art 12(6) suspension
+test(suspension_positive_unconfirmed) :-
+    basis_of(identity_doubts_unconfirmed, none),
+    retention_of(identity_doubts_unconfirmed, undetermined).
+test(suspension_near_miss_confirmed) :-
+    basis_of(identity_doubts_confirmed, art17_1_a),
+    retention_of(identity_doubts_confirmed, prohibited).
+
+% Art 12(2)
+test(exception_12_2_positive_relieves) :-
+    retention_of(unable_to_identify, permitted).
+test(exception_12_2_near_miss_identifiable) :-
+    retention_of(necessity_no_longer, prohibited).
+
+% Art 23
+test(exception_23_positive_relieves) :-
+    retention_of(legislative_restriction, permitted).
+test(exception_23_near_miss_no_restriction) :-
+    retention_of(necessity_no_longer, prohibited).
+
+% input check
+test(input_problem_positive_has_no_basis) :-
+    basis_of(unknown_key_present, none),
+    retention_of(unknown_key_present, undetermined).
+test(input_problem_near_miss_without_the_unknown_key) :-
+    basis_of(necessity_no_longer, art17_1_a).
+
+% required keys absent
+test(missing_required_keys_give_no_basis) :-
+    basis_of(request_type_only, none),
+    retention_of(request_type_only, undetermined).
+
+:- end_module(test_negative_controls).

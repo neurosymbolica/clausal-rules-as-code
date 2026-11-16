@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_lists.pl
 % Generated-companion supplying the list ENGINE builtins that Scryer has no
 % library for at all. Trealla has them built in, so the failure is

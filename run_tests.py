@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """Run every domain's tests, or the tests under one path.
 
     pip install 'clausal>=1.2.0'     # the engine (Clausal Prolog)

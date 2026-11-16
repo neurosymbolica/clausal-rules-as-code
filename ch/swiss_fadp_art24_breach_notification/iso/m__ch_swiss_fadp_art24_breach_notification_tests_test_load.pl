@@ -1,0 +1,102 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_art24_breach_notification_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ch_swiss_fadp_art24_breach_notification_kernel, [swiss_fadp_art24_breach_notification_input_problems/2, swiss_fadp_art24_breach_notification_contract_keys/1, swiss_fadp_art24_breach_notification_key_state/3, swiss_fadp_art24_breach_notification_first_key_in_state/4, swiss_fadp_art24_breach_notification_pairs/3]).
+:- use_module(m__ch_swiss_fadp_art24_breach_notification_citations, [citation/2, implements/1]).
+
+test(the_contract_has_nine_keys_in_root_exports_order) :-
+    swiss_fadp_art24_breach_notification_contract_keys(Keys),
+    length(Keys, 9),
+    Keys = [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement, personal_data_breach, breach_unlikely_to_result_in_risk].
+test(the_swiss_controller_verdict_atoms_are_distinct) :-
+    dif(authority_notification_required, authority_notification_not_required).
+test(the_processor_verdict_atoms_are_distinct) :-
+    dif(report_to_controller_required, report_to_controller_not_required).
+test(the_information_verdict_atoms_are_distinct) :-
+    dif(information_of_data_subject_required, information_of_data_subject_not_required),
+    dif(information_of_data_subject_required, information_of_data_subject_may_be_restricted_deferred_or_omitted),
+    dif(information_of_data_subject_not_required, information_of_data_subject_may_be_restricted_deferred_or_omitted).
+test(the_comparison_atoms_are_distinct) :-
+    dif(same, differs),
+    dif(same, not_comparable),
+    dif(differs, not_comparable).
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = swiss_fadp_art24_breach_notification_verdict(authority_notification_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]),
+    Verdict = swiss_fadp_art24_breach_notification_verdict(Status, Citations),
+    Status == authority_notification_required,
+    Citations == [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)].
+test(the_referral_compound_builds_and_destructures) :-
+    Result = needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security - unsure])]),
+    Result = needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]),
+    Key == breach_of_data_security,
+    Citation == ch_fadp_art_5_h,
+    Pairs == [breach_of_data_security - unsure].
+test(the_indeterminate_compound_holds_one_bare_key) :-
+    Result = indeterminate([personal_data_breach]),
+    Result = indeterminate([Key]),
+    Key == personal_data_breach.
+test(the_swiss_report_citation_is_recorded) :-
+    citation(ch_fadp_art_24_1, _Record).
+test(the_definition_citation_is_recorded) :-
+    citation(ch_fadp_art_5_h, _Record).
+test(the_eu_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_33_1, _Record).
+test(the_exception_letter_citations_are_recorded) :-
+    citation(ch_fadp_art_24_5_a, _RecordA),
+    citation(ch_fadp_art_24_5_b, _RecordB),
+    citation(ch_fadp_art_24_5_c, _RecordC).
+test(the_marker_holds_for_a_recorded_key) :-
+    implements(ch_fadp_art_24_4).
+test(a_well_formed_profile_has_no_problem) :-
+    findall(Problems, swiss_fadp_art24_breach_notification_input_problems([attribute(breach_of_data_security, true), attribute(commissioner_requested_information_of_data_subject, false), attribute(personal_data_breach, unsure)], Problems), Answers),
+    Answers == [[]].
+test(an_empty_profile_has_no_problem) :-
+    swiss_fadp_art24_breach_notification_input_problems([], []).
+test(an_atom_is_not_an_attribute_list) :-
+    swiss_fadp_art24_breach_notification_input_problems(profile, [wrong_type(profile)]).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, swiss_fadp_art24_breach_notification_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_foreign_element_makes_the_profile_wrong) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(breach_of_data_security, true), breach_of_data_security - true], [wrong_type(profile)]).
+test(the_crisp_key_refuses_unsure) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(commissioner_requested_information_of_data_subject, unsure)], [wrong_type(commissioner_requested_information_of_data_subject)]).
+test(a_judgement_key_accepts_unsure) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, unsure)], []).
+test(a_string_value_is_wrong_type) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(breach_of_data_security, "true")], [wrong_type(breach_of_data_security)]).
+test(contract_problems_come_before_unknown_keys) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(foreign_key, true), attribute(commissioner_requested_information_of_data_subject, unsure), attribute(foreign_key, false)], [wrong_type(commissioner_requested_information_of_data_subject), unknown_key(foreign_key)]).
+test(a_repeated_key_is_a_duplicate_and_not_a_wrong_type) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(personal_data_breach, maybe), attribute(personal_data_breach, true)], [duplicate_key(personal_data_breach)]).
+test(a_number_key_is_unknown_as_given) :-
+    swiss_fadp_art24_breach_notification_input_problems([attribute(7, true)], [unknown_key(7)]).
+test(an_absent_key_has_the_absent_state) :-
+    findall(State, swiss_fadp_art24_breach_notification_key_state([attribute(breach_of_data_security, true)], personal_data_breach, State), States),
+    States == [absent].
+test(a_present_key_has_its_value_as_state) :-
+    findall(State, swiss_fadp_art24_breach_notification_key_state([attribute(breach_of_data_security, unsure)], breach_of_data_security, State), States),
+    States == [unsure].
+test(the_first_absent_key_follows_the_given_order) :-
+    findall(Key, swiss_fadp_art24_breach_notification_first_key_in_state([attribute(breach_of_data_security, unsure)], [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights], absent, Key), Keys),
+    Keys == [breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights].
+test(the_pairs_hold_present_keys_only) :-
+    findall(Pairs, swiss_fadp_art24_breach_notification_pairs([attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_of_data_security, unsure)], [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, breach_unlikely_to_result_in_risk], Pairs), Answers),
+    Answers == [[breach_of_data_security - unsure, breach_unlikely_to_result_in_risk - false]].
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(ch_fadp_art_24).
+test(no_first_key_when_none_is_in_the_state, fail) :-
+    swiss_fadp_art24_breach_notification_first_key_in_state([attribute(breach_of_data_security, true)], [breach_of_data_security], unsure, _).
+
+cp_test_names([the_contract_has_nine_keys_in_root_exports_order, the_swiss_controller_verdict_atoms_are_distinct, the_processor_verdict_atoms_are_distinct, the_information_verdict_atoms_are_distinct, the_comparison_atoms_are_distinct, the_verdict_term_carries_status_and_citations, the_referral_compound_builds_and_destructures, the_indeterminate_compound_holds_one_bare_key, the_swiss_report_citation_is_recorded, the_definition_citation_is_recorded, the_eu_citation_is_recorded, the_exception_letter_citations_are_recorded, the_marker_holds_for_a_recorded_key, a_well_formed_profile_has_no_problem, an_empty_profile_has_no_problem, an_atom_is_not_an_attribute_list, an_unbound_profile_is_not_an_attribute_list, a_foreign_element_makes_the_profile_wrong, the_crisp_key_refuses_unsure, a_judgement_key_accepts_unsure, a_string_value_is_wrong_type, contract_problems_come_before_unknown_keys, a_repeated_key_is_a_duplicate_and_not_a_wrong_type, a_number_key_is_unknown_as_given, an_absent_key_has_the_absent_state, a_present_key_has_its_value_as_state, the_first_absent_key_follows_the_given_order, the_pairs_hold_present_keys_only]).
+cp_test_fail_names([the_marker_fails_for_an_unrecorded_key, no_first_key_when_none_is_in_the_state]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

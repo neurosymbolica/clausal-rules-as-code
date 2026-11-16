@@ -1,0 +1,204 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> different verdict), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`; each near-miss also gets a
+% positive test of the verdict it DOES get, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_articles_15_to_18_decision_and_exception/tests/test_negative_controls.clausal
+% lint: allow C6 contract-atom (art17_3_*, art12_*, art23_* are contract atoms)
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_15_to_18_decision_and_exception/request_exception, [
+    decide_request_exception/2,
+    request_exception_status/2,
+    request_exception_status_values/1,
+    request_decision/2,
+    request_exception/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_15_to_18_decision_and_exception/fixtures, [gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for/2]).
+
+decision_of(Subject, Comply) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(Subject, Profile),
+    request_decision(Profile, Comply).
+
+exception_of(Subject, Exception) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(Subject, Profile),
+    request_exception(Profile, Exception).
+
+verdict_of(Subject, Verdict) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(Subject, Profile),
+    decide_request_exception(Profile, Verdict).
+
+% ---- the near-miss atoms are real vocabulary atoms ----------------------
+test(the_exception_atoms_are_vocabulary_atoms) :-
+    request_exception_status_values(Vocabulary),
+    member(art17_3_a, Vocabulary),
+    member(art17_3_b, Vocabulary),
+    member(art17_3_c, Vocabulary),
+    member(art17_3_d, Vocabulary),
+    member(art17_3_e, Vocabulary),
+    member(art12_5_manifestly_unfounded_or_excessive, Vocabulary),
+    member(art12_2_unable_to_identify, Vocabulary),
+    member(art23_legislative_restriction, Vocabulary),
+    member(none, Vocabulary).
+
+% ---- (v) must_comply vs (iii) Art 23 restriction -----------------------
+test(access_must_comply) :-
+    decision_of(access_request, must_comply).
+test(access_restricted_by_law_is_not_must_comply, fail) :-
+    decision_of(access_request_legislative_restriction, must_comply).
+test(access_restricted_by_law_is_relieved) :-
+    exception_of(access_request_legislative_restriction, art23_legislative_restriction).
+test(access_not_restricted_by_law_is_not_relieved, fail) :-
+    exception_of(access_request_no_legislative_restriction, art23_legislative_restriction).
+test(access_not_restricted_by_law_must_comply) :-
+    decision_of(access_request_no_legislative_restriction, must_comply).
+
+% ---- (iii) Art 12(5) ------------------------------------------------------
+test(manifestly_unfounded_access_need_not_comply) :-
+    decision_of(access_request_manifestly_unfounded, need_not_comply).
+test(well_founded_access_is_not_need_not_comply, fail) :-
+    decision_of(access_request_not_manifestly_unfounded, need_not_comply).
+test(well_founded_access_must_comply) :-
+    decision_of(access_request_not_manifestly_unfounded, must_comply).
+
+% ---- (iii) Art 12(2) ------------------------------------------------------
+test(unidentifiable_data_subject_is_relieved) :-
+    exception_of(access_request_controller_cannot_identify, art12_2_unable_to_identify).
+test(identifiable_data_subject_is_not_relieved, fail) :-
+    exception_of(access_request_controller_can_identify, art12_2_unable_to_identify).
+test(identifiable_data_subject_has_no_exception) :-
+    exception_of(access_request_controller_can_identify, none).
+
+% ---- (iii-a) Art 12(6) suspension ------------------------------------------
+test(unconfirmed_identity_suspends) :-
+    decision_of(access_request_identity_unconfirmed, suspended(art12_6_identity_not_confirmed)).
+test(confirmed_identity_does_not_suspend, fail) :-
+    decision_of(access_request_identity_confirmed, suspended(_)).
+test(confirmed_identity_must_comply) :-
+    decision_of(access_request_identity_confirmed, must_comply).
+test(unconfirmed_identity_without_doubts_does_not_suspend, fail) :-
+    decision_of(access_request_identity_not_confirmed_without_doubts, suspended(_)).
+
+% ---- (iv) open-textured referral (Art 12(6) row) -----------------------------
+test(unsure_doubts_are_referred) :-
+    decision_of(access_request_identity_doubts_unsure, needs_legal_review(open_textured(reasonable_doubts_about_identity, cite(eu_reg_2016_679_art_12_6)), _Context)).
+test(certain_doubts_are_not_referred, fail) :-
+    decision_of(access_request_identity_unconfirmed, needs_legal_review(_, _)).
+
+% ---- Art 16 rectification ----------------------------------------------------
+test(inaccurate_data_must_be_rectified) :-
+    verdict_of(rectification_inaccurate_data, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_16)])).
+test(accurate_complete_data_need_not_be_rectified) :-
+    decision_of(rectification_accurate_and_complete_data, need_not_comply).
+test(accurate_complete_data_is_not_must_comply, fail) :-
+    decision_of(rectification_accurate_and_complete_data, must_comply).
+test(unsure_completeness_is_referred) :-
+    decision_of(rectification_completeness_unsure, needs_legal_review(open_textured(personal_data_incomplete_in_light_of_purposes, cite(eu_reg_2016_679_art_16)), _Context)).
+test(incomplete_data_is_not_referred, fail) :-
+    decision_of(rectification_incomplete_data, needs_legal_review(_, _)).
+
+% ---- (iv) missing keys -------------------------------------------------------
+test(bare_erasure_is_indeterminate) :-
+    decision_of(erasure_facts_missing, indeterminate([_|_])).
+test(erasure_with_a_met_ground_is_not_indeterminate, fail) :-
+    decision_of(erasure_data_no_longer_necessary, indeterminate(_)).
+test(erasure_with_a_met_ground_must_comply) :-
+    verdict_of(erasure_data_no_longer_necessary, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_17_1_a)])).
+
+% ---- (iv) unresolved cross-reference vs (ii) not engaged --------------------
+test(unattested_erasure_law_is_referred) :-
+    decision_of(erasure_no_ground_law_not_attested, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), cite(union_or_member_state_law_requiring_erasure)), _Context)).
+test(attested_absence_of_erasure_law_is_not_referred, fail) :-
+    decision_of(erasure_no_ground, needs_legal_review(_, _)).
+test(attested_absence_of_erasure_law_need_not_comply) :-
+    decision_of(erasure_no_ground, need_not_comply).
+test(attested_erasure_law_must_comply) :-
+    verdict_of(erasure_required_by_law, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_17_1_e)])).
+
+% ---- Art 17(1)(b) and (c) ----------------------------------------------------
+test(withdrawn_consent_must_erase) :-
+    verdict_of(erasure_consent_withdrawn, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_17_1_b)])).
+test(withdrawn_consent_with_another_ground_is_not_must_comply, fail) :-
+    decision_of(erasure_consent_withdrawn_other_ground, must_comply).
+test(withdrawn_consent_with_another_ground_need_not_comply) :-
+    decision_of(erasure_consent_withdrawn_other_ground, need_not_comply).
+test(direct_marketing_objection_must_erase) :-
+    verdict_of(erasure_objection_direct_marketing, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_17_1_c)])).
+test(no_ground_is_not_must_comply, fail) :-
+    decision_of(erasure_no_ground, must_comply).
+
+% ---- Art 17(3) exceptions -------------------------------------------------
+test(freedom_of_expression_relieves) :-
+    exception_of(erasure_freedom_of_expression, art17_3_a).
+test(unnecessary_freedom_of_expression_does_not_relieve, fail) :-
+    exception_of(erasure_freedom_of_expression_not_necessary, art17_3_a).
+test(unnecessary_freedom_of_expression_must_comply) :-
+    decision_of(erasure_freedom_of_expression_not_necessary, must_comply).
+test(public_task_relieves) :-
+    exception_of(erasure_public_task, art17_3_b).
+test(unnecessary_public_task_does_not_relieve, fail) :-
+    exception_of(erasure_public_task_not_necessary, art17_3_b).
+test(law_requiring_processing_relieves) :-
+    exception_of(erasure_law_requires_processing, art17_3_b).
+test(law_not_requiring_processing_does_not_relieve, fail) :-
+    exception_of(erasure_law_does_not_require_processing, art17_3_b).
+test(law_not_requiring_processing_must_comply) :-
+    decision_of(erasure_law_does_not_require_processing, must_comply).
+test(public_health_relieves) :-
+    exception_of(erasure_public_health, art17_3_c).
+test(unnecessary_public_health_does_not_relieve, fail) :-
+    exception_of(erasure_public_health_not_necessary, art17_3_c).
+test(archiving_with_impairment_relieves) :-
+    exception_of(erasure_archiving_impairs_objectives, art17_3_d).
+test(archiving_without_impairment_does_not_relieve, fail) :-
+    exception_of(erasure_archiving_without_impairment, art17_3_d).
+test(archiving_without_impairment_must_comply) :-
+    decision_of(erasure_archiving_without_impairment, must_comply).
+test(legal_claims_relieve) :-
+    exception_of(erasure_legal_claims, art17_3_e).
+test(unnecessary_legal_claims_do_not_relieve, fail) :-
+    exception_of(erasure_legal_claims_not_necessary, art17_3_e).
+
+% ---- Art 18(1) restriction --------------------------------------------------
+test(contested_accuracy_must_restrict) :-
+    verdict_of(restriction_accuracy_contested, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_18_1_a)])).
+test(no_situation_is_not_must_comply, fail) :-
+    decision_of(restriction_no_situation, must_comply).
+test(no_situation_need_not_comply) :-
+    decision_of(restriction_no_situation, need_not_comply).
+test(legal_claims_must_restrict) :-
+    verdict_of(restriction_legal_claims, request_exception_verdict(must_comply, [cite(eu_reg_2016_679_art_18_1_c)])).
+test(legal_claims_not_required_is_not_must_comply, fail) :-
+    decision_of(restriction_legal_claims_not_required, must_comply).
+test(pending_verification_must_restrict) :-
+    decision_of(restriction_objection_pending_verification, must_comply).
+test(finished_verification_is_not_must_comply, fail) :-
+    decision_of(restriction_objection_verification_done, must_comply).
+test(unsure_unlawfulness_is_referred) :-
+    decision_of(restriction_unlawfulness_unsure, needs_legal_review(open_textured(personal_data_unlawfully_processed, cite(eu_reg_2016_679_art_18_1_b)), _Context)).
+test(lawful_processing_is_not_referred, fail) :-
+    decision_of(restriction_lawful_processing, needs_legal_review(_, _)).
+test(lawful_processing_need_not_comply) :-
+    decision_of(restriction_lawful_processing, need_not_comply).
+
+% ---- (0) input problems and (i) request type absent ---------------------------
+test(an_unknown_key_is_an_input_problem) :-
+    decision_of(access_request_unknown_key, input_problems([unknown_key(favourite_colour)])).
+test(a_clean_profile_has_no_input_problem, fail) :-
+    decision_of(access_request, input_problems(_)).
+test(a_duplicate_key_is_an_input_problem) :-
+    decision_of(access_request_duplicate_key, input_problems([duplicate_key(request_type)])).
+test(a_duplicate_key_is_not_also_a_wrong_type, fail) :-
+    decision_of(access_request_duplicate_key, input_problems([duplicate_key(request_type), wrong_type(request_type)])).
+test(an_absent_request_type_is_indeterminate) :-
+    decision_of(request_type_not_given, indeterminate([request_type])).
+test(a_given_request_type_is_not_indeterminate, fail) :-
+    decision_of(access_request, indeterminate(_)).
+test(the_status_projection_follows_the_decision) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(access_request_manifestly_unfounded, Profile),
+    request_exception_status(Profile, need_not_comply).
+
+:- end_module(test_negative_controls).

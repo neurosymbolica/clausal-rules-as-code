@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % european_union — vendored so an exported domain's `-import_from(european_union, [euro, eur_cent])` resolves.
 %
 % EMPTY EXPORT LIST, ON PURPOSE. Same shape and same reason as

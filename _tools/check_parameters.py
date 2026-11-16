@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """check_parameters.py -- validate a domain's parameter-provenance registry
 (Part B). Completeness (parameters-sources.yaml keys <-> records), key names a
 real fact functor, string-key well-formedness, status consistency, and an
@@ -247,7 +248,7 @@ def _prolog_sources(domain_dir):
     `.clausal` after the extension flip), eval/ and tests/ excluded."""
     out = []
     for root, dirs, files in os.walk(domain_dir):
-        dirs[:] = [d for d in dirs if d not in ("eval", "tests", "__pycache__")]
+        dirs[:] = [d for d in dirs if d not in ("eval", "tests", "iso", "__pycache__")]
         out += [os.path.join(root, f) for f in files if is_prolog(f)]
     return sorted(out)
 

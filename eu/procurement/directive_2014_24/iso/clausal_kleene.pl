@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_kleene.pl
 % Generated-companion of clausal.stdlib.kleene (source:
 % clausal/clausal/stdlib/kleene.clausal). Pure, cut-free, ->-free.

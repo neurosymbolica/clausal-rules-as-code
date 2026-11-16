@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 import os
 from _tools import check_provenance as cp
 

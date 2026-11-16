@@ -1,0 +1,210 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative cases for eu/labour/daily_rest.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls.
+%
+% A case is case(Profile, Worker, Shifts, PeriodStart, PeriodEnd): Profile
+% an attribute list, the other four the arguments of daily_rest_status/7.
+%
+% Every route of daily_rest_status/7 has a positive case and a near-miss
+% control that gets another answer:
+%   - given / not given: day shifts (960 minutes of rest) against a short
+%     rest (480); the threshold pair 660 (held) / 659 (short);
+%   - not applied to the worker: a mobile worker and a fishing-vessel worker
+%     with a short rest, against the same workers on day shifts (given,
+%     reading (7), (Q8));
+%   - a derogation (17(1), 17(3), 17(4), 18) with a short rest, against a
+%     derogation on day shifts (given);
+%   - a missing worker_category / derogation_from_article_3 with a short
+%     rest, against a missing category on day shifts (given);
+%   - on-call time on site: absent, counted, not counted, unsure, and unsure
+%     with the category missing; on-call standby unsure;
+%   - two absent on-call keys where the standby key is named by the
+%     measuring query, and its one-minute variant where the status
+%     names the on-site key;
+%   - no work start in the period, against a single shift;
+%   - a period start that cuts a shift (Q7), against the same with a short
+%     rest;
+%   - leave counted as rest (Q5), against the leave replaced by work;
+%   - a malformed profile and a reversed period (input problems), against
+%     the well-formed day-shift case.
+% =====================================================================
+
+:- module(fixtures, [
+    daily_rest_subject/1,
+    daily_rest_profile_for/2,
+    daily_rest_assess/2
+]).
+
+:- use_module(eu/labour/daily_rest/daily_rest, [decide_daily_rest/6]).
+
+% ---- Subject registry ------------------------------------------------
+daily_rest_subject(day_shift_worker).
+daily_rest_subject(short_rest_worker).
+daily_rest_subject(eleven_hour_rest_worker).
+daily_rest_subject(one_minute_short_rest_worker).
+daily_rest_subject(mobile_worker_short_rest).
+daily_rest_subject(mobile_worker_day_shifts).
+daily_rest_subject(fishing_vessel_worker_short_rest).
+daily_rest_subject(fishing_vessel_worker_day_shifts).
+daily_rest_subject(derogation_article_17_1_short_rest).
+daily_rest_subject(derogation_article_17_3_short_rest).
+daily_rest_subject(derogation_article_17_4_short_rest).
+daily_rest_subject(derogation_article_18_short_rest).
+daily_rest_subject(derogation_article_17_4_day_shifts).
+daily_rest_subject(missing_category_short_rest).
+daily_rest_subject(missing_category_day_shifts).
+daily_rest_subject(missing_derogation_short_rest).
+daily_rest_subject(on_call_on_site_absent).
+daily_rest_subject(on_call_on_site_counted).
+daily_rest_subject(on_call_on_site_not_counted).
+daily_rest_subject(on_call_on_site_unsure).
+daily_rest_subject(on_call_on_site_unsure_missing_category).
+daily_rest_subject(on_call_standby_unsure).
+daily_rest_subject(standby_behind_worker).
+daily_rest_subject(standby_behind_short_worker).
+daily_rest_subject(no_work_worker).
+daily_rest_subject(single_shift_worker).
+daily_rest_subject(period_cut_worker).
+daily_rest_subject(period_cut_short_worker).
+daily_rest_subject(leave_as_rest_worker).
+daily_rest_subject(leave_replaced_by_work_worker).
+daily_rest_subject(malformed_profile_worker).
+daily_rest_subject(reversed_period_worker).
+
+% ---- Profiles --------------------------------------------------------
+ordinary_profile([attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)]).
+
+% ---- Rotas -----------------------------------------------------------
+% Two 8-hour day shifts: 16 hours (960 minutes) of rest.
+day_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% Only 8 hours (480 minutes) between the shifts.
+short_rest_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 20, 0), work), shift(w1, date_time(2026, 3, 3, 4, 0), date_time(2026, 3, 3, 12, 0), work)]).
+
+% Exactly 660 minutes of rest (21:00 to 08:00): held.
+eleven_hour_rest_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 21, 0), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% 659 minutes of rest (21:01 to 08:00): one minute short.
+one_minute_short_rest_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 21, 1), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% On-call time on site 16:00-22:00: counted, 600 minutes of rest; not counted, 960.
+on_call_on_site_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 22, 0), on_call_on_site), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% The same rota with on-call standby in place of on-call on site.
+on_call_standby_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 22, 0), on_call_standby), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% Both on-call kinds unresolved. The on-site row lies after the period, so it
+% only matters inside the window the counted standby row opens: the on-site
+% kind is BEHIND the standby kind for SHORTEST (1320, 1320, 720, 660).
+standby_behind_shifts([shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 2, 2, 0), work), shift(w1, date_time(2026, 3, 2, 14, 0), date_time(2026, 3, 2, 15, 0), on_call_standby), shift(w1, date_time(2026, 3, 3, 2, 0), date_time(2026, 3, 3, 14, 0), on_call_on_site)]).
+
+% The same, the on-site row one minute earlier: with both counted the standby
+% window holds 659 minutes, so the status turns on both kinds.
+standby_behind_short_shifts([shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 2, 2, 0), work), shift(w1, date_time(2026, 3, 2, 14, 0), date_time(2026, 3, 2, 15, 0), on_call_standby), shift(w1, date_time(2026, 3, 3, 1, 59), date_time(2026, 3, 3, 14, 0), on_call_on_site)]).
+
+% Only another worker's row: worker w1 starts no work.
+another_worker_shifts([shift(w2, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work)]).
+
+% One shift 08:00-16:30: 930 minutes of rest in its window.
+single_shift([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 30), work)]).
+
+% A night shift across the period start: one window from 00:00, 1080 minutes of rest.
+period_cut_shifts([shift(w1, date_time(2026, 3, 1, 22, 0), date_time(2026, 3, 2, 6, 0), work)]).
+
+% The same with an evening shift: the window from 00:00 holds only 600.
+period_cut_short_shifts([shift(w1, date_time(2026, 3, 1, 22, 0), date_time(2026, 3, 2, 6, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 23, 0), work)]).
+
+% Paid annual leave and sick leave between the shifts are rest (Art 2(2)).
+leave_as_rest_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 3, 0, 0), paid_annual_leave), shift(w1, date_time(2026, 3, 3, 0, 0), date_time(2026, 3, 3, 8, 0), sick_leave), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% The sick leave replaced by work: 480 minutes of rest.
+leave_replaced_by_work_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 3, 0, 0), paid_annual_leave), shift(w1, date_time(2026, 3, 3, 0, 0), date_time(2026, 3, 3, 8, 0), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+% ---- Cases -----------------------------------------------------------
+daily_rest_profile_for(day_shift_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    ordinary_profile(Profile),
+    day_shifts(Shifts).
+daily_rest_profile_for(short_rest_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    ordinary_profile(Profile),
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(eleven_hour_rest_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    eleven_hour_rest_shifts(Shifts).
+daily_rest_profile_for(one_minute_short_rest_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    one_minute_short_rest_shifts(Shifts).
+daily_rest_profile_for(mobile_worker_short_rest, case([attribute(worker_category, mobile_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(mobile_worker_day_shifts, case([attribute(worker_category, mobile_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    day_shifts(Shifts).
+daily_rest_profile_for(fishing_vessel_worker_short_rest, case([attribute(worker_category, seagoing_fishing_vessel_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(fishing_vessel_worker_day_shifts, case([attribute(worker_category, seagoing_fishing_vessel_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    day_shifts(Shifts).
+daily_rest_profile_for(derogation_article_17_1_short_rest, case([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_17_1)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(derogation_article_17_3_short_rest, case([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_17_3)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(derogation_article_17_4_short_rest, case([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_17_4)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(derogation_article_18_short_rest, case([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_18)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(derogation_article_17_4_day_shifts, case([attribute(worker_category, other_worker), attribute(derogation_from_article_3, derogation_under_article_17_4)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    day_shifts(Shifts).
+daily_rest_profile_for(missing_category_short_rest, case([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(missing_category_day_shifts, case([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    day_shifts(Shifts).
+daily_rest_profile_for(missing_derogation_short_rest, case([attribute(worker_category, other_worker)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    short_rest_shifts(Shifts).
+daily_rest_profile_for(on_call_on_site_absent, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    ordinary_profile(Profile),
+    on_call_on_site_shifts(Shifts).
+daily_rest_profile_for(on_call_on_site_counted, case([attribute(on_call_on_site_counts_as_working_time, true), attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    on_call_on_site_shifts(Shifts).
+daily_rest_profile_for(on_call_on_site_not_counted, case([attribute(on_call_on_site_counts_as_working_time, false), attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    on_call_on_site_shifts(Shifts).
+daily_rest_profile_for(on_call_on_site_unsure, case([attribute(on_call_on_site_counts_as_working_time, unsure), attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    on_call_on_site_shifts(Shifts).
+daily_rest_profile_for(on_call_on_site_unsure_missing_category, case([attribute(on_call_on_site_counts_as_working_time, unsure)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    on_call_on_site_shifts(Shifts).
+daily_rest_profile_for(on_call_standby_unsure, case([attribute(on_call_on_site_counts_as_working_time, false), attribute(on_call_standby_counts_as_working_time, unsure), attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    on_call_standby_shifts(Shifts).
+daily_rest_profile_for(standby_behind_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    standby_behind_shifts(Shifts).
+daily_rest_profile_for(standby_behind_short_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    standby_behind_short_shifts(Shifts).
+daily_rest_profile_for(no_work_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    another_worker_shifts(Shifts).
+daily_rest_profile_for(single_shift_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    single_shift(Shifts).
+daily_rest_profile_for(period_cut_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    period_cut_shifts(Shifts).
+daily_rest_profile_for(period_cut_short_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    period_cut_short_shifts(Shifts).
+daily_rest_profile_for(leave_as_rest_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    ordinary_profile(Profile),
+    leave_as_rest_shifts(Shifts).
+daily_rest_profile_for(leave_replaced_by_work_worker, case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    ordinary_profile(Profile),
+    leave_replaced_by_work_shifts(Shifts).
+daily_rest_profile_for(malformed_profile_worker, case([attribute(worker_category, pilot), attribute(derogation_from_article_3, no_derogation), attribute(derogation_from_article_3, no_derogation), attribute(colour, red)], w1, Shifts, date(2026, 3, 2), date(2026, 3, 3))) :-
+    day_shifts(Shifts).
+daily_rest_profile_for(reversed_period_worker, case(Profile, w1, Shifts, date(2026, 3, 3), date(2026, 3, 2))) :-
+    ordinary_profile(Profile),
+    day_shifts(Shifts).
+
+% ---- Convenience wrapper ---------------------------------------------
+daily_rest_assess(Subject, Result) :-
+    daily_rest_profile_for(Subject, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    decide_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Result).
+
+:- end_module(fixtures).

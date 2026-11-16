@@ -1,0 +1,387 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/cra_art14_manufacturer_reporting
+shape_family: temporal
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "cra_art14_manufacturer_reporting"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- cra_art14_manufacturer_reporting.clausal --
+  - "severe_incident_status/3"
+  - "manufacturer_reporting_steps/4"
+  - "manufacturer_reporting_step_timeliness/5"
+  - "decide_cra_art14_manufacturer_reporting/2"
+  - "cra_art14_manufacturer_reporting_status/2"
+  - "cra_art14_manufacturer_reporting_checklist/2"
+  - "cra_art14_manufacturer_reporting_decision_resolvable/1"
+  - "cra_art14_manufacturer_reporting_status_values/1"
+  # -- queries.clausal --
+  - "cra_art14_manufacturer_reporting_profile_keys/1"
+  - "cra_art14_manufacturer_reporting_input_problems/2"
+  - "cra_art14_manufacturer_reporting_what_if/4"
+  - "severe/0"
+  - "not_severe/0"
+  - "on_time/0"
+  - "date/3"
+  - "step_due/3"
+  - "hours_after_awareness/1"
+  - "days_after_measure_available/1"
+  - "months_after_notification/1"
+  - "late/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "cra_art14_manufacturer_reporting_subject/1"
+  - "cra_art14_manufacturer_reporting_profile_for/2"
+  - "cra_art14_manufacturer_reporting_assess/2"
+
+# root_atoms: the order's root_exports, bare atoms the test cases read as
+# package-root module attributes. Atoms are never in a :- module export
+# list; the generated package facade carries them.
+root_atoms:
+  - "affects_protection_of_sensitive_or_important_data_or_functions"
+  - "leads_to_malicious_code_in_product_or_user_systems"
+  - "early_warning_without_undue_delay"
+  - "notification_without_undue_delay"
+  - "actively_exploited_vulnerability"
+  - "incident_impacting_product_security"
+  - "early_warning"
+  - "notification"
+  - "unsure"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib) and
+# library(reif), library(clpz); no shared backbone package.
+uses: []
+
+scope: >-
+  The reporting obligations of manufacturers under Article 14 of Regulation (EU)
+  2024/2847 (Cyber Resilience Act), with the definitions of Article 3 that Article
+  14 uses and the date of application of Article 14 in Article 71(2). Decided here:
+  whether an incident having an impact on the security of a product with digital
+  elements is severe (Art 14(5)(a) or (b), an OR of two judgement keys); which
+  reporting steps are due, with their limits, for an actively exploited
+  vulnerability (Art 14(1), (2)(a) to (c)) or a severe incident (Art 14(3), (4)(a)
+  to (c)), plus the intermediate report on request (Art 14(6)), none before
+  awareness on 11 September 2026 (Art 71(2)); and whether an early warning or a
+  notification was submitted within its 24-hour or 72-hour limit and without undue
+  delay (a judgement key; an unsure judgement goes to a lawyer). Out of scope:
+  who is a manufacturer and whether the event is one of the two kinds (the
+  caller's classification), the recipient CSIRT, ENISA and the single reporting
+  platform (Art 14(1), (3), (7)), the content of each step and 'unless the
+  relevant information has already been provided', informing users (Art 14(8)),
+  the Commission's acts (Art 14(9), (10)), the end date of the calendar periods,
+  product scope and transitional provisions, and overlap with NIS2 and DORA.
+  Every reading is the author's, not a lawyer's.
+
+sources:
+  - "Regulation (EU) 2024/2847 of the European Parliament and of the Council of 23 October 2024 (Cyber Resilience Act), OJ L, 2024/2847, 20.11.2024 (CELEX 32024R2847), original OJ text as published, pinned in eu/cra_art14_manufacturer_reporting/sources/ (raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed)"
+  - "Art 3(1), (13), (40), (42), (43), (44): product with digital elements, manufacturer, vulnerability, actively exploited vulnerability, incident, incident having an impact on the security of the product (read as the caller's classification)"
+  - "Art 14(1) and (2)(a) to (c): notification of an actively exploited vulnerability; early warning within 24 hours, vulnerability notification within 72 hours, final report no later than 14 days after a corrective or mitigating measure is available"
+  - "Art 14(3) and (4)(a) to (c): notification of a severe incident; early warning within 24 hours, incident notification within 72 hours, final report within one month after the incident notification"
+  - "Art 14(5)(a) and (b): when an incident having an impact on the security of the product is severe"
+  - "Art 14(6): intermediate report at the request of the CSIRT designated as coordinator"
+  - "Art 71(2), second sentence: Article 14 shall apply from 11 September 2026"
+
+query_interface:
+  2: "severe_incident_status/3"                        # eligibility: severity verdict with citations (checklist: cra_art14_manufacturer_reporting_checklist/2)
+  15: "manufacturer_reporting_steps/4"                 # deadline: steps due with their limits (consequence of missing: manufacturer_reporting_step_timeliness/5)
+  16: "cra_art14_manufacturer_reporting_what_if/4"     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings_and_lead_words
+  units:
+  - 32024R2847#art_003
+  - 32024R2847#art_014
+  - 32024R2847#art_071
+  - 32024R2847#parag_014.002
+  - 32024R2847#parag_014.004
+  reason: 'The headings of Articles 3, 14 and 71, the lead words of Article 3, and
+    the lead words of Art 14(2) and (4) (''For the purposes of the notification referred
+    to in paragraph 1 [or 3], the manufacturer shall submit:'') carry no rule of their
+    own: they introduce the definitions and the points (a) to (c), which are formalised,
+    or deferred, one by one.'
+  consequence: 'None for a caller: the steps come from the points.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: definitions_read_as_the_callers_classification
+  units:
+  - 32024R2847#point_003_1
+  - 32024R2847#point_003_13
+  - 32024R2847#point_003_40
+  - 32024R2847#point_003_42
+  - 32024R2847#point_003_43
+  - 32024R2847#point_003_44
+  reason: Art 3(1) and (13) define product with digital elements and manufacturer;
+    Art 3(40), (42), (43) and (44) define vulnerability, actively exploited vulnerability,
+    incident and incident having an impact on the security of the product. They are
+    quoted for readings (1) and (2); whether the asker is a manufacturer of such a
+    product and whether the event is one of the two EVENT atoms is the caller's classification,
+    with no key.
+  consequence: The answers presuppose a manufacturer of a product with digital elements
+    and an event of the kind EVENT names; the caller checks the definitions first.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32024R2847#point_003_2
+  - 32024R2847#point_003_3
+  - 32024R2847#point_003_4
+  - 32024R2847#point_003_5
+  - 32024R2847#point_003_6
+  - 32024R2847#point_003_7
+  - 32024R2847#point_003_8
+  - 32024R2847#point_003_9
+  - 32024R2847#point_003_10
+  - 32024R2847#point_003_11
+  - 32024R2847#point_003_12
+  - 32024R2847#point_003_14
+  - 32024R2847#point_003_18
+  - 32024R2847#point_003_19
+  - 32024R2847#point_003_20
+  - 32024R2847#point_003_21
+  - 32024R2847#point_003_22
+  - 32024R2847#point_003_23
+  - 32024R2847#point_003_24
+  - 32024R2847#point_003_25
+  - 32024R2847#point_003_26
+  - 32024R2847#point_003_27
+  - 32024R2847#point_003_28
+  - 32024R2847#point_003_29
+  - 32024R2847#point_003_30
+  - 32024R2847#point_003_31
+  - 32024R2847#point_003_32
+  - 32024R2847#point_003_33
+  - 32024R2847#point_003_34
+  - 32024R2847#point_003_35
+  - 32024R2847#point_003_36
+  - 32024R2847#point_003_37
+  - 32024R2847#point_003_38
+  - 32024R2847#point_003_39
+  - 32024R2847#point_003_41
+  - 32024R2847#point_003_45
+  - 32024R2847#point_003_46
+  - 32024R2847#point_003_47
+  - 32024R2847#point_003_48
+  - 32024R2847#point_003_49
+  - 32024R2847#point_003_50
+  reason: The other points of Article 3 define words that no limb of this order reads
+    (for example placing on the market, making available on the market, cybersecurity,
+    cybersecurity risk, exploitable vulnerability, near miss, cyber threat, personal
+    data).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: recipient_and_channel
+  units:
+  - 32024R2847#parag_014.007
+  - 32024R2847#point_014.007_a
+  - 32024R2847#point_014.007_b
+  - 32024R2847#point_014.007_c
+  - 32024R2847#point_014.007_d
+  - 32024R2847#point_003_15
+  - 32024R2847#point_003_16
+  - 32024R2847#point_003_17
+  - 32024R2847#point_003_51
+  reason: Art 14(7) says that the notifications go via the single reporting platform
+    through the electronic notification end-point of the CSIRT designated as coordinator
+    of the Member State of the manufacturer's main establishment in the Union (where
+    cybersecurity decisions are predominantly taken, else the establishment with the
+    highest number of employees), and, with no main establishment in the Union, of
+    the Member State fixed by the order in points (a) to (d) (authorised representative,
+    importer, distributor, users); Art 3(15), (16), (17) and (51) define the persons
+    and the CSIRT it names. Which end-point the manufacturer must use is not formalised
+    (reading (13)).
+  consequence: No answer says to which CSIRT or through which end-point the steps
+    are submitted.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: recipients_and_platform_words_of_paragraphs_1_and_3
+  partial: true
+  units:
+  - 32024R2847#parag_014.001
+  - 32024R2847#parag_014.003
+  reason: Art 14(1) and (3) are read for the duty they state (the manufacturer notifies
+    an actively exploited vulnerability, or a severe incident having an impact on
+    the security of the product, that it becomes aware of); their words 'simultaneously
+    to the CSIRT designated as coordinator, in accordance with paragraph 7 of this
+    Article, and to ENISA' and 'via the single reporting platform established pursuant
+    to Article 16' are not formalised (reading (13)).
+  consequence: No answer says whether the notification went to both recipients or
+    through the platform.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: content_of_the_steps_and_unless_already_provided
+  partial: true
+  units:
+  - 32024R2847#point_014.002_a
+  - 32024R2847#point_014.002_b
+  - 32024R2847#point_014.002_c
+  - 32024R2847#point_014.004_a
+  - 32024R2847#point_014.004_b
+  - 32024R2847#point_014.004_c
+  reason: Points (a) to (c) of Art 14(2) and (4) are read for the step, its limit
+    and its 'without undue delay'. What each step must indicate or provide (Member
+    States where the product is made available, whether unlawful or malicious acts
+    are suspected, general information, corrective or mitigating measures, how sensitive
+    the information is) and the words 'unless the relevant information has already
+    been provided' in points (b) and (c) are not formalised (readings (4) and (10);
+    open question (Q4)).
+  consequence: A listed notification or final report may in law not be needed where
+    the relevant information has already been provided; the caller decides that. No
+    answer checks the content of a report.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: content_of_the_final_reports
+  units:
+  - 32024R2847#point_014.002_c_i
+  - 32024R2847#point_014.002_c_ii
+  - 32024R2847#point_014.002_c_iii
+  - 32024R2847#point_014.004_c_i
+  - 32024R2847#point_014.004_c_ii
+  - 32024R2847#point_014.004_c_iii
+  reason: Points (c)(i) to (iii) of Art 14(2) and (4) list what the final report must
+    include at least. The content of a report is not formalised.
+  consequence: No answer checks what a final report contains.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: informing_users
+  units:
+  - 32024R2847#parag_014.008
+  reason: Art 14(8) requires the manufacturer, after becoming aware, to inform the
+    impacted users (and where appropriate all users) of the vulnerability or incident
+    and, where necessary, of risk mitigation and corrective measures, and lets the
+    coordinator CSIRTs inform users where the manufacturer fails to do so in a timely
+    manner. It sets no hour limit and is not formalised.
+  consequence: No answer says whether or when users must be informed.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: commission_acts
+  units:
+  - 32024R2847#parag_014.009
+  - 32024R2847#parag_014.010
+  reason: Art 14(9) and (10) empower and oblige the Commission to adopt delegated
+    acts (grounds for delaying dissemination under Art 16(2)) and implementing acts
+    (format and procedures of the notifications); they bind the Commission, not the
+    manufacturer.
+  consequence: None for these answers; acts adopted under them are not read.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: entry_into_force
+  units:
+  - 32024R2847#parag_071.001
+  reason: Art 71(1) fixes the entry into force of the Regulation; the date from which
+    Art 14 applies is the one Art 71(2) gives, which the order reads.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: other_application_dates
+  partial: true
+  units:
+  - 32024R2847#parag_071.002
+  reason: Art 71(2) is read for its sentence 'Article 14 shall apply from 11 September
+    2026' (reading (11)); its dates for the rest of the Regulation (11 December 2027)
+    and for Chapter IV (11 June 2026) are not formalised (open question (Q12)).
+  consequence: No answer says from when any other Article applies.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: product_scope_and_exclusions
+  instrument: Regulation (EU) 2024/2847 Art 2
+  cites:
+  - 32024R2847#art_002
+  reason: Not pinned in this domain. Whether the product is within the scope of the
+    Regulation (and not excluded) is the caller's fact (reading (1)).
+  consequence: The answers presuppose a product with digital elements within the scope
+    of the Regulation.
+- what: transitional_provisions
+  instrument: Regulation (EU) 2024/2847 Art 69
+  cites:
+  - 32024R2847#art_069
+  reason: Not pinned in this domain. The transitional provisions for products placed
+    on the market before the Regulation applies are not read (open question (Q14)).
+  consequence: The caller checks the transitional provisions first; the answers treat
+    the product as one Art 14 reaches.
+- what: voluntary_reporting
+  instrument: Regulation (EU) 2024/2847 Art 15
+  cites:
+  - 32024R2847#art_015
+  reason: Not pinned in this domain. This order formalises the duties of Art 14 only;
+    Art 15 (voluntary reporting) is not read.
+  consequence: No answer covers voluntary reports.
+- what: single_reporting_platform
+  instrument: Regulation (EU) 2024/2847 Art 16
+  cites:
+  - 32024R2847#art_016
+  reason: Not pinned in this domain. The single reporting platform that Art 14(1),
+    (3) and (7) name is established under Art 16, which is not read (reading (13)).
+  consequence: No answer covers the platform or what happens to a notification after
+    it is submitted.
+- what: incident_definition_in_nis2
+  instrument: Directive (EU) 2022/2555 Art 6
+  cites:
+  - 32022L2555#art_006
+  reason: Not pinned in this domain. Art 3(43) defines 'incident' by Article 6, point
+    (6), of Directive (EU) 2022/2555; whether an event is an incident is the caller's
+    classification (reading (2)).
+  consequence: The caller checks the Directive's definition of incident first.
+- what: calendar_periods
+  instrument: Regulation (EEC, Euratom) No 1182/71 Art 3
+  cites:
+  - 31971R1182#art_003
+  reason: The 14-day and one-month limits of Art 14(2)(c) and (4)(c) are calendar
+    periods; computing their end needs the period rules of Regulation 1182/71, which
+    are not pinned in this domain. The limits are listed (days_after_measure_available(14),
+    months_after_notification(1)) but no date is computed (reading (8)).
+  consequence: The caller computes the end of the 14-day or one-month period itself.
+- what: overlap_with_nis2_and_dora
+  instrument: Directive (EU) 2022/2555 Art 23 and Regulation (EU) 2022/2554 Art 19
+  cites:
+  - 32022L2555#art_023
+  - 32022R2554#art_019
+  reason: Not pinned in this domain. A manufacturer may also have to report the same
+    event as an essential or important entity, or as a financial entity; how those
+    duties interact is not decided here (open question (Q13)).
+  consequence: The answers say nothing about reporting under those acts.

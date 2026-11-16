@@ -1,0 +1,159 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests for decide_sme_definition/2:
+% the result and citations read out for every fixture subject, with every
+% ceiling, share and limit at the figure and one unit past it.
+% Run: python -m clausal.testing eu/state_aid/sme_definition/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/state_aid/sme_definition/sme_definition, [
+    decide_sme_definition/2,
+    sme_definition_status/2
+]).
+:- use_module(eu/state_aid/sme_definition/fixtures, [
+    sme_definition_subject/1,
+    sme_definition_profile_for/2
+]).
+
+subject_verdict(Subject, Result, Citations) :-
+    sme_definition_profile_for(Subject, Request),
+    decide_sme_definition(Request, sme_definition_verdict(Result, Citations)).
+
+subject_statuses(Subject, Statuses) :-
+    sme_definition_profile_for(Subject, Request),
+    findall(Status, sme_definition_status(Request, Status), Statuses).
+
+expected_result(micro_staff_just_below_ceiling, micro_enterprise).
+expected_result(micro_staff_at_ceiling, small_enterprise).
+expected_result(micro_turnover_at_ceiling, micro_enterprise).
+expected_result(micro_turnover_one_cent_above_ceiling, small_enterprise).
+expected_result(micro_balance_sheet_at_ceiling, micro_enterprise).
+expected_result(micro_balance_sheet_one_cent_above_ceiling, small_enterprise).
+expected_result(small_staff_just_below_ceiling, small_enterprise).
+expected_result(small_staff_at_ceiling, medium_sized_enterprise).
+expected_result(small_turnover_at_ceiling, small_enterprise).
+expected_result(small_turnover_one_cent_above_ceiling, medium_sized_enterprise).
+expected_result(small_balance_sheet_at_ceiling, small_enterprise).
+expected_result(small_balance_sheet_one_cent_above_ceiling, medium_sized_enterprise).
+expected_result(medium_staff_just_below_ceiling, medium_sized_enterprise).
+expected_result(medium_staff_at_ceiling, large_enterprise).
+expected_result(medium_turnover_at_ceiling, medium_sized_enterprise).
+expected_result(medium_turnover_one_cent_above_ceiling, large_enterprise).
+expected_result(medium_balance_sheet_at_ceiling, medium_sized_enterprise).
+expected_result(medium_balance_sheet_one_cent_above_ceiling, large_enterprise).
+expected_result(partner_share_lifts_staff_to_ceiling, small_enterprise).
+expected_result(partner_share_one_point_below, micro_enterprise).
+expected_result(linked_staff_lifts_to_ceiling, small_enterprise).
+expected_result(linked_staff_one_hundredth_below, micro_enterprise).
+expected_result(linked_list_not_given, indeterminate([linked_enterprises])).
+expected_result(entity_not_an_enterprise, not_an_enterprise).
+expected_result(enterprise_status_unsure_under_public_control, needs_legal_review(open_textured(is_enterprise, cite(eu_rec_2003_361_annex_art_1_t1)), [inputs_relied_on([is_enterprise-unsure])])).
+expected_result(public_body_control_reached, not_sme_public_control).
+expected_result(public_body_control_not_reached, micro_enterprise).
+expected_result(two_periods_held_micro_kept, micro_enterprise).
+expected_result(two_periods_held_small_kept, small_enterprise).
+expected_result(two_periods_both_small, small_enterprise).
+expected_result(sme_staff_just_below_medium_ceiling, sme).
+expected_result(sme_staff_at_medium_ceiling, not_sme).
+expected_result(sme_under_public_control, not_sme).
+expected_result(staff_just_below_small_ceiling_is_below_medium, below_medium).
+expected_result(staff_at_small_ceiling_is_at_least_medium, at_least_medium).
+expected_result(majority_of_voting_rights_links, linked_enterprise).
+expected_result(holding_at_partner_threshold, partner_enterprise).
+expected_result(holding_one_point_below_partner_threshold, neither_partner_nor_linked).
+expected_result(business_angels_one_cent_below_limit, neither_partner_nor_linked).
+expected_result(business_angels_at_limit, partner_enterprise).
+expected_result(local_authority_within_limits, neither_partner_nor_linked).
+expected_result(local_authority_inhabitants_at_limit, partner_enterprise).
+expected_result(local_authority_budget_at_limit, partner_enterprise).
+expected_result(presumed_investor_not_involved_in_management, neither_partner_nor_linked).
+expected_result(investor_involved_in_management_links, linked_enterprise).
+expected_result(natural_persons_in_same_market, linked_enterprise).
+expected_result(natural_persons_in_other_market, neither_partner_nor_linked).
+expected_result(dominant_influence_unsure, needs_legal_review(open_textured(dominant_influence_by_contract_or_articles, cite(eu_reg_651_2014_annex_i_art_3_3_c)), [inputs_relied_on([dominant_influence_by_contract_or_articles-unsure])])).
+expected_result(unknown_text, input_problems([wrong_type(text)])).
+
+test(every_subject_gets_its_expected_result) :-
+    findall(Subject-Result, (sme_definition_subject(Subject), subject_verdict(Subject, Result, _)), Actual),
+    msort(Actual, ActualSorted),
+    findall(Subject-Result, expected_result(Subject, Result), Expected),
+    msort(Expected, ExpectedSorted),
+    ActualSorted == ExpectedSorted.
+
+test(the_micro_staff_ceiling_is_strict) :-
+    subject_statuses(micro_staff_just_below_ceiling, Below),
+    Below == [micro_enterprise],
+    subject_statuses(micro_staff_at_ceiling, AtCeiling),
+    AtCeiling == [small_enterprise].
+test(the_medium_turnover_ceiling_includes_the_figure) :-
+    subject_statuses(medium_turnover_at_ceiling, AtCeiling),
+    AtCeiling == [medium_sized_enterprise],
+    subject_statuses(medium_turnover_one_cent_above_ceiling, Above),
+    Above == [large_enterprise].
+test(the_balance_sheet_alone_can_meet_the_medium_ceilings) :-
+    subject_statuses(medium_balance_sheet_at_ceiling, Statuses),
+    Statuses == [medium_sized_enterprise].
+
+test(an_autonomous_micro_cites_article_6_1) :-
+    subject_verdict(micro_staff_just_below_ceiling, micro_enterprise, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_3), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_1)], Expected),
+    Citations == Expected.
+test(a_gber_answer_cites_gber_keys) :-
+    subject_verdict(micro_balance_sheet_at_ceiling, micro_enterprise, Citations),
+    sort([cite(eu_reg_651_2014_annex_i_art_2_3), cite(eu_reg_651_2014_annex_i_art_5), cite(eu_reg_651_2014_annex_i_art_6_1)], Expected),
+    Citations == Expected.
+test(a_partner_cites_its_proportional_aggregation) :-
+    subject_verdict(partner_share_lifts_staff_to_ceiling, small_enterprise, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_2), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_2), cite(eu_rec_2003_361_annex_art_6_t3)], Expected),
+    Citations == Expected.
+test(a_linked_enterprise_cites_its_full_aggregation) :-
+    subject_verdict(linked_staff_lifts_to_ceiling, small_enterprise, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_2), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_2), cite(eu_rec_2003_361_annex_art_6_t4)], Expected),
+    Citations == Expected.
+test(two_approved_periods_cite_article_4_1_and_4_2) :-
+    subject_verdict(two_periods_both_small, small_enterprise, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_2), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_1), cite(eu_rec_2003_361_annex_art_4_1), cite(eu_rec_2003_361_annex_art_4_2)], Expected),
+    Citations == Expected.
+test(a_bona_fide_estimate_cites_article_4_3) :-
+    subject_verdict(public_body_control_not_reached, micro_enterprise, Citations),
+    sort([cite(eu_reg_651_2014_annex_i_art_2_3), cite(eu_reg_651_2014_annex_i_art_5), cite(eu_reg_651_2014_annex_i_art_6_1), cite(eu_reg_651_2014_annex_i_art_4_3)], Expected),
+    Citations == Expected.
+test(a_large_enterprise_is_not_sme_under_article_2_1) :-
+    subject_verdict(sme_staff_at_medium_ceiling, not_sme, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_1), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_1), cite(eu_rec_2003_361_annex_art_4_3)], Expected),
+    Citations == Expected.
+test(public_control_is_not_sme_under_article_3_4) :-
+    subject_verdict(sme_under_public_control, not_sme, Citations),
+    Citations == [cite(eu_reg_651_2014_annex_i_art_3_4)].
+test(below_medium_cites_article_2_2) :-
+    subject_verdict(staff_just_below_small_ceiling_is_below_medium, below_medium, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_2_2), cite(eu_rec_2003_361_annex_art_5), cite(eu_rec_2003_361_annex_art_6_1), cite(eu_rec_2003_361_annex_art_4_3)], Expected),
+    Citations == Expected.
+test(the_business_angel_exception_cites_point_a) :-
+    subject_verdict(business_angels_one_cent_below_limit, neither_partner_nor_linked, Citations),
+    sort([cite(eu_reg_651_2014_annex_i_art_3_1), cite(eu_reg_651_2014_annex_i_art_3_t1), cite(eu_reg_651_2014_annex_i_art_3_2_a)], Expected),
+    Citations == Expected.
+test(the_presumption_cites_its_subparagraph_and_point_c_of_the_exception) :-
+    subject_verdict(presumed_investor_not_involved_in_management, neither_partner_nor_linked, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_3_1), cite(eu_rec_2003_361_annex_art_3_t3), cite(eu_rec_2003_361_annex_art_3_t6), cite(eu_rec_2003_361_annex_art_3_t13)], Expected),
+    Citations == Expected.
+test(an_involved_investor_links_under_point_c) :-
+    subject_verdict(investor_involved_in_management_links, linked_enterprise, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_3_3), cite(eu_rec_2003_361_annex_art_3_t11)], Expected),
+    Citations == Expected.
+test(natural_persons_in_another_market_cite_the_market_subparagraphs) :-
+    subject_verdict(natural_persons_in_other_market, neither_partner_nor_linked, Citations),
+    sort([cite(eu_rec_2003_361_annex_art_3_1), cite(eu_rec_2003_361_annex_art_3_t15), cite(eu_rec_2003_361_annex_art_3_t16)], Expected),
+    Citations == Expected.
+test(a_holding_below_the_threshold_cites_article_3_1_only) :-
+    subject_verdict(holding_one_point_below_partner_threshold, neither_partner_nor_linked, Citations),
+    Citations == [cite(eu_rec_2003_361_annex_art_3_1)].
+test(a_non_final_answer_carries_no_citation) :-
+    subject_verdict(linked_list_not_given, _, LinkedCitations),
+    LinkedCitations == [],
+    subject_verdict(dominant_influence_unsure, _, ReferralCitations),
+    ReferralCitations == [],
+    subject_verdict(unknown_text, _, ProblemCitations),
+    ProblemCitations == [].
+
+:- end_module(test_output_mode).

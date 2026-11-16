@@ -1,0 +1,204 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/gpai_models.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served as follows (manifest query_interface):
+%   #3  status_determination  -- systemic_risk_classification_status/4
+%                                (the slice; re-exported by the facade)
+%   #14 obligation_surfacing  -- provider_obligation_status/5 (the slice)
+%   #15 deadline              -- systemic_risk_notification_status/5 (the
+%                                slice: the two-week day of Art 52(1),
+%                                read with Art 111(3) and Art 113(b))
+%   #1  factual_lookup        -- documentation_elements/3 (the slice:
+%                                Annexes XI and XII as data)
+%   #7  justification         -- gpai_models_checklist/2 (the slice: one
+%                                cite(...) per checklist item)
+%   #2  status projection     -- gpai_models_status/2 (the slice)
+%   #16 what-if               -- gpai_models_what_if/4 (below)
+%
+% gpai_models_what_if/4: override one profile key of a request, then
+%   re-decide. The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...]
+%   (the order's typed input contract), not a dict, so the override is the
+%   attribute-list plumbing below rather than query_combinators'
+%   override_key/4 (which rewrites a dict). It decides nothing statutory
+%   and carries no provenance marker.
+% gpai_models_profile_keys/1: the top-level profile key schema.
+% gpai_models_input_problems/2: the problems a profile has ([] = none),
+%   re-exported from the kernel as the scaffold wrote it.
+%
+% RESULT CONSTRUCTORS (INTERFACE - THE ANSWER SHAPES (5)): date/3,
+%   indeterminate/1, needs_legal_review/2, open_textured/2,
+%   inputs_relied_on/1, provenance/2, input_problems/1, unknown_key/1,
+%   wrong_type/1 and duplicate_key/1 are exported so the package root
+%   carries their names. Each has a SHAPE CHECK clause below: it holds
+%   when its arguments have the shape the order states for that
+%   constructor, and fails otherwise. They decide nothing statutory.
+%   (They are defined by clauses, so they carry no constructors/1
+%   declaration: a name/arity is either declared data or defined.)
+% ROOT ATOMS (root_exports): the ten profile key atoms, the ten OBLIGATION
+%   atoms, the DOCUMENT atom additional_technical_documentation_for_models_with_systemic_risk
+%   (technical_documentation and information_for_downstream_providers are
+%   both OBLIGATION and DOCUMENT atoms, listed once) and the judgement value
+%   unsure, as bare /0 facts read by the scorer as package attributes.
+% =====================================================================
+
+:- module(queries, [
+    gpai_models_profile_keys/1,
+    gpai_models_input_problems/2,
+    gpai_models_what_if/4,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    general_purpose_ai_model/0,
+    used_for_research_development_or_prototyping_before_being_placed_on_the_market/0,
+    cumulative_training_computation_in_floating_point_operations/0,
+    high_impact_capabilities/0,
+    designated_by_a_commission_decision_as_a_model_with_systemic_risk/0,
+    commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks/0,
+    released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution/0,
+    parameters_weights_architecture_and_usage_information_made_publicly_available/0,
+    provider_established_in_a_third_country/0,
+    placed_on_the_market_before_2_august_2025/0,
+    technical_documentation/0,
+    information_for_downstream_providers/0,
+    copyright_policy/0,
+    training_content_summary/0,
+    cooperation_with_authorities/0,
+    authorised_representative/0,
+    model_evaluation/0,
+    systemic_risk_assessment_and_mitigation/0,
+    serious_incident_reporting/0,
+    cybersecurity_protection/0,
+    additional_technical_documentation_for_models_with_systemic_risk/0,
+    unsure/0
+]).
+
+:- use_module(eu/ai_act/gpai_models/kernel, [gpai_models_input_problems/2]).
+:- use_module(eu/ai_act/gpai_models/gpai_models, [gpai_models_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gpai_models_profile_keys([general_purpose_ai_model, used_for_research_development_or_prototyping_before_being_placed_on_the_market, cumulative_training_computation_in_floating_point_operations, high_impact_capabilities, designated_by_a_commission_decision_as_a_model_with_systemic_risk, commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks, released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution, parameters_weights_architecture_and_usage_information_made_publicly_available, provider_established_in_a_third_country, placed_on_the_market_before_2_august_2025]).
+
+% ---- result constructors: shape checks ---------------------------------
+% date(Year, Month, Day): three integers, the month 1 to 12, the day 1 to 31.
+date(Year, Month, Day) :-
+    integer(Year),
+    integer(Month),
+    integer(Day),
+    Month >= 1,
+    Month =< 12,
+    Day >= 1,
+    Day =< 31.
+
+% indeterminate([MissingKey]): exactly one bare key atom.
+indeterminate([MissingKey]) :-
+    atom(MissingKey).
+
+% needs_legal_review(open_textured(Judgement, cite(Citation)), Context):
+% Context is [inputs_relied_on(Pairs)], optionally followed by one
+% provenance(Clause, Citations).
+needs_legal_review(open_textured(Judgement, cite(CitationKey)), [inputs_relied_on(Pairs)]) :-
+    atom(Judgement),
+    atom(CitationKey),
+    is_list(Pairs).
+needs_legal_review(open_textured(Judgement, cite(CitationKey)), [inputs_relied_on(Pairs), provenance(Clause, Citations)]) :-
+    atom(Judgement),
+    atom(CitationKey),
+    is_list(Pairs),
+    atom(Clause),
+    is_list(Citations).
+
+open_textured(Judgement, cite(CitationKey)) :-
+    atom(Judgement),
+    atom(CitationKey).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(Clause, Citations) :-
+    atom(Clause),
+    is_list(Citations).
+
+input_problems(Problems) :-
+    is_list(Problems).
+
+% unknown_key(Key): Key as given; here any bound term.
+unknown_key(UnknownKey) :-
+    nonvar(UnknownKey).
+
+wrong_type(Name) :-
+    atom(Name).
+
+duplicate_key(DuplicatedKey) :-
+    atom(DuplicatedKey).
+
+% ---- root atoms: the ten profile keys ---------------------------------
+general_purpose_ai_model.
+used_for_research_development_or_prototyping_before_being_placed_on_the_market.
+cumulative_training_computation_in_floating_point_operations.
+high_impact_capabilities.
+designated_by_a_commission_decision_as_a_model_with_systemic_risk.
+commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks.
+released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution.
+parameters_weights_architecture_and_usage_information_made_publicly_available.
+provider_established_in_a_third_country.
+placed_on_the_market_before_2_august_2025.
+
+% ---- root atoms: the ten obligations and the three documents ----------
+technical_documentation.
+information_for_downstream_providers.
+copyright_policy.
+training_content_summary.
+cooperation_with_authorities.
+authorised_representative.
+model_evaluation.
+systemic_risk_assessment_and_mitigation.
+serious_incident_reporting.
+cybersecurity_protection.
+additional_technical_documentation_for_models_with_systemic_risk.
+
+% ---- root atom: the judgement value besides true and false ------------
+unsure.
+
+% #16 what-if: re-evaluate a request with one profile key hypothetically
+% overridden. Request is a facade request term:
+%   systemic_risk_classification(Profile, AssessmentDate)
+%   systemic_risk_notification(Profile, TriggerDate, NotificationDate)
+%   provider_obligation(Profile, Obligation, AssessmentDate)
+%   documentation(Document)   (reads no profile: re-decided unchanged)
+gpai_models_what_if(Request, OverriddenKey, NewValue, NewStatus) :-
+    request_with_override(Request, OverriddenKey, NewValue, Hypothesis),
+    gpai_models_status(Hypothesis, NewStatus).
+
+request_with_override(systemic_risk_classification(Profile, AssessmentDate), OverriddenKey, NewValue, systemic_risk_classification(NewProfile, AssessmentDate)) :-
+    profile_with_override(Profile, OverriddenKey, NewValue, NewProfile).
+request_with_override(systemic_risk_notification(Profile, TriggerDate, NotificationDate), OverriddenKey, NewValue, systemic_risk_notification(NewProfile, TriggerDate, NotificationDate)) :-
+    profile_with_override(Profile, OverriddenKey, NewValue, NewProfile).
+request_with_override(provider_obligation(Profile, Obligation, AssessmentDate), OverriddenKey, NewValue, provider_obligation(NewProfile, Obligation, AssessmentDate)) :-
+    profile_with_override(Profile, OverriddenKey, NewValue, NewProfile).
+request_with_override(documentation(Document), _, _, documentation(Document)).
+
+% Every attribute naming the key is dropped, then the one new attribute is
+% appended: the hypothesis gives the key exactly one value.
+profile_with_override(Profile, OverriddenKey, NewValue, NewProfile) :-
+    attributes_without_key(Profile, OverriddenKey, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], NewProfile).
+
+attributes_without_key([], _, []).
+attributes_without_key([attribute(ElementKey, _)|Elements], OverriddenKey, KeptAttributes) :-
+    ElementKey == OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+attributes_without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|KeptAttributes]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+
+:- end_module(queries).

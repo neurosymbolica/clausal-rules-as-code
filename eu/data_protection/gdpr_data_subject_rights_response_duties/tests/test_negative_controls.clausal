@@ -1,0 +1,152 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss (one condition
+% changed -> different verdict), proving the route is load-bearing. Every
+% `fail` test is paired with a positive test over the same case, so a
+% misspelt atom shows up as a failing positive test.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_response_duties/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/gdpr_data_subject_rights_response_duties, [
+    gdpr_data_subject_rights_response_duties_status/2,
+    gdpr_data_subject_rights_response_duties_status_values/1,
+    request_response_deadline/2,
+    response_duties/2,
+    recipient_notification/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/fixtures, [gdpr_data_subject_rights_response_duties_profile_for/2]).
+
+status_of(Subject, Status) :-
+    gdpr_data_subject_rights_response_duties_profile_for(Subject, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, Status).
+
+deadline_of(Subject, Deadline) :-
+    gdpr_data_subject_rights_response_duties_profile_for(Subject, Profile),
+    request_response_deadline(Profile, Deadline).
+
+test(the_near_miss_verdict_atoms_are_real_verdict_atoms) :-
+    gdpr_data_subject_rights_response_duties_status_values(StatusValues),
+    member(must_comply, StatusValues),
+    member(need_not_comply, StatusValues).
+
+% ---- Art 12(5): manifestly unfounded or excessive ----------------------
+test(excessive_request_need_not_comply) :-
+    status_of(access_excessive, need_not_comply).
+test(not_excessive_request_must_comply) :-
+    status_of(access_not_excessive, must_comply).
+test(not_excessive_request_is_not_refused, fail) :-
+    status_of(access_not_excessive, need_not_comply).
+
+% ---- Art 12(2): unable to identify -------------------------------------
+test(unable_to_identify_need_not_comply) :-
+    status_of(access_unable_to_identify, need_not_comply).
+test(without_the_showing_must_comply) :-
+    status_of(access_basic, must_comply).
+test(without_the_showing_not_refused, fail) :-
+    status_of(access_basic, need_not_comply).
+
+% ---- Art 12(6): identity suspension ------------------------------------
+test(unconfirmed_identity_suspends) :-
+    status_of(access_identity_suspended, suspended(art12_6_identity_not_confirmed)).
+test(confirmed_identity_must_comply) :-
+    status_of(access_identity_confirmed, must_comply).
+test(confirmed_identity_is_not_suspended, fail) :-
+    status_of(access_identity_confirmed, suspended(_)).
+
+% ---- Art 23: legislative restriction -----------------------------------
+test(attested_restriction_need_not_comply) :-
+    status_of(access_restricted_by_law, need_not_comply).
+test(attested_no_restriction_must_comply) :-
+    status_of(access_not_restricted_by_law, must_comply).
+test(no_restriction_is_not_a_refusal, fail) :-
+    status_of(access_not_restricted_by_law, need_not_comply).
+
+% ---- Art 16 rectification ----------------------------------------------
+test(inaccurate_data_must_comply) :-
+    status_of(rectification_inaccurate, must_comply).
+test(accurate_complete_data_need_not_comply) :-
+    status_of(rectification_nothing_wrong, need_not_comply).
+test(accurate_complete_data_is_not_must_comply, fail) :-
+    status_of(rectification_nothing_wrong, must_comply).
+
+% ---- Art 17 erasure and its exception ----------------------------------
+test(no_longer_necessary_must_comply) :-
+    status_of(erasure_no_longer_necessary, must_comply).
+test(legal_claims_exception_need_not_comply) :-
+    status_of(erasure_legal_claims_exception, need_not_comply).
+test(legal_claims_exception_is_not_must_comply, fail) :-
+    status_of(erasure_legal_claims_exception, must_comply).
+
+% ---- Art 18 restriction ------------------------------------------------
+test(contested_accuracy_must_comply) :-
+    status_of(restriction_accuracy_contested, must_comply).
+test(no_ground_need_not_comply) :-
+    status_of(restriction_no_ground, need_not_comply).
+test(no_ground_is_not_must_comply, fail) :-
+    status_of(restriction_no_ground, must_comply).
+
+% ---- Art 20 portability ------------------------------------------------
+test(portability_engaged_must_comply) :-
+    status_of(portability_engaged, must_comply).
+test(portability_not_automated_need_not_comply) :-
+    status_of(portability_not_automated, need_not_comply).
+test(portability_public_task_need_not_comply) :-
+    status_of(portability_public_task, need_not_comply).
+test(portability_not_automated_is_not_must_comply, fail) :-
+    status_of(portability_not_automated, must_comply).
+
+% ---- Art 21 objection --------------------------------------------------
+test(direct_marketing_objection_must_comply) :-
+    status_of(objection_marketing, must_comply).
+test(not_marketing_objection_need_not_comply) :-
+    status_of(objection_not_marketing, need_not_comply).
+test(compelling_grounds_need_not_comply) :-
+    status_of(objection_art21_1_compelling, need_not_comply).
+test(not_marketing_objection_is_not_must_comply, fail) :-
+    status_of(objection_not_marketing, must_comply).
+
+% ---- Art 22 automated decision -----------------------------------------
+test(explicit_consent_relieves) :-
+    status_of(automated_decision_consent, need_not_comply).
+test(no_consent_must_comply) :-
+    status_of(automated_decision_no_consent, must_comply).
+test(special_category_bar_removes_the_consent_exception) :-
+    status_of(automated_decision_special_bar, must_comply).
+test(special_category_bar_is_not_a_refusal, fail) :-
+    status_of(automated_decision_special_bar, need_not_comply).
+
+% ---- the extension and the calendar ------------------------------------
+test(necessary_extension_gives_three_months) :-
+    deadline_of(extension_necessary, date(2026, 4, 30)).
+test(unnecessary_extension_gives_one_month) :-
+    deadline_of(extension_not_necessary, date(2026, 3, 2)).
+test(unsure_extension_is_referred) :-
+    deadline_of(extension_unsure, needs_legal_review(open_textured(extension_necessary_for_complexity_and_number, cite(eu_reg_2016_679_art_12_3)), [inputs_relied_on([extension_necessary_for_complexity_and_number-unsure])])).
+test(unnecessary_extension_is_not_three_months, fail) :-
+    deadline_of(extension_not_necessary, date(2026, 4, 30)).
+test(public_holiday_moves_the_deadline) :-
+    deadline_of(holiday_shift, date(2026, 12, 1)).
+test(no_holiday_leaves_the_working_day) :-
+    deadline_of(no_holiday_shift, date(2026, 11, 30)).
+test(no_holiday_is_not_shifted_again, fail) :-
+    deadline_of(no_holiday_shift, date(2026, 12, 1)).
+
+% ---- Art 19 recipient notification -------------------------------------
+test(erasure_with_recipients_communicates) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_no_longer_necessary, Profile),
+    recipient_notification(Profile, [communicate_to_each_recipient(_)|_]).
+test(excused_effort_is_not_communicated, fail) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_effort_excused, Profile),
+    recipient_notification(Profile, [communicate_to_each_recipient(_)|_]).
+test(excused_effort_is_excused) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_effort_excused, Profile),
+    recipient_notification(Profile, [recipient_notification_excused(cite(eu_reg_2016_679_art_19))]).
+test(no_disclosure_is_not_applicable) :-
+    gdpr_data_subject_rights_response_duties_profile_for(rectification_inaccurate, Profile),
+    recipient_notification(Profile, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+test(refusal_has_no_recipient_duty) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_claims_exception, Profile),
+    recipient_notification(Profile, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+
+:- end_module(test_negative_controls).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """The corpus's ONE answer to "which files are Clausal predicate-module source".
 
 `.clausal` and `.seam` are aliases carrying the same seam syntax (engine

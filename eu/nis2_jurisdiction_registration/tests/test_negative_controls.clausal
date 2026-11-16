@@ -1,0 +1,109 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% One positive case and one near-miss per route; the near-miss changes one
+% required condition and flips the answer. Each negative is paired with a
+% positive over the same case, so a misspelt atom shows up as a failing
+% positive test.
+% Run: python -m clausal.testing eu/nis2_jurisdiction_registration/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/nis2_jurisdiction_registration/nis2_jurisdiction_registration, [
+    nis2_jurisdiction_registration_status/2,
+    nis2_jurisdiction_registration_status_values/1,
+    jurisdiction_basis/3,
+    main_establishment_rule/3,
+    registry_submission_items/2,
+    entity_list_submission_items/2,
+    change_notification_limits/2
+]).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    nis2_jurisdiction_registration_status_values(StatusValues),
+    member(ineligible, StatusValues).
+
+% ---- route: general entity ----
+test(general_entity_positive) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_establishment, _).
+test(general_entity_is_not_main_establishment_basis, fail) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_main_establishment, _).
+
+% ---- route: public electronic communications ----
+test(communications_positive) :-
+    jurisdiction_basis([attribute(entity_category, public_electronic_communications_provider)], state_where_services_are_provided, _).
+test(communications_is_not_state_of_establishment, fail) :-
+    jurisdiction_basis([attribute(entity_category, public_electronic_communications_provider)], state_of_establishment, _).
+
+% ---- route: public administration ----
+test(public_administration_positive) :-
+    jurisdiction_basis([attribute(entity_category, public_administration_entity)], state_that_established_the_entity, _).
+test(public_administration_is_not_state_of_establishment, fail) :-
+    jurisdiction_basis([attribute(entity_category, public_administration_entity)], state_of_establishment, _).
+
+% ---- route: provider established vs not established (flip of established_in_union) ----
+test(provider_established_positive) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, true)], state_of_main_establishment, _).
+test(provider_not_established_is_not_main_establishment, fail) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, true), attribute(representative_designated_in_union, true)], state_of_main_establishment, _).
+
+% ---- route: representative vs none (flip of representative_designated_in_union) ----
+test(representative_positive) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, true), attribute(representative_designated_in_union, true)], state_of_representative, _).
+test(no_representative_is_not_state_of_representative, fail) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, true), attribute(representative_designated_in_union, false)], state_of_representative, _).
+test(no_representative_legal_action_positive) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, true), attribute(representative_designated_in_union, false)], any_member_state_where_services_are_provided_may_take_legal_action, _).
+
+% ---- route: no services (flip of offers_services_in_union) ----
+test(no_services_positive) :-
+    nis2_jurisdiction_registration_status([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, false)], ineligible).
+test(services_offered_is_not_ineligible, fail) :-
+    nis2_jurisdiction_registration_status([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, true), attribute(representative_designated_in_union, false)], ineligible).
+
+% ---- route: main establishment decisions / operations / employees ----
+test(decisions_true_positive) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, true)], state_where_cybersecurity_risk_management_decisions_are_taken, _).
+test(decisions_false_is_not_decisions_state, fail) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false), attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true)], state_where_cybersecurity_risk_management_decisions_are_taken, _).
+test(operations_true_positive) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false), attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true)], state_where_cybersecurity_operations_are_carried_out, _).
+test(operations_false_is_not_operations_state, fail) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false), attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)], state_where_cybersecurity_operations_are_carried_out, _).
+test(employees_positive) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false), attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)], state_of_establishment_with_most_employees_in_the_union, _).
+test(unsure_decisions_is_not_a_final_result, fail) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)], state_where_cybersecurity_risk_management_decisions_are_taken, _).
+test(unsure_decisions_is_a_referral) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)], needs_legal_review(_, _), []).
+
+% ---- route: registry list, sector item (flip of sector_and_subsector_applicable) ----
+test(registry_sector_positive) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider), attribute(established_in_union, true), attribute(sector_and_subsector_applicable, true)], Items),
+    member(item(sector_subsector_and_type_of_entity, cite(eu_dir_2022_2555_art_27_2_b)), Items).
+test(registry_no_sector_has_no_sector_item, fail) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider), attribute(established_in_union, true), attribute(sector_and_subsector_applicable, false)], Items),
+    member(item(sector_subsector_and_type_of_entity, _), Items).
+
+% ---- route: registry list is only for the providers of Art 27(1) ----
+test(registry_provider_list_is_not_empty) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider), attribute(established_in_union, true), attribute(sector_and_subsector_applicable, false)], [_|_]).
+test(registry_general_entity_is_not_a_non_empty_list, fail) :-
+    registry_submission_items([attribute(entity_category, general_entity)], [_|_]).
+
+% ---- route: entity list, member states item ----
+test(entity_list_member_states_positive) :-
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, false), attribute(member_states_list_applicable, true)], Items),
+    member(item(member_states_where_services_in_scope_are_provided, cite(eu_dir_2022_2555_art_3_4_d)), Items).
+test(entity_list_no_member_states_item, fail) :-
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, false), attribute(member_states_list_applicable, false)], Items),
+    member(item(member_states_where_services_in_scope_are_provided, _), Items).
+
+% ---- route: change limits ----
+test(limits_provider_has_registry_limit) :-
+    change_notification_limits([attribute(entity_category, main_establishment_provider)], Limits),
+    member(limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)), Limits).
+test(limits_general_entity_has_no_registry_limit, fail) :-
+    change_notification_limits([attribute(entity_category, general_entity)], Limits),
+    member(limit(registry_information, _, _), Limits).
+
+:- end_module(test_negative_controls).

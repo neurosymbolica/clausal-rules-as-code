@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """check_translation.py -- validate a domain's per-language translation submodule
 (Part C). Completeness (translation records <-> citation atoms), key-is-a-real-
 citation-atom, string-key well-formedness, and status consistency against the

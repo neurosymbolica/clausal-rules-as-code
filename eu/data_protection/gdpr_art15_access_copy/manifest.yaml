@@ -1,0 +1,341 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_art15_access_copy
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_art15_access_copy"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The item atoms, result atoms and result
+# constructors of the order are root exports, declared as facts in
+# queries.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_art15_access_copy_input_problems/2 is listed under queries.clausal,
+  #  which re-exports the kernel's definition)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_art15_access_copy.clausal --
+  - "access_answer_items/4"
+  - "access_answer_items_missing/4"
+  - "copy_scope/3"
+  - "copy_fee/3"
+  - "information_form/3"
+  - "decide_gdpr_art15_access_copy/2"
+  - "gdpr_art15_access_copy_status/2"
+  - "gdpr_art15_access_copy_checklist/2"
+  - "gdpr_art15_access_copy_decision_resolvable/1"
+  - "gdpr_art15_access_copy_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_art15_access_copy_profile_keys/1"
+  - "gdpr_art15_access_copy_input_problems/2"
+  - "gdpr_art15_access_copy_what_if/4"
+  - "gdpr_art15_access_copy_compliance/4"
+  - "gdpr_art15_access_copy_deadline/3"
+  - "confirmation_of_processing/0"
+  - "access_to_personal_data/0"
+  - "purposes_of_processing/0"
+  - "categories_of_personal_data/0"
+  - "recipients_or_categories_of_recipients/0"
+  - "storage_period_or_criteria/0"
+  - "rights_to_rectification_erasure_restriction_and_objection/0"
+  - "right_to_lodge_complaint/0"
+  - "source_of_personal_data/0"
+  - "automated_decision_making_information/0"
+  - "transfer_safeguards_information/0"
+  - "copy_of_personal_data/0"
+  - "no_item_missing/0"
+  - "no_personal_data_to_copy/0"
+  - "full_copy/0"
+  - "copy_limited_by_rights_and_freedoms_of_others/0"
+  - "no_fee_under_article_15_3/0"
+  - "reasonable_fee_permitted/0"
+  - "no_electronic_request/0"
+  - "other_form_requested/0"
+  - "commonly_used_electronic_form/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_art15_access_copy_subject/1"
+  - "gdpr_art15_access_copy_profile_for/2"
+  - "gdpr_art15_access_copy_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. Only kit modules (formalize_lib, kit/query_combinators) are
+# imported; no shared backbone package.
+uses: []
+
+scope: >-
+  When a controller answers a data subject's request for access under Art 15
+  of Regulation (EU) 2016/679 (GDPR), what must the answer and the copy
+  contain? Decided here, from the pinned text of Art 15 only: the confirmation
+  and the items of information of Art 15(1), points (a) to (h)
+  (access_answer_items/4, and the items still missing from a given answer,
+  access_answer_items_missing/4); the information on Art 46 transfer safeguards
+  of Art 15(2); the copy (copy_scope/3), the fee for further copies
+  (copy_fee/3) and the commonly used electronic form (information_form/3) of
+  Art 15(3); and Art 15(4) as a limit on the copy only. The Art 15(4)
+  judgement is the caller's (unsure goes to a lawyer); the Art 22(1) and (4)
+  statement and the Art 46 safeguards statement arrive as attested outside
+  facts and an absent one is referred. Out of scope: whether access is owed at
+  all (identity and Art 11, manifestly unfounded or excessive requests, Art 23
+  restrictions), the time limits of Art 12(3) and (4) (no deadline is computed
+  here; deferred to gdpr-data-subject-rights-response-period), the fee and
+  refusal of Art 12(5), the form rules of Art 12(1), the adequacy of the
+  content of any item, Art 22 and Chapter V themselves, and the definitions of
+  Art 4, all decided by sibling orders or left to the caller.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504 with the 2018 corrigendum: Art 15(1) chapeau and points (a) to (h), Art 15(2), Art 15(3) and Art 15(4) (formalised)"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504: Art 4(1), 4(2), 4(7) and 4(9) (quoted to tie the terms personal data, data subject, processing, controller and recipient; deferred, read by no limb)"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504: Art 12 (pinned for context; every unit deferred)"
+
+query_interface:
+  2: "decide_gdpr_art15_access_copy/2"        # eligibility verdict with cited checklist (gdpr_art15_access_copy_checklist/2)
+  13: "gdpr_art15_access_copy_compliance/4"   # compliance check: is a proposed controller action allowed
+  15: "gdpr_art15_access_copy_deadline/3"     # deadline: deferred to gdpr-data-subject-rights-response-period
+  16: "gdpr_art15_access_copy_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_012
+  - 02016R0679-20160504#art_015
+  not_formalized_because: structural
+  reason: 'The titles of Articles 4, 12 and 15 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for.'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+- what: art4_definitions_decided_in_common_definitions_data_and_processing
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-data-and-processing
+  reason: Art 4(1) personal data and data subject, 4(2) processing and 4(9) recipient
+    are quoted above to tie the terms of Art 15 and of the keys (readings (1), (2),
+    (4)); no limb of this order reads them, and they are decided by gdpr-common-definitions-data-and-processing
+    with the other definitions of this list (restriction, profiling, pseudonymisation,
+    filing system, third party, consent, personal data breach, information society
+    service, international organisation), none of which this order reads.
+  consequence: 'Whether information is personal data, whether an operation is processing
+    and whether a body is a recipient are not tested: the caller establishes them
+    before stating personal_data_concerning_data_subject_processed and disclosure_to_recipients_made_or_envisaged.'
+  declaration: answered_with_caveat
+- what: art4_definitions_decided_in_common_definitions_roles_and_establishments
+  units:
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-roles-and-establishments
+  reason: Art 4(7) controller is quoted above to tie the term (reading (1)); no limb
+    reads it. It and the other definitions of this list (processor, genetic, biometric
+    and health data, main establishment, enterprise, group of undertakings, cross-border
+    processing, relevant and reasoned objection and the rest) are decided by gdpr-common-definitions-roles-and-establishments;
+    none is read here.
+  consequence: 'Who is the controller is not tested: the caller addresses the profile
+    to the controller of the processing.'
+  declaration: answered_with_caveat
+- what: art4_definitions_not_read
+  units:
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  debt: true
+  reason: Art 4(17) representative, 4(20) binding corporate rules and 4(21) supervisory
+    authority are read by no limb of this order, and no order on main cites them;
+    they are pinned only because the smallest document element holding the definitions
+    this order quotes is the whole article.
+  consequence: 'None for a caller of this order: no answer turns on these definitions.'
+  declaration: not_an_exception
+  open: formalisable in an order on the definitions; the deferral stands for this
+    order.
+- what: art12_1_form_of_communication
+  units:
+  - 02016R0679-20160504#parag_012.001
+  debt: true
+  reason: Art 12(1) (a concise, transparent, intelligible and easily accessible form,
+    clear and plain language; in writing or by other means, including electronic means;
+    orally on request) governs how any communication under Arts 15 to 22 is given.
+    This order reads only the electronic form of Art 15(3), third sentence (information_form);
+    no order on main formalises Art 12(1).
+  consequence: Whether the answer is concise, intelligible and in plain language,
+    and whether an oral answer was allowed, are not tested; the caller checks Art
+    12(1) itself.
+  declaration: answered_with_caveat
+  open: formalisable as a form checklist; the deferral stands for this order.
+- what: art12_2_facilitate_and_identification
+  units:
+  - 02016R0679-20160504#parag_012.002
+  not_formalized_because: in_sibling
+  decided_in: gdpr-data-subject-rights-access-rectification-restriction
+  reason: 'Art 12(2), second sentence (no refusal in the cases of Art 11(2) unless
+    the controller cannot identify the data subject), bears on whether the request
+    is answered at all, which this order assumes (SCOPE), and is decided by gdpr-data-subject-rights-access-rectification-restriction.
+    Its first sentence (the controller shall facilitate the exercise of the rights)
+    is decided by no order on main: that order keeps it as debt, and this order does
+    not read it either.'
+  consequence: This order assumes the request is answered; whether the controller
+    may refuse for want of identification is answered by gdpr-data-subject-rights-access-rectification-restriction;
+    whether the controller facilitated the exercise of the rights is not tested by
+    any order, and the caller checks it itself.
+  declaration: not_an_exception
+- what: art12_3_time_limit_and_electronic_means
+  units:
+  - 02016R0679-20160504#parag_012.003
+  not_formalized_because: in_sibling
+  decided_in: gdpr-data-subject-rights-response-period
+  reason: 'Art 12(3), first to third sentences (one month from receipt, extension
+    by two further months, informing of the extension), is the time limit of the answer,
+    decided by gdpr-data-subject-rights-response-period. Its last sentence (for a
+    request made by electronic form means, the information by electronic means where
+    possible, unless otherwise requested) is decided by no order on main: gdpr-data-subject-rights-response-period
+    keeps it as debt, and this order reads the electronic form only from Art 15(3),
+    third sentence (information_form, reading (13)).'
+  consequence: 'This order gives no date and no time limit; the caller takes them
+    from gdpr-data-subject-rights-response-period. The general electronic-means rule
+    of Art 12(3), last sentence, is tested by no order: the caller checks it itself;
+    for the access answer, information_form gives the rule of Art 15(3).'
+  open: the last sentence of Art 12(3) is formalisable as a form rule beside information_form;
+    the deferral stands for this order.
+  declaration: not_an_exception
+- what: art12_4_to_12_6_no_action_fee_and_identity
+  units:
+  - 02016R0679-20160504#parag_012.004
+  - 02016R0679-20160504#parag_012.005
+  - 02016R0679-20160504#parag_012.006
+  not_formalized_because: in_sibling
+  decided_in: gdpr-data-subject-rights-response-duties
+  reason: Art 12(4) (informing of reasons for not taking action), Art 12(5) (free
+    of charge; a manifestly unfounded or excessive request) and Art 12(6) (reasonable
+    doubts about identity) are decided by gdpr-data-subject-rights-response-duties.
+    This order's fee answer reads Art 15(3), second sentence, only (reading (12)).
+  consequence: Whether the request may be refused or charged for as manifestly unfounded
+    or excessive, and whether additional information to confirm identity may be requested,
+    are answered by gdpr-data-subject-rights-response-duties, not here.
+  declaration: answered_with_caveat
+- what: art12_5_fee_amount_and_refusal
+  units:
+  - 02016R0679-20160504#point_012.005_a
+  - 02016R0679-20160504#point_012.005_b
+  debt: true
+  reason: Art 12(5)(a) (a reasonable fee taking into account the administrative costs)
+    and (b) (refusal) are the two options for a manifestly unfounded or excessive
+    request; no order on main formalises the amount of the fee, and this order reads
+    only the fee for further copies of Art 15(3).
+  consequence: The amount of any fee is not tested; the caller checks it against the
+    administrative costs itself.
+  declaration: answered_with_caveat
+  open: formalisable only with cost figures the text does not give; the deferral stands
+    for this order.
+- what: art12_7_standardised_icons
+  units:
+  - 02016R0679-20160504#parag_012.007
+  debt: true
+  reason: Art 12(7) (standardised icons in combination with the information of Arts
+    13 and 14) concerns the information duties, not the access answer.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  open: formalisable in an information-duties order; the deferral stands for this
+    order.
+- what: art12_8_delegated_acts_on_icons
+  units:
+  - 02016R0679-20160504#parag_012.008
+  not_formalized_because: institutional
+  reason: 'Art 12(8) empowers the Commission to adopt delegated acts on the icons:
+    a power of an institution, with no answer for a controller.'
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+
+excluded_set:
+- what: whether_access_is_owed
+  instrument: Regulation (EU) 2016/679 Arts 11 and 23
+  cites:
+  - 02016R0679-20160504#art_011
+  - 02016R0679-20160504#art_023
+  reason: Whether the controller must answer at all (processing that does not require
+    identification, Art 11; a restriction by Union or Member State law, Art 23) is
+    decided by gdpr-data-subject-rights-articles-15-to-18-decision-and-exception and
+    gdpr-data-subject-rights-access-rectification-restriction; this order assumes
+    the request is answered (SCOPE).
+  consequence: The caller first establishes that access is owed with those orders;
+    this order then says what the answer and the copy contain.
+- what: automated_decision_making_under_article_22
+  instrument: Regulation (EU) 2016/679 Art 22
+  cites:
+  - 02016R0679-20160504#art_022
+  reason: Not pinned here. Whether the processing includes automated decision-making
+    referred to in Art 22(1) and (4) is decided by gdpr-data-subject-rights-automated-decision
+    and gdpr-data-subject-rights-articles-20-to-22-decision-and-exception and arrives
+    as the attested outside fact automated_decision_making_referred_to_in_article_22
+    (reading (8)).
+  consequence: The caller supplies the attested statement; this order does not test
+    Art 22.
+- what: transfers_and_article_46_safeguards
+  instrument: Regulation (EU) 2016/679 Arts 44, 45 and 46
+  cites:
+  - 02016R0679-20160504#art_044
+  - 02016R0679-20160504#art_045
+  - 02016R0679-20160504#art_046
+  reason: Not pinned here. Whether a transfer rests on an adequacy decision, on appropriate
+    safeguards pursuant to Art 46 or on another ground is decided by gdpr-chapter-v-transfers
+    and arrives as the attested outside fact transfer_subject_to_article_46_safeguards
+    (reading (9)).
+  consequence: The caller supplies the attested statement; this order does not test
+    Chapter V.

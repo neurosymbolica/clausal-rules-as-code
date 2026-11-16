@@ -1,0 +1,250 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_act_connected_product_data_sharing (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one exception is the
+% order's input check data_act_connected_product_data_sharing_input_problems/2,
+% which the scaffold writes here from the order's typed input contract and
+% exports for the slice and the queries layer to import:
+%   :- use_module(eu/data_act_connected_product_data_sharing/kernel, [data_act_connected_product_data_sharing_input_problems/2]).
+% No other predicate is shared: this package has ONE determination slice
+% (data_act_connected_product_data_sharing.clausal), which owns its key
+% tables, its limbs and its completion engine.
+%
+% Source: Regulation (EU) 2023/2854 of 13 December 2023 (the Data Act),
+% CELEX 32023R2854, the original act as published (extracted text sha256
+% f6f0f14921ebabb2373ebbc2adaa59bad66bf15d1216a842f5dcf56997b8c1ef):
+% Chapter II, Articles 3, 4 and 5, with the Article 2 definitions they use
+% (points (5), (6), (12), (13), (15), (16), (17)), Article 7(1) and
+% Article 50, second and third paragraphs. The input contract checked here
+% types the twenty-two profile keys those provisions are read through.
+% Every reading is the author's, not a lawyer's.
+%
+% deontic family: STATUS is a modal vocabulary (a duty arises / is met /
+% the data holder may refuse or withhold).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike.
+%
+% RESULT TERMS.
+% Each contract query is QUERY(Profile, Result, Citations):
+%   product_design_duty_status/3 (Art 3(1)):
+%     Result design_duty_met | design_duty_not_met | not_applicable
+%   pre_contract_information_duty_status/3 (Art 3(2) and (3)):
+%     Result information_duty_met | information_duty_not_met | not_applicable
+%   user_access_request_status/3 (Art 4):
+%     Result access_due | not_applicable | refusal_permitted_security_restriction
+%            | personal_data_not_to_be_made_available
+%            | withholding_permitted_trade_secrets
+%   third_party_sharing_request_status/3 (Art 5):
+%     Result sharing_due | not_applicable | third_party_not_eligible_gatekeeper
+%            | personal_data_not_to_be_made_available
+%            | trade_secret_disclosure_not_permitted
+%            | withholding_permitted_trade_secrets
+%   Citations: a set-like list of cite(Key) terms for a final Result, [] otherwise.
+% Non-final Results of every query (Citations []), never written bare:
+%   input_problems(Problems)   Problems a list of duplicate_key(Key),
+%                              wrong_type(Key) and unknown_key(Key) terms
+%                              (or [wrong_type(profile)] alone);
+%   indeterminate([Key])       the first absent key that matters;
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                              Pairs the Key-Value pairs of the query's keys
+%                              present in the profile, in decision order.
+% The slice's verdict term, used by the scaffold facade:
+%   data_act_connected_product_data_sharing_verdict(Status, Citations)
+%   Status the eligibility status over user_access_request_status/3
+%   (eligible | ineligible | a non-final Result passed through), Citations
+%   the cite(Key) list of that query's answer.
+% =====================================================================
+
+:- module(kernel, [data_act_connected_product_data_sharing_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% data_act_connected_product_data_sharing_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+data_act_connected_product_data_sharing_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [connected_product_or_related_service, small_enterprise_exemption_applies, placed_on_market_after_12_september_2026, data_accessible_by_default_as_required, directly_accessible_where_relevant_and_feasible, pre_contract_contract_kind, required_information_provided_before_contract, requester_is_user, request_by_or_on_behalf_of_user, addressee_is_data_holder, requested_data_readily_available, data_directly_accessible_by_user, security_restriction_agreed_applies, testing_data_not_yet_on_market, third_party_use_contractually_permitted, third_party_is_designated_gatekeeper, other_persons_personal_data_requested, gdpr_conditions_for_making_available_met, requested_data_identified_as_trade_secrets, trade_secret_disclosure_strictly_necessary, trade_secret_measures_agreed_and_kept, exceptional_trade_secret_refusal_invoked],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(connected_product_or_related_service, judgement).
+key_type(small_enterprise_exemption_applies, judgement).
+key_type(placed_on_market_after_12_september_2026, boolean).
+key_type(data_accessible_by_default_as_required, judgement).
+key_type(directly_accessible_where_relevant_and_feasible, judgement).
+key_type(pre_contract_contract_kind, pre_contract_contract_kind).
+key_type(required_information_provided_before_contract, judgement).
+key_type(requester_is_user, judgement).
+key_type(request_by_or_on_behalf_of_user, judgement).
+key_type(addressee_is_data_holder, judgement).
+key_type(requested_data_readily_available, judgement).
+key_type(data_directly_accessible_by_user, judgement).
+key_type(security_restriction_agreed_applies, judgement).
+key_type(testing_data_not_yet_on_market, boolean).
+key_type(third_party_use_contractually_permitted, boolean).
+key_type(third_party_is_designated_gatekeeper, judgement).
+key_type(other_persons_personal_data_requested, boolean).
+key_type(gdpr_conditions_for_making_available_met, judgement).
+key_type(requested_data_identified_as_trade_secrets, boolean).
+key_type(trade_secret_disclosure_strictly_necessary, judgement).
+key_type(trade_secret_measures_agreed_and_kept, judgement).
+key_type(exceptional_trade_secret_refusal_invoked, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(pre_contract_contract_kind, Value, T) :-
+    in_type_t(enum([purchase_rent_or_lease_of_connected_product, provision_of_related_service]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

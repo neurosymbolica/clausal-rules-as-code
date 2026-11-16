@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """oracle_units.py -- the S4 registry of statutory units a sealed battery exercises.
 
 WHAT THIS FILE IS FOR. A domain's corpus ledger says which units the RULEBASE

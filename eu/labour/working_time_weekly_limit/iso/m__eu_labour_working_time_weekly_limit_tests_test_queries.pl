@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_labour_working_time_weekly_limit_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_labour_working_time_weekly_limit_queries, [working_time_weekly_limit_profile_keys/1, working_time_weekly_limit_what_if/4, working_time_weekly_limit_maximum_counted_minutes/6, unsure/0, work/0, member_state_reference_period/0, minutes_per_seven_days/2, indeterminate/1, needs_legal_review/2, provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_labour_working_time_weekly_limit_kernel, [working_time_weekly_limit_input_problems/2]).
+:- use_module(m__eu_labour_working_time_weekly_limit_working_time_weekly_limit, [weekly_limit_status/7, required_reduction_minutes/6]).
+:- use_module(m__eu_labour_working_time_weekly_limit_fixtures, [working_time_weekly_limit_profile_for/2]).
+
+maximum_of(Subject, Maximum) :-
+    working_time_weekly_limit_profile_for(Subject, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    working_time_weekly_limit_maximum_counted_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Maximum).
+
+test(profile_keys_are_the_contract_keys) :-
+    working_time_weekly_limit_profile_keys(ProfileKeys),
+    ProfileKeys == [reference_period_basis, on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, member_state_uses_article_22_option, worker_agreement_to_exceed_obtained_first].
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    working_time_weekly_limit_input_problems([attribute(foo, 1)], [unknown_key(foo)]).
+test(the_root_vocabulary_is_served) :-
+    unsure,
+    work,
+    member_state_reference_period.
+test(the_average_constructor_takes_two_bare_integers) :-
+    minutes_per_seven_days(8638, 3).
+test(the_indeterminate_constructor_names_one_contract_key) :-
+    indeterminate([reference_period_basis]).
+test(the_legal_review_constructor) :-
+    needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time - unsure])]).
+test(the_legal_review_constructor_with_provenance) :-
+    needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_standby_counts_as_working_time - unsure]), provenance(weekly_limit_status, [cite(eu_dir_2003_88_art_2_1)])]).
+test(the_provenance_constructor) :-
+    provenance(weekly_working_time_average, [cite(eu_dir_2003_88_art_2_1)]).
+test(the_input_problems_constructor) :-
+    input_problems([unknown_key(foo), wrong_type(worker)]).
+test(the_unknown_key_constructor) :-
+    unknown_key(foo).
+test(the_wrong_type_constructor) :-
+    wrong_type(worker).
+test(the_duplicate_key_constructor) :-
+    duplicate_key(member_state_uses_article_22_option).
+test(the_status_query_answers_once) :-
+    working_time_weekly_limit_profile_for(one_minute_over, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Result - Citations, weekly_limit_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Result, Citations), Answers),
+    Answers == [over_weekly_limit - [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_6_b), cite(eu_dir_2003_88_art_16_b)]].
+test(a_full_week_has_the_boundary_2880) :-
+    maximum_of(at_limit, 2880).
+test(a_day_of_leave_moves_the_boundary_to_2468) :-
+    maximum_of(leave_day_at_limit, 2468).
+test(the_boundary_is_where_the_status_flips) :-
+    maximum_of(leave_day_at_limit, Maximum),
+    Maximum =:= 2468,
+    working_time_weekly_limit_profile_for(leave_day_at_limit, case(WithinProfile, WithinWorker, WithinShifts, WithinStart, WithinEnd)),
+    weekly_limit_status(WithinProfile, WithinWorker, WithinShifts, WithinStart, WithinEnd, within_weekly_limit, _),
+    working_time_weekly_limit_profile_for(leave_day_one_minute_over, case(OverProfile, OverWorker, OverShifts, OverStart, OverEnd)),
+    weekly_limit_status(OverProfile, OverWorker, OverShifts, OverStart, OverEnd, over_weekly_limit, _).
+test(a_shift_across_the_end_does_not_move_the_boundary) :-
+    maximum_of(edge_shift_at_limit, 2880).
+test(an_unsure_judgement_still_has_a_boundary) :-
+    maximum_of(on_site_unsure_matters, 2880).
+test(a_whole_period_of_sick_leave_has_no_boundary) :-
+    maximum_of(all_sick_leave, no_countable_period).
+test(a_template_period_has_no_boundary) :-
+    working_time_weekly_limit_maximum_counted_minutes([], 5, [], date(year, month, day), date(year, month, day), no_countable_period).
+test(the_boundary_refuses_a_bad_profile) :-
+    maximum_of(bad_profile, input_problems([wrong_type(reference_period_basis), unknown_key(foo)])).
+test(the_boundary_answers_once) :-
+    working_time_weekly_limit_profile_for(leave_day_at_limit, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Maximum, working_time_weekly_limit_maximum_counted_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Maximum), Answers),
+    Answers == [2468].
+test(the_reduction_is_counted_less_the_boundary) :-
+    maximum_of(on_site_counted, Maximum),
+    Maximum =:= 2880,
+    working_time_weekly_limit_profile_for(on_site_counted, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    required_reduction_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, 120).
+test(the_reduction_answers_once) :-
+    working_time_weekly_limit_profile_for(same_rota_own_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Minutes, required_reduction_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes), Answers),
+    Answers == [5760].
+test(what_if_the_option_is_used_asks_for_the_agreement) :-
+    working_time_weekly_limit_profile_for(one_minute_over, SubjectCase),
+    working_time_weekly_limit_what_if(SubjectCase, member_state_uses_article_22_option, true, working_time_weekly_limit_verdict(indeterminate([worker_agreement_to_exceed_obtained_first]), [])).
+test(what_if_the_agreement_was_obtained_first) :-
+    working_time_weekly_limit_profile_for(opt_out_without_agreement, SubjectCase),
+    working_time_weekly_limit_what_if(SubjectCase, worker_agreement_to_exceed_obtained_first, true, working_time_weekly_limit_verdict(weekly_limit_not_applied_by_agreement, [cite(eu_dir_2003_88_art_22_1), cite(eu_dir_2003_88_art_22_1_a)])).
+test(what_if_the_unsure_judgement_goes_true) :-
+    working_time_weekly_limit_profile_for(on_site_unsure_matters, SubjectCase),
+    working_time_weekly_limit_what_if(SubjectCase, on_call_on_site_counts_as_working_time, true, working_time_weekly_limit_verdict(over_weekly_limit, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_6_b), cite(eu_dir_2003_88_art_16_b)])).
+test(what_if_the_unsure_judgement_goes_false) :-
+    working_time_weekly_limit_profile_for(on_site_unsure_matters, SubjectCase),
+    working_time_weekly_limit_what_if(SubjectCase, on_call_on_site_counts_as_working_time, false, working_time_weekly_limit_verdict(within_weekly_limit, _)).
+test(what_if_a_bad_value_is_refused) :-
+    working_time_weekly_limit_profile_for(one_minute_over, SubjectCase),
+    working_time_weekly_limit_what_if(SubjectCase, member_state_uses_article_22_option, unsure, working_time_weekly_limit_verdict(input_problems([wrong_type(member_state_uses_article_22_option)]), [])).
+test(what_if_drops_every_occurrence_of_the_key) :-
+    working_time_weekly_limit_what_if(case([attribute(member_state_uses_article_22_option, true), attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8)), member_state_uses_article_22_option, false, working_time_weekly_limit_verdict(over_weekly_limit, _)).
+test(what_if_answers_once) :-
+    working_time_weekly_limit_profile_for(on_site_absent_matters, SubjectCase),
+    findall(Verdict, working_time_weekly_limit_what_if(SubjectCase, on_call_on_site_counts_as_working_time, true, Verdict), Verdicts),
+    Verdicts == [working_time_weekly_limit_verdict(indeterminate([member_state_uses_article_22_option]), [])].
+
+test(a_zero_denominator_is_not_an_average, fail) :-
+    minutes_per_seven_days(2880, 0).
+test(two_keys_are_not_an_indeterminate_term, fail) :-
+    indeterminate([reference_period_basis, on_call_on_site_counts_as_working_time]).
+test(an_empty_list_is_not_input_problems, fail) :-
+    input_problems([]).
+test(a_contract_key_is_not_unknown, fail) :-
+    unknown_key(reference_period_basis).
+test(a_foreign_key_is_not_a_duplicate_contract_key, fail) :-
+    duplicate_key(foo).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_re_exported_input_check_names_an_unknown_key, the_root_vocabulary_is_served, the_average_constructor_takes_two_bare_integers, the_indeterminate_constructor_names_one_contract_key, the_legal_review_constructor, the_legal_review_constructor_with_provenance, the_provenance_constructor, the_input_problems_constructor, the_unknown_key_constructor, the_wrong_type_constructor, the_duplicate_key_constructor, the_status_query_answers_once, a_full_week_has_the_boundary_2880, a_day_of_leave_moves_the_boundary_to_2468, the_boundary_is_where_the_status_flips, a_shift_across_the_end_does_not_move_the_boundary, an_unsure_judgement_still_has_a_boundary, a_whole_period_of_sick_leave_has_no_boundary, a_template_period_has_no_boundary, the_boundary_refuses_a_bad_profile, the_boundary_answers_once, the_reduction_is_counted_less_the_boundary, the_reduction_answers_once, what_if_the_option_is_used_asks_for_the_agreement, what_if_the_agreement_was_obtained_first, what_if_the_unsure_judgement_goes_true, what_if_the_unsure_judgement_goes_false, what_if_a_bad_value_is_refused, what_if_drops_every_occurrence_of_the_key, what_if_answers_once]).
+cp_test_fail_names([a_zero_denominator_is_not_an_average, two_keys_are_not_an_indeterminate_term, an_empty_list_is_not_input_problems, a_contract_key_is_not_unknown, a_foreign_key_is_not_a_duplicate_contract_key]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

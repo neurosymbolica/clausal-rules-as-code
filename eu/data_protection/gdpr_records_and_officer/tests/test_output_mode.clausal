@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: every answer read out with the
+% result argument UNBOUND, collected whole, so a duplicate solution fails.
+% Run: python -m clausal.testing eu/data_protection/gdpr_records_and_officer/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_records_and_officer/gdpr_records_and_officer, [
+    decide_gdpr_records_and_officer/2,
+    gdpr_records_and_officer_status/2,
+    gdpr_records_and_officer_checklist/2,
+    record_obligation/2,
+    record_missing_items/2,
+    data_protection_officer_designation/2,
+    officer_missing_tasks/2,
+    data_protection_officer_outside_facts/2,
+    officer_position_status/5
+]).
+:- use_module(eu/data_protection/gdpr_records_and_officer/fixtures, [gdpr_records_and_officer_profile_for/2]).
+
+subject_statuses(Subject, Statuses) :-
+    gdpr_records_and_officer_profile_for(Subject, Profile),
+    findall(Status, gdpr_records_and_officer_status(Profile, Status), Statuses).
+
+subject_obligations(Subject, Answers) :-
+    gdpr_records_and_officer_profile_for(Subject, Profile),
+    findall(Answer, record_obligation(Profile, Answer), Answers).
+
+subject_designations(Subject, Answers) :-
+    gdpr_records_and_officer_profile_for(Subject, Profile),
+    findall(Answer, data_protection_officer_designation(Profile, Answer), Answers).
+
+% ---- entry 1: the record ------------------------------------------------
+test(at_249_the_status_is_record_not_required) :-
+    subject_statuses(small_controller_exempt_at_249, Statuses),
+    Statuses == [record_not_required].
+
+test(at_250_the_status_is_record_required) :-
+    subject_statuses(controller_at_ceiling_250, Statuses),
+    Statuses == [record_required].
+
+test(the_250_verdict_carries_the_article_30_1_citation) :-
+    gdpr_records_and_officer_profile_for(controller_at_ceiling_250, Profile),
+    findall(Verdict, decide_gdpr_records_and_officer(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_verdict(record_required, [cite(eu_reg_2016_679_art_30_1)])].
+
+test(both_roles_owe_both_records_controller_first) :-
+    subject_obligations(both_roles_large_entity, Answers),
+    Answers == [[keep_controller_record(cite(eu_reg_2016_679_art_30_1)), keep_processor_record(cite(eu_reg_2016_679_art_30_2))]].
+
+test(a_small_processor_with_special_categories_owes_the_processor_record) :-
+    subject_obligations(small_processor_special_categories, Answers),
+    Answers == [[keep_processor_record(cite(eu_reg_2016_679_art_30_2))]].
+
+test(neither_role_is_referred_as_not_governed_here) :-
+    subject_obligations(neither_role_entity, Answers),
+    Answers == [needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_30_1), cite(eu_reg_2016_679_art_30_2)]), [inputs_relied_on([acts_as_controller-false, acts_as_processor-false])])].
+
+test(unsure_occasional_is_referred_with_its_pairs) :-
+    subject_obligations(unsure_occasional_controller, Answers),
+    Answers == [needs_legal_review(open_textured(processing_is_occasional, cite(eu_reg_2016_679_art_30_5)), [inputs_relied_on([persons_employed-100, processing_is_occasional-unsure, processing_likely_to_result_in_risk-false])])].
+
+test(not_occasional_processing_owes_the_record) :-
+    subject_obligations(not_occasional_controller, Answers),
+    Answers == [[keep_controller_record(cite(eu_reg_2016_679_art_30_1))]].
+
+test(absent_headcount_is_named) :-
+    subject_obligations(headcount_absent_controller, Answers),
+    Answers == [indeterminate([persons_employed])].
+
+test(a_duplicate_headcount_is_an_input_problem) :-
+    subject_obligations(duplicate_headcount_malformed, Answers),
+    Answers == [input_problems([duplicate_key(persons_employed)])].
+
+test(the_empty_owed_controller_record_names_every_first_key) :-
+    gdpr_records_and_officer_profile_for(controller_at_ceiling_250, Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [indeterminate([
+        controller_record_has_categories_of_data_subjects_and_personal_data,
+        controller_record_has_categories_of_recipients,
+        controller_record_has_contact_details,
+        controller_record_has_erasure_time_limits,
+        controller_record_has_purposes,
+        controller_record_has_security_measures_description,
+        controller_transfers_to_third_countries
+    ])].
+
+test(an_exempt_activity_misses_no_item) :-
+    gdpr_records_and_officer_profile_for(small_controller_exempt_at_249, Profile),
+    findall(Answer, record_missing_items(Profile, Answer), Answers),
+    Answers == [[]].
+
+% ---- entry 2: the designation and the tasks -----------------------------
+test(a_public_authority_designates_under_limb_a) :-
+    subject_designations(public_authority_controller, Answers),
+    Answers == [[designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_a))]].
+
+test(a_court_in_judicial_capacity_with_no_law_needs_no_designation) :-
+    subject_designations(court_in_judicial_capacity_controller, Answers),
+    Answers == [[no_designation_required(cite(eu_reg_2016_679_art_37_4))]].
+
+test(member_state_law_requires_designation) :-
+    subject_designations(member_state_law_requires_officer, Answers),
+    Answers == [[designate_data_protection_officer(cite(eu_reg_2016_679_art_37_4))]].
+
+test(member_state_law_not_requiring_gives_no_designation) :-
+    subject_designations(member_state_law_does_not_require_officer, Answers),
+    Answers == [[no_designation_required(cite(eu_reg_2016_679_art_37_4))]].
+
+test(the_missing_contact_point_is_listed) :-
+    gdpr_records_and_officer_profile_for(officer_mandate_lacks_contact_point, Profile),
+    findall(Answer, officer_missing_tasks(Profile, Answer), Answers),
+    Answers == [[missing_officer_task(acting_as_contact_point, cite(eu_reg_2016_679_art_39_1_e))]].
+
+test(a_complete_mandate_misses_no_task) :-
+    gdpr_records_and_officer_profile_for(officer_mandate_complete, Profile),
+    findall(Answer, officer_missing_tasks(Profile, Answer), Answers),
+    Answers == [[]].
+
+test(the_outside_facts_are_listed_as_given) :-
+    gdpr_records_and_officer_profile_for(public_authority_controller, Profile),
+    findall(Answer, data_protection_officer_outside_facts(Profile, Answer), Answers),
+    Answers == [[
+        outside_fact(is_public_authority_or_body, attested(true, attestation(fixture_host, fixture_moment, fixture_reason, none))),
+        outside_fact(union_or_member_state_law_requires_data_protection_officer, absent)
+    ]].
+
+test(the_checklist_marks_record_and_designation_met) :-
+    gdpr_records_and_officer_profile_for(public_authority_controller, Profile),
+    gdpr_records_and_officer_checklist(Profile, [
+        item(record_of_processing_activities, met, cite(eu_reg_2016_679_art_30_1)),
+        item(data_protection_officer_designation, met, cite(eu_reg_2016_679_art_37_1)),
+        item(data_protection_officer_tasks, unknown(_TaskKeys), cite(eu_reg_2016_679_art_39_1))
+    ]).
+
+% ---- entry 3: the position of the officer -------------------------------
+test(absent_reporting_line_is_referred) :-
+    findall(Result-Basis-Citations, officer_position_status([], direct_reporting, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_38_3), cite(officer_reporting_line_statement)), [resolution(cite(officer_reporting_line_statement), not_attempted), inputs_relied_on([officer_reports_to_highest_management_level-absent])])-[]-[]].
+
+test(attested_false_resources_are_not_met) :-
+    Attested = attested(false, attestation(output_host, output_moment, output_reason, url(address, retrieved_moment))),
+    findall(Result-Basis-Citations, officer_position_status([attribute(officer_supported_with_resources_and_access, Attested)], resources_and_access, Result, Basis, Citations), Answers),
+    Answers == [not_met-[outside_fact(officer_supported_with_resources_and_access, Attested)]-[cite(eu_reg_2016_679_art_38_2)]].
+
+test(absent_conflict_judgement_is_indeterminate) :-
+    findall(Result-Basis-Citations, officer_position_status([], conflict_of_interests, Result, Basis, Citations), Answers),
+    Answers == [indeterminate([officer_other_tasks_result_in_conflict_of_interests])-[]-[]].
+
+test(unsure_conflict_judgement_is_referred) :-
+    findall(Result-Basis-Citations, officer_position_status([attribute(officer_other_tasks_result_in_conflict_of_interests, unsure)], conflict_of_interests, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(officer_other_tasks_result_in_conflict_of_interests, cite(eu_reg_2016_679_art_38_6)), [inputs_relied_on([officer_other_tasks_result_in_conflict_of_interests-unsure])])-[]-[]].
+
+:- end_module(test_output_mode).

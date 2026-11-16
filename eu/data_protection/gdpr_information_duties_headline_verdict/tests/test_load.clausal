@@ -1,0 +1,57 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
+% result terms build and destructure, the verdict atoms are distinct, and one
+% real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_information_duties_headline_verdict/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/kernel, [gdpr_information_duties_headline_verdict_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/citations, [citation/2, implements/1]).
+
+test(the_headline_verdict_atoms_are_distinct) :-
+    dif(eligible, ineligible).
+
+test(the_exemption_atoms_are_distinct) :-
+    dif(none, impossible_or_disproportionate_effort),
+    dif(law_lays_down_obtaining_or_disclosure, professional_secrecy_obligation).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = information_duty_verdict_verdict(eligible, [cite(eu_reg_2016_679_art_14_1)]),
+    Verdict = information_duty_verdict_verdict(Status, Citations),
+    Status == eligible,
+    Citations == [cite(eu_reg_2016_679_art_14_1)].
+
+test(the_exemption_term_carries_status_and_citations) :-
+    Verdict = information_duty_exemption_verdict(none, []),
+    Verdict = information_duty_exemption_verdict(Status, Citations),
+    Status == none,
+    Citations == [].
+
+test(the_non_final_answers_build_and_destructure) :-
+    Missing = indeterminate([personal_data_collected_from_data_subject]),
+    Missing = indeterminate(Keys),
+    Keys == [personal_data_collected_from_data_subject],
+    Review = needs_legal_review(open_textured(provision_impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)), [inputs_relied_on([])]),
+    Review = needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]),
+    Key == provision_impossible_or_disproportionate_effort,
+    Citation == eu_reg_2016_679_art_14_5_b,
+    Pairs == [].
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_14_5_b, _Record).
+
+test(a_real_citation_key_is_implemented) :-
+    implements(eu_reg_2016_679_art_13_1).
+
+test(an_unrecorded_citation_key_does_not_resolve, fail) :-
+    citation(eu_reg_2016_679_art_14_9_z, _Record).
+
+test(an_empty_profile_has_no_input_problem) :-
+    gdpr_information_duties_headline_verdict_input_problems([], []).
+
+test(a_non_list_profile_is_wrong_type_profile) :-
+    gdpr_information_duties_headline_verdict_input_problems(not_a_profile, [wrong_type(profile)]).
+
+:- end_module(test_load).

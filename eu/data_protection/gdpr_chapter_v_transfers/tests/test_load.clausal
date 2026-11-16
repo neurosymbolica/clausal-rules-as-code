@@ -1,0 +1,101 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/data_protection/gdpr_chapter_v_transfers loads (kernel and citations),
+% the result terms the order pins build and destructure, the verdict atoms
+% are distinct, and real citation records resolve.
+% Self-contained: the determination slices are not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_chapter_v_transfers/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/kernel, [gdpr_chapter_v_transfers_input_problems/2, gdpr_chapter_v_transfers_cascade/5]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/citations, [citation/2, implements/1]).
+
+% ---- the verdict vocabulary ------------------------------------------
+test(the_final_verdict_atoms_are_distinct) :-
+    dif(eligible, ineligible).
+
+test(the_basis_atoms_are_distinct) :-
+    dif(art45_adequacy, art46_safeguards),
+    dif(art46_safeguards, art49_derogation),
+    dif(art45_adequacy, art49_derogation),
+    dif(art49_derogation, none).
+
+test(the_indeterminate_status_is_a_compound_not_the_bare_atom) :-
+    Verdict = indeterminate([safeguard_in_place]),
+    dif(Verdict, indeterminate),
+    Verdict = indeterminate(MissingKeys),
+    MissingKeys == [safeguard_in_place].
+
+% ---- the result terms build and destructure --------------------------
+test(the_open_textured_referral_builds_and_destructures) :-
+    Verdict = needs_legal_review(open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)), [inputs_relied_on([derogation_claimed-art49_1_b, safeguard_in_place-unsure])]),
+    Verdict = needs_legal_review(open_textured(InputKey, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    InputKey == safeguard_in_place,
+    CitationKey == eu_reg_2016_679_art_46,
+    Pairs == [derogation_claimed-art49_1_b, safeguard_in_place-unsure].
+
+test(the_cross_reference_referral_builds_and_destructures) :-
+    Verdict = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_45), cite(eu_reg_2016_679_art_45_3)), [resolution(cite(eu_reg_2016_679_art_45_3), not_attempted), inputs_relied_on([adequacy_decision_in_force-absent, safeguard_in_place-false])]),
+    Verdict = needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, Status), inputs_relied_on(Pairs)]),
+    Citation == cite(eu_reg_2016_679_art_45),
+    Target == cite(eu_reg_2016_679_art_45_3),
+    Status == not_attempted,
+    Pairs == [adequacy_decision_in_force-absent, safeguard_in_place-false].
+
+test(the_outside_fact_record_builds_and_destructures) :-
+    Record = outside_fact(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, url(test_address, test_retrieved_time)))),
+    Record = outside_fact(Key, attested(Value, attestation(_, _, _, Evidence))),
+    Key == adequacy_decision_in_force,
+    Value == true,
+    Evidence = url(_, _).
+
+test(the_input_problems_status_builds_and_destructures) :-
+    Verdict = input_problems([duplicate_key(safeguard_in_place), wrong_type(derogation_claimed), unknown_key(colour)]),
+    Verdict = input_problems([First, Second, Third]),
+    First == duplicate_key(safeguard_in_place),
+    Second == wrong_type(derogation_claimed),
+    Third == unknown_key(colour).
+
+% ---- the citation records resolve -------------------------------------
+test(the_adequacy_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_45, Record),
+    Record = [label-_, ref-Reference, verbatim-_],
+    Reference == '02016R0679-20160504#art_045'.
+
+test(the_safeguards_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_46, _Record).
+
+test(the_second_subparagraph_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_49_1_second_subpara, _Record).
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2016_679_art_45_3).
+
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_todo_primary_source).
+
+% ---- the shared floor answers -------------------------------------------
+test(an_empty_profile_has_no_input_problem) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_term_that_is_not_a_list_is_a_wrong_profile) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems([attribute(colour, blue)], Problems), Answers),
+    Answers == [[unknown_key(colour)]].
+
+test(an_attested_adequacy_decision_gives_one_cascade_answer) :-
+    findall(RequirementId-Outcome,
+            gdpr_chapter_v_transfers_cascade([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], RequirementId, Outcome, _, _),
+            Answers),
+    Answers == [art45_adequacy-met].
+
+test(an_attested_adequacy_decision_is_not_stage_two, fail) :-
+    gdpr_chapter_v_transfers_cascade([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], art46_safeguards, _, _, _).
+
+:- end_module(test_load).

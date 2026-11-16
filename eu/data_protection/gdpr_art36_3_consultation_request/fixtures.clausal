@@ -1,0 +1,313 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_art36_3_consultation_request.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The outside fact joint_controllers_or_processors_involved
+% is attested(Value, attestation(host_user, host_time, stated_by_caller, none)).
+%
+% Every route has a positive case and a one-unit near-miss control (one key
+% changed or added). The order has no numeric threshold, so the pairs flip
+% one boolean, one presence, or one wrapper.
+%
+% Expected answers (status | items), consultation true unless stated:
+%   controller_alone_complete                   complete | []
+%   impact_assessment_not_provided              incomplete | [data_protection_impact_assessment]
+%   consultation_under_member_state_law         not_governed_by_article_36_3 | same
+%   consultation_footing_not_stated             indeterminate([consultation_under_article_36_1]) | same
+%   roles_not_attested_responsibilities_not_given  THE ABSENT REFERRAL | same
+%   roles_attested_controller_alone             complete | []
+%   processor_involved_responsibilities_missing incomplete | [respective_responsibilities]
+%   processor_involved_responsibilities_given   complete | []
+%   officer_designated_contact_missing          incomplete | [data_protection_officer_contact_details]
+%   officer_designated_contact_given            complete | []
+%   contact_given_designation_unstated          complete | []
+%   authority_request_answer_unstated           indeterminate([requested_other_information_provided]) | same
+%   authority_request_answered                  complete | []
+%   authority_request_not_answered              incomplete | [other_requested_information]
+%   missing_item_and_officer_unknown            incomplete | indeterminate([data_protection_officer_designated])
+%   missing_item_and_officer_not_designated     incomplete | [purposes_and_means]
+%   deciding_key_before_responsibilities        indeterminate([measures_and_safeguards_provided]) | indeterminate([respective_responsibilities_provided])
+%   responsibilities_unstated_roles_unstated    indeterminate([respective_responsibilities_provided]) | same
+%   attested_value_on_crisp_key                 input_problems([wrong_type(purposes_and_means_provided)])
+%   bare_roles_value                            input_problems([wrong_type(joint_controllers_or_processors_involved)])
+%   duplicate_and_unknown_keys                  input_problems([duplicate_key(impact_assessment_provided), unknown_key(controller_name)])
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_art36_3_consultation_request_subject/1,
+    gdpr_art36_3_consultation_request_profile_for/2,
+    gdpr_art36_3_consultation_request_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_art36_3_consultation_request/gdpr_art36_3_consultation_request, [decide_gdpr_art36_3_consultation_request/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_art36_3_consultation_request_subject(controller_alone_complete).
+gdpr_art36_3_consultation_request_subject(impact_assessment_not_provided).
+gdpr_art36_3_consultation_request_subject(consultation_under_member_state_law).
+gdpr_art36_3_consultation_request_subject(consultation_footing_not_stated).
+gdpr_art36_3_consultation_request_subject(roles_not_attested_responsibilities_not_given).
+gdpr_art36_3_consultation_request_subject(roles_attested_controller_alone).
+gdpr_art36_3_consultation_request_subject(processor_involved_responsibilities_missing).
+gdpr_art36_3_consultation_request_subject(processor_involved_responsibilities_given).
+gdpr_art36_3_consultation_request_subject(officer_designated_contact_missing).
+gdpr_art36_3_consultation_request_subject(officer_designated_contact_given).
+gdpr_art36_3_consultation_request_subject(contact_given_designation_unstated).
+gdpr_art36_3_consultation_request_subject(authority_request_answer_unstated).
+gdpr_art36_3_consultation_request_subject(authority_request_answered).
+gdpr_art36_3_consultation_request_subject(authority_request_not_answered).
+gdpr_art36_3_consultation_request_subject(missing_item_and_officer_unknown).
+gdpr_art36_3_consultation_request_subject(missing_item_and_officer_not_designated).
+gdpr_art36_3_consultation_request_subject(deciding_key_before_responsibilities).
+gdpr_art36_3_consultation_request_subject(responsibilities_unstated_roles_unstated).
+gdpr_art36_3_consultation_request_subject(attested_value_on_crisp_key).
+gdpr_art36_3_consultation_request_subject(bare_roles_value).
+gdpr_art36_3_consultation_request_subject(duplicate_and_unknown_keys).
+
+% ---- Profiles --------------------------------------------------------
+
+% Point (a) settled by an attested controller-alone statement; every item given.
+gdpr_art36_3_consultation_request_profile_for(controller_alone_complete, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: the impact assessment is not provided.
+gdpr_art36_3_consultation_request_profile_for(impact_assessment_not_provided, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, false),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: a consultation on another footing.
+gdpr_art36_3_consultation_request_profile_for(consultation_under_member_state_law, [
+    attribute(consultation_under_article_36_1, false),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: the footing is not stated.
+gdpr_art36_3_consultation_request_profile_for(consultation_footing_not_stated, [
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Responsibilities not given and no role statement attested: referral.
+gdpr_art36_3_consultation_request_profile_for(roles_not_attested_responsibilities_not_given, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, false),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of the referral: the controller is attested to process alone.
+gdpr_art36_3_consultation_request_profile_for(roles_attested_controller_alone, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(respective_responsibilities_provided, false),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% A processor is attested to be involved and the responsibilities are not given.
+gdpr_art36_3_consultation_request_profile_for(processor_involved_responsibilities_missing, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(true, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(respective_responsibilities_provided, false),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss: the responsibilities are given.
+gdpr_art36_3_consultation_request_profile_for(processor_involved_responsibilities_given, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(true, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% A designated officer whose contact details are not given.
+gdpr_art36_3_consultation_request_profile_for(officer_designated_contact_missing, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, true),
+    attribute(data_protection_officer_contact_details_provided, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss: the contact details are given.
+gdpr_art36_3_consultation_request_profile_for(officer_designated_contact_given, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, true),
+    attribute(data_protection_officer_contact_details_provided, true),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Contact details given settle point (d) without the designation key.
+gdpr_art36_3_consultation_request_profile_for(contact_given_designation_unstated, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_contact_details_provided, true),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% The authority asked for other information; whether it is provided is unstated.
+gdpr_art36_3_consultation_request_profile_for(authority_request_answer_unstated, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, true)
+]).
+
+% Near miss: the requested information is provided.
+gdpr_art36_3_consultation_request_profile_for(authority_request_answered, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, true),
+    attribute(requested_other_information_provided, true)
+]).
+
+% Near miss: the requested information is not provided.
+gdpr_art36_3_consultation_request_profile_for(authority_request_not_answered, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, true),
+    attribute(requested_other_information_provided, false)
+]).
+
+% A missing item decides the status while point (d) is still open.
+gdpr_art36_3_consultation_request_profile_for(missing_item_and_officer_unknown, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, false),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss: no officer designated, so the items list is whole.
+gdpr_art36_3_consultation_request_profile_for(missing_item_and_officer_not_designated, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, false),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% A DECIDING key (measures) goes before the waiting responsibilities key.
+gdpr_art36_3_consultation_request_profile_for(deciding_key_before_responsibilities, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss: measures given, so the waiting responsibilities key is named.
+gdpr_art36_3_consultation_request_profile_for(responsibilities_unstated_roles_unstated, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: a crisp key given an attested term.
+gdpr_art36_3_consultation_request_profile_for(attested_value_on_crisp_key, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, attested(true, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: the outside fact given a bare value.
+gdpr_art36_3_consultation_request_profile_for(bare_roles_value, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% Near miss of controller_alone_complete: a repeated key and a key outside the ten.
+gdpr_art36_3_consultation_request_profile_for(duplicate_and_unknown_keys, [
+    attribute(consultation_under_article_36_1, true),
+    attribute(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none))),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, false),
+    attribute(impact_assessment_provided, true),
+    attribute(impact_assessment_provided, true),
+    attribute(controller_name, acme),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_art36_3_consultation_request_assess(Subject, Result) :-
+    gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
+    decide_gdpr_art36_3_consultation_request(Profile, Result).
+
+:- end_module(fixtures).

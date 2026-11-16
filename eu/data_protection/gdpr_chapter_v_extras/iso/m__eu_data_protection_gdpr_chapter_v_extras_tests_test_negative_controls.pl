@@ -1,0 +1,127 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_chapter_v_extras_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [second_subparagraph_duty/5, foreign_judgment_or_decision_recognition/4, onward_transfer_condition/4, gdpr_chapter_v_extras_status/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_fixtures, [gdpr_chapter_v_extras_profile_for/2]).
+
+duty_result(Subject, Duty, Result) :-
+    gdpr_chapter_v_extras_profile_for(Subject, Profile),
+    second_subparagraph_duty(Profile, Duty, Result, _, _).
+
+recognition_result(Subject, Result) :-
+    gdpr_chapter_v_extras_profile_for(Subject, Profile),
+    foreign_judgment_or_decision_recognition(Profile, Result, _, _).
+
+onward_result(Subject, Result) :-
+    gdpr_chapter_v_extras_profile_for(Subject, Profile),
+    onward_transfer_condition(Profile, Result, _, _).
+
+facade_status(Subject, Status) :-
+    gdpr_chapter_v_extras_profile_for(Subject, Profile),
+    gdpr_chapter_v_extras_status(Profile, Status).
+
+test(supervisory_authority_informed_is_met) :-
+    duty_result(controller_all_duties_met, inform_supervisory_authority, duty_met).
+test(supervisory_authority_not_informed_is_not_met) :-
+    duty_result(controller_supervisory_authority_not_informed, inform_supervisory_authority, duty_not_met).
+test(data_subject_fully_informed_is_met) :-
+    duty_result(controller_all_duties_met, inform_data_subject, duty_met).
+test(data_subject_not_told_interests_is_not_met) :-
+    duty_result(controller_data_subject_not_told_interests, inform_data_subject, duty_not_met).
+test(documentation_complete_is_met) :-
+    duty_result(controller_all_duties_met, document_assessment_and_safeguards, duty_met).
+test(safeguards_not_documented_is_not_met) :-
+    duty_result(controller_safeguards_not_documented, document_assessment_and_safeguards, duty_not_met).
+test(a_processor_is_not_bound_to_inform) :-
+    duty_result(processor_documentation_met, inform_supervisory_authority, not_a_processor_duty).
+test(a_processor_still_documents) :-
+    duty_result(processor_documentation_met, document_assessment_and_safeguards, duty_met).
+test(no_second_subparagraph_transfer_disengages_the_duty) :-
+    duty_result(no_second_subparagraph_transfer_stated, inform_data_subject, no_second_subparagraph_transfer).
+test(an_unstated_second_subparagraph_fact_is_referred) :-
+    duty_result(second_subparagraph_unstated, inform_supervisory_authority, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)), _)).
+test(an_unstated_party_role_is_named) :-
+    duty_result(party_role_unstated, inform_data_subject, indeterminate([party_role])).
+test(an_unstated_safeguards_record_is_named) :-
+    duty_result(processor_documentation_pending, document_assessment_and_safeguards, indeterminate([suitable_safeguards_documented_in_records])).
+test(no_judgment_means_article_48_not_engaged) :-
+    recognition_result(controller_all_duties_met, article_48_not_engaged).
+test(an_agreement_lifts_the_bar) :-
+    recognition_result(foreign_judgment_with_agreement, not_barred_by_article_48).
+test(no_agreement_bars) :-
+    recognition_result(foreign_judgment_without_agreement, not_recognisable_or_enforceable).
+test(an_unstated_agreement_is_referred) :-
+    recognition_result(foreign_judgment_agreement_unstated, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)), _)).
+test(an_unstated_judgment_is_referred) :-
+    foreign_judgment_or_decision_recognition([], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_48), cite(foreign_judgment_requires_transfer_statement)), _), [], []).
+test(a_transfer_stated_not_onward) :-
+    onward_result(controller_all_duties_met, not_an_onward_transfer).
+test(an_onward_transfer_with_a_basis_may_take_place) :-
+    onward_result(onward_transfer_with_basis, onward_transfer_may_take_place).
+test(an_onward_transfer_without_a_basis_may_not_take_place) :-
+    onward_result(onward_transfer_without_basis, onward_transfer_may_not_take_place).
+test(an_unstated_onward_basis_is_referred) :-
+    onward_result(onward_transfer_basis_unstated, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)), _)).
+test(a_bare_boolean_outside_fact_is_an_input_problem) :-
+    onward_result(malformed_bare_boolean_outside_fact, input_problems([wrong_type(transfer_is_onward_transfer)])).
+test(the_facade_is_clear_when_every_duty_is_met) :-
+    facade_status(controller_all_duties_met, no_condition_breached).
+test(the_facade_reports_a_breach_for_an_unmet_duty) :-
+    facade_status(controller_supervisory_authority_not_informed, condition_breached).
+
+test(supervisory_authority_informed_is_not_unmet, fail) :-
+    duty_result(controller_all_duties_met, inform_supervisory_authority, duty_not_met).
+test(supervisory_authority_not_informed_is_never_met, fail) :-
+    duty_result(controller_supervisory_authority_not_informed, inform_supervisory_authority, duty_met).
+test(data_subject_not_told_interests_is_never_met, fail) :-
+    duty_result(controller_data_subject_not_told_interests, inform_data_subject, duty_met).
+test(safeguards_not_documented_is_never_met, fail) :-
+    duty_result(controller_safeguards_not_documented, document_assessment_and_safeguards, duty_met).
+test(a_controller_is_not_told_it_is_a_processor, fail) :-
+    duty_result(controller_all_duties_met, inform_supervisory_authority, not_a_processor_duty).
+test(a_processor_documentation_is_not_waived, fail) :-
+    duty_result(processor_documentation_met, document_assessment_and_safeguards, not_a_processor_duty).
+test(a_second_subparagraph_transfer_engages_the_duty, fail) :-
+    duty_result(controller_all_duties_met, inform_data_subject, no_second_subparagraph_transfer).
+test(a_stated_second_subparagraph_fact_is_not_referred, fail) :-
+    duty_result(no_second_subparagraph_transfer_stated, inform_supervisory_authority, needs_legal_review(_, _)).
+test(a_stated_party_role_is_not_named, fail) :-
+    duty_result(controller_all_duties_met, inform_data_subject, indeterminate(_)).
+test(a_stated_safeguards_record_is_not_named, fail) :-
+    duty_result(processor_documentation_met, document_assessment_and_safeguards, indeterminate(_)).
+test(a_judgment_engages_article_48, fail) :-
+    recognition_result(foreign_judgment_with_agreement, article_48_not_engaged).
+test(no_agreement_does_not_lift_the_bar, fail) :-
+    recognition_result(foreign_judgment_without_agreement, not_barred_by_article_48).
+test(an_agreement_does_not_bar, fail) :-
+    recognition_result(foreign_judgment_with_agreement, not_recognisable_or_enforceable).
+test(a_stated_agreement_is_not_referred, fail) :-
+    recognition_result(foreign_judgment_with_agreement, needs_legal_review(_, _)).
+test(a_stated_judgment_is_not_referred, fail) :-
+    recognition_result(controller_all_duties_met, needs_legal_review(_, _)).
+test(an_onward_transfer_is_not_called_not_onward, fail) :-
+    onward_result(onward_transfer_with_basis, not_an_onward_transfer).
+test(an_onward_transfer_without_a_basis_is_not_allowed, fail) :-
+    onward_result(onward_transfer_without_basis, onward_transfer_may_take_place).
+test(an_onward_transfer_with_a_basis_is_not_refused, fail) :-
+    onward_result(onward_transfer_with_basis, onward_transfer_may_not_take_place).
+test(a_stated_onward_basis_is_not_referred, fail) :-
+    onward_result(onward_transfer_with_basis, needs_legal_review(_, _)).
+test(an_attested_outside_fact_is_not_an_input_problem, fail) :-
+    onward_result(onward_transfer_with_basis, input_problems(_)).
+test(the_facade_is_not_clear_for_an_unmet_duty, fail) :-
+    facade_status(controller_supervisory_authority_not_informed, no_condition_breached).
+test(the_facade_does_not_report_a_breach_when_clear, fail) :-
+    facade_status(controller_all_duties_met, condition_breached).
+
+cp_test_names([supervisory_authority_informed_is_met, supervisory_authority_not_informed_is_not_met, data_subject_fully_informed_is_met, data_subject_not_told_interests_is_not_met, documentation_complete_is_met, safeguards_not_documented_is_not_met, a_processor_is_not_bound_to_inform, a_processor_still_documents, no_second_subparagraph_transfer_disengages_the_duty, an_unstated_second_subparagraph_fact_is_referred, an_unstated_party_role_is_named, an_unstated_safeguards_record_is_named, no_judgment_means_article_48_not_engaged, an_agreement_lifts_the_bar, no_agreement_bars, an_unstated_agreement_is_referred, an_unstated_judgment_is_referred, a_transfer_stated_not_onward, an_onward_transfer_with_a_basis_may_take_place, an_onward_transfer_without_a_basis_may_not_take_place, an_unstated_onward_basis_is_referred, a_bare_boolean_outside_fact_is_an_input_problem, the_facade_is_clear_when_every_duty_is_met, the_facade_reports_a_breach_for_an_unmet_duty]).
+cp_test_fail_names([supervisory_authority_informed_is_not_unmet, supervisory_authority_not_informed_is_never_met, data_subject_not_told_interests_is_never_met, safeguards_not_documented_is_never_met, a_controller_is_not_told_it_is_a_processor, a_processor_documentation_is_not_waived, a_second_subparagraph_transfer_engages_the_duty, a_stated_second_subparagraph_fact_is_not_referred, a_stated_party_role_is_not_named, a_stated_safeguards_record_is_not_named, a_judgment_engages_article_48, no_agreement_does_not_lift_the_bar, an_agreement_does_not_bar, a_stated_agreement_is_not_referred, a_stated_judgment_is_not_referred, an_onward_transfer_is_not_called_not_onward, an_onward_transfer_without_a_basis_is_not_allowed, an_onward_transfer_with_a_basis_is_not_refused, a_stated_onward_basis_is_not_referred, an_attested_outside_fact_is_not_an_input_problem, the_facade_is_not_clear_for_an_unmet_duty, the_facade_does_not_report_a_breach_when_clear]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,68 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_chapter_v_extras_queries, [gdpr_chapter_v_extras_profile_keys/1, gdpr_chapter_v_extras_what_if/4, no_second_subparagraph_transfer/0, not_a_processor_duty/0, duty_met/0, duty_not_met/0, article_48_not_engaged/0, not_barred_by_article_48/0, not_recognisable_or_enforceable/0, not_an_onward_transfer/0, onward_transfer_may_take_place/0, onward_transfer_may_not_take_place/0, inform_supervisory_authority/0, inform_data_subject/0, document_assessment_and_safeguards/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [gdpr_chapter_v_extras_status/2]).
+
+gdpr_chapter_v_extras_profile_keys([transfer_relies_on_article_49_1_second_subparagraph, party_role, supervisory_authority_informed_of_transfer, data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests, assessment_documented_in_records, suitable_safeguards_documented_in_records, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision, transfer_is_onward_transfer, onward_transfer_has_chapter_v_basis]).
+
+gdpr_chapter_v_extras_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    revised_profile(Profile, OverriddenKey, NewValue, RevisedProfile),
+    gdpr_chapter_v_extras_status(RevisedProfile, NewStatus).
+
+revised_profile(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|KeptAttributes]) :-
+    exclude(attribute_for_key(OverriddenKey), Profile, KeptAttributes).
+
+attribute_for_key(OverriddenKey, Element) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey.
+
+no_second_subparagraph_transfer.
+
+not_a_processor_duty.
+
+duty_met.
+
+duty_not_met.
+
+article_48_not_engaged.
+
+not_barred_by_article_48.
+
+not_recognisable_or_enforceable.
+
+not_an_onward_transfer.
+
+onward_transfer_may_take_place.
+
+onward_transfer_may_not_take_place.
+
+inform_supervisory_authority.
+
+inform_data_subject.
+
+document_assessment_and_safeguards.
+
+test(the_schema_has_eleven_keys) :-
+    gdpr_chapter_v_extras_profile_keys(Keys),
+    length(Keys, 11).
+test(a_what_if_on_an_onward_basis_clears_the_breach) :-
+    Attestation = attestation(host_user, host_timestamp, fixture_statement, none),
+    Profile = [attribute(transfer_is_onward_transfer, attested(true, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(false, Attestation))],
+    findall(Status, gdpr_chapter_v_extras_what_if(Profile, onward_transfer_has_chapter_v_basis, attested(true, Attestation), Status), Statuses),
+    Statuses == [more_input_needed].
+test(a_what_if_with_a_bare_boolean_outside_fact_is_an_input_problem) :-
+    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, input_problems([wrong_type(transfer_is_onward_transfer)])).
+test(the_result_atoms_are_declared) :-
+    duty_met,
+    not_a_processor_duty,
+    onward_transfer_may_take_place,
+    inform_data_subject.
+
+test(a_what_if_with_a_bare_boolean_is_not_clear, fail) :-
+    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, no_condition_breached).

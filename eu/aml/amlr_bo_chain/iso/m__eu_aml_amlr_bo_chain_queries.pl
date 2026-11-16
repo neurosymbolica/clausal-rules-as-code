@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_bo_chain_queries, [bo_chain_direct_boundary/1, bo_chain_direct_vs_effective/5, bo_chain_edge_sensitivity/6, bo_chain_gap_to_threshold/4, bo_chain_justification/5, bo_chain_qualifying_holders/3, bo_chain_qualifying_holders_at/4, bo_chain_set_holding/5, bo_chain_what_if_holding/7]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

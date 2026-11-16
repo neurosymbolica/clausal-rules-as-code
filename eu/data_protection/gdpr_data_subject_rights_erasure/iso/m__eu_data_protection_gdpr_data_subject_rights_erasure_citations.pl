@@ -1,0 +1,54 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_erasure_citations, [citation/2, implements/1, gdpr_data_subject_rights_erasure_citations_in_order/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+
+citation(eu_reg_2016_679_art_12_2, [label - 'Regulation (EU) 2016/679 (GDPR) Art 12(2), second sentence (refusal only where the controller cannot identify the data subject)', ref - 'CELEX 02016R0679-20160504, unit parag_012.002', verbatim - 'In the cases referred to in Article 11(2), the controller shall not refuse to act on the request of the data subject for exercising his or her rights under Articles 15 to 22, unless the controller demonstrates that it is not in a position to identify the data subject.']).
+citation(eu_reg_2016_679_art_12_5, [label - 'Regulation (EU) 2016/679 (GDPR) Art 12(5), second and third sentences (manifestly unfounded or excessive requests; reasonable fee or refusal)', ref - 'CELEX 02016R0679-20160504, unit parag_012.005', verbatim - 'Where requests from a data subject are manifestly unfounded or excessive, in particular because of their repetitive character, the controller may either']).
+citation(eu_reg_2016_679_art_12_6, [label - 'Regulation (EU) 2016/679 (GDPR) Art 12(6) (reasonable doubts concerning identity; additional information)', ref - 'CELEX 02016R0679-20160504, unit parag_012.006', verbatim - 'where the controller has reasonable doubts concerning the identity of the natural person making the request referred to in Articles 15 to 21, the controller may request the provision of additional information necessary to confirm the identity of the data subject.']).
+citation(eu_reg_2016_679_art_17_1, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1), chapeau (right to erasure and obligation to erase where one of the grounds applies)', ref - 'CELEX 02016R0679-20160504, unit parag_017.001', verbatim - 'The data subject shall have the right to obtain from the controller the erasure of personal data concerning him or her without undue delay and the controller shall have the obligation to erase personal data without undue delay where one of the following grounds applies']).
+citation(eu_reg_2016_679_art_17_1_a, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(a) (data no longer necessary for the purposes)', ref - 'CELEX 02016R0679-20160504, unit point_017.001_a', verbatim - 'the personal data are no longer necessary in relation to the purposes for which they were collected or otherwise processed']).
+citation(eu_reg_2016_679_art_17_1_b, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(b) (consent withdrawn and no other legal ground)', ref - 'CELEX 02016R0679-20160504, unit point_017.001_b', verbatim - 'the data subject withdraws consent on which the processing is based according to point (a) of Article 6(1), or point (a) of Article 9(2), and where there is no other legal ground for the processing']).
+citation(eu_reg_2016_679_art_17_1_c, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(c) (objection under Art 21(1) without overriding grounds, or under Art 21(2))', ref - 'CELEX 02016R0679-20160504, unit point_017.001_c', verbatim - 'the data subject objects to the processing pursuant to Article 21(1) and there are no overriding legitimate grounds for the processing, or the data subject objects to the processing pursuant to Article 21(2)']).
+citation(eu_reg_2016_679_art_17_1_d, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(d) (data unlawfully processed)', ref - 'CELEX 02016R0679-20160504, unit point_017.001_d', verbatim - 'the personal data have been unlawfully processed']).
+citation(eu_reg_2016_679_art_17_1_e, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(e) (erasure for compliance with a legal obligation in Union or Member State law)', ref - 'CELEX 02016R0679-20160504, unit point_017.001_e', verbatim - 'the personal data have to be erased for compliance with a legal obligation in Union or Member State law to which the controller is subject']).
+citation(eu_reg_2016_679_art_17_1_f, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(1)(f) (data collected in relation to the offer of information society services referred to in Art 8(1))', ref - 'CELEX 02016R0679-20160504, unit point_017.001_f', verbatim - 'the personal data have been collected in relation to the offer of information society services referred to in Article 8(1)']).
+citation(eu_reg_2016_679_art_17_3, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3), chapeau (exceptions to the right to erasure)', ref - 'CELEX 02016R0679-20160504, unit parag_017.003', verbatim - 'Paragraphs 1 and 2 shall not apply to the extent that processing is necessary']).
+citation(eu_reg_2016_679_art_17_3_a, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3)(a) (freedom of expression and information)', ref - 'CELEX 02016R0679-20160504, unit point_017.003_a', verbatim - 'for exercising the right of freedom of expression and information']).
+citation(eu_reg_2016_679_art_17_3_b, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3)(b) (legal obligation requiring processing, or public-interest task or official authority)', ref - 'CELEX 02016R0679-20160504, unit point_017.003_b', verbatim - 'for compliance with a legal obligation which requires processing by Union or Member State law to which the controller is subject or for the performance of a task carried out in the public interest or in the exercise of official authority vested in the controller']).
+citation(eu_reg_2016_679_art_17_3_c, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3)(c) (public interest in the area of public health)', ref - 'CELEX 02016R0679-20160504, unit point_017.003_c', verbatim - 'for reasons of public interest in the area of public health in accordance with points (h) and (i) of Article 9(2) as well as Article 9(3)']).
+citation(eu_reg_2016_679_art_17_3_d, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3)(d) (archiving, scientific or historical research or statistical purposes where erasure is likely to render impossible or seriously impair the objectives)', ref - 'CELEX 02016R0679-20160504, unit point_017.003_d', verbatim - 'for archiving purposes in the public interest, scientific or historical research purposes or statistical purposes in accordance with Article 89(1) in so far as the right referred to in paragraph 1 is likely to render impossible or seriously impair the achievement of the objectives of that processing']).
+citation(eu_reg_2016_679_art_17_3_e, [label - 'Regulation (EU) 2016/679 (GDPR) Art 17(3)(e) (establishment, exercise or defence of legal claims)', ref - 'CELEX 02016R0679-20160504, unit point_017.003_e', verbatim - 'for the establishment, exercise or defence of legal claims']).
+citation(eu_reg_2016_679_art_23_1, [label - 'Regulation (EU) 2016/679 (GDPR) Art 23(1), opening words (restriction by a Union or Member State legislative measure)', ref - 'CELEX 02016R0679-20160504, unit parag_023.001', verbatim - 'Union or Member State law to which the data controller or processor is subject may restrict by way of a legislative measure the scope of the obligations and rights provided for in Articles 12 to 22 and Article 34']).
+citation(union_or_member_state_law_requiring_erasure, [label - 'Union or Member State law imposing on the controller a legal obligation to erase the personal data (cross-reference target of GDPR Art 17(1)(e); not formalized)', ref - 'Cross-reference from CELEX 02016R0679-20160504, unit point_017.001_e']).
+citation(union_or_member_state_law_requiring_processing, [label - 'Union or Member State law requiring the processing by the controller (cross-reference target of GDPR Art 17(3)(b), first limb; not formalized)', ref - 'Cross-reference from CELEX 02016R0679-20160504, unit point_017.003_b']).
+citation(union_or_member_state_law_restricting_the_right, [label - 'Union or Member State legislative measure restricting the right invoked (cross-reference target of GDPR Art 23(1); points (a)-(j) and Art 23(2) not formalized)', ref - 'Cross-reference from CELEX 02016R0679-20160504, unit parag_023.001']).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation_vocabulary_order([eu_reg_2016_679_art_12_2, eu_reg_2016_679_art_12_5, eu_reg_2016_679_art_12_6, eu_reg_2016_679_art_17_1, eu_reg_2016_679_art_17_1_a, eu_reg_2016_679_art_17_1_b, eu_reg_2016_679_art_17_1_c, eu_reg_2016_679_art_17_1_d, eu_reg_2016_679_art_17_1_e, eu_reg_2016_679_art_17_1_f, eu_reg_2016_679_art_17_3, eu_reg_2016_679_art_17_3_a, eu_reg_2016_679_art_17_3_b, eu_reg_2016_679_art_17_3_c, eu_reg_2016_679_art_17_3_d, eu_reg_2016_679_art_17_3_e, eu_reg_2016_679_art_23_1]).
+
+gdpr_data_subject_rights_erasure_citations_in_order(Keys, Citations) :-
+    citation_vocabulary_order(VocabularyKeys),
+    wanted_citations(VocabularyKeys, Keys, Citations).
+
+wanted_citations([], _, []).
+wanted_citations([Key|VocabularyKeys], Wanted, Citations) :-
+    memberd_t(Key, Wanted, IsWanted),
+    keep_citation(IsWanted, Key, Rest, Citations),
+    wanted_citations(VocabularyKeys, Wanted, Rest).
+
+keep_citation(true, Key, Rest, [cite(Key)|Rest]).
+keep_citation(false, _, Rest, Rest).
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2016_679_art_17_1_a).
+test(citations_come_in_vocabulary_order) :-
+    gdpr_data_subject_rights_erasure_citations_in_order([eu_reg_2016_679_art_17_3_b, eu_reg_2016_679_art_17_1, eu_reg_2016_679_art_17_3, eu_reg_2016_679_art_17_1], [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_3), cite(eu_reg_2016_679_art_17_3_b)]).
+
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_reg_2016_679_art_17_1_g).

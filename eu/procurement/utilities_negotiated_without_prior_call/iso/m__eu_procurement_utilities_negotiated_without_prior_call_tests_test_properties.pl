@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_utilities_negotiated_without_prior_call_tests_test_properties, [run_tests/0]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

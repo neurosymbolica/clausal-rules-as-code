@@ -1,0 +1,667 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_art15_access_copy.clausal -- the gdpr_art15_access_copy DETERMINATION for
+% eu/data_protection/gdpr_art15_access_copy, self-contained top to bottom:
+% the item table, the decision routes of the five queries, the per-rule
+% tests, the checklist and the verdict assembly.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 15(1) (chapeau and points
+% (a) to (h)), Art 15(2), Art 15(3) and Art 15(4), pinned consolidated text
+% 02016R0679-20160504 (in force from 2016-05-04, with the 2018 corrigendum).
+%
+% Queries (INTERFACE - THE CALLED CONTRACT):
+%   access_answer_items(Profile, Result, Basis, Citations)
+%   access_answer_items_missing(Profile, Result, Basis, Citations)
+%   copy_scope(Profile, Result, Citations)
+%   copy_fee(Profile, Result, Citations)
+%   information_form(Profile, Result, Citations)
+% Each query yields exactly one solution: every step is complementary
+% clauses over the state of a key, absent or value(Value).
+%
+% The input check gdpr_art15_access_copy_input_problems/2 lives in the
+% kernel and is imported here; it runs FIRST in every query.
+%
+% Art 15(4) is a defeater of the full copy: the judgement true LIMITS the
+% copy (copy_limited_by_rights_and_freedoms_of_others), it never removes it,
+% and it is never read by the items queries. The judgement is the caller's
+% (open-textured); unsure goes to a lawyer. No crisp test is invented.
+%
+% No deadline is formalised here: the response period of Art 12(3) and (4)
+% is deferred to the order gdpr-data-subject-rights-response-period.
+% =====================================================================
+
+:- module(gdpr_art15_access_copy, [
+    access_answer_items/4,
+    access_answer_items_missing/4,
+    copy_scope/3,
+    copy_fee/3,
+    information_form/3,
+    decide_gdpr_art15_access_copy/2,
+    gdpr_art15_access_copy_status/2,
+    gdpr_art15_access_copy_checklist/2,
+    gdpr_art15_access_copy_decision_resolvable/1,
+    gdpr_art15_access_copy_status_values/1
+]).
+
+:- use_module(eu/data_protection/gdpr_art15_access_copy/kernel, [gdpr_art15_access_copy_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art15_access_copy/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The verdict vocabulary of the facade (mapped from access_answer_items_missing/4).
+gdpr_art15_access_copy_status_values([access_answer_complete, access_answer_incomplete, access_answer_awaiting_input, access_answer_referred_for_legal_review, access_answer_input_rejected]).
+
+% The twelve items of INTERFACE - THE ITEMS, in item order, each with the
+% ready-made citation of its provision.
+item_row(confirmation_of_processing, cite(eu_reg_2016_679_art_15_1)).
+item_row(access_to_personal_data, cite(eu_reg_2016_679_art_15_1)).
+item_row(purposes_of_processing, cite(eu_reg_2016_679_art_15_1_a)).
+item_row(categories_of_personal_data, cite(eu_reg_2016_679_art_15_1_b)).
+item_row(recipients_or_categories_of_recipients, cite(eu_reg_2016_679_art_15_1_c)).
+item_row(storage_period_or_criteria, cite(eu_reg_2016_679_art_15_1_d)).
+item_row(rights_to_rectification_erasure_restriction_and_objection, cite(eu_reg_2016_679_art_15_1_e)).
+item_row(right_to_lodge_complaint, cite(eu_reg_2016_679_art_15_1_f)).
+item_row(source_of_personal_data, cite(eu_reg_2016_679_art_15_1_g)).
+item_row(automated_decision_making_information, cite(eu_reg_2016_679_art_15_1_h)).
+item_row(transfer_safeguards_information, cite(eu_reg_2016_679_art_15_2)).
+item_row(copy_of_personal_data, cite(eu_reg_2016_679_art_15_3)).
+
+% The condition keys of each item (used by the checklist only).
+item_condition_keys(confirmation_of_processing, []).
+item_condition_keys(access_to_personal_data, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(purposes_of_processing, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(categories_of_personal_data, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(recipients_or_categories_of_recipients, [personal_data_concerning_data_subject_processed, disclosure_to_recipients_made_or_envisaged]).
+item_condition_keys(storage_period_or_criteria, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(rights_to_rectification_erasure_restriction_and_objection, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(right_to_lodge_complaint, [personal_data_concerning_data_subject_processed]).
+item_condition_keys(source_of_personal_data, [personal_data_concerning_data_subject_processed, some_personal_data_not_collected_from_data_subject, source_information_available]).
+item_condition_keys(automated_decision_making_information, [personal_data_concerning_data_subject_processed, automated_decision_making_referred_to_in_article_22]).
+item_condition_keys(transfer_safeguards_information, [personal_data_concerning_data_subject_processed, transfer_to_third_country_or_international_organisation, transfer_subject_to_article_46_safeguards]).
+item_condition_keys(copy_of_personal_data, [personal_data_concerning_data_subject_processed]).
+
+% ---- profile plumbing: the state of a key, absent or value(Value) ----
+key_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(Profile, Key, value(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+% The seven keys the items depend on, as one internal term.
+profile_states(Profile, states(Processed, Recipients, Collected, Source, Automated, Transfer, Safeguards)) :-
+    key_state(Profile, personal_data_concerning_data_subject_processed, Processed),
+    key_state(Profile, disclosure_to_recipients_made_or_envisaged, Recipients),
+    key_state(Profile, some_personal_data_not_collected_from_data_subject, Collected),
+    key_state(Profile, source_information_available, Source),
+    key_state(Profile, automated_decision_making_referred_to_in_article_22, Automated),
+    key_state(Profile, transfer_to_third_country_or_international_organisation, Transfer),
+    key_state(Profile, transfer_subject_to_article_46_safeguards, Safeguards).
+
+get_state(personal_data_concerning_data_subject_processed, states(State, _, _, _, _, _, _), State).
+get_state(disclosure_to_recipients_made_or_envisaged, states(_, State, _, _, _, _, _), State).
+get_state(some_personal_data_not_collected_from_data_subject, states(_, _, State, _, _, _, _), State).
+get_state(source_information_available, states(_, _, _, State, _, _, _), State).
+get_state(automated_decision_making_referred_to_in_article_22, states(_, _, _, _, State, _, _), State).
+get_state(transfer_to_third_country_or_international_organisation, states(_, _, _, _, _, State, _), State).
+get_state(transfer_subject_to_article_46_safeguards, states(_, _, _, _, _, _, State), State).
+
+set_state(personal_data_concerning_data_subject_processed, states(_, Recipients, Collected, Source, Automated, Transfer, Safeguards), State, states(State, Recipients, Collected, Source, Automated, Transfer, Safeguards)).
+set_state(disclosure_to_recipients_made_or_envisaged, states(Processed, _, Collected, Source, Automated, Transfer, Safeguards), State, states(Processed, State, Collected, Source, Automated, Transfer, Safeguards)).
+set_state(some_personal_data_not_collected_from_data_subject, states(Processed, Recipients, _, Source, Automated, Transfer, Safeguards), State, states(Processed, Recipients, State, Source, Automated, Transfer, Safeguards)).
+set_state(source_information_available, states(Processed, Recipients, Collected, _, Automated, Transfer, Safeguards), State, states(Processed, Recipients, Collected, State, Automated, Transfer, Safeguards)).
+set_state(automated_decision_making_referred_to_in_article_22, states(Processed, Recipients, Collected, Source, _, Transfer, Safeguards), State, states(Processed, Recipients, Collected, Source, State, Transfer, Safeguards)).
+set_state(transfer_to_third_country_or_international_organisation, states(Processed, Recipients, Collected, Source, Automated, _, Safeguards), State, states(Processed, Recipients, Collected, Source, Automated, State, Safeguards)).
+set_state(transfer_subject_to_article_46_safeguards, states(Processed, Recipients, Collected, Source, Automated, Transfer, _), State, states(Processed, Recipients, Collected, Source, Automated, Transfer, State)).
+
+% The two values a completion may give an absent key.
+key_values(personal_data_concerning_data_subject_processed, value(true), value(false)).
+key_values(disclosure_to_recipients_made_or_envisaged, value(true), value(false)).
+key_values(some_personal_data_not_collected_from_data_subject, value(true), value(false)).
+key_values(source_information_available, value(true), value(false)).
+key_values(automated_decision_making_referred_to_in_article_22, value(attested(true, completion)), value(attested(false, completion))).
+key_values(transfer_to_third_country_or_international_organisation, value(true), value(false)).
+key_values(transfer_subject_to_article_46_safeguards, value(attested(true, completion)), value(attested(false, completion))).
+
+% ---- truth helpers ---------------------------------------------------
+holds_t(value(true), true).
+holds_t(value(false), false).
+holds_t(absent, false).
+
+attested_holds_t(value(attested(true, _)), true).
+attested_holds_t(value(attested(false, _)), false).
+attested_holds_t(absent, false).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+% ---- the conditions of the items (INTERFACE - THE ITEMS) -------------
+% Reading (2): the confirmation is owed on every request.
+item_condition(confirmation_of_processing, _, true) :-
+    implements(eu_reg_2016_679_art_15_1).
+% Reading (3): access to the personal data.
+item_condition(access_to_personal_data, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1),
+    holds_t(Processed, Truth).
+item_condition(purposes_of_processing, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_a),
+    holds_t(Processed, Truth).
+item_condition(categories_of_personal_data, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_b),
+    holds_t(Processed, Truth).
+% Reading (4): recipients only when a disclosure is made or envisaged.
+item_condition(recipients_or_categories_of_recipients, states(Processed, Recipients, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_c),
+    holds_t(Processed, ProcessedTruth),
+    holds_t(Recipients, RecipientsTruth),
+    truth_and(ProcessedTruth, RecipientsTruth, Truth).
+% Reading (5).
+item_condition(storage_period_or_criteria, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_d),
+    holds_t(Processed, Truth).
+% Reading (6).
+item_condition(rights_to_rectification_erasure_restriction_and_objection, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_e),
+    holds_t(Processed, Truth).
+item_condition(right_to_lodge_complaint, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_f),
+    holds_t(Processed, Truth).
+% Reading (7): any available information as to the source, read as a condition.
+item_condition(source_of_personal_data, states(Processed, _, Collected, Source, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_g),
+    holds_t(Processed, ProcessedTruth),
+    holds_t(Collected, CollectedTruth),
+    holds_t(Source, SourceTruth),
+    truth_and(CollectedTruth, SourceTruth, SourcePartTruth),
+    truth_and(ProcessedTruth, SourcePartTruth, Truth).
+% Reading (8): owed only on the attested Article 22 statement.
+item_condition(automated_decision_making_information, states(Processed, _, _, _, Automated, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_1_h),
+    holds_t(Processed, ProcessedTruth),
+    attested_holds_t(Automated, AutomatedTruth),
+    truth_and(ProcessedTruth, AutomatedTruth, Truth).
+% Reading (9): a transfer resting on attested Article 46 safeguards.
+item_condition(transfer_safeguards_information, states(Processed, _, _, _, _, Transfer, Safeguards), Truth) :-
+    implements(eu_reg_2016_679_art_15_2),
+    holds_t(Processed, ProcessedTruth),
+    holds_t(Transfer, TransferTruth),
+    attested_holds_t(Safeguards, SafeguardsTruth),
+    truth_and(TransferTruth, SafeguardsTruth, TransferPartTruth),
+    truth_and(ProcessedTruth, TransferPartTruth, Truth).
+% Reading (10): the copy.
+item_condition(copy_of_personal_data, states(Processed, _, _, _, _, _, _), Truth) :-
+    implements(eu_reg_2016_679_art_15_3),
+    holds_t(Processed, Truth).
+
+% OWED: the items whose condition holds, in item order.
+owed_items(States, Owed) :-
+    findall(Item,
+            ( item_row(Item, _),
+              item_condition(Item, States, true)
+            ),
+            Owed).
+
+% ITEM CITATIONS: the set of the citations of the items, each once.
+item_citations(Items, Citations) :-
+    findall(Citation,
+            ( member(Item, Items),
+              item_row(Item, Citation)
+            ),
+            AllCitations),
+    sort(AllCitations, Citations).
+
+% ---- THE ABSENT REFERRAL --------------------------------------------
+absent_referral(automated_decision_making_referred_to_in_article_22, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_15_1_h), cite(article_22_automated_decision_making_statement)), [resolution(cite(article_22_automated_decision_making_statement), not_attempted), inputs_relied_on([automated_decision_making_referred_to_in_article_22-absent])])) :-
+    implements(eu_reg_2016_679_art_15_1_h).
+absent_referral(transfer_subject_to_article_46_safeguards, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_15_2), cite(article_46_safeguards_statement)), [resolution(cite(article_46_safeguards_statement), not_attempted), inputs_relied_on([transfer_subject_to_article_46_safeguards-absent])])) :-
+    implements(eu_reg_2016_679_art_15_2).
+
+% =====================================================================
+% access_answer_items/4
+% =====================================================================
+access_answer_items(Profile, input_problems([Problem|Problems]), [], []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+access_answer_items(Profile, Result, Basis, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    profile_states(Profile, States),
+    get_state(personal_data_concerning_data_subject_processed, States, Processed),
+    items_by_processing(Processed, States, Result, Basis, Citations).
+
+% Steps 1 and 2.
+items_by_processing(absent, _, indeterminate([personal_data_concerning_data_subject_processed]), [], []) :-
+    implements(eu_reg_2016_679_art_15_1).
+items_by_processing(value(false), _, [confirmation_of_processing], [], [cite(eu_reg_2016_679_art_15_1)]) :-
+    implements(eu_reg_2016_679_art_15_1).
+items_by_processing(value(true), States, Result, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_15_1),
+    crisp_keys_wanting(States, Wanting),
+    items_after_crisp(Wanting, States, Result, Basis, Citations).
+
+% Step 3: R, then C unless S is false, then S when C is true, then T unless
+% G is attested false; the absent ones, in that order.
+crisp_keys_wanting(states(_, Recipients, Collected, Source, _, Transfer, Safeguards), Wanting) :-
+    wanted_if_absent(true, Recipients, disclosure_to_recipients_made_or_envisaged, RecipientsWanted),
+    gate_unless_false(Source, CollectedGate),
+    wanted_if_absent(CollectedGate, Collected, some_personal_data_not_collected_from_data_subject, CollectedWanted),
+    gate_when_true(Collected, SourceGate),
+    wanted_if_absent(SourceGate, Source, source_information_available, SourceWanted),
+    gate_unless_attested_false(Safeguards, TransferGate),
+    wanted_if_absent(TransferGate, Transfer, transfer_to_third_country_or_international_organisation, TransferWanted),
+    append([RecipientsWanted, CollectedWanted, SourceWanted, TransferWanted], Wanting).
+
+wanted_if_absent(true, absent, Key, [Key]).
+wanted_if_absent(true, value(_), _, []).
+wanted_if_absent(false, _, _, []).
+
+% S false settles item 9 as not owed, so C is then not needed.
+gate_unless_false(absent, true) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+gate_unless_false(value(true), true) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+gate_unless_false(value(false), false) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+
+% S is needed only when C is true.
+gate_when_true(value(true), true) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+gate_when_true(value(false), false) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+gate_when_true(absent, false) :-
+    implements(eu_reg_2016_679_art_15_1_g).
+
+% G attested false settles item 11 as not owed, so T is then not needed.
+gate_unless_attested_false(absent, true) :-
+    implements(eu_reg_2016_679_art_15_2).
+gate_unless_attested_false(value(attested(true, _)), true) :-
+    implements(eu_reg_2016_679_art_15_2).
+gate_unless_attested_false(value(attested(false, _)), false) :-
+    implements(eu_reg_2016_679_art_15_2).
+
+items_after_crisp([Key|_], _, indeterminate([Key]), [], []).
+items_after_crisp([], States, Result, Basis, Citations) :-
+    get_state(automated_decision_making_referred_to_in_article_22, States, Automated),
+    items_after_automated(Automated, States, Result, Basis, Citations).
+
+% Step 4.
+items_after_automated(absent, _, Result, [], []) :-
+    absent_referral(automated_decision_making_referred_to_in_article_22, Result).
+items_after_automated(value(_), States, Result, Basis, Citations) :-
+    get_state(transfer_to_third_country_or_international_organisation, States, Transfer),
+    get_state(transfer_subject_to_article_46_safeguards, States, Safeguards),
+    safeguards_referral_t(Transfer, Safeguards, Refer),
+    items_after_safeguards(Refer, States, Result, Basis, Citations).
+
+% Step 5: T true and G absent.
+safeguards_referral_t(value(true), absent, true) :-
+    implements(eu_reg_2016_679_art_15_2).
+safeguards_referral_t(value(true), value(_), false) :-
+    implements(eu_reg_2016_679_art_15_2).
+safeguards_referral_t(value(false), _, false) :-
+    implements(eu_reg_2016_679_art_15_2).
+safeguards_referral_t(absent, _, false) :-
+    implements(eu_reg_2016_679_art_15_2).
+
+% Step 6.
+items_after_safeguards(true, _, Result, [], []) :-
+    absent_referral(transfer_subject_to_article_46_safeguards, Result).
+items_after_safeguards(false, States, Owed, Basis, Citations) :-
+    owed_items(States, Owed),
+    access_basis(States, Basis),
+    item_citations(Owed, Citations).
+
+access_basis(states(_, _, _, _, value(AttestedAutomated), _, Safeguards), [outside_fact(automated_decision_making_referred_to_in_article_22, AttestedAutomated)|Rest]) :-
+    safeguards_basis(Safeguards, Rest).
+
+safeguards_basis(absent, []).
+safeguards_basis(value(AttestedSafeguards), [outside_fact(transfer_subject_to_article_46_safeguards, AttestedSafeguards)]).
+
+% =====================================================================
+% access_answer_items_missing/4
+% =====================================================================
+access_answer_items_missing(Profile, input_problems([Problem|Problems]), [], []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+access_answer_items_missing(Profile, Result, Basis, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    key_state(Profile, items_provided, ProvidedState),
+    missing_by_provided(ProvidedState, Profile, Result, Basis, Citations).
+
+% Step 1.
+missing_by_provided(absent, _, indeterminate([items_provided]), [], []) :-
+    implements(eu_reg_2016_679_art_15_1).
+missing_by_provided(value(Provided), Profile, Result, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_15_1),
+    profile_states(Profile, States),
+    findall(Missing,
+            ( completion(States, Completed),
+              missing_for(Completed, Provided, Missing)
+            ),
+            Missings),
+    sort(Missings, Distinct),
+    missing_by_agreement(Distinct, States, Provided, Result, Basis, Citations).
+
+% Step 2: every completion agrees.
+missing_by_agreement([Missing], States, Provided, Result, Basis, Citations) :-
+    settled_missing(Missing, Result, Citations),
+    missing_basis(States, Provided, Basis).
+% Steps 3 and 4: the completions disagree.
+missing_by_agreement([_, _|_], States, Provided, Result, [], []) :-
+    unsettled_missing(States, Provided, Result).
+
+settled_missing([], no_item_missing, [cite(eu_reg_2016_679_art_15_1)]) :-
+    implements(eu_reg_2016_679_art_15_1).
+settled_missing([Item|Items], [Item|Items], Citations) :-
+    implements(eu_reg_2016_679_art_15_1),
+    item_citations([Item|Items], Citations).
+
+missing_basis(states(_, _, _, _, Automated, _, Safeguards), Provided, Basis) :-
+    basis_part(Automated, automated_decision_making_referred_to_in_article_22, automated_decision_making_information, Provided, AutomatedPart),
+    basis_part(Safeguards, transfer_subject_to_article_46_safeguards, transfer_safeguards_information, Provided, SafeguardsPart),
+    append(AutomatedPart, SafeguardsPart, Basis).
+
+basis_part(absent, _, _, _, []).
+basis_part(value(Attested), Key, Item, Provided, Part) :-
+    memberd_t(Item, Provided, Given),
+    basis_given(Given, Key, Attested, Part).
+
+basis_given(true, _, _, []).
+basis_given(false, Key, Attested, [outside_fact(Key, Attested)]).
+
+% A COMPLETION: each absent key true or false, each absent outside fact
+% attested true or attested false; a present key keeps its value.
+completion(states(Processed, Recipients, Collected, Source, Automated, Transfer, Safeguards), states(ProcessedDone, RecipientsDone, CollectedDone, SourceDone, AutomatedDone, TransferDone, SafeguardsDone)) :-
+    complete_crisp(Processed, ProcessedDone),
+    complete_crisp(Recipients, RecipientsDone),
+    complete_crisp(Collected, CollectedDone),
+    complete_crisp(Source, SourceDone),
+    complete_outside(Automated, AutomatedDone),
+    complete_crisp(Transfer, TransferDone),
+    complete_outside(Safeguards, SafeguardsDone).
+
+complete_crisp(absent, value(true)).
+complete_crisp(absent, value(false)).
+complete_crisp(value(Value), value(Value)).
+
+complete_outside(absent, value(attested(true, completion))).
+complete_outside(absent, value(attested(false, completion))).
+complete_outside(value(Value), value(Value)).
+
+% MISSING: OWED without the items already provided, in item order.
+missing_for(Completed, Provided, Missing) :-
+    findall(Item,
+            ( item_row(Item, _),
+              item_missing_flag(Item, Completed, Provided, missing)
+            ),
+            Missing).
+
+item_missing_flag(Item, Completed, Provided, Flag) :-
+    item_condition(Item, Completed, Owed),
+    memberd_t(Item, Provided, Given),
+    missing_flag(Owed, Given, Flag).
+
+missing_flag(true, false, missing).
+missing_flag(true, true, not_missing).
+missing_flag(false, _, not_missing).
+
+% Step 3: the first of P, R, C, S, T that is absent and matters.
+unsettled_missing(States, Provided, Result) :-
+    findall(Key,
+            ( member(Key, [personal_data_concerning_data_subject_processed, disclosure_to_recipients_made_or_envisaged, some_personal_data_not_collected_from_data_subject, source_information_available, transfer_to_third_country_or_international_organisation]),
+              key_matters_t(Key, States, Provided, true)
+            ),
+            Named),
+    unsettled_by_named(Named, States, Provided, Result).
+
+unsettled_by_named([Key|_], _, _, indeterminate([Key])).
+% Step 4: the first of A and G that is absent and matters.
+unsettled_by_named([], States, Provided, Result) :-
+    findall(Key,
+            ( member(Key, [automated_decision_making_referred_to_in_article_22, transfer_subject_to_article_46_safeguards]),
+              key_matters_t(Key, States, Provided, true)
+            ),
+            Referred),
+    referred_first(Referred, Result).
+
+referred_first([Key|_], Result) :-
+    absent_referral(Key, Result).
+
+% A key MATTERS when two completions differing only in it give different MISSING.
+key_matters_t(Key, States, Provided, Truth) :-
+    get_state(Key, States, State),
+    state_matters_t(State, Key, States, Provided, Truth).
+
+state_matters_t(value(_), _, _, _, false).
+state_matters_t(absent, Key, States, Provided, Truth) :-
+    key_values(Key, FirstValue, SecondValue),
+    findall(Flag,
+            ( completion(States, Completed),
+              get_state(Key, Completed, FirstValue),
+              set_state(Key, Completed, SecondValue, Flipped),
+              missing_for(Completed, Provided, FirstMissing),
+              missing_for(Flipped, Provided, SecondMissing),
+              compare(Order, FirstMissing, SecondMissing),
+              order_flag(Order, Flag)
+            ),
+            Flags),
+    memberd_t(different, Flags, Truth).
+
+order_flag(=, same).
+order_flag(<, different).
+order_flag(>, different).
+
+% =====================================================================
+% copy_scope/3 (Art 15(3), first sentence, and Art 15(4))
+% =====================================================================
+copy_scope(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+copy_scope(Profile, Result, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    key_state(Profile, personal_data_concerning_data_subject_processed, Processed),
+    copy_scope_by_processing(Processed, Profile, Result, Citations).
+
+copy_scope_by_processing(absent, _, indeterminate([personal_data_concerning_data_subject_processed]), []) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_scope_by_processing(value(false), _, no_personal_data_to_copy, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_scope_by_processing(value(true), Profile, Result, Citations) :-
+    implements(eu_reg_2016_679_art_15_3),
+    key_state(Profile, copy_would_adversely_affect_rights_and_freedoms_of_others, Judgement),
+    copy_scope_by_judgement(Judgement, Result, Citations).
+
+% Art 15(4) as a defeater of the full copy; the judgement is the caller's.
+copy_scope_by_judgement(absent, indeterminate([copy_would_adversely_affect_rights_and_freedoms_of_others]), []) :-
+    implements(eu_reg_2016_679_art_15_4).
+copy_scope_by_judgement(value(unsure), needs_legal_review(open_textured(copy_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_15_4)), [inputs_relied_on([copy_would_adversely_affect_rights_and_freedoms_of_others-unsure])]), []) :-
+    implements(eu_reg_2016_679_art_15_4).
+copy_scope_by_judgement(value(false), full_copy, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_scope_by_judgement(value(true), copy_limited_by_rights_and_freedoms_of_others, [cite(eu_reg_2016_679_art_15_3), cite(eu_reg_2016_679_art_15_4)]) :-
+    implements(eu_reg_2016_679_art_15_4).
+
+% =====================================================================
+% copy_fee/3 (Art 15(3), second sentence)
+% =====================================================================
+copy_fee(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+copy_fee(Profile, Result, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    key_state(Profile, personal_data_concerning_data_subject_processed, Processed),
+    copy_fee_by_processing(Processed, Profile, Result, Citations).
+
+copy_fee_by_processing(absent, _, indeterminate([personal_data_concerning_data_subject_processed]), []) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_fee_by_processing(value(false), _, no_personal_data_to_copy, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_fee_by_processing(value(true), Profile, Result, Citations) :-
+    implements(eu_reg_2016_679_art_15_3),
+    key_state(Profile, further_copy_requested, Further),
+    copy_fee_by_further(Further, Result, Citations).
+
+copy_fee_by_further(absent, indeterminate([further_copy_requested]), []) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_fee_by_further(value(false), no_fee_under_article_15_3, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+copy_fee_by_further(value(true), reasonable_fee_permitted, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+
+% =====================================================================
+% information_form/3 (Art 15(3), third sentence)
+% =====================================================================
+information_form(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+information_form(Profile, Result, Citations) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    key_state(Profile, request_made_by_electronic_means, Electronic),
+    form_by_electronic(Electronic, Profile, Result, Citations).
+
+form_by_electronic(absent, _, indeterminate([request_made_by_electronic_means]), []) :-
+    implements(eu_reg_2016_679_art_15_3).
+form_by_electronic(value(false), _, no_electronic_request, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+form_by_electronic(value(true), Profile, Result, Citations) :-
+    implements(eu_reg_2016_679_art_15_3),
+    key_state(Profile, other_form_requested_by_data_subject, OtherForm),
+    form_by_other_form(OtherForm, Result, Citations).
+
+form_by_other_form(absent, indeterminate([other_form_requested_by_data_subject]), []) :-
+    implements(eu_reg_2016_679_art_15_3).
+form_by_other_form(value(true), other_form_requested, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+form_by_other_form(value(false), commonly_used_electronic_form, [cite(eu_reg_2016_679_art_15_3)]) :-
+    implements(eu_reg_2016_679_art_15_3).
+
+% =====================================================================
+% verdict assembly (facade), mapped from access_answer_items_missing/4
+% =====================================================================
+decide_gdpr_art15_access_copy(Profile, Verdict) :-
+    access_answer_items_missing(Profile, Result, _Basis, Citations),
+    verdict_of(Result, Citations, Verdict).
+
+verdict_of([_|_], Citations, gdpr_art15_access_copy_verdict(access_answer_incomplete, Citations)).
+verdict_of(no_item_missing, Citations, gdpr_art15_access_copy_verdict(access_answer_complete, Citations)).
+verdict_of(indeterminate(_), _, gdpr_art15_access_copy_verdict(access_answer_awaiting_input, [])).
+verdict_of(needs_legal_review(_, _), _, gdpr_art15_access_copy_verdict(access_answer_referred_for_legal_review, [])).
+verdict_of(input_problems(_), _, gdpr_art15_access_copy_verdict(access_answer_input_rejected, [])).
+
+% ---- projection: Status only ------------------------------------------
+gdpr_art15_access_copy_status(Profile, Status) :-
+    decide_gdpr_art15_access_copy(Profile, gdpr_art15_access_copy_verdict(Status, _Citations)).
+
+% ---- checklist: one row per item --------------------------------------
+gdpr_art15_access_copy_checklist(Profile, [item(profile, unmet(input_problems([Problem|Problems])), cite(eu_reg_2016_679_art_15_1))]) :-
+    gdpr_art15_access_copy_input_problems(Profile, [Problem|Problems]).
+gdpr_art15_access_copy_checklist(Profile, Items) :-
+    gdpr_art15_access_copy_input_problems(Profile, []),
+    key_state(Profile, items_provided, ProvidedState),
+    checklist_by_provided(ProvidedState, Profile, Items).
+
+checklist_by_provided(absent, _, [item(items_provided, unknown([items_provided]), cite(eu_reg_2016_679_art_15_1))]).
+checklist_by_provided(value(Provided), Profile, Items) :-
+    profile_states(Profile, States),
+    findall(item(Item, Status, Citation),
+            ( item_row(Item, Citation),
+              item_check(Item, States, Provided, Status)
+            ),
+            Items).
+
+item_check(Item, States, Provided, Status) :-
+    findall(Flag,
+            ( completion(States, Completed),
+              item_missing_flag(Item, Completed, Provided, Flag)
+            ),
+            Flags),
+    sort(Flags, Distinct),
+    item_status(Distinct, Item, States, Status).
+
+item_status([missing], _, _, unmet(owed_and_not_provided)).
+item_status([not_missing], _, _, met).
+item_status([missing, not_missing], Item, States, unknown(Absent)) :-
+    item_condition_keys(Item, Keys),
+    findall(Key,
+            ( member(Key, Keys),
+              get_state(Key, States, absent)
+            ),
+            Absent).
+
+gdpr_art15_access_copy_decision_resolvable(Profile) :-
+    decide_gdpr_art15_access_copy(Profile, _Verdict).
+
+% =====================================================================
+% tests
+% =====================================================================
+test(processed_false_owes_confirmation_only) :-
+    access_answer_items([attribute(personal_data_concerning_data_subject_processed, false)], Result, Basis, Citations),
+    Result == [confirmation_of_processing],
+    Basis == [],
+    Citations == [cite(eu_reg_2016_679_art_15_1)].
+
+test(processed_absent_is_asked_first) :-
+    access_answer_items([], indeterminate([personal_data_concerning_data_subject_processed]), [], []).
+
+test(recipients_asked_before_others) :-
+    access_answer_items([attribute(personal_data_concerning_data_subject_processed, true)], indeterminate([disclosure_to_recipients_made_or_envisaged]), [], []).
+
+test(source_false_settles_collection) :-
+    access_answer_items([attribute(personal_data_concerning_data_subject_processed, true), attribute(disclosure_to_recipients_made_or_envisaged, false), attribute(source_information_available, false)], indeterminate([transfer_to_third_country_or_international_organisation]), [], []).
+
+test(absent_article_22_statement_is_referred) :-
+    access_answer_items([attribute(personal_data_concerning_data_subject_processed, true), attribute(disclosure_to_recipients_made_or_envisaged, false), attribute(source_information_available, false), attribute(transfer_to_third_country_or_international_organisation, false)], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_15_1_h), cite(article_22_automated_decision_making_statement)), _), [], []).
+
+test(full_profile_owes_all_twelve_items) :-
+    Attested = attested(true, attestation(by, at, reason, none)),
+    access_answer_items([attribute(personal_data_concerning_data_subject_processed, true), attribute(disclosure_to_recipients_made_or_envisaged, true), attribute(some_personal_data_not_collected_from_data_subject, true), attribute(source_information_available, true), attribute(automated_decision_making_referred_to_in_article_22, Attested), attribute(transfer_to_third_country_or_international_organisation, true), attribute(transfer_subject_to_article_46_safeguards, Attested)], Result, Basis, Citations),
+    length(Result, 12),
+    Basis == [outside_fact(automated_decision_making_referred_to_in_article_22, Attested), outside_fact(transfer_subject_to_article_46_safeguards, Attested)],
+    length(Citations, 11).
+
+test(items_query_yields_one_solution) :-
+    findall(Result, access_answer_items([attribute(personal_data_concerning_data_subject_processed, false)], Result, _, _), Results),
+    length(Results, 1).
+
+test(missing_without_items_provided_is_asked) :-
+    access_answer_items_missing([attribute(personal_data_concerning_data_subject_processed, false)], indeterminate([items_provided]), [], []).
+
+test(missing_confirmation_when_nothing_given) :-
+    access_answer_items_missing([attribute(items_provided, []), attribute(personal_data_concerning_data_subject_processed, false)], [confirmation_of_processing], [], [cite(eu_reg_2016_679_art_15_1)]).
+
+test(missing_names_processed_when_unknown) :-
+    access_answer_items_missing([attribute(items_provided, [])], indeterminate([personal_data_concerning_data_subject_processed]), [], []).
+
+test(all_items_given_is_complete) :-
+    findall(Item, item_row(Item, _), AllItems),
+    access_answer_items_missing([attribute(items_provided, AllItems)], no_item_missing, [], [cite(eu_reg_2016_679_art_15_1)]).
+
+test(missing_refers_article_22_when_it_matters) :-
+    access_answer_items_missing([attribute(items_provided, [confirmation_of_processing, access_to_personal_data, purposes_of_processing, categories_of_personal_data, recipients_or_categories_of_recipients, storage_period_or_criteria, rights_to_rectification_erasure_restriction_and_objection, right_to_lodge_complaint, source_of_personal_data, transfer_safeguards_information, copy_of_personal_data]), attribute(personal_data_concerning_data_subject_processed, true)], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_15_1_h), cite(article_22_automated_decision_making_statement)), _), [], []).
+
+test(copy_scope_unsure_goes_to_lawyer) :-
+    copy_scope([attribute(personal_data_concerning_data_subject_processed, true), attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, unsure)], needs_legal_review(open_textured(copy_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_15_4)), [inputs_relied_on([copy_would_adversely_affect_rights_and_freedoms_of_others-unsure])]), []).
+
+test(copy_scope_limited) :-
+    copy_scope([attribute(personal_data_concerning_data_subject_processed, true), attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, true)], copy_limited_by_rights_and_freedoms_of_others, _).
+
+test(copy_scope_limited_is_not_full, fail) :-
+    copy_scope([attribute(personal_data_concerning_data_subject_processed, true), attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, true)], full_copy, _).
+
+test(copy_scope_nothing_to_copy) :-
+    copy_scope([attribute(personal_data_concerning_data_subject_processed, false), attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, true)], no_personal_data_to_copy, [cite(eu_reg_2016_679_art_15_3)]).
+
+test(further_copy_fee) :-
+    copy_fee([attribute(personal_data_concerning_data_subject_processed, true), attribute(further_copy_requested, true)], reasonable_fee_permitted, [cite(eu_reg_2016_679_art_15_3)]).
+
+test(first_copy_no_fee) :-
+    copy_fee([attribute(personal_data_concerning_data_subject_processed, true), attribute(further_copy_requested, false)], no_fee_under_article_15_3, _).
+
+test(electronic_form) :-
+    information_form([attribute(request_made_by_electronic_means, true), attribute(other_form_requested_by_data_subject, false)], commonly_used_electronic_form, [cite(eu_reg_2016_679_art_15_3)]).
+
+test(no_electronic_request) :-
+    information_form([attribute(request_made_by_electronic_means, false)], no_electronic_request, _).
+
+test(unknown_key_is_rejected) :-
+    copy_fee([attribute(colour, blue)], input_problems([unknown_key(colour)]), []).
+
+test(facade_complete) :-
+    findall(Item, item_row(Item, _), AllItems),
+    gdpr_art15_access_copy_status([attribute(items_provided, AllItems)], access_answer_complete).
+
+:- end_module(gdpr_art15_access_copy).

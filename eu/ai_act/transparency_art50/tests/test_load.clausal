@@ -1,0 +1,105 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of eu/ai_act/transparency_art50
+% (kernel and citations) loads, the result term builds and destructures,
+% the verdict atoms the order pins are distinct, and real citation records
+% resolve. The determination slices are not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/ai_act/transparency_art50/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/ai_act/transparency_art50/kernel, [transparency_art50_input_problems/2, transparency_art50_calendar_day_t/2, transparency_art50_item_state/3, transparency_art50_test_outcome/3]).
+:- use_module(eu/ai_act/transparency_art50/citations, [citation/2, implements/1, citation_vocabulary/1]).
+
+% ---- the result term builds and destructures ------------------------
+test(the_verdict_term_carries_result_and_citations) :-
+    Verdict = transparency_art50_verdict(duty_applies, [cite(eu_reg_2024_1689_art_50_1)]),
+    Verdict = transparency_art50_verdict(Result, Citations),
+    Result == duty_applies,
+    Citations == [cite(eu_reg_2024_1689_art_50_1)].
+
+test(the_not_final_term_carries_one_key_and_no_citation) :-
+    Verdict = transparency_art50_verdict(indeterminate([ai_system]), []),
+    Verdict = transparency_art50_verdict(indeterminate([MissingKey]), Citations),
+    MissingKey == ai_system,
+    Citations == [].
+
+test(the_referral_term_destructures) :-
+    Result = needs_legal_review(open_textured(ai_system, cite(eu_reg_2024_1689_art_3_1)), [inputs_relied_on([ai_system-unsure])]),
+    Result = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == ai_system,
+    CitationKey == eu_reg_2024_1689_art_3_1,
+    Pairs == [ai_system-unsure].
+
+% ---- the verdict atoms are distinct --------------------------------
+test(the_status_atoms_are_distinct) :-
+    Atoms = [duty_applies, limited_disclosure_applies, duty_does_not_apply, not_applicable_on_date, not_an_ai_system, in_transitional_period, compliant, not_compliant],
+    sort(Atoms, Sorted),
+    length(Sorted, 8).
+
+test(duty_applies_is_not_duty_does_not_apply) :-
+    dif(duty_applies, duty_does_not_apply).
+
+test(compliant_is_not_not_compliant) :-
+    dif(compliant, not_compliant).
+
+test(the_duty_atoms_are_distinct) :-
+    Duties = [interaction_information, machine_readable_marking, emotion_recognition_or_biometric_categorisation_information, deep_fake_disclosure, public_interest_text_disclosure],
+    sort(Duties, Sorted),
+    length(Sorted, 5).
+
+% ---- real citation records resolve ---------------------------------
+test(the_date_citation_is_recorded) :-
+    citation(eu_reg_2024_1689_art_113, _Record).
+
+test(the_interaction_citation_is_recorded) :-
+    citation(eu_reg_2024_1689_art_50_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(every_vocabulary_key_resolves) :-
+    findall(Key, citation_vocabulary(Key), Keys),
+    length(Keys, 9),
+    maplist(implements, Keys).
+
+test(a_shortened_citation_is_not_recorded, fail) :-
+    citation(art_50_1, _Record).
+
+% ---- the kernel's shared predicates load and answer ----------------
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, transparency_art50_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(an_unknown_key_is_named) :-
+    transparency_art50_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(an_unknown_key_is_not_accepted, fail) :-
+    transparency_art50_input_problems([attribute(colour, red)], []).
+
+test(a_repeated_key_is_a_duplicate) :-
+    transparency_art50_input_problems([attribute(ai_system, true), attribute(ai_system, true)], [duplicate_key(ai_system)]).
+
+test(a_non_list_profile_is_a_wrong_type) :-
+    transparency_art50_input_problems(profile, [wrong_type(profile)]).
+
+test(the_first_day_of_application_is_a_calendar_day) :-
+    transparency_art50_calendar_day_t(date(2026, 8, 2), true).
+
+test(an_impossible_day_is_not_a_calendar_day) :-
+    transparency_art50_calendar_day_t(date(2026, 2, 30), false).
+
+test(a_present_condition_holds) :-
+    transparency_art50_item_state([attribute(ai_system, true)], condition(ai_system, true), holds).
+
+test(an_absent_condition_is_undetermined) :-
+    transparency_art50_item_state([], condition(ai_system, true), undetermined(ai_system)).
+
+test(a_met_test_is_met) :-
+    transparency_art50_test_outcome([attribute(intended_to_interact_directly_with_natural_persons, true)], [condition(intended_to_interact_directly_with_natural_persons, true)], test_met).
+
+test(a_failed_test_is_not_met, fail) :-
+    transparency_art50_test_outcome([attribute(intended_to_interact_directly_with_natural_persons, false)], [condition(intended_to_interact_directly_with_natural_persons, true)], test_met).
+
+test(a_failed_test_is_failed) :-
+    transparency_art50_test_outcome([attribute(intended_to_interact_directly_with_natural_persons, false)], [condition(intended_to_interact_directly_with_natural_persons, true)], test_failed).
+
+:- end_module(test_load).

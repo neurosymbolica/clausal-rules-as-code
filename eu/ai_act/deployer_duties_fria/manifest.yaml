@@ -1,0 +1,548 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/ai_act/deployer_duties_fria
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "deployer_duties_fria"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # (deployer_duties_fria_input_problems/2 is defined here and re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- deployer_duties_fria.clausal --
+  - "deployer_obligation_status/5"
+  - "log_retention_period_status/5"
+  - "decide_deployer_duties_fria/2"
+  - "deployer_duties_fria_status/2"
+  - "deployer_duties_fria_checklist/2"
+  - "deployer_duties_fria_decision_resolvable/1"
+  - "deployer_duties_fria_status_values/1"
+  - "not_applicable_on_date/0"
+  - "not_a_deployer/0"
+  - "not_a_high_risk_ai_system/0"
+  - "obligation_does_not_apply/0"
+  - "information_under_article_13_of_directive_2016_680/0"
+  - "compliance_required_by_31_december_2030/0"
+  - "existing_system_without_significant_changes_not_covered/0"
+  - "compliance_required_by_2_august_2030/0"
+  - "obligation_applies/0"
+  - "period_set_by_other_union_or_national_law/0"
+  - "retention_period_of_at_least_six_months/0"
+  - "retention_period_shorter_than_six_months/0"
+  - "date/3"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "deployer_duties_fria_profile_keys/1"
+  - "deployer_duties_fria_input_problems/2"
+  - "deployer_duties_fria_what_if/4"
+  - "deployer_duties_fria_obligation_status/2"
+  - "deployer_duties_fria_compliance_check/2"
+  - "deployer_duties_fria_chapter_iii_date/2"
+  # -- fixtures.clausal --
+  - "deployer_duties_fria_subject/1"
+  - "deployer_duties_fria_profile_for/2"
+  - "deployer_duties_fria_assess/2"
+
+# root_exports: bare atoms the test cases read as package-root attributes:
+# the nineteen profile keys (input_contract order), the five OBLIGATION
+# atoms and the judgement value unsure.
+root_exports:
+  - "deployer_of_the_system"
+  - "system_is_a_high_risk_ai_system_listed_in_annex_iii"
+  - "system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i"
+  - "logs_automatically_generated_by_the_system_under_the_deployers_control"
+  - "union_or_national_law_provides_otherwise_on_the_log_retention_period"
+  - "deployer_is_an_employer"
+  - "put_into_service_or_used_at_the_workplace"
+  - "makes_or_assists_in_making_decisions_related_to_natural_persons"
+  - "used_for_law_enforcement_purposes"
+  - "system_listed_under_point_2_of_annex_iii"
+  - "body_governed_by_public_law"
+  - "private_entity_providing_public_services"
+  - "system_listed_under_point_5_b_of_annex_iii"
+  - "system_listed_under_point_5_c_of_annex_iii"
+  - "exempt_from_notification_in_the_case_of_article_46_1"
+  - "component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027"
+  - "placed_on_the_market_or_put_into_service_before_the_chapter_iii_date"
+  - "significant_changes_in_design_as_from_the_chapter_iii_date"
+  - "intended_to_be_used_by_public_authorities"
+  - "log_retention"
+  - "information_of_workers_and_their_representatives"
+  - "information_of_natural_persons_subject_to_decisions"
+  - "fundamental_rights_impact_assessment"
+  - "notification_of_assessment_results"
+  - "unsure"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This package imports only kit modules (formalize_lib).
+uses: []
+
+scope: "Whether, on an assessment day, one of five duties of the deployer of an AI system
+  applies under Regulation (EU) 2024/1689 (Artificial Intelligence Act), consolidated text
+  02024R1689-20260727: keeping the automatically generated logs (Art 26(6)), informing
+  the workers' representatives and the affected workers (Art 26(7)), informing the natural
+  persons subject to decisions (Art 26(11), with the Directive (EU) 2016/680 Art 13 rule
+  for law enforcement), performing a fundamental rights impact assessment (Art 27(1), (2))
+  and notifying its results (Art 27(3)); and whether a proposed log retention period of
+  whole months meets the six-month minimum of Art 26(6). The dates of Art 113, third
+  paragraph, point (c), and the transitional rules of Art 111(1) and (2) are applied; the
+  role of deployer (Art 3(4)) and the high-risk classification are the caller's facts.
+  Out of scope: the scope of the Regulation (Art 2), the classification itself (Art 6,
+  Annexes I and III), the content of the assessment, the manner and timing of the
+  information, which logs are kept and whether the period is appropriate to the intended
+  purpose, and the other duties of Art 26 (deferred and excluded sets). Open-textured
+  judgements (body governed by public law, public services, decisions related to natural
+  persons, significant changes in design, intended use by public authorities) are the
+  caller's and refer to a lawyer when unsure."
+
+sources:
+  - "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024, consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744: Art 3 points (4), (9), (11) and (46); Art 26(6), (7) and (11); Art 27(1), (2) and (3); Art 111(1) and (2); Art 113, third paragraph, point (c)(i) and (ii); Annex III points 2, 5(b) and 5(c)"
+  - "Directive (EU) 2016/680, Art 13 (referred to by Art 26(11), second sentence; not applied)"
+
+query_interface:
+  2: "deployer_duties_fria_status/2"              # status verdict of a request
+  7: "deployer_duties_fria_checklist/2"           # justification: items carry cite(...)
+  13: "deployer_duties_fria_compliance_check/2"   # compliance_check: proposed log retention period
+  14: "deployer_duties_fria_obligation_status/2"  # obligation_surfacing: does the duty apply
+  15: "deployer_duties_fria_chapter_iii_date/2"   # deadline: the day Arts 26 and 27 apply
+  16: "deployer_duties_fria_what_if/4"            # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings_and_lead_words
+  units:
+  - 02024R1689-20260727#art_003
+  - 02024R1689-20260727#art_026
+  - 02024R1689-20260727#art_027
+  - 02024R1689-20260727#art_111
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'The titles of Articles 3, 26, 27 and 111 and the lead words of Article
+    3 (''For the purposes of this Regulation, the following definitions apply'') carry
+    no rule of their own: document structure. Deferred so every unit of the pinned
+    extract is accounted for.'
+  consequence: 'None for a caller: they carry no rule.'
+- what: definitions_not_read_by_this_order
+  units:
+  - 02024R1689-20260727#point_003_1
+  - 02024R1689-20260727#point_003_2
+  - 02024R1689-20260727#point_003_3
+  - 02024R1689-20260727#point_003_5
+  - 02024R1689-20260727#point_003_6
+  - 02024R1689-20260727#point_003_7
+  - 02024R1689-20260727#point_003_8
+  - 02024R1689-20260727#point_003_10
+  - 02024R1689-20260727#point_003_12
+  - 02024R1689-20260727#point_003_13
+  - 02024R1689-20260727#point_003_14
+  - 02024R1689-20260727#point_003_14a
+  - 02024R1689-20260727#point_003_14b
+  - 02024R1689-20260727#point_003_15
+  - 02024R1689-20260727#point_003_16
+  - 02024R1689-20260727#point_003_17
+  - 02024R1689-20260727#point_003_18
+  - 02024R1689-20260727#point_003_19
+  - 02024R1689-20260727#point_003_20
+  - 02024R1689-20260727#point_003_21
+  - 02024R1689-20260727#point_003_22
+  - 02024R1689-20260727#point_003_23
+  - 02024R1689-20260727#point_003_24
+  - 02024R1689-20260727#point_003_25
+  - 02024R1689-20260727#point_003_26
+  - 02024R1689-20260727#point_003_27
+  - 02024R1689-20260727#point_003_28
+  - 02024R1689-20260727#point_003_29
+  - 02024R1689-20260727#point_003_30
+  - 02024R1689-20260727#point_003_31
+  - 02024R1689-20260727#point_003_32
+  - 02024R1689-20260727#point_003_33
+  - 02024R1689-20260727#point_003_34
+  - 02024R1689-20260727#point_003_35
+  - 02024R1689-20260727#point_003_36
+  - 02024R1689-20260727#point_003_37
+  - 02024R1689-20260727#point_003_38
+  - 02024R1689-20260727#point_003_39
+  - 02024R1689-20260727#point_003_40
+  - 02024R1689-20260727#point_003_41
+  - 02024R1689-20260727#point_003_42
+  - 02024R1689-20260727#point_003_43
+  - 02024R1689-20260727#point_003_44
+  - 02024R1689-20260727#point_003_45
+  - 02024R1689-20260727#point_003_45_a
+  - 02024R1689-20260727#point_003_45_b
+  - 02024R1689-20260727#point_003_47
+  - 02024R1689-20260727#point_003_48
+  - 02024R1689-20260727#point_003_49
+  - 02024R1689-20260727#point_003_49_a
+  - 02024R1689-20260727#point_003_49_b
+  - 02024R1689-20260727#point_003_49_c
+  - 02024R1689-20260727#point_003_49_d
+  - 02024R1689-20260727#point_003_50
+  - 02024R1689-20260727#point_003_51
+  - 02024R1689-20260727#point_003_52
+  - 02024R1689-20260727#point_003_53
+  - 02024R1689-20260727#point_003_54
+  - 02024R1689-20260727#point_003_55
+  - 02024R1689-20260727#point_003_56
+  - 02024R1689-20260727#point_003_57
+  - 02024R1689-20260727#point_003_58
+  - 02024R1689-20260727#point_003_59
+  - 02024R1689-20260727#point_003_60
+  - 02024R1689-20260727#point_003_61
+  - 02024R1689-20260727#point_003_61_a
+  - 02024R1689-20260727#point_003_61_a_i
+  - 02024R1689-20260727#point_003_61_a_ii
+  - 02024R1689-20260727#point_003_61_a_iii
+  - 02024R1689-20260727#point_003_61_b
+  - 02024R1689-20260727#point_003_62
+  - 02024R1689-20260727#point_003_63
+  - 02024R1689-20260727#point_003_64
+  - 02024R1689-20260727#point_003_65
+  - 02024R1689-20260727#point_003_66
+  - 02024R1689-20260727#point_003_67
+  - 02024R1689-20260727#point_003_68
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 3 is pinned whole; its points other than (4), (9), (11) and (46) define
+    terms no query of this order reads. 77 units.
+  consequence: None for these answers.
+- what: definitions_read_into_the_keys
+  units:
+  - 02024R1689-20260727#point_003_9
+  - 02024R1689-20260727#point_003_11
+  - 02024R1689-20260727#point_003_46
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 3, points (9) placing on the market, (11) putting into service and (46)
+    law enforcement are read into the meaning of the keys put_into_service_or_used_at_the_workplace,
+    placed_on_the_market_or_put_into_service_before_the_chapter_iii_date and used_for_law_enforcement_purposes;
+    they add no step of their own (reading (7), reading (12), reading (8)).
+  consequence: The caller applies the definitions when it gives those keys.
+- what: annex_iii_points_read_into_the_keys
+  units:
+  - 02024R1689-20260727#division_annex_iii
+  - 02024R1689-20260727#point_annex_iii_2
+  - 02024R1689-20260727#point_annex_iii_5
+  - 02024R1689-20260727#point_annex_iii_5_b
+  - 02024R1689-20260727#point_annex_iii_5_c
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: The title and lead words of Annex III, its point 2 (critical infrastructure),
+    the lead words of point 5 and points 5(b) and 5(c) are read into the meaning of
+    the keys system_is_a_high_risk_ai_system_listed_in_annex_iii, system_listed_under_point_2_of_annex_iii,
+    system_listed_under_point_5_b_of_annex_iii and system_listed_under_point_5_c_of_annex_iii;
+    the classification is the caller's fact and no step reads the Annex itself (reading
+    (4), reading (9)).
+  consequence: The caller gives the classification and the Annex III point from the
+    classification rules.
+- what: annex_iii_points_not_read
+  units:
+  - 02024R1689-20260727#point_annex_iii_1
+  - 02024R1689-20260727#point_annex_iii_1_a
+  - 02024R1689-20260727#point_annex_iii_1_b
+  - 02024R1689-20260727#point_annex_iii_1_c
+  - 02024R1689-20260727#point_annex_iii_3
+  - 02024R1689-20260727#point_annex_iii_3_a
+  - 02024R1689-20260727#point_annex_iii_3_b
+  - 02024R1689-20260727#point_annex_iii_3_c
+  - 02024R1689-20260727#point_annex_iii_3_d
+  - 02024R1689-20260727#point_annex_iii_4
+  - 02024R1689-20260727#point_annex_iii_4_a
+  - 02024R1689-20260727#point_annex_iii_4_b
+  - 02024R1689-20260727#point_annex_iii_5_a
+  - 02024R1689-20260727#point_annex_iii_5_d
+  - 02024R1689-20260727#point_annex_iii_6
+  - 02024R1689-20260727#point_annex_iii_6_a
+  - 02024R1689-20260727#point_annex_iii_6_b
+  - 02024R1689-20260727#point_annex_iii_6_c
+  - 02024R1689-20260727#point_annex_iii_6_d
+  - 02024R1689-20260727#point_annex_iii_6_e
+  - 02024R1689-20260727#point_annex_iii_7
+  - 02024R1689-20260727#point_annex_iii_7_a
+  - 02024R1689-20260727#point_annex_iii_7_b
+  - 02024R1689-20260727#point_annex_iii_7_c
+  - 02024R1689-20260727#point_annex_iii_7_d
+  - 02024R1689-20260727#point_annex_iii_8
+  - 02024R1689-20260727#point_annex_iii_8_a
+  - 02024R1689-20260727#point_annex_iii_8_b
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: The other points of Annex III (points 1, 3, 4, 6, 7 and 8 with their lettered
+    points, and points 5(a) and 5(d)) matter to this order only through the classification
+    key system_is_a_high_risk_ai_system_listed_in_annex_iii; no step reads them. 28
+    units.
+  consequence: None for these answers; the caller gives the classification.
+- what: log_period_appropriate_to_the_intended_purpose_and_financial_institutions
+  units:
+  - 02024R1689-20260727#parag_026.006
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 26(6) asks for 'a period appropriate to the intended purpose of the
+    high-risk AI system, of at least six months'; the order checks only the minimum
+    of six months, not whether the period is appropriate (an open word), nor which
+    logs are under the deployer's control; and its second sentence (deployers that
+    are financial institutions maintain the logs as part of the documentation kept
+    under Union financial services law) is not formalised (reading (5), reading (6),
+    Q14).
+  consequence: An answer retention_period_of_at_least_six_months does not say that
+    the period is appropriate to the intended purpose, nor how a financial institution
+    keeps the logs.
+- what: rules_and_timing_of_the_information_of_workers
+  units:
+  - 02024R1689-20260727#parag_026.007
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 26(7): the second sentence (the information is given, where applicable,
+    under the rules and procedures of Union and national law and practice on information
+    of workers and their representatives) and the check that the information came
+    before the system was put into service or used are not formalised (reading (7),
+    Q19).'
+  consequence: An answer obligation_applies does not say how the information is given
+    or whether it was given in time.
+- what: manner_of_informing_natural_persons
+  units:
+  - 02024R1689-20260727#parag_026.011
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 26(11): how and when the natural persons are informed is not formalised;
+    the order says whether the obligation applies (reading (8)).'
+  consequence: An answer obligation_applies does not say how or when the persons are
+    to be informed.
+- what: content_and_timing_of_the_impact_assessment
+  units:
+  - 02024R1689-20260727#parag_027.001
+  - 02024R1689-20260727#parag_027.002
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 27(1), second sentence (''For that purpose, deployers shall perform
+    an assessment consisting of:''), and the words ''that the use of such system may
+    produce''; Art 27(2), second and third sentences (reliance on earlier assessments
+    in similar cases; the update when an element has changed): not formalised. The
+    order reads who must perform the assessment and that it is due before the first
+    use (reading (9)).'
+  consequence: An answer obligation_applies does not say what the assessment must
+    hold, whether an earlier assessment may be relied on, or when it must be updated.
+- what: elements_of_the_impact_assessment
+  units:
+  - 02024R1689-20260727#point_027.001_a
+  - 02024R1689-20260727#point_027.001_b
+  - 02024R1689-20260727#point_027.001_c
+  - 02024R1689-20260727#point_027.001_d
+  - 02024R1689-20260727#point_027.001_e
+  - 02024R1689-20260727#point_027.001_f
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 27(1), points (a) to (f), list what the assessment consists of; the
+    order says whether the assessment is due, not its content (reading (1)).
+  consequence: The caller reads the points for the content of the assessment.
+- what: template_with_the_notification
+  units:
+  - 02024R1689-20260727#parag_027.003
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 27(3): the notification is made by ''submitting the filled-out template
+    referred to in paragraph 5''; the order says whether the notification duty applies,
+    not what is submitted or when (reading (10)).'
+  consequence: An answer obligation_applies does not say what the notification holds
+    or when it is due.
+- what: data_protection_impact_assessment_cross_references
+  units:
+  - 02024R1689-20260727#parag_027.004
+  not_formalized_because: procedural_no_output
+  declaration: not_an_exception
+  reason: Art 27(4) lets the deployer include cross-references to, or parts of, a
+    data protection impact assessment in the fundamental rights impact assessment;
+    it says how the assessment may be written, not whether it is due.
+  consequence: None for these answers.
+- what: template_of_the_ai_office
+  units:
+  - 02024R1689-20260727#parag_027.005
+  not_formalized_because: institutional
+  declaration: not_an_exception
+  reason: Art 27(5) is a task of the AI Office (a template for a questionnaire); no
+    duty of the deployer follows.
+  consequence: None for these answers.
+- what: appropriate_measures_oversight_input_data_monitoring_and_cooperation
+  units:
+  - 02024R1689-20260727#parag_026.001
+  - 02024R1689-20260727#parag_026.002
+  - 02024R1689-20260727#parag_026.004
+  - 02024R1689-20260727#parag_026.005
+  - 02024R1689-20260727#parag_026.012
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 26(1) (appropriate technical and organisational measures to use the
+    system in accordance with the instructions for use), Art 26(2) (human oversight
+    by persons with the necessary competence, training and authority), Art 26(4) (input
+    data relevant and sufficiently representative), Art 26(5) (monitoring, informing
+    the provider, suspending use, serious incidents) and Art 26(12) (cooperation with
+    the competent authorities) are other duties of the deployer, turning on open words
+    ('appropriate', 'necessary', 'sufficiently representative', 'reason to consider');
+    this order does not answer for them.
+  consequence: The caller does not learn from this order whether those duties apply
+    or are met.
+- what: without_prejudice_clause
+  units:
+  - 02024R1689-20260727#parag_026.003
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 26(3) says that paragraphs 1 and 2 are without prejudice to other deployer
+    obligations and to the deployer's freedom to organise its resources; it adds no
+    condition to the obligations this order reads.
+  consequence: None for these answers.
+- what: registration_duty_of_public_deployers
+  units:
+  - 02024R1689-20260727#parag_026.008
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 26(8): deployers that are public authorities or Union institutions,
+    bodies, offices or agencies comply with the registration obligations of Art 49
+    and do not use a system not registered in the EU database of Art 71; Arts 49 and
+    71 are not pinned here, and this order does not answer for that duty.'
+  consequence: The caller checks the registration duty under the rules on registration.
+- what: data_protection_impact_assessment_duty
+  units:
+  - 02024R1689-20260727#parag_026.009
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 26(9): where applicable, deployers use the information provided under
+    Art 13 to comply with their duty to carry out a data protection impact assessment
+    under Art 35 of Regulation (EU) 2016/679 or Art 27 of Directive (EU) 2016/680;
+    that duty arises under those acts, which are not pinned here.'
+  consequence: The caller checks the data protection impact assessment under the data
+    protection rules.
+- what: post_remote_biometric_identification
+  units:
+  - 02024R1689-20260727#parag_026.010
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 26(10) (authorisation of the use of post-remote biometric identification
+    in a targeted search, its limits, documentation and annual reports) is a separate
+    set of duties; this order does not answer for it.
+  consequence: The caller does not learn from this order whether those duties apply
+    or are met.
+- what: evaluation_of_large_scale_it_systems
+  units:
+  - 02024R1689-20260727#parag_111.001
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 111(1), second sentence (the requirements are taken into account in
+    the evaluation of each large-scale IT system and where its legal acts are replaced
+    or amended) binds those who evaluate the systems; the order reads the first sentence
+    only (reading (11)).
+  consequence: None for a deployer's answer.
+- what: transitional_rules_for_general_purpose_ai_models_and_article_50
+  units:
+  - 02024R1689-20260727#parag_111.003
+  - 02024R1689-20260727#parag_111.004
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: Art 111(3) (general-purpose AI models) and Art 111(4) (Art 50(2)) concern
+    providers and provisions this order does not read.
+  consequence: None for these answers.
+- what: entry_into_force_and_other_dates
+  units:
+  - 02024R1689-20260727#art_113
+  - 02024R1689-20260727#point_113_a
+  - 02024R1689-20260727#point_113_b
+  - 02024R1689-20260727#point_113_d
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'Art 113: the entry into force, the general date of the second paragraph
+    and points (a), (b) and (d) of the third paragraph date provisions this order
+    does not read; the order reads point (c) (reading (2)).'
+  consequence: None for these answers.
+
+excluded_set:
+- what: scope_of_the_regulation
+  instrument: Regulation (EU) 2024/1689 Art 2 (not in this pin; the scope order)
+  cites:
+  - 02024R1689-20260727#art_002
+  reason: Art 2 sets the scope of the Regulation (among others, deployers established
+    or located in the Union, the exclusions for military, defence or national security
+    purposes and for personal non-professional activity); it is not pinned in this
+    domain (reading (1)).
+  consequence: The caller first checks that the Regulation applies to the case under
+    Art 2; the answers assume it does.
+- what: classification_of_high_risk_ai_systems
+  instrument: Regulation (EU) 2024/1689 Art 6 (not in this pin; the classification
+    order)
+  cites:
+  - 02024R1689-20260727#art_006
+  reason: Art 6 classifies AI systems as high-risk under Annex I (paragraph 1) and
+    Annex III (paragraphs 2 and 3); the classification is the caller's fact (reading
+    (4)).
+  consequence: The caller gives the classification keys from the classification rules.
+- what: case_of_article_46_1
+  instrument: Regulation (EU) 2024/1689 Art 46(1) (not in this pin)
+  cites:
+  - 02024R1689-20260727#art_046
+  reason: Art 27(3) refers to the case of Art 46(1); its content is not pinned (reading
+    (10)).
+  consequence: The caller states whether the exemption applies.
+- what: law_enforcement_information_rule
+  instrument: Directive (EU) 2016/680 Art 13
+  cites:
+  - 32016L0680#art_013
+  reason: Art 26(11), second sentence, applies Art 13 of Directive (EU) 2016/680;
+    that Directive is not pinned (reading (8)).
+  consequence: An answer information_under_article_13_of_directive_2016_680 does not
+    say what that Article asks; the caller applies the Directive.
+- what: large_scale_it_systems_listed_in_annex_x
+  instrument: Regulation (EU) 2024/1689 Annex X (not in this pin)
+  cites:
+  - 02024R1689-20260727#division_annex_x
+  reason: Art 111(1) refers to the legal acts listed in Annex X; the Annex is not
+    pinned, so membership is the caller's fact (reading (11)).
+  consequence: The caller says whether the system is such a component.

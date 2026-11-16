@@ -1,0 +1,500 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_act_connected_product_data_sharing_data_act_connected_product_data_sharing, [product_design_duty_status/3, pre_contract_information_duty_status/3, user_access_request_status/3, third_party_sharing_request_status/3, decide_data_act_connected_product_data_sharing/2, data_act_connected_product_data_sharing_status/2, data_act_connected_product_data_sharing_checklist/2, data_act_connected_product_data_sharing_decision_resolvable/1, data_act_connected_product_data_sharing_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_values/2]).
+:- use_module(m__eu_data_act_connected_product_data_sharing_kernel, [data_act_connected_product_data_sharing_input_problems/2]).
+:- use_module(m__eu_data_act_connected_product_data_sharing_citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+
+data_act_connected_product_data_sharing_status_values([eligible, ineligible]).
+
+product_design_duty_status(Profile, Result, Citations) :-
+    implements(eu_reg_2023_2854_art_3_1),
+    data_act_connected_product_data_sharing_input_problems(Profile, Problems),
+    checked_answer(Problems, product_design_duty_status, Profile, Result, Citations).
+
+pre_contract_information_duty_status(Profile, Result, Citations) :-
+    implements(eu_reg_2023_2854_art_3_2),
+    implements(eu_reg_2023_2854_art_3_3),
+    data_act_connected_product_data_sharing_input_problems(Profile, Problems),
+    checked_answer(Problems, pre_contract_information_duty_status, Profile, Result, Citations).
+
+user_access_request_status(Profile, Result, Citations) :-
+    implements(eu_reg_2023_2854_art_4_1),
+    data_act_connected_product_data_sharing_input_problems(Profile, Problems),
+    checked_answer(Problems, user_access_request_status, Profile, Result, Citations).
+
+third_party_sharing_request_status(Profile, Result, Citations) :-
+    implements(eu_reg_2023_2854_art_5_1),
+    data_act_connected_product_data_sharing_input_problems(Profile, Problems),
+    checked_answer(Problems, third_party_sharing_request_status, Profile, Result, Citations).
+
+checked_answer([], Query, Profile, Result, Citations) :-
+    query_answer(Query, Profile, Result, Citations).
+checked_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+
+query_keys(product_design_duty_status, [connected_product_or_related_service, small_enterprise_exemption_applies, placed_on_market_after_12_september_2026, data_accessible_by_default_as_required, directly_accessible_where_relevant_and_feasible]).
+query_keys(pre_contract_information_duty_status, [connected_product_or_related_service, small_enterprise_exemption_applies, pre_contract_contract_kind, required_information_provided_before_contract]).
+query_keys(user_access_request_status, [connected_product_or_related_service, small_enterprise_exemption_applies, requester_is_user, addressee_is_data_holder, requested_data_readily_available, data_directly_accessible_by_user, security_restriction_agreed_applies, other_persons_personal_data_requested, gdpr_conditions_for_making_available_met, requested_data_identified_as_trade_secrets, trade_secret_measures_agreed_and_kept, exceptional_trade_secret_refusal_invoked]).
+query_keys(third_party_sharing_request_status, [connected_product_or_related_service, small_enterprise_exemption_applies, request_by_or_on_behalf_of_user, addressee_is_data_holder, requested_data_readily_available, testing_data_not_yet_on_market, third_party_use_contractually_permitted, third_party_is_designated_gatekeeper, other_persons_personal_data_requested, gdpr_conditions_for_making_available_met, requested_data_identified_as_trade_secrets, trade_secret_disclosure_strictly_necessary, trade_secret_measures_agreed_and_kept, exceptional_trade_secret_refusal_invoked]).
+
+key_domain(pre_contract_contract_kind, [purchase_rent_or_lease_of_connected_product, provision_of_related_service]).
+key_domain(Key, [true, false]) :-
+    dif(Key, pre_contract_contract_kind).
+
+limb(product_design_duty_status, step([holds(connected_product_or_related_service, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_3_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_5),
+    implements(eu_reg_2023_2854_art_2_6).
+limb(product_design_duty_status, step([holds(small_enterprise_exemption_applies, true)], final(not_applicable, [cite(eu_reg_2023_2854_art_3_1)]))) :-
+    implements(eu_reg_2023_2854_art_7_1),
+    implements(eu_reg_2023_2854_art_7_t1).
+limb(product_design_duty_status, step([holds(placed_on_market_after_12_september_2026, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_3_1)]))) :-
+    implements(eu_reg_2023_2854_art_50_t3).
+limb(product_design_duty_status, step([holds(data_accessible_by_default_as_required, true), holds(directly_accessible_where_relevant_and_feasible, true)], final(design_duty_met, [cite(eu_reg_2023_2854_art_3_1)]))) :-
+    implements(eu_reg_2023_2854_art_3_1),
+    implements(eu_reg_2023_2854_art_2_15),
+    implements(eu_reg_2023_2854_art_2_16).
+limb(product_design_duty_status, step([], final(design_duty_not_met, [cite(eu_reg_2023_2854_art_3_1)]))) :-
+    implements(eu_reg_2023_2854_art_3_1).
+limb(pre_contract_information_duty_status, step([holds(connected_product_or_related_service, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_3_2), cite(eu_reg_2023_2854_art_3_3)]))) :-
+    implements(eu_reg_2023_2854_art_2_5),
+    implements(eu_reg_2023_2854_art_2_6).
+limb(pre_contract_information_duty_status, step([holds(small_enterprise_exemption_applies, true)], final(not_applicable, [cite(eu_reg_2023_2854_art_3_2), cite(eu_reg_2023_2854_art_3_3)]))) :-
+    implements(eu_reg_2023_2854_art_7_1),
+    implements(eu_reg_2023_2854_art_7_t1).
+limb(pre_contract_information_duty_status, step([holds(pre_contract_contract_kind, purchase_rent_or_lease_of_connected_product), holds(required_information_provided_before_contract, true)], final(information_duty_met, [cite(eu_reg_2023_2854_art_3_2)]))) :-
+    implements(eu_reg_2023_2854_art_3_2),
+    implements(eu_reg_2023_2854_art_3_2_a),
+    implements(eu_reg_2023_2854_art_3_2_b),
+    implements(eu_reg_2023_2854_art_3_2_c),
+    implements(eu_reg_2023_2854_art_3_2_d).
+limb(pre_contract_information_duty_status, step([holds(pre_contract_contract_kind, provision_of_related_service), holds(required_information_provided_before_contract, true)], final(information_duty_met, [cite(eu_reg_2023_2854_art_3_3)]))) :-
+    implements(eu_reg_2023_2854_art_3_3),
+    implements(eu_reg_2023_2854_art_3_3_a),
+    implements(eu_reg_2023_2854_art_3_3_b),
+    implements(eu_reg_2023_2854_art_3_3_c),
+    implements(eu_reg_2023_2854_art_3_3_d),
+    implements(eu_reg_2023_2854_art_3_3_e),
+    implements(eu_reg_2023_2854_art_3_3_f),
+    implements(eu_reg_2023_2854_art_3_3_g),
+    implements(eu_reg_2023_2854_art_3_3_h),
+    implements(eu_reg_2023_2854_art_3_3_i).
+limb(pre_contract_information_duty_status, step([holds(pre_contract_contract_kind, purchase_rent_or_lease_of_connected_product)], final(information_duty_not_met, [cite(eu_reg_2023_2854_art_3_2)]))) :-
+    implements(eu_reg_2023_2854_art_3_2).
+limb(pre_contract_information_duty_status, step([holds(pre_contract_contract_kind, provision_of_related_service)], final(information_duty_not_met, [cite(eu_reg_2023_2854_art_3_3)]))) :-
+    implements(eu_reg_2023_2854_art_3_3).
+limb(user_access_request_status, step([holds(connected_product_or_related_service, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_5),
+    implements(eu_reg_2023_2854_art_2_6).
+limb(user_access_request_status, step([holds(small_enterprise_exemption_applies, true)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_7_1),
+    implements(eu_reg_2023_2854_art_7_t1).
+limb(user_access_request_status, step([holds(requester_is_user, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_12).
+limb(user_access_request_status, step([holds(addressee_is_data_holder, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_13).
+limb(user_access_request_status, step([holds(requested_data_readily_available, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_17).
+limb(user_access_request_status, step([holds(data_directly_accessible_by_user, true)], final(not_applicable, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_4_1).
+limb(user_access_request_status, step([holds(security_restriction_agreed_applies, true)], final(refusal_permitted_security_restriction, [cite(eu_reg_2023_2854_art_4_2)]))) :-
+    implements(eu_reg_2023_2854_art_4_2).
+limb(user_access_request_status, step([holds(other_persons_personal_data_requested, true), holds(gdpr_conditions_for_making_available_met, false)], final(personal_data_not_to_be_made_available, [cite(eu_reg_2023_2854_art_4_12)]))) :-
+    implements(eu_reg_2023_2854_art_4_12).
+limb(user_access_request_status, step([holds(requested_data_identified_as_trade_secrets, true), holds(trade_secret_measures_agreed_and_kept, false)], final(withholding_permitted_trade_secrets, [cite(eu_reg_2023_2854_art_4_7)]))) :-
+    implements(eu_reg_2023_2854_art_4_6),
+    implements(eu_reg_2023_2854_art_4_7).
+limb(user_access_request_status, step([holds(requested_data_identified_as_trade_secrets, true), holds(exceptional_trade_secret_refusal_invoked, true)], referral(open_textured(exceptional_trade_secret_refusal_invoked, cite(eu_reg_2023_2854_art_4_8))))) :-
+    implements(eu_reg_2023_2854_art_4_8).
+limb(user_access_request_status, step([], final(access_due, [cite(eu_reg_2023_2854_art_4_1)]))) :-
+    implements(eu_reg_2023_2854_art_4_1),
+    implements(eu_reg_2023_2854_art_50_t2).
+limb(third_party_sharing_request_status, step([holds(connected_product_or_related_service, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_5),
+    implements(eu_reg_2023_2854_art_2_6).
+limb(third_party_sharing_request_status, step([holds(small_enterprise_exemption_applies, true)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_7_1),
+    implements(eu_reg_2023_2854_art_7_t1).
+limb(third_party_sharing_request_status, step([holds(request_by_or_on_behalf_of_user, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_5_1),
+    implements(eu_reg_2023_2854_art_2_12).
+limb(third_party_sharing_request_status, step([holds(addressee_is_data_holder, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_13).
+limb(third_party_sharing_request_status, step([holds(requested_data_readily_available, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_2_17).
+limb(third_party_sharing_request_status, step([holds(testing_data_not_yet_on_market, true), holds(third_party_use_contractually_permitted, false)], final(not_applicable, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_5_2).
+limb(third_party_sharing_request_status, step([holds(third_party_is_designated_gatekeeper, true)], final(third_party_not_eligible_gatekeeper, [cite(eu_reg_2023_2854_art_5_3)]))) :-
+    implements(eu_reg_2023_2854_art_5_3).
+limb(third_party_sharing_request_status, step([holds(other_persons_personal_data_requested, true), holds(gdpr_conditions_for_making_available_met, false)], final(personal_data_not_to_be_made_available, [cite(eu_reg_2023_2854_art_5_7)]))) :-
+    implements(eu_reg_2023_2854_art_5_7).
+limb(third_party_sharing_request_status, step([holds(requested_data_identified_as_trade_secrets, true), holds(trade_secret_disclosure_strictly_necessary, false)], final(trade_secret_disclosure_not_permitted, [cite(eu_reg_2023_2854_art_5_9)]))) :-
+    implements(eu_reg_2023_2854_art_5_9).
+limb(third_party_sharing_request_status, step([holds(requested_data_identified_as_trade_secrets, true), holds(trade_secret_measures_agreed_and_kept, false)], final(withholding_permitted_trade_secrets, [cite(eu_reg_2023_2854_art_5_10)]))) :-
+    implements(eu_reg_2023_2854_art_5_9),
+    implements(eu_reg_2023_2854_art_5_10).
+limb(third_party_sharing_request_status, step([holds(requested_data_identified_as_trade_secrets, true), holds(exceptional_trade_secret_refusal_invoked, true)], referral(open_textured(exceptional_trade_secret_refusal_invoked, cite(eu_reg_2023_2854_art_5_11))))) :-
+    implements(eu_reg_2023_2854_art_5_11).
+limb(third_party_sharing_request_status, step([], final(sharing_due, [cite(eu_reg_2023_2854_art_5_1)]))) :-
+    implements(eu_reg_2023_2854_art_5_1),
+    implements(eu_reg_2023_2854_art_50_t2).
+
+referral_cite(product_design_duty_status, connected_product_or_related_service, _, cite(eu_reg_2023_2854_art_2_5)).
+referral_cite(product_design_duty_status, small_enterprise_exemption_applies, _, cite(eu_reg_2023_2854_art_7_1)).
+referral_cite(product_design_duty_status, data_accessible_by_default_as_required, _, cite(eu_reg_2023_2854_art_3_1)).
+referral_cite(product_design_duty_status, directly_accessible_where_relevant_and_feasible, _, cite(eu_reg_2023_2854_art_3_1)).
+referral_cite(pre_contract_information_duty_status, connected_product_or_related_service, _, cite(eu_reg_2023_2854_art_2_5)).
+referral_cite(pre_contract_information_duty_status, small_enterprise_exemption_applies, _, cite(eu_reg_2023_2854_art_7_1)).
+referral_cite(pre_contract_information_duty_status, required_information_provided_before_contract, purchase_rent_or_lease_of_connected_product, cite(eu_reg_2023_2854_art_3_2)).
+referral_cite(pre_contract_information_duty_status, required_information_provided_before_contract, provision_of_related_service, cite(eu_reg_2023_2854_art_3_3)).
+referral_cite(user_access_request_status, connected_product_or_related_service, _, cite(eu_reg_2023_2854_art_2_5)).
+referral_cite(user_access_request_status, small_enterprise_exemption_applies, _, cite(eu_reg_2023_2854_art_7_1)).
+referral_cite(user_access_request_status, requester_is_user, _, cite(eu_reg_2023_2854_art_2_12)).
+referral_cite(user_access_request_status, addressee_is_data_holder, _, cite(eu_reg_2023_2854_art_2_13)).
+referral_cite(user_access_request_status, requested_data_readily_available, _, cite(eu_reg_2023_2854_art_2_17)).
+referral_cite(user_access_request_status, data_directly_accessible_by_user, _, cite(eu_reg_2023_2854_art_4_1)).
+referral_cite(user_access_request_status, security_restriction_agreed_applies, _, cite(eu_reg_2023_2854_art_4_2)).
+referral_cite(user_access_request_status, gdpr_conditions_for_making_available_met, _, cite(eu_reg_2023_2854_art_4_12)).
+referral_cite(user_access_request_status, trade_secret_measures_agreed_and_kept, _, cite(eu_reg_2023_2854_art_4_7)).
+referral_cite(third_party_sharing_request_status, connected_product_or_related_service, _, cite(eu_reg_2023_2854_art_2_5)).
+referral_cite(third_party_sharing_request_status, small_enterprise_exemption_applies, _, cite(eu_reg_2023_2854_art_7_1)).
+referral_cite(third_party_sharing_request_status, request_by_or_on_behalf_of_user, _, cite(eu_reg_2023_2854_art_5_1)).
+referral_cite(third_party_sharing_request_status, addressee_is_data_holder, _, cite(eu_reg_2023_2854_art_2_13)).
+referral_cite(third_party_sharing_request_status, requested_data_readily_available, _, cite(eu_reg_2023_2854_art_2_17)).
+referral_cite(third_party_sharing_request_status, third_party_is_designated_gatekeeper, _, cite(eu_reg_2023_2854_art_5_3)).
+referral_cite(third_party_sharing_request_status, gdpr_conditions_for_making_available_met, _, cite(eu_reg_2023_2854_art_5_7)).
+referral_cite(third_party_sharing_request_status, trade_secret_disclosure_strictly_necessary, _, cite(eu_reg_2023_2854_art_5_9)).
+referral_cite(third_party_sharing_request_status, trade_secret_measures_agreed_and_kept, _, cite(eu_reg_2023_2854_art_5_10)).
+
+query_entry(Profile, Key, entry(Key, Domain, not_stated)) :-
+    profile_lacks(Profile, Key),
+    key_domain(Key, Domain).
+query_entry(Profile, Key, Entry) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    stated_entry(Value, Key, Entry).
+
+stated_entry(unsure, Key, entry(Key, [true, false], stated_unsure)).
+stated_entry(Value, Key, entry(Key, [Value], stated)) :-
+    dif(Value, unsure).
+
+query_answer(Query, Profile, Result, Citations) :-
+    query_keys(Query, Keys),
+    maplist(query_entry(Profile), Keys, Entries),
+    findall(Reads - Answer, completion_leaf(Query, Entries, Reads, Answer), Leaves),
+    pairs_values(Leaves, AnswerList),
+    sort(AnswerList, Answers),
+    answers_outcome(Answers, Query, Entries, Leaves, Result, Citations).
+
+answers_outcome([Answer], _, Entries, _, Result, Citations) :-
+    settled_outcome(Answer, Entries, Result, Citations).
+answers_outcome([_, _|_], Query, Entries, Leaves, Result, Citations) :-
+    findall(Key, mattering_key(Leaves, Key), KeyList),
+    sort(KeyList, MatteringKeys),
+    first_flagged_key(Entries, not_stated, MatteringKeys, Found),
+    unsettled_outcome(Found, Query, Entries, MatteringKeys, Result, Citations).
+
+settled_outcome(final(Result, Citations), _, Result, Citations).
+settled_outcome(referral(Reason), Entries, needs_legal_review(Reason, [inputs_relied_on(Pairs)]), []) :-
+    entry_pairs(Entries, Pairs).
+
+unsettled_outcome(flagged(Key), _, _, _, indeterminate([Key]), []).
+unsettled_outcome(no_flagged_key, Query, Entries, MatteringKeys, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), []) :-
+    first_flagged_key(Entries, stated_unsure, MatteringKeys, flagged(Key)),
+    contract_kind_of(Entries, Kind),
+    referral_cite(Query, Key, Kind, Citation),
+    entry_pairs(Entries, Pairs).
+
+first_flagged_key([], _, _, no_flagged_key).
+first_flagged_key([entry(Key, _, Presence)|Entries], Wanted, MatteringKeys, Found) :-
+    memberd_t(Presence, [Wanted], IsWanted),
+    memberd_t(Key, MatteringKeys, Matters),
+    truth_and(IsWanted, Matters, Hit),
+    flagged_after(Hit, Key, Entries, Wanted, MatteringKeys, Found).
+
+flagged_after(true, Key, _, _, _, flagged(Key)).
+flagged_after(false, _, Entries, Wanted, MatteringKeys, Found) :-
+    first_flagged_key(Entries, Wanted, MatteringKeys, Found).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+contract_kind_of(Entries, Kind) :-
+    findall(Value, member(entry(pre_contract_contract_kind, [Value], stated), Entries), Values),
+    kind_from(Values, Kind).
+
+kind_from([], not_stated).
+kind_from([Value], Value).
+
+entry_pairs([], []).
+entry_pairs([entry(_, _, not_stated)|Entries], Pairs) :-
+    entry_pairs(Entries, Pairs).
+entry_pairs([entry(Key, [Value], stated)|Entries], [Key - Value|Pairs]) :-
+    entry_pairs(Entries, Pairs).
+entry_pairs([entry(Key, _, stated_unsure)|Entries], [Key - unsure|Pairs]) :-
+    entry_pairs(Entries, Pairs).
+
+completion_leaf(Query, Entries, Reads, Answer) :-
+    maplist(entry_world, Entries, World),
+    findall(Step, limb(Query, Step), Steps),
+    run_steps(Steps, World, Answer),
+    maplist(world_read, World, Reads).
+
+entry_world(entry(Key, Choices, _), world(Key, Choices, _)).
+
+world_read(world(Key, _, Value), Key - Read) :-
+    read_state(Value, Read).
+
+read_state(Value, not_read) :-
+    var(Value).
+read_state(Value, Value) :-
+    nonvar(Value).
+
+read_value(World, Key, Value) :-
+    member(world(Key, Choices, Value), World),
+    member(Value, Choices).
+
+run_steps([step(Tests, Answer)|Steps], World, Result) :-
+    tests_hold_t(Tests, World, Fires),
+    run_after(Fires, Answer, Steps, World, Result).
+
+run_after(true, Answer, _, _, Answer).
+run_after(false, _, Steps, World, Result) :-
+    run_steps(Steps, World, Result).
+
+tests_hold_t([], _, true).
+tests_hold_t([holds(Key, Wanted)|Tests], World, Truth) :-
+    read_value(World, Key, Value),
+    memberd_t(Value, [Wanted], Matches),
+    tests_after(Matches, Tests, World, Truth).
+
+tests_after(false, _, _, false).
+tests_after(true, Tests, World, Truth) :-
+    tests_hold_t(Tests, World, Truth).
+
+mattering_key(Leaves, Key) :-
+    member(FirstReads - FirstAnswer, Leaves),
+    member(SecondReads - SecondAnswer, Leaves),
+    FirstAnswer \== SecondAnswer,
+    member(Key - FirstValue, FirstReads),
+    FirstValue \== not_read,
+    member(Key - SecondValue, SecondReads),
+    SecondValue \== not_read,
+    FirstValue \== SecondValue,
+    compatible_except(FirstReads, SecondReads, Key).
+
+compatible_except([], [], _).
+compatible_except([Other - FirstValue|FirstReads], [Other - SecondValue|SecondReads], Key) :-
+    pair_compatible(Other, FirstValue, SecondValue, Key),
+    compatible_except(FirstReads, SecondReads, Key).
+
+pair_compatible(Other, _, _, Key) :-
+    Other == Key.
+pair_compatible(Other, FirstValue, SecondValue, Key) :-
+    Other \== Key,
+    compatible_values(FirstValue, SecondValue).
+
+compatible_values(not_read, _).
+compatible_values(FirstValue, not_read) :-
+    FirstValue \== not_read.
+compatible_values(FirstValue, SecondValue) :-
+    FirstValue \== not_read,
+    SecondValue \== not_read,
+    FirstValue == SecondValue.
+
+decide_data_act_connected_product_data_sharing(Profile, data_act_connected_product_data_sharing_verdict(Status, Citations)) :-
+    implements(eu_reg_2023_2854_art_4_1),
+    user_access_request_status(Profile, Result, Citations),
+    eligibility_of(Result, Status).
+
+eligibility_of(access_due, eligible).
+eligibility_of(not_applicable, ineligible).
+eligibility_of(refusal_permitted_security_restriction, ineligible).
+eligibility_of(personal_data_not_to_be_made_available, ineligible).
+eligibility_of(withholding_permitted_trade_secrets, ineligible).
+eligibility_of(indeterminate(Keys), indeterminate(Keys)).
+eligibility_of(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+eligibility_of(input_problems(Problems), input_problems(Problems)).
+
+data_act_connected_product_data_sharing_status(Profile, Status) :-
+    decide_data_act_connected_product_data_sharing(Profile, data_act_connected_product_data_sharing_verdict(Status, _Citations)).
+
+data_act_connected_product_data_sharing_decision_resolvable(Profile) :-
+    decide_data_act_connected_product_data_sharing(Profile, _Verdict).
+
+data_act_connected_product_data_sharing_checklist(Profile, Items) :-
+    data_act_connected_product_data_sharing_input_problems(Profile, []),
+    requirement_identifiers(Identifiers),
+    maplist(checklist_item(Profile), Identifiers, Items).
+
+requirement_identifiers([connected_product_or_related_service, no_small_enterprise_exemption, requester_user, addressee_data_holder, data_readily_available, no_direct_access, no_security_restriction, personal_data_legal_basis, trade_secret_measures, no_exceptional_refusal]).
+
+checklist_item(Profile, Identifier, item(Identifier, Status, Citation)) :-
+    requirement(Identifier, Profile, Status, Citation).
+
+requirement(connected_product_or_related_service, Profile, Status, cite(eu_reg_2023_2854_art_2_5)) :-
+    implements(eu_reg_2023_2854_art_2_5),
+    judgement_status(Profile, connected_product_or_related_service, true, not_connected_product_or_related_service, Status).
+requirement(no_small_enterprise_exemption, Profile, Status, cite(eu_reg_2023_2854_art_7_1)) :-
+    implements(eu_reg_2023_2854_art_7_1),
+    judgement_status(Profile, small_enterprise_exemption_applies, false, small_enterprise_exemption, Status).
+requirement(requester_user, Profile, Status, cite(eu_reg_2023_2854_art_2_12)) :-
+    implements(eu_reg_2023_2854_art_2_12),
+    judgement_status(Profile, requester_is_user, true, requester_not_user, Status).
+requirement(addressee_data_holder, Profile, Status, cite(eu_reg_2023_2854_art_2_13)) :-
+    implements(eu_reg_2023_2854_art_2_13),
+    judgement_status(Profile, addressee_is_data_holder, true, addressee_not_data_holder, Status).
+requirement(data_readily_available, Profile, Status, cite(eu_reg_2023_2854_art_2_17)) :-
+    implements(eu_reg_2023_2854_art_2_17),
+    judgement_status(Profile, requested_data_readily_available, true, data_not_readily_available, Status).
+requirement(no_direct_access, Profile, Status, cite(eu_reg_2023_2854_art_4_1)) :-
+    implements(eu_reg_2023_2854_art_4_1),
+    judgement_status(Profile, data_directly_accessible_by_user, false, data_directly_accessible, Status).
+requirement(no_security_restriction, Profile, Status, cite(eu_reg_2023_2854_art_4_2)) :-
+    implements(eu_reg_2023_2854_art_4_2),
+    judgement_status(Profile, security_restriction_agreed_applies, false, security_restriction_agreed, Status).
+requirement(personal_data_legal_basis, Profile, Status, cite(eu_reg_2023_2854_art_4_12)) :-
+    implements(eu_reg_2023_2854_art_4_12),
+    judgement_status(Profile, other_persons_personal_data_requested, false, other_persons_personal_data_requested, First),
+    judgement_status(Profile, gdpr_conditions_for_making_available_met, true, gdpr_conditions_not_met, Second),
+    either_status(First, Second, Status).
+requirement(trade_secret_measures, Profile, Status, cite(eu_reg_2023_2854_art_4_7)) :-
+    implements(eu_reg_2023_2854_art_4_7),
+    judgement_status(Profile, requested_data_identified_as_trade_secrets, false, data_identified_as_trade_secrets, First),
+    judgement_status(Profile, trade_secret_measures_agreed_and_kept, true, trade_secret_measures_not_kept, Second),
+    either_status(First, Second, Status).
+requirement(no_exceptional_refusal, Profile, Status, cite(eu_reg_2023_2854_art_4_8)) :-
+    implements(eu_reg_2023_2854_art_4_8),
+    judgement_status(Profile, requested_data_identified_as_trade_secrets, false, data_identified_as_trade_secrets, First),
+    judgement_status(Profile, exceptional_trade_secret_refusal_invoked, false, exceptional_refusal_invoked, Second),
+    either_status(First, Second, Status).
+
+judgement_status(Profile, Key, _, _, unknown([Key])) :-
+    profile_lacks(Profile, Key).
+judgement_status(Profile, Key, Wanted, Reason, Status) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    stated_status(Value, Key, Wanted, Reason, Status).
+
+stated_status(Wanted, _, Wanted, _, met).
+stated_status(unsure, Key, Wanted, _, unknown([Key])) :-
+    dif(Wanted, unsure).
+stated_status(Value, _, Wanted, Reason, unmet(Reason)) :-
+    dif(Value, Wanted),
+    dif(Value, unsure).
+
+status_kind(met, met).
+status_kind(unmet(_), unmet).
+status_kind(unknown(_), unknown).
+
+either_status(First, Second, Status) :-
+    status_kind(First, FirstKind),
+    status_kind(Second, SecondKind),
+    either_kinds(FirstKind, SecondKind, First, Second, Status).
+
+either_kinds(met, _, _, _, met).
+either_kinds(unmet, met, _, _, met).
+either_kinds(unknown, met, _, _, met).
+either_kinds(unmet, unmet, _, Second, Second).
+either_kinds(unmet, unknown, _, Second, Second).
+either_kinds(unknown, unmet, First, _, First).
+either_kinds(unknown, unknown, unknown(FirstKeys), unknown(SecondKeys), unknown(Keys)) :-
+    append(FirstKeys, SecondKeys, Keys).
+
+access_core_profile([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(requester_is_user, true), attribute(addressee_is_data_holder, true), attribute(requested_data_readily_available, true), attribute(data_directly_accessible_by_user, false), attribute(security_restriction_agreed_applies, false), attribute(other_persons_personal_data_requested, false)]).
+
+sharing_core_profile([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(request_by_or_on_behalf_of_user, true), attribute(addressee_is_data_holder, true), attribute(requested_data_readily_available, true), attribute(testing_data_not_yet_on_market, false)]).
+
+test(design_duty_met_on_a_complete_profile) :-
+    findall(Result - Citations, product_design_duty_status([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(placed_on_market_after_12_september_2026, true), attribute(data_accessible_by_default_as_required, true), attribute(directly_accessible_where_relevant_and_feasible, true)], Result, Citations), Answers),
+    Answers == [design_duty_met - [cite(eu_reg_2023_2854_art_3_1)]].
+test(design_duty_settled_by_market_date) :-
+    findall(Result - Citations, product_design_duty_status([attribute(placed_on_market_after_12_september_2026, false)], Result, Citations), Answers),
+    Answers == [not_applicable - [cite(eu_reg_2023_2854_art_3_1)]].
+test(design_duty_empty_profile_names_the_first_key) :-
+    findall(Result - Citations, product_design_duty_status([], Result, Citations), Answers),
+    Answers == [indeterminate([connected_product_or_related_service]) - []].
+test(design_duty_unsure_connected_product_is_referred) :-
+    findall(Result - Citations, product_design_duty_status([attribute(connected_product_or_related_service, unsure), attribute(small_enterprise_exemption_applies, false), attribute(placed_on_market_after_12_september_2026, true), attribute(data_accessible_by_default_as_required, true), attribute(directly_accessible_where_relevant_and_feasible, true)], Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(connected_product_or_related_service, cite(eu_reg_2023_2854_art_2_5)), [inputs_relied_on([connected_product_or_related_service - unsure, small_enterprise_exemption_applies - false, placed_on_market_after_12_september_2026 - true, data_accessible_by_default_as_required - true, directly_accessible_where_relevant_and_feasible - true])]) - []].
+test(information_duty_met_for_a_purchase) :-
+    findall(Result - Citations, pre_contract_information_duty_status([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(pre_contract_contract_kind, purchase_rent_or_lease_of_connected_product), attribute(required_information_provided_before_contract, true)], Result, Citations), Answers),
+    Answers == [information_duty_met - [cite(eu_reg_2023_2854_art_3_2)]].
+test(information_duty_absent_kind_is_asked_for) :-
+    findall(Result - Citations, pre_contract_information_duty_status([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(required_information_provided_before_contract, unsure)], Result, Citations), Answers),
+    Answers == [indeterminate([pre_contract_contract_kind]) - []].
+test(information_duty_unsure_is_referred_with_the_kind_citation) :-
+    findall(Result, pre_contract_information_duty_status([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(pre_contract_contract_kind, provision_of_related_service), attribute(required_information_provided_before_contract, unsure)], Result, _), Results),
+    Results == [needs_legal_review(open_textured(required_information_provided_before_contract, cite(eu_reg_2023_2854_art_3_3)), [inputs_relied_on([connected_product_or_related_service - true, small_enterprise_exemption_applies - false, pre_contract_contract_kind - provision_of_related_service, required_information_provided_before_contract - unsure])])].
+test(access_due_settled_with_irrelevant_keys_absent) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    findall(Result - Citations, user_access_request_status(Profile, Result, Citations), Answers),
+    Answers == [access_due - [cite(eu_reg_2023_2854_art_4_1)]].
+test(access_exceptional_refusal_goes_to_a_lawyer) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, true), attribute(trade_secret_measures_agreed_and_kept, true), attribute(exceptional_trade_secret_refusal_invoked, true)], Profile),
+    findall(Result - Citations, user_access_request_status(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(exceptional_trade_secret_refusal_invoked, cite(eu_reg_2023_2854_art_4_8)), [inputs_relied_on([connected_product_or_related_service - true, small_enterprise_exemption_applies - false, requester_is_user - true, addressee_is_data_holder - true, requested_data_readily_available - true, data_directly_accessible_by_user - false, security_restriction_agreed_applies - false, other_persons_personal_data_requested - false, requested_data_identified_as_trade_secrets - true, trade_secret_measures_agreed_and_kept - true, exceptional_trade_secret_refusal_invoked - true])]) - []].
+test(access_trade_secret_measures_not_kept) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, true), attribute(trade_secret_measures_agreed_and_kept, false)], Profile),
+    findall(Result - Citations, user_access_request_status(Profile, Result, Citations), Answers),
+    Answers == [withholding_permitted_trade_secrets - [cite(eu_reg_2023_2854_art_4_7)]].
+test(access_missing_key_named_beside_an_unsure_judgement) :-
+    findall(Result, user_access_request_status([attribute(connected_product_or_related_service, unsure), attribute(requester_is_user, true), attribute(addressee_is_data_holder, true), attribute(requested_data_readily_available, true), attribute(data_directly_accessible_by_user, false), attribute(security_restriction_agreed_applies, false), attribute(other_persons_personal_data_requested, false), attribute(requested_data_identified_as_trade_secrets, false)], Result, _), Results),
+    Results == [indeterminate([small_enterprise_exemption_applies])].
+test(access_unknown_key_is_an_input_problem) :-
+    findall(Result - Citations, user_access_request_status([attribute(colour, true)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour)]) - []].
+test(access_wrong_type_is_an_input_problem) :-
+    findall(Result, user_access_request_status([attribute(requester_is_user, maybe)], Result, _), Results),
+    Results == [input_problems([wrong_type(requester_is_user)])].
+test(sharing_gatekeeper_not_eligible) :-
+    sharing_core_profile(Core),
+    append(Core, [attribute(third_party_is_designated_gatekeeper, true)], Profile),
+    findall(Result - Citations, third_party_sharing_request_status(Profile, Result, Citations), Answers),
+    Answers == [third_party_not_eligible_gatekeeper - [cite(eu_reg_2023_2854_art_5_3)]].
+test(sharing_testing_data_settles_not_applicable) :-
+    findall(Result - Citations, third_party_sharing_request_status([attribute(testing_data_not_yet_on_market, true), attribute(third_party_use_contractually_permitted, false)], Result, Citations), Answers),
+    Answers == [not_applicable - [cite(eu_reg_2023_2854_art_5_1)]].
+test(sharing_trade_secret_not_strictly_necessary) :-
+    sharing_core_profile(Core),
+    append(Core, [attribute(third_party_is_designated_gatekeeper, false), attribute(other_persons_personal_data_requested, false), attribute(requested_data_identified_as_trade_secrets, true), attribute(trade_secret_disclosure_strictly_necessary, false)], Profile),
+    findall(Result - Citations, third_party_sharing_request_status(Profile, Result, Citations), Answers),
+    Answers == [trade_secret_disclosure_not_permitted - [cite(eu_reg_2023_2854_art_5_9)]].
+test(sharing_due_on_a_clean_profile) :-
+    sharing_core_profile(Core),
+    append(Core, [attribute(third_party_is_designated_gatekeeper, false), attribute(other_persons_personal_data_requested, false), attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    findall(Result - Citations, third_party_sharing_request_status(Profile, Result, Citations), Answers),
+    Answers == [sharing_due - [cite(eu_reg_2023_2854_art_5_1)]].
+test(facade_eligible_when_access_is_due) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    decide_data_act_connected_product_data_sharing(Profile, data_act_connected_product_data_sharing_verdict(eligible, [cite(eu_reg_2023_2854_art_4_1)])).
+test(checklist_rows_met_when_access_is_due) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    data_act_connected_product_data_sharing_checklist(Profile, Items),
+    length(Items, 10),
+    member(item(no_security_restriction, met, cite(eu_reg_2023_2854_art_4_2)), Items),
+    member(item(trade_secret_measures, met, cite(eu_reg_2023_2854_art_4_7)), Items).
+
+test(design_duty_met_is_not_not_met, fail) :-
+    product_design_duty_status([attribute(connected_product_or_related_service, true), attribute(small_enterprise_exemption_applies, false), attribute(placed_on_market_after_12_september_2026, true), attribute(data_accessible_by_default_as_required, true), attribute(directly_accessible_where_relevant_and_feasible, true)], design_duty_not_met, _).
+test(access_due_is_not_withholding, fail) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    user_access_request_status(Profile, withholding_permitted_trade_secrets, _).
+test(sharing_gatekeeper_is_not_sharing_due, fail) :-
+    sharing_core_profile(Core),
+    append(Core, [attribute(third_party_is_designated_gatekeeper, true)], Profile),
+    third_party_sharing_request_status(Profile, sharing_due, _).
+test(facade_eligible_is_not_ineligible, fail) :-
+    access_core_profile(Core),
+    append(Core, [attribute(requested_data_identified_as_trade_secrets, false)], Profile),
+    data_act_connected_product_data_sharing_status(Profile, ineligible).

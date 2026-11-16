@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_beneficial_ownership_threshold_fixtures, [amlr_bo_subject/1, amlr_bo_profile_for/2, amlr_bo_assess/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

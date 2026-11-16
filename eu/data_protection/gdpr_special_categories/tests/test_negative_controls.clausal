@@ -1,0 +1,179 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed). Each near-miss is asserted three ways: the route's
+% answer is NOT produced (a fail test), and the answer it DOES get is
+% stated positively, so a misspelt atom shows up as a failing positive.
+% Run: python -m clausal.testing eu/data_protection/gdpr_special_categories/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_special_categories/processing_permitted, [processing_permitted/2]).
+:- use_module(eu/data_protection/gdpr_special_categories/permitted_bases, [permitted_bases/2]).
+:- use_module(eu/data_protection/gdpr_special_categories/fixtures, [gdpr_special_categories_profile_for/2]).
+
+status_of(Subject, Status) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    processing_permitted(Profile, Status).
+
+bases_of(Subject, Bases) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    permitted_bases(Profile, Bases).
+
+% ---- not special-category data / special-category data with no claim ----
+test(not_special_category_route) :-
+    bases_of(not_special_category, [not_special_category_data]).
+test(no_claim_near_miss_is_not_eligible, fail) :-
+    status_of(health_without_claim, eligible).
+test(no_claim_near_miss_is_ineligible) :-
+    status_of(health_without_claim, ineligible).
+
+% ---- Art 9(2)(a) ----
+test(point_a_route) :-
+    bases_of(explicit_consent, [art9_2_a]).
+test(point_a_near_miss_is_not_eligible, fail) :-
+    status_of(explicit_consent_barred_by_law, eligible).
+test(point_a_near_miss_is_ineligible) :-
+    status_of(explicit_consent_barred_by_law, ineligible).
+
+% ---- Art 9(2)(b) ----
+test(point_b_route) :-
+    bases_of(employment_law_authorised, [art9_2_b]).
+test(point_b_near_miss_is_not_eligible, fail) :-
+    status_of(employment_law_attested_false, eligible).
+test(point_b_near_miss_is_ineligible) :-
+    status_of(employment_law_attested_false, ineligible).
+
+% ---- Art 9(2)(c) ----
+test(point_c_route) :-
+    bases_of(vital_interest_incapable, [art9_2_c]).
+test(point_c_near_miss_is_not_eligible, fail) :-
+    status_of(vital_interest_capable, eligible).
+test(point_c_near_miss_is_ineligible) :-
+    status_of(vital_interest_capable, ineligible).
+
+% ---- Art 9(2)(d) ----
+test(point_d_route) :-
+    bases_of(not_for_profit_members, [art9_2_d]).
+test(point_d_near_miss_is_not_eligible, fail) :-
+    status_of(not_for_profit_outsiders, eligible).
+test(point_d_near_miss_is_ineligible) :-
+    status_of(not_for_profit_outsiders, ineligible).
+
+% ---- Art 9(2)(e) ----
+test(point_e_route) :-
+    bases_of(made_public, [art9_2_e]).
+test(point_e_near_miss_is_not_eligible, fail) :-
+    status_of(made_public_denied, eligible).
+test(point_e_near_miss_is_ineligible) :-
+    status_of(made_public_denied, ineligible).
+
+% ---- Art 9(2)(f) ----
+test(point_f_route) :-
+    bases_of(legal_claims, [art9_2_f]).
+test(point_f_near_miss_is_not_eligible, fail) :-
+    status_of(legal_claims_other_purpose, eligible).
+test(point_f_near_miss_is_ineligible) :-
+    status_of(legal_claims_other_purpose, ineligible).
+
+% ---- Art 9(2)(g) ----
+test(point_g_route) :-
+    bases_of(substantial_public_interest, [art9_2_g]).
+test(point_g_near_miss_is_not_eligible, fail) :-
+    status_of(substantial_public_interest_denied, eligible).
+test(point_g_near_miss_is_ineligible) :-
+    status_of(substantial_public_interest_denied, ineligible).
+
+% ---- Art 9(2)(h) with Art 9(3) ----
+test(point_h_route) :-
+    bases_of(health_care_contract, [art9_2_h]).
+test(point_h_near_miss_is_not_eligible, fail) :-
+    status_of(health_care_without_secrecy, eligible).
+test(point_h_near_miss_is_ineligible) :-
+    status_of(health_care_without_secrecy, ineligible).
+
+% ---- Art 9(2)(i) ----
+test(point_i_route) :-
+    bases_of(public_health_law, [art9_2_i]).
+test(point_i_near_miss_is_not_eligible, fail) :-
+    status_of(public_health_law_attested_false, eligible).
+test(point_i_near_miss_is_ineligible) :-
+    status_of(public_health_law_attested_false, ineligible).
+
+% ---- Art 9(2)(j) ----
+test(point_j_route) :-
+    bases_of(research_archiving, [art9_2_j]).
+test(point_j_near_miss_is_not_eligible, fail) :-
+    status_of(research_without_article_89, eligible).
+test(point_j_near_miss_is_ineligible) :-
+    status_of(research_without_article_89, ineligible).
+
+% ---- Art 10 route A (official authority) ----
+test(article_10_route_a) :-
+    bases_of(criminal_official_authority, [art10_official_authority]).
+test(article_10_route_a_near_miss_is_not_eligible, fail) :-
+    status_of(criminal_no_route, eligible).
+test(article_10_route_a_near_miss_is_ineligible) :-
+    status_of(criminal_no_route, ineligible).
+
+% ---- Art 10 route B (authorising law), the register a defeater ----
+test(article_10_route_b) :-
+    bases_of(criminal_authorised_by_law, [art10_authorised_by_law]).
+test(article_10_route_b_near_miss_is_not_eligible, fail) :-
+    status_of(criminal_register_defeats_law, eligible).
+test(article_10_route_b_near_miss_is_ineligible) :-
+    status_of(criminal_register_defeats_law, ineligible).
+
+% ---- Art 9(4) further conditions ----
+test(article_9_4_attested_false_is_applied) :-
+    status_of(further_conditions_attested_false, eligible).
+test(article_9_4_attested_true_is_not_eligible, fail) :-
+    status_of(further_conditions_attested_true, eligible).
+test(article_9_4_attested_true_is_referred) :-
+    status_of(further_conditions_attested_true, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_4)), _)).
+
+% ---- Art 9(4) applicability: health false / health unsure ----
+test(article_9_4_health_false_stands) :-
+    status_of(health_false_further_conditions, eligible).
+test(article_9_4_health_unsure_is_not_eligible, fail) :-
+    status_of(health_unsure_further_conditions, eligible).
+test(article_9_4_health_unsure_is_referred) :-
+    status_of(health_unsure_further_conditions, needs_legal_review(open_textured(concerns_health, cite(eu_reg_2016_679_art_4_15)), _)).
+
+% ---- Art 9(1) biometric limiter ----
+test(biometric_without_identification_is_out_of_scope) :-
+    bases_of(biometric_without_identification, [not_special_category_data]).
+test(biometric_with_identification_is_not_eligible, fail) :-
+    status_of(biometric_with_identification, eligible).
+test(biometric_with_identification_is_ineligible) :-
+    status_of(biometric_with_identification, ineligible).
+
+% ---- Art 9(1) scope settled / unsure ----
+test(scope_settled_false_is_eligible) :-
+    status_of(scope_settled_false, eligible).
+test(scope_unsure_is_not_eligible, fail) :-
+    status_of(scope_unsure_referral, eligible).
+test(scope_unsure_is_referred) :-
+    status_of(scope_unsure_referral, needs_legal_review(open_textured(concerns_sex_life_or_sexual_orientation, cite(eu_reg_2016_679_art_9_1)), _)).
+
+% ---- absent enabling fact (cross-reference) ----
+test(attested_enabling_fact_is_eligible) :-
+    status_of(employment_law_authorised, eligible).
+test(absent_enabling_fact_is_not_eligible, fail) :-
+    status_of(employment_law_absent_cross_reference, eligible).
+test(absent_enabling_fact_is_referred) :-
+    status_of(employment_law_absent_cross_reference, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_2_b), cite(eu_reg_2016_679_art_9_2_b)), _)).
+
+% ---- absent scope flag (indeterminate) ----
+test(absent_scope_flag_is_not_eligible, fail) :-
+    status_of(criminal_scope_absent, eligible).
+test(absent_scope_flag_is_indeterminate) :-
+    status_of(criminal_scope_absent, indeterminate([criminal_offence_data_present])).
+
+% ---- input problems ----
+test(input_problems_are_not_eligible, fail) :-
+    status_of(wrong_type_value, eligible).
+test(input_problems_are_reported) :-
+    status_of(wrong_type_value, input_problems([wrong_type(genetic_data_present)])).
+
+:- end_module(test_negative_controls).

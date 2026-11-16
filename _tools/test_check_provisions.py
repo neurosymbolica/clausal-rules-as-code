@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Contract tests for check_provisions — T1, T2, T3, T5 and the parameter leg.
 
 The properties under test are the CHECKS' contract, not their wording:

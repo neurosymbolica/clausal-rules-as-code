@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
+% result term builds and destructures, the verdict atoms are distinct, and a
+% real citation record resolves. The determination slices are not referenced.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_data_subject_rights_portability_and_objection/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/kernel, [gdpr_data_subject_rights_portability_and_objection_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/citations, [citation/2, implements/1]).
+
+test(the_comply_atoms_are_distinct) :-
+    dif(must_comply, need_not_comply).
+
+test(the_basis_atoms_are_distinct) :-
+    dif(art20_1, art21_1),
+    dif(art21_1, art21_2),
+    dif(art21_2, art21_6),
+    dif(art21_6, none).
+
+test(the_verdict_term_builds_and_destructures) :-
+    Verdict = gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], [cite(eu_reg_2016_679_art_20_1)]),
+    Verdict = gdpr_data_subject_request_verdict(Comply, Basis, Exception, Conditions, Citations),
+    Comply == must_comply,
+    Basis == art20_1,
+    Exception == none,
+    Conditions == [],
+    Citations == [cite(eu_reg_2016_679_art_20_1)].
+
+test(the_conditional_verdict_carries_its_condition) :-
+    Verdict = gdpr_data_subject_request_verdict(need_not_comply, art21_1, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], []),
+    Verdict = gdpr_data_subject_request_verdict(_, _, _, Conditions, _),
+    Conditions == [reasonable_fee_may_be_charged].
+
+test(the_compound_statuses_build) :-
+    Missing = indeterminate([request_type]),
+    Missing = indeterminate(Keys),
+    Keys == [request_type],
+    Suspended = suspended(art12_6_identity_not_confirmed),
+    Suspended = suspended(Reason),
+    Reason == art12_6_identity_not_confirmed.
+
+test(the_legal_review_status_builds) :-
+    Review = needs_legal_review(open_textured(transmission_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_20_4)), [inputs_relied_on([request_type-portability])]),
+    Review = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Input == transmission_would_adversely_affect_rights_and_freedoms_of_others,
+    Key == eu_reg_2016_679_art_20_4,
+    Pairs == [request_type-portability].
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_20_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(an_unrecorded_citation_does_not_resolve, fail) :-
+    citation(eu_reg_2016_679_art_99_9, _).
+
+test(implements_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_21_2).
+
+test(the_kernel_input_check_accepts_an_empty_profile) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems([], []).
+
+test(the_kernel_input_check_accepts_a_well_formed_profile) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems(
+        [attribute(request_type, portability), attribute(processing_carried_out_by_automated_means, true)],
+        []).
+
+test(the_kernel_input_check_names_an_unknown_key) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems(
+        [attribute(bogus_key, true)],
+        [unknown_key(bogus_key)]).
+
+test(the_kernel_input_check_names_a_wrong_type) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems(
+        [attribute(request_type, nonsense)],
+        [wrong_type(request_type)]).
+
+test(the_kernel_input_check_names_a_duplicate_key) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems(
+        [attribute(request_type, portability), attribute(request_type, objection)],
+        [duplicate_key(request_type)]).
+
+test(a_non_list_profile_is_wrong_type_profile) :-
+    gdpr_data_subject_rights_portability_and_objection_input_problems(not_a_list, [wrong_type(profile)]).
+
+:- end_module(test_load).

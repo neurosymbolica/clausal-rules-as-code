@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % clausal: no-collect
 % (a Prolog module/fixture, not a test file: clausal.testing collects .pl since engine 076d7b41)
 % =====================================================================

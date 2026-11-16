@@ -1,0 +1,126 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE
+% control (one required condition changed -> different verdict), proving
+% the route is LOAD-BEARING and a wrong answer is NOT produced. A negative
+% states "no solution" as `test(Name, fail) :- Goal.`
+%
+% A `fail` test cannot tell a wrong verdict from a MISSPELT one, so every
+% near-miss atom is paired with a positive test that it IS one of the
+% slice's verdict atoms, and every compound status with a positive case.
+% Run: python -m clausal.testing eu/labour/weekly_rest/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/labour/weekly_rest/weekly_rest, [
+    weekly_rest_status/2,
+    weekly_rest_status_values/1
+]).
+:- use_module(eu/labour/weekly_rest/fixtures, [weekly_rest_profile_for/2]).
+
+status_of(Subject, Status) :-
+    weekly_rest_profile_for(Subject, WeeklyRestCase),
+    weekly_rest_status(WeeklyRestCase, Status).
+
+% ---- the verdict atoms are real -------------------------------------------
+test(every_near_miss_atom_is_a_real_verdict_atom) :-
+    weekly_rest_status_values(StatusValues),
+    member(weekly_rest_given, StatusValues),
+    member(weekly_rest_not_given, StatusValues),
+    member(weekly_rest_not_applied_to_worker, StatusValues),
+    member(weekly_rest_derogation_applies, StatusValues).
+
+% ---- Art 5 first subparagraph: given / not given ------------------------
+test(rest_of_2100_minutes_is_given) :-
+    status_of(rest_of_2100_minutes_given, weekly_rest_given).
+test(rest_of_2099_minutes_is_not_given) :-
+    status_of(rest_of_2099_minutes_not_given, weekly_rest_not_given).
+test(rest_of_2099_minutes_is_not_given_as_given, fail) :-
+    status_of(rest_of_2099_minutes_not_given, weekly_rest_given).
+test(rest_of_2100_minutes_is_not_short, fail) :-
+    status_of(rest_of_2100_minutes_given, weekly_rest_not_given).
+
+% ---- Art 5 second subparagraph: the reduced minimum ---------------------
+test(reduced_rest_of_1440_minutes_is_given) :-
+    status_of(reduced_rest_of_1440_minutes_given, weekly_rest_given).
+test(reduced_rest_of_1439_minutes_is_not_given) :-
+    status_of(reduced_rest_of_1439_minutes_not_given, weekly_rest_not_given).
+test(reduced_rest_of_1439_minutes_is_not_given_as_given, fail) :-
+    status_of(reduced_rest_of_1439_minutes_not_given, weekly_rest_given).
+
+% ---- Art 16(a): two rests in a 14-day block -----------------------------
+test(fourteen_day_run_of_4200_is_given) :-
+    status_of(fourteen_day_run_of_4200_minutes_given, weekly_rest_given).
+test(fourteen_day_run_of_4199_is_not_given) :-
+    status_of(fourteen_day_run_of_4199_minutes_not_given, weekly_rest_not_given).
+test(fourteen_day_run_of_4199_is_not_given_as_given, fail) :-
+    status_of(fourteen_day_run_of_4199_minutes_not_given, weekly_rest_given).
+
+% ---- Art 20(1) with Art 2(7): mobile workers -----------------------------
+test(mobile_worker_short_of_rest_is_not_applied) :-
+    status_of(mobile_worker_short_rest_not_applied, weekly_rest_not_applied_to_worker).
+test(mobile_worker_with_full_rest_is_given) :-
+    status_of(mobile_worker_full_rest_given, weekly_rest_given).
+test(mobile_worker_with_full_rest_is_not_reported_as_not_applied, fail) :-
+    status_of(mobile_worker_full_rest_given, weekly_rest_not_applied_to_worker).
+test(mobile_worker_short_of_rest_is_not_not_given, fail) :-
+    status_of(mobile_worker_short_rest_not_applied, weekly_rest_not_given).
+
+% ---- Art 21(1): seagoing fishing vessel workers --------------------------
+test(fishing_vessel_worker_short_of_rest_is_not_applied) :-
+    status_of(fishing_vessel_worker_short_rest_not_applied, weekly_rest_not_applied_to_worker).
+test(fishing_vessel_worker_with_full_rest_is_given) :-
+    status_of(fishing_vessel_worker_full_rest_given, weekly_rest_given).
+test(fishing_vessel_worker_with_full_rest_is_not_reported_as_not_applied, fail) :-
+    status_of(fishing_vessel_worker_full_rest_given, weekly_rest_not_applied_to_worker).
+
+% ---- Art 17 and Art 18: derogations --------------------------------------
+test(each_stated_derogation_applies_to_a_short_rest) :-
+    status_of(derogation_under_article_17_1_short_rest, weekly_rest_derogation_applies),
+    status_of(derogation_under_article_17_3_short_rest, weekly_rest_derogation_applies),
+    status_of(derogation_under_article_17_4_short_rest, weekly_rest_derogation_applies),
+    status_of(derogation_under_article_18_short_rest, weekly_rest_derogation_applies).
+test(a_derogation_with_full_rest_is_given) :-
+    status_of(derogation_under_article_17_4_full_rest_given, weekly_rest_given).
+test(a_derogation_with_full_rest_is_not_reported_as_a_derogation, fail) :-
+    status_of(derogation_under_article_17_4_full_rest_given, weekly_rest_derogation_applies).
+test(a_derogation_short_rest_is_not_not_given, fail) :-
+    status_of(derogation_under_article_17_4_short_rest, weekly_rest_not_given).
+
+% ---- step 3: a missing worker category or derogation ----------------------
+test(a_short_rest_without_worker_category_asks_for_it) :-
+    status_of(short_rest_without_worker_category, indeterminate([worker_category])).
+test(a_full_rest_without_worker_category_does_not_ask, fail) :-
+    status_of(rest_of_2100_minutes_given, indeterminate([worker_category])).
+test(a_short_rest_without_worker_category_does_not_ask_for_the_derogation, fail) :-
+    status_of(short_rest_without_worker_category, indeterminate([derogation_from_article_5])).
+test(a_short_rest_without_derogation_asks_for_it) :-
+    status_of(short_rest_without_derogation, indeterminate([derogation_from_article_5])).
+test(a_short_rest_with_no_derogation_stated_does_not_ask, fail) :-
+    status_of(rest_of_2099_minutes_not_given, indeterminate([derogation_from_article_5])).
+
+% ---- Art 2(1): on-call standby judged unsure, false, true, absent ---------
+test(an_unsure_standby_goes_to_a_lawyer) :-
+    status_of(unsure_standby_needs_legal_review, needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_standby_counts_as_working_time-unsure])])).
+test(standby_judged_not_working_time_is_given) :-
+    status_of(standby_not_working_time_given, weekly_rest_given).
+test(standby_judged_working_time_is_not_given) :-
+    status_of(standby_working_time_not_given, weekly_rest_not_given).
+test(standby_judged_false_does_not_go_to_a_lawyer, fail) :-
+    status_of(standby_not_working_time_given, needs_legal_review(_, _)).
+test(an_unsure_standby_is_not_given_a_final_answer, fail) :-
+    status_of(unsure_standby_needs_legal_review, weekly_rest_not_given).
+test(an_absent_standby_is_asked_for) :-
+    status_of(absent_standby_indeterminate, indeterminate([on_call_standby_counts_as_working_time])).
+test(an_absent_standby_does_not_go_to_a_lawyer, fail) :-
+    status_of(absent_standby_indeterminate, needs_legal_review(_, _)).
+
+% ---- step 0: input problems ---------------------------------------------
+test(an_unknown_key_is_refused) :-
+    status_of(unknown_key_input_problems, input_problems([unknown_key(audit_note)])).
+test(an_unknown_key_gets_no_verdict, fail) :-
+    status_of(unknown_key_input_problems, weekly_rest_given).
+test(the_same_rota_without_the_unknown_key_is_not_refused, fail) :-
+    status_of(rest_of_2100_minutes_given, input_problems(_)).
+
+:- end_module(test_negative_controls).

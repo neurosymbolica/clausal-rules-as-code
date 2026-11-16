@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_dicts.pl
 % Clausal's dict predicate forms for the Clausal Prolog
 % (.clausal) ISO export, under the ENGINE's names:

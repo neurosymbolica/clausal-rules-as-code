@@ -1,0 +1,167 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_gdpr_common_definitions_roles_and_establishments, [party_is_controller/2, party_is_processor/2, genetic_data/2, biometric_data/2, data_concerning_health/2, main_establishment/2, enterprise/2, group_of_undertakings/2, supervisory_authority_concerned/2, cross_border_processing/2, relevant_and_reasoned_objection/2, roles_and_establishments_outside_facts/2, decide_gdpr_common_definitions_roles_and_establishments/2, gdpr_common_definitions_roles_and_establishments_status/2, gdpr_common_definitions_roles_and_establishments_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_queries, [gdpr_common_definitions_roles_and_establishments_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_fixtures, [gdpr_common_definitions_roles_and_establishments_subject/1, gdpr_common_definitions_roles_and_establishments_profile_for/2, gdpr_common_definitions_roles_and_establishments_assess/2]).
+
+test(controller_determines_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    party_is_controller(Profile, definition_answer(met, determines_purposes_and_means, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_by_law_is_met_by_attested_law) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_law, Profile),
+    party_is_controller(Profile, definition_answer(met, provided_for_by_law, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_law_not_provided_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_not_provided, Profile),
+    party_is_controller(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_law_unattested_refers) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_unattested, Profile),
+    party_is_controller(Profile, definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)), [resolution(cite(union_or_member_state_law_providing_for_controller), not_attempted), inputs_relied_on([party_determines_purposes_and_means - false, purposes_and_means_determined_by_law - true])]), none, [cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)])).
+test(controller_unsure_judgement_is_open_textured) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_unsure, Profile),
+    party_is_controller(Profile, definition_answer(needs_legal_review(open_textured(party_determines_purposes_and_means, cite(eu_reg_2016_679_art_4_7)), [inputs_relied_on([party_determines_purposes_and_means - unsure, purposes_and_means_determined_by_law - false])]), none, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_nothing_stated_is_indeterminate) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, Profile),
+    party_is_controller(Profile, definition_answer(indeterminate([party_determines_purposes_and_means, purposes_and_means_determined_by_law]), none, [cite(eu_reg_2016_679_art_4_7)])).
+test(what_if_resolves_the_unsure_judgement) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_unsure, Profile),
+    gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_determines_purposes_and_means, true, met),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, needs_legal_review).
+test(processor_on_behalf_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(processor_on_behalf, Profile),
+    party_is_processor(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_8)])).
+test(processor_not_on_behalf_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(processor_not_on_behalf, Profile),
+    party_is_processor(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_8)])).
+test(genetic_data_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Profile),
+    genetic_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(genetic_data_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_not_genetic, Profile),
+    genetic_data(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(genetic_personal_data_unsure_refers_to_art_4_1) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_personal_data_unsure, Profile),
+    genetic_data(Profile, definition_answer(needs_legal_review(open_textured(data_are_personal_data, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([data_are_personal_data - unsure])]), none, [cite(eu_reg_2016_679_art_4_1)])).
+test(biometric_data_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(biometric_data_met, Profile),
+    biometric_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_14)])).
+test(biometric_not_personal_data_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(biometric_not_personal_data, Profile),
+    biometric_data(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_14)])).
+test(health_data_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(health_data_met, Profile),
+    data_concerning_health(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_15)])).
+test(health_data_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(health_data_not_health, Profile),
+    data_concerning_health(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_15)])).
+test(main_establishment_where_decisions_are_taken) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_decisions_elsewhere, Profile),
+    main_establishment(Profile, definition_answer(met, establishment_taking_decisions, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_central_administration) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_central_administration, Profile),
+    main_establishment(Profile, definition_answer(met, central_administration, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_gap_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_no_place, Profile),
+    main_establishment(Profile, definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_processor_central_administration) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_central, Profile),
+    main_establishment(Profile, definition_answer(met, central_administration, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])).
+test(main_establishment_processor_main_activities) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_main_activities, Profile),
+    main_establishment(Profile, definition_answer(met, establishment_of_main_processing_activities, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])).
+test(main_establishment_processor_not_subject_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_not_subject, Profile),
+    main_establishment(Profile, definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])).
+test(main_establishment_single_member_state_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_single_member_state, Profile),
+    main_establishment(Profile, definition_answer(not_met, not_established_in_more_than_one_member_state, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_role_missing_is_indeterminate) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_role_missing, Profile),
+    main_establishment(Profile, definition_answer(indeterminate([party_role]), none, [cite(eu_reg_2016_679_art_4_16)])).
+test(main_establishment_power_unsure_is_open_textured) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(main_power_unsure, Profile),
+    main_establishment(Profile, definition_answer(needs_legal_review(open_textured(other_establishment_can_have_decisions_implemented, cite(eu_reg_2016_679_art_4_16_a)), [inputs_relied_on([decisions_taken_in_other_union_establishment - true, other_establishment_can_have_decisions_implemented - unsure])]), none, [cite(eu_reg_2016_679_art_4_16_a)])).
+test(enterprise_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(enterprise_met, Profile),
+    enterprise(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_18)])).
+test(enterprise_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(enterprise_not_economic, Profile),
+    enterprise(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_18)])).
+test(group_of_undertakings_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(group_met, Profile),
+    group_of_undertakings(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_19)])).
+test(group_of_undertakings_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(group_not_met, Profile),
+    group_of_undertakings(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_19)])).
+test(authority_concerned_by_establishment) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_established, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_a)])).
+test(authority_concerned_by_substantial_effect) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_affected, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, point_b, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_b)])).
+test(authority_concerned_by_complaint) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_complaint, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, point_c, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_c)])).
+test(authority_not_concerned) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_none, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_22)])).
+test(cross_border_by_several_establishments) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_several, Profile),
+    cross_border_processing(Profile, definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_a)])).
+test(cross_border_by_single_establishment) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_single, Profile),
+    cross_border_processing(Profile, definition_answer(met, point_b, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_b)])).
+test(cross_border_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_none, Profile),
+    cross_border_processing(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_23)])).
+test(objection_is_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_met, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_24)])).
+test(objection_near_miss_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_no_risk, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_24)])).
+test(objection_unsure_risk_is_open_textured) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_risk_unsure, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(needs_legal_review(open_textured(objection_demonstrates_significance_of_risks, cite(eu_reg_2016_679_art_4_24)), [inputs_relied_on([objection_to_draft_decision - true, objection_concerns_infringement_or_envisaged_action - true, objection_demonstrates_significance_of_risks - unsure])]), none, [cite(eu_reg_2016_679_art_4_24)])).
+test(unknown_key_gives_input_problems_for_every_relation) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(unknown_key_profile, Profile),
+    party_is_controller(Profile, definition_answer(input_problems([unknown_key(not_a_contract_key)]), none, [])),
+    cross_border_processing(Profile, definition_answer(input_problems([unknown_key(not_a_contract_key)]), none, [])).
+test(wrong_type_gives_input_problems) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(wrong_type_profile, Profile),
+    main_establishment(Profile, definition_answer(input_problems([wrong_type(party_role)]), none, [])).
+test(a_profile_that_is_not_a_list_gives_input_problems) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
+    enterprise(Profile, definition_answer(input_problems([wrong_type(profile)]), none, [])),
+    roles_and_establishments_outside_facts(Profile, input_problems([wrong_type(profile)])).
+test(outside_fact_absent) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, absent)]).
+test(outside_fact_attested) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_law, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, attested(true, attestation(host_layer, attested_2026_11_07, operator_ruling, none)))]).
+test(decide_gives_the_headline_verdict) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    decide_gdpr_common_definitions_roles_and_establishments(Profile, gdpr_common_definitions_roles_and_establishments_verdict(met, [cite(eu_reg_2016_679_art_4_7)])),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, met).
+test(checklist_has_one_cited_item_per_relation) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items),
+    length(Items, 11),
+    Items = [item(party_is_controller, met, cite(eu_reg_2016_679_art_4_7))|_].
+test(every_fixture_subject_resolves) :-
+    findall(Subject, gdpr_common_definitions_roles_and_establishments_subject(Subject), Subjects),
+    findall(Subject, (gdpr_common_definitions_roles_and_establishments_subject(Subject), gdpr_common_definitions_roles_and_establishments_assess(Subject, gdpr_common_definitions_roles_and_establishments_verdict(_Status, _Citations))), Resolved),
+    Subjects == Resolved.
+
+cp_test_names([controller_determines_is_met, controller_by_law_is_met_by_attested_law, controller_law_not_provided_is_not_met, controller_law_unattested_refers, controller_unsure_judgement_is_open_textured, controller_nothing_stated_is_indeterminate, what_if_resolves_the_unsure_judgement, processor_on_behalf_is_met, processor_not_on_behalf_is_not_met, genetic_data_is_met, genetic_data_near_miss_is_not_met, genetic_personal_data_unsure_refers_to_art_4_1, biometric_data_is_met, biometric_not_personal_data_is_not_met, health_data_is_met, health_data_near_miss_is_not_met, main_establishment_where_decisions_are_taken, main_establishment_central_administration, main_establishment_gap_is_not_met, main_establishment_processor_central_administration, main_establishment_processor_main_activities, main_establishment_processor_not_subject_is_not_met, main_establishment_single_member_state_is_not_met, main_establishment_role_missing_is_indeterminate, main_establishment_power_unsure_is_open_textured, enterprise_is_met, enterprise_near_miss_is_not_met, group_of_undertakings_is_met, group_of_undertakings_near_miss_is_not_met, authority_concerned_by_establishment, authority_concerned_by_substantial_effect, authority_concerned_by_complaint, authority_not_concerned, cross_border_by_several_establishments, cross_border_by_single_establishment, cross_border_near_miss_is_not_met, objection_is_met, objection_near_miss_is_not_met, objection_unsure_risk_is_open_textured, unknown_key_gives_input_problems_for_every_relation, wrong_type_gives_input_problems, a_profile_that_is_not_a_list_gives_input_problems, outside_fact_absent, outside_fact_attested, decide_gives_the_headline_verdict, checklist_has_one_cited_item_per_relation, every_fixture_subject_resolves]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

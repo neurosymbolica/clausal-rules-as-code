@@ -1,0 +1,188 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_compensation_and_liability
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_compensation_and_liability"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The root vocabulary atoms the scorer reads as
+# package-root attributes are exported as name/0 facts by the slice.
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_compensation_and_liability_input_problems/2 is defined in the kernel
+  #  and re-exported by queries.clausal; listed once, under queries)
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- gdpr_compensation_and_liability.clausal --
+  - "compensation_liability/4"
+  - "decide_gdpr_compensation_and_liability/2"
+  - "gdpr_compensation_and_liability_status/2"
+  - "gdpr_compensation_and_liability_checklist/2"
+  - "gdpr_compensation_and_liability_decision_resolvable/1"
+  - "gdpr_compensation_and_liability_status_values/1"
+  - "right_not_established/0"
+  - "not_liable_for_damage/0"
+  - "exempt_from_liability/0"
+  - "liable_for_damage/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "party_role/0"
+  - "involved_in_the_processing/0"
+  - "processor_breached_obligations_directed_to_processors/0"
+  - "processor_acted_outside_or_contrary_to_lawful_instructions/0"
+  - "damage_suffered/0"
+  - "infringement_of_the_regulation_occurred/0"
+  - "damage_resulted_from_the_infringement/0"
+  - "not_in_any_way_responsible_for_the_event/0"
+  - "controller/0"
+  - "processor/0"
+  - "unsure/0"
+  - "absent/0"
+  - "not_attempted/0"
+  # -- queries.clausal --
+  - "gdpr_compensation_and_liability_profile_keys/1"
+  - "gdpr_compensation_and_liability_input_problems/2"
+  - "gdpr_compensation_and_liability_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_compensation_and_liability_subject/1"
+  - "gdpr_compensation_and_liability_profile_for/2"
+  - "gdpr_compensation_and_liability_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib), no shared package.
+uses: []
+
+scope: >-
+  For ONE claim against ONE party (the caller, stated to be EITHER the
+  controller OR the processor of the processing in question), whether that
+  party is liable to compensate damage under Article 82(1) to (3) of
+  Regulation (EU) 2016/679 (GDPR): the three conditions of Art 82(1) (damage,
+  an infringement, the damage resulting from it) are the caller's tri-state
+  judgements and are never decided here; Art 82(2) is read as the controller
+  limb (involvement in the processing) and the processor limb (a breach of
+  processor obligations or acting outside or contrary to lawful instructions),
+  both crisp statements of the caller; the Art 82(3) exemption is an attested
+  outside fact that the order copies and never assesses. Answers are
+  right_not_established, not_liable_for_damage, exempt_from_liability or
+  liable_for_damage, or a non-final indeterminate([KEY]), needs_legal_review
+  (open_textured or cross_reference_unresolved) or input_problems. Out of
+  scope: the amount of compensation, joint liability for the entire damage
+  and recourse (Art 82(4) and (5), deferred), the competent court (Art 82(6)
+  and Art 79, deferred or excluded), fines (Arts 83 and 84), who is a
+  controller or processor (Art 4(7), (8)) and which obligations are directed
+  to processors (Art 28) -- these are handed to the caller or a lawyer.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1 -- Article 82(1), (2) and (3) formalized; Article 82(4), (5) and (6) quoted and deferred; consolidated text 02016R0679-20160504, units parag_082.001 to parag_082.006 (pinned by tools/pin_statute.py, fetched 2026-11-12)"
+
+query_interface:
+  2: "decide_gdpr_compensation_and_liability/2"      # eligibility: the verdict with its citations
+  7: "gdpr_compensation_and_liability_checklist/2"   # justification: cited checklist, one item per condition
+  16: "gdpr_compensation_and_liability_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_heading
+  units:
+  - 02016R0679-20160504#art_082
+  reason: 'The title of Article 82 (''Right to compensation and liability'') carries
+    no obligation: document structure. Deferred so every unit of the pinned extract
+    is accounted for.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: joint_liability_for_the_entire_damage
+  units:
+  - 02016R0679-20160504#parag_082.004
+  reason: Art 82(4) makes each controller or processor involved in the same processing
+    liable for the entire damage where they are responsible under paragraphs 2 and
+    3. The order answers for ONE party; it does not model several parties or the entire-damage
+    rule (Q6).
+  consequence: liable_for_damage never says that the caller is liable for the entire
+    damage or only for a part of it.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable only with a model of several parties; external research found
+    no judgment on Art 82(4) (Q6).
+- what: recourse_between_those_involved
+  units:
+  - 02016R0679-20160504#parag_082.005
+  reason: Art 82(5) entitles a party that has paid full compensation to claim back
+    from the others the part corresponding to their part of responsibility. It is
+    a claim between parties after payment and no limb of this order reads it.
+  consequence: The answers never say whether or how much a party may claim back.
+  declaration: answered_with_caveat
+  debt: true
+  open: a later order or amendment could model recourse.
+- what: courts_competent_for_the_proceedings
+  units:
+  - 02016R0679-20160504#parag_082.006
+  reason: Art 82(6) says court proceedings are brought before the courts competent
+    under the law of the Member State referred to in Art 79(2). It is a step of procedure
+    with no answer in this order.
+  consequence: The answers never say which court is competent.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: administrative_fines_and_penalties
+  instrument: Regulation (EU) 2016/679 Arts 83 and 84
+  cites:
+  - 02016R0679-20160504#art_083
+  - 02016R0679-20160504#art_084
+  reason: Fines and penalties are a separate matter from the right to compensation;
+    the order does not say whether a fine is due and no limb reads Art 83 or 84.
+  consequence: The answers never say that a fine is due, nor that it is not.
+- what: judicial_remedy_against_a_controller_or_processor
+  instrument: Regulation (EU) 2016/679 Art 79
+  cites:
+  - 02016R0679-20160504#art_079
+  reason: Art 82(6) points to Art 79(2) for the competent courts; the right to a judicial
+    remedy against a controller or processor is not modelled by this order.
+  consequence: The answers never say which court hears the claim or whether a remedy
+    exists.
+- what: obligations_directed_to_processors
+  instrument: Regulation (EU) 2016/679 Art 28
+  cites:
+  - 02016R0679-20160504#art_028
+  reason: Art 82(2) speaks of 'obligations of this Regulation specifically directed
+    to processors' (for instance Art 28); which obligations are meant, and whether
+    one was breached, is the caller's statement (reading (4)).
+  consequence: The answers never say which obligations are directed to processors.
+- what: roles_controller_processor
+  instrument: Regulation (EU) 2016/679 Art 4(7) and (8)
+  cites:
+  - 02016R0679-20160504#art_004
+  reason: Whether the caller is a controller or a processor is decided outside this
+    order; this order takes the position of the caller as given.
+  consequence: The caller establishes its role first.

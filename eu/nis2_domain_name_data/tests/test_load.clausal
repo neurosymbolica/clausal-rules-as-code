@@ -1,0 +1,58 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
+% result terms build and destructure, the verdict atoms are distinct, and a
+% real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/nis2_domain_name_data/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/nis2_domain_name_data/kernel, [nis2_domain_name_data_input_problems/2]).
+:- use_module(eu/nis2_domain_name_data/citations, [citation/2, implements/1]).
+
+test(the_empty_profile_has_no_input_problem) :-
+    nis2_domain_name_data_input_problems([], Problems),
+    Problems == [].
+
+test(a_non_list_profile_is_a_wrong_type) :-
+    nis2_domain_name_data_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+
+test(the_publication_verdict_atoms_are_distinct) :-
+    dif(must_publish_without_undue_delay, no_publication_duty).
+
+test(the_access_verdict_atoms_are_distinct) :-
+    dif(must_provide_access, no_duty_to_provide_access).
+
+test(the_timeliness_atoms_are_distinct) :-
+    dif(on_time, late(hour_limit)),
+    dif(late(hour_limit), late(without_undue_delay)).
+
+test(the_duty_term_builds_and_destructures) :-
+    Duty = duty(reply_to_access_requests_within_72_hours, cite(eu_dir_2022_2555_art_28_5)),
+    Duty = duty(Name, Citation),
+    Name == reply_to_access_requests_within_72_hours,
+    Citation == cite(eu_dir_2022_2555_art_28_5).
+
+test(the_referral_term_builds_and_destructures) :-
+    Result = needs_legal_review(open_textured(registration_data_is_personal_data, cite(eu_dir_2022_2555_art_28_4)), [inputs_relied_on([registration_data_is_personal_data-unsure])]),
+    Result = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
+    Key == registration_data_is_personal_data,
+    Citation == cite(eu_dir_2022_2555_art_28_4),
+    Pairs == [registration_data_is_personal_data-unsure].
+
+test(the_indeterminate_term_names_missing_keys) :-
+    Result = indeterminate([provider_type]),
+    Result = indeterminate(MissingKeys),
+    MissingKeys == [provider_type].
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_dir_2022_2555_art_28_5, _Record).
+
+test(the_implements_marker_succeeds_for_a_recorded_key) :-
+    implements(eu_dir_2022_2555_art_28_4).
+
+test(the_implements_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_dir_2022_2555_art_28_99).
+
+:- end_module(test_load).

@@ -1,0 +1,215 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_records_and_officer.
+% A TOP-LAYER consumer: it imports the determination slice PUBLIC
+% predicates it calls, and nothing else.
+%
+% gdpr_records_and_officer_profile_keys/1          the 45 contract keys, in contract order
+% gdpr_records_and_officer_input_problems/2        the input check (re-exported from the kernel)
+% gdpr_records_and_officer_what_if/4               (#16 what-if) replace one key, re-decide
+% gdpr_records_and_officer_exemption_verdict/2     (#2 eligibility) the Art 30(5) exemption
+% gdpr_records_and_officer_compliance_verdict/3    (#13 compliance) may the entity operate
+%                                                  without a record or an officer
+% gdpr_records_and_officer_obligations/2           (#14 obligation surfacing) entries 1 and 2
+%
+% The PROFILE is an attribute list [attribute(Key, Value), ...]. The what-if
+% REPLACES the key (every earlier occurrence removed, one new attribute
+% appended): appending a second occurrence would turn the profile into a
+% duplicate_key input problem. kit/query_combinators override_key/4 works on
+% a dict, so the replacement here is local list plumbing.
+%
+% Every status compound of an entry (indeterminate/1, needs_legal_review/2,
+% input_problems/1) passes through these wrappers unchanged.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_records_and_officer_profile_keys/1,
+    gdpr_records_and_officer_input_problems/2,
+    gdpr_records_and_officer_what_if/4,
+    gdpr_records_and_officer_exemption_verdict/2,
+    gdpr_records_and_officer_compliance_verdict/3,
+    gdpr_records_and_officer_obligations/2
+]).
+
+:- use_module(eu/data_protection/gdpr_records_and_officer/kernel, [gdpr_records_and_officer_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_records_and_officer/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_records_and_officer/gdpr_records_and_officer, [
+    gdpr_records_and_officer_status/2,
+    record_obligation/2,
+    data_protection_officer_designation/2
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_records_and_officer_profile_keys([acts_as_controller, acts_as_processor, controller_erasure_time_limits_possible, controller_record_has_article_49_safeguards_documentation, controller_record_has_categories_of_data_subjects_and_personal_data, controller_record_has_categories_of_recipients, controller_record_has_contact_details, controller_record_has_erasure_time_limits, controller_record_has_purposes, controller_record_has_security_measures_description, controller_record_has_transfer_details, controller_security_measures_description_possible, controller_transfers_rely_on_article_49_1_second_subparagraph, controller_transfers_to_third_countries, is_public_authority_or_body, monitoring_is_core_activity, monitoring_is_large_scale, officer_free_of_instructions_and_penalty, officer_involved_properly_and_in_time, officer_other_tasks_result_in_conflict_of_interests, officer_reports_to_highest_management_level, officer_supported_with_resources_and_access, officer_tasks_include_acting_as_contact_point, officer_tasks_include_advising_on_impact_assessment, officer_tasks_include_cooperating_with_supervisory_authority, officer_tasks_include_informing_and_advising, officer_tasks_include_monitoring_compliance, persons_employed, processing_includes_criminal_offence_data, processing_includes_special_categories, processing_is_by_court_in_judicial_capacity, processing_is_occasional, processing_likely_to_result_in_risk, processing_requires_regular_and_systematic_monitoring, processor_record_has_article_49_safeguards_documentation, processor_record_has_categories_of_processing, processor_record_has_contact_details, processor_record_has_security_measures_description, processor_record_has_transfer_details, processor_security_measures_description_possible, processor_transfers_rely_on_article_49_1_second_subparagraph, processor_transfers_to_third_countries, special_category_processing_is_core_activity, special_category_processing_is_large_scale, union_or_member_state_law_requires_data_protection_officer]).
+
+% ---- #16 what-if: re-evaluate with one key REPLACED --------------------
+gdpr_records_and_officer_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    is_list(Profile),
+    replaced_key_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_records_and_officer_status(Hypothesis, NewStatus).
+
+replaced_key_profile(Profile, Key, Value, Hypothesis) :-
+    exclude(attribute_has_key(Key), Profile, Kept),
+    append(Kept, [attribute(Key, Value)], Hypothesis).
+
+attribute_has_key(Key, Element) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == Key.
+
+% ---- #2 eligibility: the Art 30(5) exemption ---------------------------
+% eligible: the exemption holds (no record owed for this activity);
+% ineligible: a record is owed, with the cites of the owed records;
+% otherwise the status compound of record_obligation/2, unchanged.
+gdpr_records_and_officer_exemption_verdict(Profile, Verdict) :-
+    record_obligation(Profile, Obligation),
+    exemption_answer(Obligation, Verdict).
+
+exemption_answer([no_record_required(Citation)], gdpr_records_and_officer_exemption(eligible, [Citation])) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_answer(
+    [keep_controller_record(ControllerCitation), keep_processor_record(ProcessorCitation)],
+    gdpr_records_and_officer_exemption(ineligible, [ControllerCitation, ProcessorCitation])
+) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_answer([keep_controller_record(Citation)], gdpr_records_and_officer_exemption(ineligible, [Citation])) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_answer([keep_processor_record(Citation)], gdpr_records_and_officer_exemption(ineligible, [Citation])) :-
+    implements(eu_reg_2016_679_art_30_5).
+exemption_answer(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+exemption_answer(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+exemption_answer(input_problems(Problems), input_problems(Problems)).
+
+% ---- #13 compliance check ----------------------------------------------
+% An action is prohibited when the entry owes the duty it omits, permitted
+% when the entry owes no such duty; a status compound passes through.
+% An action outside the three has no solution.
+gdpr_records_and_officer_compliance_verdict(Profile, Action, Verdict) :-
+    compliance_action(Action, Entry),
+    entry_answer(Entry, Profile, Answer),
+    action_answer(Action, Answer, Verdict).
+
+compliance_action(operate_without_controller_record, records).
+compliance_action(operate_without_processor_record, records).
+compliance_action(operate_without_data_protection_officer, designation).
+
+entry_answer(records, Profile, Answer) :-
+    record_obligation(Profile, Answer).
+entry_answer(designation, Profile, Answer) :-
+    data_protection_officer_designation(Profile, Answer).
+
+action_answer(
+    operate_without_controller_record,
+    [keep_controller_record(Citation)|_],
+    gdpr_records_and_officer_compliance(prohibited, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_30_1).
+action_answer(
+    operate_without_controller_record,
+    [keep_processor_record(_)],
+    gdpr_records_and_officer_compliance(permitted, [])
+) :-
+    implements(eu_reg_2016_679_art_30_1).
+action_answer(
+    operate_without_controller_record,
+    [no_record_required(Citation)],
+    gdpr_records_and_officer_compliance(permitted, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_30_5).
+action_answer(
+    operate_without_processor_record,
+    [keep_controller_record(_), keep_processor_record(Citation)],
+    gdpr_records_and_officer_compliance(prohibited, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_30_2).
+action_answer(
+    operate_without_processor_record,
+    [keep_processor_record(Citation)],
+    gdpr_records_and_officer_compliance(prohibited, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_30_2).
+action_answer(
+    operate_without_processor_record,
+    [keep_controller_record(_)],
+    gdpr_records_and_officer_compliance(permitted, [])
+) :-
+    implements(eu_reg_2016_679_art_30_2).
+action_answer(
+    operate_without_processor_record,
+    [no_record_required(Citation)],
+    gdpr_records_and_officer_compliance(permitted, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_30_5).
+action_answer(
+    operate_without_data_protection_officer,
+    [designate_data_protection_officer(Citation)],
+    gdpr_records_and_officer_compliance(prohibited, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_37_1).
+action_answer(
+    operate_without_data_protection_officer,
+    [no_designation_required(Citation)],
+    gdpr_records_and_officer_compliance(permitted, [Citation])
+) :-
+    implements(eu_reg_2016_679_art_37_4).
+action_answer(_, indeterminate(MissingKeys), indeterminate(MissingKeys)).
+action_answer(_, needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+action_answer(_, input_problems(Problems), input_problems(Problems)).
+
+% ---- #14 obligation surfacing: what must the entity do ----------------
+gdpr_records_and_officer_obligations(
+    Profile,
+    gdpr_records_and_officer_obligations(RecordAnswer, DesignationAnswer)
+) :-
+    record_obligation(Profile, RecordAnswer),
+    data_protection_officer_designation(Profile, DesignationAnswer).
+
+% ---- tests -------------------------------------------------------------
+test(what_if_replaces_the_headcount) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(persons_employed, 249),
+        attribute(processing_likely_to_result_in_risk, false),
+        attribute(processing_is_occasional, true),
+        attribute(processing_includes_special_categories, false),
+        attribute(processing_includes_criminal_offence_data, false)
+    ],
+    findall(Status, gdpr_records_and_officer_what_if(Profile, persons_employed, 250, Status), Statuses),
+    Statuses == [record_required].
+
+test(exemption_is_eligible_below_the_ceiling) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(persons_employed, 249),
+        attribute(processing_likely_to_result_in_risk, false),
+        attribute(processing_is_occasional, true),
+        attribute(processing_includes_special_categories, false),
+        attribute(processing_includes_criminal_offence_data, false)
+    ],
+    findall(Verdict, gdpr_records_and_officer_exemption_verdict(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_exemption(eligible, [cite(eu_reg_2016_679_art_30_5)])].
+
+test(operating_without_the_owed_controller_record_is_prohibited) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(persons_employed, 300)
+    ],
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_controller_record, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(prohibited, [cite(eu_reg_2016_679_art_30_1)])].
+
+test(operating_without_a_processor_record_is_permitted_for_a_controller_only) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(persons_employed, 300)
+    ],
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_processor_record, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(permitted, [])].
+
+test(an_unknown_action_has_no_verdict, fail) :-
+    gdpr_records_and_officer_compliance_verdict([], publish_the_record, _).
+
+:- end_module(queries).

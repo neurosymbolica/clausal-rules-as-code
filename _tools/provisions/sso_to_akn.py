@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Singapore Statutes Online (SSO) provision pages -> an Akoma Ntoso extract the units
 reader already reads.
 

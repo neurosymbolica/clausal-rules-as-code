@@ -1,0 +1,192 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_scope_and_roles_queries, [scope_and_roles_profile_keys/1, scope_and_roles_what_if/4, scope_and_roles_action_permitted/4, provenance/2, ai_system/0, exclusively_for_military_defence_or_national_security_purposes/0, third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation/0, adequate_safeguards_for_fundamental_rights_and_freedoms/0, specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development/0, research_testing_or_development_before_placing_on_the_market_or_putting_into_service/0, testing_in_real_world_conditions/0, released_under_free_and_open_source_licence/0, placed_on_the_market_or_put_into_service_as_high_risk_or_under_article_5_or_50/0, actor_role/0, use_in_a_personal_non_professional_activity/0, develops_or_has_developed_the_system/0, places_or_puts_into_service_the_system_together_with_its_product/0, under_its_own_name_or_trademark/0, uses_the_system_under_its_authority/0, written_mandate_from_a_provider_received_and_accepted/0, in_the_supply_chain/0, makes_the_system_available_on_the_union_market/0, is_a_product_manufacturer/0, places_the_system_on_the_union_market/0, puts_the_system_into_service_in_the_union/0, established_or_located_in_the_union/0, located_in_the_union/0, output_used_in_the_union/0, represented_provider_established_in_the_union/0, high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i/0, system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country/0, high_risk_route/0, product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component/0, system_is_high_risk_after_the_change/0, puts_its_name_or_trademark_on_a_high_risk_system_already_placed_or_in_service/0, makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service/0, modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service/0, system_placed_on_the_market_together_with_the_product_under_the_manufacturer_name/0, system_put_into_service_under_the_manufacturer_name_after_the_product_was_placed/0, another_person_became_the_provider_under_paragraph_1/0, initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk/0, supplies_items_used_or_integrated_in_a_high_risk_system/0, makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence/0, supplied_items_include_a_general_purpose_ai_model/0, product_manufacturer/0, affected_person/0, annex_iii/0, annex_i/0, unsure/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(m__eu_ai_act_scope_and_roles_kernel, [scope_and_roles_input_problems/2]).
+:- use_module(m__eu_ai_act_scope_and_roles_citations, [implements/1]).
+:- use_module(m__eu_ai_act_scope_and_roles_scope_and_roles, [scope_and_roles_status/2, supplier_agreement_status/4, initial_provider_status/4]).
+
+ai_system.
+
+exclusively_for_military_defence_or_national_security_purposes.
+
+third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation.
+
+adequate_safeguards_for_fundamental_rights_and_freedoms.
+
+specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development.
+
+research_testing_or_development_before_placing_on_the_market_or_putting_into_service.
+
+testing_in_real_world_conditions.
+
+released_under_free_and_open_source_licence.
+
+placed_on_the_market_or_put_into_service_as_high_risk_or_under_article_5_or_50.
+
+actor_role.
+
+use_in_a_personal_non_professional_activity.
+
+develops_or_has_developed_the_system.
+
+places_or_puts_into_service_the_system_together_with_its_product.
+
+under_its_own_name_or_trademark.
+
+uses_the_system_under_its_authority.
+
+written_mandate_from_a_provider_received_and_accepted.
+
+in_the_supply_chain.
+
+makes_the_system_available_on_the_union_market.
+
+is_a_product_manufacturer.
+
+places_the_system_on_the_union_market.
+
+puts_the_system_into_service_in_the_union.
+
+established_or_located_in_the_union.
+
+located_in_the_union.
+
+output_used_in_the_union.
+
+represented_provider_established_in_the_union.
+
+high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i.
+
+system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country.
+
+high_risk_route.
+
+product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component.
+
+system_is_high_risk_after_the_change.
+
+puts_its_name_or_trademark_on_a_high_risk_system_already_placed_or_in_service.
+
+makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service.
+
+modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service.
+
+system_placed_on_the_market_together_with_the_product_under_the_manufacturer_name.
+
+system_put_into_service_under_the_manufacturer_name_after_the_product_was_placed.
+
+another_person_became_the_provider_under_paragraph_1.
+
+initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk.
+
+supplies_items_used_or_integrated_in_a_high_risk_system.
+
+makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence.
+
+supplied_items_include_a_general_purpose_ai_model.
+
+product_manufacturer.
+
+affected_person.
+
+annex_iii.
+
+annex_i.
+
+unsure.
+
+provenance(Clause, Citations) :-
+    provenance_clauses(Known),
+    memberd_t(Clause, Known, IsKnown),
+    provenance_for(IsKnown, Clause, Citations).
+
+provenance_for(true, Clause, Citations) :-
+    provenance_row(Clause, Citations).
+provenance_for(false, _, []).
+
+provenance_clauses([art_113_dates, art_2_1_coverage, art_2_2_section_b, art_3_role_test, art_25_1_value_chain, art_25_2_initial_provider, art_25_4_supplier_agreement]).
+
+provenance_row(art_113_dates, [cite(eu_reg_2024_1689_art_113_a)]).
+provenance_row(art_2_1_coverage, [cite(eu_reg_2024_1689_art_2_1)]).
+provenance_row(art_2_2_section_b, [cite(eu_reg_2024_1689_art_2_2)]).
+provenance_row(art_3_role_test, [cite(eu_reg_2024_1689_art_3_1)]).
+provenance_row(art_25_1_value_chain, [cite(eu_reg_2024_1689_art_25_1)]).
+provenance_row(art_25_2_initial_provider, [cite(eu_reg_2024_1689_art_25_2)]).
+provenance_row(art_25_4_supplier_agreement, [cite(eu_reg_2024_1689_art_25_4)]).
+
+scope_and_roles_profile_keys([ai_system, exclusively_for_military_defence_or_national_security_purposes, third_country_public_authority_or_international_organisation_in_law_enforcement_and_judicial_cooperation, adequate_safeguards_for_fundamental_rights_and_freedoms, specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development, research_testing_or_development_before_placing_on_the_market_or_putting_into_service, testing_in_real_world_conditions, released_under_free_and_open_source_licence, placed_on_the_market_or_put_into_service_as_high_risk_or_under_article_5_or_50, actor_role, use_in_a_personal_non_professional_activity, develops_or_has_developed_the_system, places_or_puts_into_service_the_system_together_with_its_product, under_its_own_name_or_trademark, uses_the_system_under_its_authority, written_mandate_from_a_provider_received_and_accepted, in_the_supply_chain, makes_the_system_available_on_the_union_market, is_a_product_manufacturer, places_the_system_on_the_union_market, puts_the_system_into_service_in_the_union, established_or_located_in_the_union, located_in_the_union, output_used_in_the_union, represented_provider_established_in_the_union, high_risk_under_article_6_1_related_to_a_product_under_section_b_of_annex_i, system_bears_the_name_or_trademark_of_a_person_established_in_a_third_country, high_risk_route, product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component, system_is_high_risk_after_the_change, puts_its_name_or_trademark_on_a_high_risk_system_already_placed_or_in_service, makes_a_substantial_modification_to_a_high_risk_system_already_placed_or_in_service, modifies_the_intended_purpose_of_a_system_not_classified_as_high_risk_already_placed_or_in_service, system_placed_on_the_market_together_with_the_product_under_the_manufacturer_name, system_put_into_service_under_the_manufacturer_name_after_the_product_was_placed, another_person_became_the_provider_under_paragraph_1, initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, supplies_items_used_or_integrated_in_a_high_risk_system, makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, supplied_items_include_a_general_purpose_ai_model]).
+
+scope_and_roles_what_if(case(Profile, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    set_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    scope_and_roles_status(case(Hypothesis, AssessmentDate), NewStatus).
+
+set_attribute([], Key, Value, [attribute(Key, Value)]).
+set_attribute([attribute(PresentKey, PresentValue)|Rest], Key, Value, [attribute(PresentKey, PresentValue)|Out]) :-
+    dif(PresentKey, Key),
+    set_attribute(Rest, Key, Value, Out).
+set_attribute([attribute(PresentKey, _)|Rest], Key, Value, [attribute(Key, Value)|Rest]) :-
+    PresentKey == Key.
+
+scope_and_roles_action_permitted(case(Profile, AssessmentDate), supply_items_without_written_agreement, Modality, Citations) :-
+    implements(eu_reg_2024_1689_art_25_4),
+    supplier_agreement_status(Profile, AssessmentDate, Result, ResultCitations),
+    action_modality(written_agreement_required, Result, ResultCitations, Modality, Citations).
+scope_and_roles_action_permitted(case(Profile, AssessmentDate), initial_provider_withholds_cooperation, Modality, Citations) :-
+    implements(eu_reg_2024_1689_art_25_2),
+    initial_provider_status(Profile, AssessmentDate, Result, ResultCitations),
+    action_modality(no_longer_provider_must_cooperate, Result, ResultCitations, Modality, Citations).
+
+action_modality(ForbiddingResult, Result, ResultCitations, forbidden, ResultCitations) :-
+    atom(Result),
+    Result == ForbiddingResult.
+action_modality(ForbiddingResult, Result, ResultCitations, permitted, ResultCitations) :-
+    atom(Result),
+    Result \== ForbiddingResult.
+action_modality(_, indeterminate(MissingKeys), _, indeterminate(MissingKeys), []).
+action_modality(_, needs_legal_review(Reason, Context), _, needs_legal_review(Reason, Context), []).
+action_modality(_, input_problems(Problems), _, input_problems(Problems), []).
+
+test(what_if_not_an_ai_system_is_out_of_scope) :-
+    findall(Status, scope_and_roles_what_if(case([attribute(ai_system, true)], date(2026, 8, 1)), ai_system, false, Status), Statuses),
+    Statuses == [out_of_scope].
+test(what_if_replaces_the_key_without_a_duplicate) :-
+    set_attribute([attribute(ai_system, true), attribute(actor_role, provider)], ai_system, false, Hypothesis),
+    Hypothesis == [attribute(ai_system, false), attribute(actor_role, provider)].
+test(supplying_without_agreement_is_forbidden_when_one_is_required) :-
+    Profile = [attribute(high_risk_route, annex_iii), attribute(supplies_items_used_or_integrated_in_a_high_risk_system, true), attribute(makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, false)],
+    findall(Modality - Citations, scope_and_roles_action_permitted(case(Profile, date(2028, 9, 1)), supply_items_without_written_agreement, Modality, Citations), Answers),
+    Answers == [forbidden - [cite(eu_reg_2024_1689_art_25_4)]].
+test(supplying_open_source_items_without_agreement_is_permitted) :-
+    Profile = [attribute(high_risk_route, annex_iii), attribute(supplies_items_used_or_integrated_in_a_high_risk_system, true), attribute(makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, true), attribute(supplied_items_include_a_general_purpose_ai_model, false)],
+    findall(Modality - Citations, scope_and_roles_action_permitted(case(Profile, date(2028, 9, 1)), supply_items_without_written_agreement, Modality, Citations), Answers),
+    Answers == [permitted - [cite(eu_reg_2024_1689_art_25_4)]].
+test(withholding_cooperation_is_forbidden_for_the_displaced_provider) :-
+    Profile = [attribute(high_risk_route, annex_iii), attribute(another_person_became_the_provider_under_paragraph_1, true), attribute(initial_provider_clearly_specified_the_system_is_not_to_be_changed_into_high_risk, false)],
+    findall(Modality, scope_and_roles_action_permitted(case(Profile, date(2028, 9, 1)), initial_provider_withholds_cooperation, Modality, _), Modalities),
+    Modalities == [forbidden].
+test(a_missing_key_is_returned_as_the_modality) :-
+    findall(Modality - Citations, scope_and_roles_action_permitted(case([], date(2028, 9, 1)), initial_provider_withholds_cooperation, Modality, Citations), Answers),
+    Answers == [indeterminate([high_risk_route]) - []].
+test(the_provenance_of_a_named_clause_is_ground) :-
+    findall(Citations, provenance(art_2_1_coverage, Citations), Answers),
+    Answers == [[cite(eu_reg_2024_1689_art_2_1)]].
+test(the_provenance_of_an_unnamed_clause_is_empty) :-
+    findall(Citations, provenance(some_other_clause, Citations), Answers),
+    Answers == [[]].
+test(the_root_vocabulary_is_present) :-
+    ai_system,
+    actor_role,
+    high_risk_route,
+    annex_i,
+    annex_iii,
+    product_manufacturer,
+    affected_person,
+    unsure.
+
+test(open_source_supply_is_not_forbidden, fail) :-
+    Profile = [attribute(high_risk_route, annex_iii), attribute(supplies_items_used_or_integrated_in_a_high_risk_system, true), attribute(makes_the_items_accessible_to_the_public_under_a_free_and_open_source_licence, true), attribute(supplied_items_include_a_general_purpose_ai_model, false)],
+    scope_and_roles_action_permitted(case(Profile, date(2028, 9, 1)), supply_items_without_written_agreement, forbidden, _).

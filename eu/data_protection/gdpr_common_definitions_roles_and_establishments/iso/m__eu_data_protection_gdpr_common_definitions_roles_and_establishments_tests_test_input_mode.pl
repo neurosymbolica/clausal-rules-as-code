@@ -1,0 +1,68 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_gdpr_common_definitions_roles_and_establishments, [genetic_data/2, roles_and_establishments_outside_facts/2, gdpr_common_definitions_roles_and_establishments_status/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_fixtures, [gdpr_common_definitions_roles_and_establishments_profile_for/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, met).
+test(bound_answer_for_genetic_data) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Profile),
+    genetic_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(a_key_the_relation_does_not_read_changes_nothing) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Base),
+    genetic_data([attribute(party_role, controller), attribute(objection_to_draft_decision, false)|Base], definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(a_bad_value_of_an_unread_key_still_gives_input_problems) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Base),
+    genetic_data([attribute(party_role, banker)|Base], definition_answer(input_problems([wrong_type(party_role)]), none, [])).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([], []).
+test(an_absent_key_is_not_a_problem) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, []).
+test(an_unknown_key_is_named) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(unknown_key_profile, Profile),
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [unknown_key(not_a_contract_key)]).
+test(a_bad_enum_is_a_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(wrong_type_profile, Profile),
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [wrong_type(party_role)]).
+test(a_non_list_is_not_a_profile) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [wrong_type(profile)]).
+test(unsure_is_not_a_crisp_value) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(purposes_and_means_determined_by_law, unsure)], [wrong_type(purposes_and_means_determined_by_law)]).
+test(a_bare_boolean_is_not_an_outside_fact) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_provided_for_as_controller_by_law, true)], [wrong_type(party_provided_for_as_controller_by_law)]).
+test(a_duplicate_key_is_named_once_whatever_the_values) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(party_role, processor)], [duplicate_key(party_role)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(zzz, true), attribute(zzz, false)], [unknown_key(zzz)]).
+test(problems_follow_contract_order_then_unknown_keys) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(zzz, true), attribute(party_role, banker), attribute(data_are_personal_data, maybe)], [wrong_type(data_are_personal_data), wrong_type(party_role), unknown_key(zzz)]).
+test(outside_facts_absent) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, absent)]).
+test(outside_facts_attested) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_law, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, attested(true, attestation(host_layer, attested_2026_11_07, operator_ruling, none)))]).
+test(outside_facts_input_problems) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
+    roles_and_establishments_outside_facts(Profile, input_problems([wrong_type(profile)])).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, not_met).
+
+cp_test_names([status_holds_with_the_verdict_bound, bound_answer_for_genetic_data, a_key_the_relation_does_not_read_changes_nothing, a_bad_value_of_an_unread_key_still_gives_input_problems, an_empty_profile_has_no_problem, an_absent_key_is_not_a_problem, an_unknown_key_is_named, a_bad_enum_is_a_wrong_type, a_non_list_is_not_a_profile, unsure_is_not_a_crisp_value, a_bare_boolean_is_not_an_outside_fact, a_duplicate_key_is_named_once_whatever_the_values, a_repeated_unknown_key_is_named_once, problems_follow_contract_order_then_unknown_keys, outside_facts_absent, outside_facts_attested, outside_facts_input_problems]).
+cp_test_fail_names([the_wrong_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

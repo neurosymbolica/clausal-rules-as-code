@@ -1,0 +1,61 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_child_consent_age_verdict.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% gdpr_child_consent_age_verdict_what_if/4          what-if: override one key -> re-evaluate the status (#16)
+% gdpr_child_consent_age_verdict_compliance_check/2 compliance: is the processing barred by Art 8 (#13)
+% gdpr_child_consent_age_verdict_profile_keys/1     top-level profile key schema
+% gdpr_child_consent_age_verdict_input_problems/2   the problems a profile has ([] = none)
+% Status determination (#3) is child_consent_ground_status/2 and justification (#7) is
+% child_consent_ground_checklist/2, both served by the determination slice.
+%
+% The profile is an attribute list, so the override is written here for
+% attribute(Key, Value) items (the kit override_key/4 is written for dicts).
+% =====================================================================
+
+:- module(queries, [
+    gdpr_child_consent_age_verdict_profile_keys/1,
+    gdpr_child_consent_age_verdict_input_problems/2,
+    gdpr_child_consent_age_verdict_what_if/4,
+    gdpr_child_consent_age_verdict_compliance_check/2
+]).
+
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/kernel, [gdpr_child_consent_age_verdict_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/child_consent_ground, [child_consent_ground_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_child_consent_age_verdict_profile_keys([processing_rests_on_consent, information_society_service, offered_directly_to_child, child_age_years, parental_consent_given, member_state, member_state_selection_test, consent_date, member_state_digital_consent_age, verification_efforts_reasonable]).
+
+% what-if: re-evaluate with one key hypothetically overridden
+gdpr_child_consent_age_verdict_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    child_consent_ground_status(Hypothesis, NewStatus).
+
+% compliance check: is the proposed processing (on the profile's facts) stood in the way of by Art 8?
+% not_barred means only that Art 8 does not bar it, never that the processing is lawful on the whole.
+gdpr_child_consent_age_verdict_compliance_check(Profile, Result) :-
+    child_consent_ground_status(Profile, Status),
+    compliance_of(Status, Result).
+
+compliance_of(eligible, not_barred).
+compliance_of(ineligible, barred).
+compliance_of(indeterminate(_), undetermined).
+compliance_of(needs_legal_review(_, _), refer_to_lawyer).
+compliance_of(input_problems(_), input_rejected).
+
+% override_attribute(Profile, Key, Value, NewProfile): every item for Key is dropped
+% and one item with the new Value is added.
+override_attribute(Profile, Key, Value, NewProfile) :-
+    without_attribute(Profile, Key, Kept),
+    append(Kept, [attribute(Key, Value)], NewProfile).
+
+without_attribute([], _, []).
+without_attribute([attribute(Other, OtherValue)|Elements], Key, [attribute(Other, OtherValue)|Kept]) :-
+    dif(Other, Key),
+    without_attribute(Elements, Key, Kept).
+without_attribute([attribute(Key, _)|Elements], Key, Kept) :-
+    without_attribute(Elements, Key, Kept).
+
+:- end_module(queries).

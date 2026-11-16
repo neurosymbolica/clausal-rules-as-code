@@ -1,0 +1,80 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer.
+% One test per query registered in manifest.yaml query_interface.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_erasure_basis/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/queries, [
+    gdpr_data_subject_rights_erasure_basis_profile_keys/1,
+    gdpr_data_subject_rights_erasure_basis_what_if/4,
+    gdpr_data_subject_rights_erasure_basis_justification/2,
+    gdpr_data_subject_rights_erasure_basis_compliance_check/3,
+    request_basis/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/request_basis, [request_basis_status/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/fixtures, [gdpr_data_subject_rights_erasure_basis_profile_for/2]).
+
+test(profile_keys_are_the_fifty_four_contract_keys) :-
+    gdpr_data_subject_rights_erasure_basis_profile_keys(ProfileKeys),
+    length(ProfileKeys, 54),
+    ProfileKeys = [request_type|_].
+
+test(request_basis_is_served) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(unlawfully_processed, Profile),
+    request_basis(Profile, art17_1_d).
+
+test(status_query_agrees_with_request_basis) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(unlawfully_processed, Profile),
+    request_basis_status(Profile, art17_1_d).
+
+test(what_if_switching_the_necessity_off_removes_the_basis) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    gdpr_data_subject_rights_erasure_basis_what_if(Profile, data_no_longer_necessary_for_purposes, false, none).
+
+test(what_if_switching_the_necessity_on_gives_art17_1_a) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_unsure, Profile),
+    gdpr_data_subject_rights_erasure_basis_what_if(Profile, data_no_longer_necessary_for_purposes, true, art17_1_a).
+
+% Test side fixed (b): under Art 17(1)(a) a met ground engages the right, and the OR is met
+% whatever the other absent grounds say; defeaters absent are unmet. So the basis is art17_1_a.
+test(what_if_adds_an_absent_key) :-
+    gdpr_data_subject_rights_erasure_basis_what_if([attribute(request_type, erasure)], data_no_longer_necessary_for_purposes, true, Status),
+    Status == art17_1_a.
+
+test(what_if_yields_one_answer) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    findall(Status, gdpr_data_subject_rights_erasure_basis_what_if(Profile, data_no_longer_necessary_for_purposes, false, Status), Statuses),
+    Statuses == [none].
+
+test(justification_items_carry_cite_provenance) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    gdpr_data_subject_rights_erasure_basis_justification(Profile, Items),
+    member(item(art17_1_a, met, cite(eu_reg_2016_679_art_17_1_a)), Items).
+
+test(justification_lists_the_suspension_row) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(identity_doubts_unconfirmed, Profile),
+    gdpr_data_subject_rights_erasure_basis_justification(Profile, Items),
+    member(item(art12_6_identity_not_confirmed, met, cite(eu_reg_2016_679_art_12_6)), Items).
+
+test(compliance_check_prohibits_retention_when_erasure_is_owed) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, prohibited).
+
+test(compliance_check_permits_retention_under_an_exception) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(freedom_of_expression_exception, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, permitted).
+
+test(compliance_check_permits_retention_when_no_ground_is_engaged) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, permitted).
+
+test(compliance_check_is_undetermined_while_identity_is_unconfirmed) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(identity_doubts_unconfirmed, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, undetermined).
+
+test(compliance_check_never_prohibits_when_permitted, fail) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Profile),
+    gdpr_data_subject_rights_erasure_basis_compliance_check(Profile, retain_data, prohibited).
+
+:- end_module(test_queries).

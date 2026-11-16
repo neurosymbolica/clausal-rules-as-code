@@ -1,0 +1,68 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_constructors.clausal -- the result constructors the order pins
+% (provenance, fetched, source, url, document) and the duplicate_key input
+% problem, exercised through the input check and by building and
+% destructuring the terms.
+% Run: python -m clausal.testing eu/data_protection/gdpr_child_consent_age_verdict/tests/test_constructors.clausal
+% =====================================================================
+:- module(test_constructors, []).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/kernel, [gdpr_child_consent_age_verdict_input_problems/2]).
+
+test(provenance_builds_and_destructures) :-
+    Term = provenance(deciding_clause, [cite(eu_reg_2016_679_art_8_1)]),
+    Term = provenance(Clause, Citations),
+    Clause == deciding_clause,
+    Citations == [cite(eu_reg_2016_679_art_8_1)].
+
+test(provenance_is_not_a_bare_atom, fail) :-
+    provenance = provenance(_, _).
+
+test(source_builds_and_destructures) :-
+    Term = source(url('https://example.org/law', date(2026, 11, 1)), date(2026, 11, 1), sha_value),
+    Term = source(Address, RetrievedAt, Checksum),
+    Address = url(_, _),
+    RetrievedAt == date(2026, 11, 1),
+    Checksum == sha_value.
+
+test(url_builds_and_destructures) :-
+    Term = url('https://example.org/law', date(2026, 11, 1)),
+    Term = url(Address, RetrievedAt),
+    Address == 'https://example.org/law',
+    RetrievedAt == date(2026, 11, 1).
+
+test(document_builds_and_destructures) :-
+    Term = document(upload_one, sha_value),
+    Term = document(UploadId, Checksum),
+    UploadId == upload_one,
+    Checksum == sha_value.
+
+test(fetched_builds_and_destructures) :-
+    Term = fetched(national_digital_consent_age(austria, 14, national_provision(act, article)), source(url('https://example.org/law', date(2026, 11, 1)), date(2026, 11, 1), sha_value)),
+    Term = fetched(Value, Source),
+    Value = national_digital_consent_age(austria, 14, _),
+    Source = source(_, _, _).
+
+test(a_fetched_value_is_an_input_problem_while_no_fetcher_exists) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(member_state_digital_consent_age, fetched(national_digital_consent_age(austria, 14, national_provision(act, article)), source(url('https://example.org/law', date(2026, 11, 1)), date(2026, 11, 1), sha_value)))], [wrong_type(member_state_digital_consent_age)]).
+
+test(an_attested_value_with_url_evidence_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(member_state_digital_consent_age, attested(national_digital_consent_age(austria, 14, national_provision(act, article)), attestation(host, stamp, reason, url('https://example.org/law', date(2026, 11, 1)))))], []).
+
+test(an_attested_value_with_document_evidence_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(member_state_digital_consent_age, attested(national_digital_consent_age(austria, 14, national_provision(act, article)), attestation(host, stamp, reason, document(upload_one, sha_value))))], []).
+
+test(a_repeated_key_is_a_duplicate_key_problem) :-
+    findall(Problems, gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, 12), attribute(child_age_years, 13)], Problems), Answers),
+    Answers == [[duplicate_key(child_age_years)]].
+
+test(a_repeated_key_with_equal_values_is_still_a_duplicate_key) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(parental_consent_given, true), attribute(parental_consent_given, true)], [duplicate_key(parental_consent_given)]).
+
+test(a_single_key_is_not_a_duplicate_key, fail) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, 12)], [duplicate_key(child_age_years)]).
+
+test(a_single_key_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, 12)], []).
+
+:- end_module(test_constructors).

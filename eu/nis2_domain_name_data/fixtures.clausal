@@ -1,0 +1,62 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/nis2_domain_name_data.
+% Profiles are attribute lists [attribute(Key, Value), ...].
+% Near-miss controls: registry_addressed / other_provider differ only in
+% provider_type; registrar_addressed flips the judgement keys.
+% =====================================================================
+
+:- module(fixtures, [
+    nis2_domain_name_data_subject/1,
+    nis2_domain_name_data_profile_for/2,
+    nis2_domain_name_data_assess/2
+]).
+
+:- use_module(eu/nis2_domain_name_data/nis2_domain_name_data, [decide_nis2_domain_name_data/2]).
+
+% ---- Subject registry ------------------------------------------------
+nis2_domain_name_data_subject(registry_addressed).
+nis2_domain_name_data_subject(registrar_addressed).
+nis2_domain_name_data_subject(other_provider).
+nis2_domain_name_data_subject(no_provider_type).
+nis2_domain_name_data_subject(invalid_provider_type).
+
+% ---- Profiles --------------------------------------------------------
+nis2_domain_name_data_profile_for(registry_addressed, [
+    attribute(provider_type, tld_name_registry),
+    attribute(point_of_contact_email_address_differs_from_registrant, true),
+    attribute(point_of_contact_telephone_number_differs_from_registrant, false),
+    attribute(registration_data_is_personal_data, false),
+    attribute(requester_is_legitimate_access_seeker, true),
+    attribute(request_is_lawful_and_duly_substantiated, true),
+    attribute(reply_without_undue_delay, true)
+]).
+nis2_domain_name_data_profile_for(registrar_addressed, [
+    attribute(provider_type, domain_name_registration_service_entity),
+    attribute(point_of_contact_email_address_differs_from_registrant, false),
+    attribute(point_of_contact_telephone_number_differs_from_registrant, false),
+    attribute(registration_data_is_personal_data, true),
+    attribute(requester_is_legitimate_access_seeker, true),
+    attribute(request_is_lawful_and_duly_substantiated, false),
+    attribute(reply_without_undue_delay, false)
+]).
+nis2_domain_name_data_profile_for(other_provider, [
+    attribute(provider_type, other),
+    attribute(point_of_contact_email_address_differs_from_registrant, true),
+    attribute(point_of_contact_telephone_number_differs_from_registrant, false),
+    attribute(registration_data_is_personal_data, false),
+    attribute(requester_is_legitimate_access_seeker, true),
+    attribute(request_is_lawful_and_duly_substantiated, true),
+    attribute(reply_without_undue_delay, true)
+]).
+nis2_domain_name_data_profile_for(no_provider_type, []).
+nis2_domain_name_data_profile_for(invalid_provider_type, [
+    attribute(provider_type, bogus)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+nis2_domain_name_data_assess(Subject, Result) :-
+    nis2_domain_name_data_profile_for(Subject, Profile),
+    decide_nis2_domain_name_data(Profile, Result).
+
+:- end_module(fixtures).

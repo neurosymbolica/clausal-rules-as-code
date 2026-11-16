@@ -1,0 +1,229 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dma_art_3_gatekeeper_order
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dma_art_3_gatekeeper_order"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (dma_art_3_gatekeeper_order_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dma_art_3_gatekeeper_order.clausal --
+  - "impact_threshold_status/3"
+  - "gateway_threshold_status/3"
+  - "entrenchment_threshold_status/3"
+  - "presumption_status/3"
+  - "designation_requirements_status/4"
+  - "gatekeeper_status/4"
+  - "decide_dma_art_3_gatekeeper_order/2"
+  - "dma_art_3_gatekeeper_order_status/2"
+  - "dma_art_3_gatekeeper_order_checklist/2"
+  - "dma_art_3_gatekeeper_order_decision_resolvable/1"
+  - "dma_art_3_gatekeeper_order_status_values/1"
+  # -- queries.clausal --
+  - "dma_art_3_gatekeeper_order_profile_keys/1"
+  - "dma_art_3_gatekeeper_order_input_problems/2"
+  - "dma_art_3_gatekeeper_order_what_if/4"
+  - "dma_art_3_gatekeeper_order_eligibility/3"
+  - "impact_threshold_met/0"
+  - "impact_threshold_not_met/0"
+  - "gateway_threshold_met/0"
+  - "gateway_threshold_not_met/0"
+  - "entrenchment_threshold_met/0"
+  - "entrenchment_threshold_not_met/0"
+  - "gatekeeper_presumed/0"
+  - "gatekeeper_not_presumed/0"
+  - "requirements_presumed_met/0"
+  - "requirements_met/0"
+  - "requirements_not_met/0"
+  - "designated_gatekeeper/0"
+  - "not_designated_gatekeeper/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "dma_art_3_gatekeeper_order_subject/1"
+  - "dma_art_3_gatekeeper_order_profile_for/2"
+  - "dma_art_3_gatekeeper_order_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This order imports only kit modules (formalize_lib) and
+# library(reif), no shared backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2022/1925 (Digital Markets Act) Art 3(1), 3(2), 3(5) and 3(9),
+  for ONE undertaking and ONE core platform service it provides: whether the
+  impact threshold of Art 3(2)(a), the gateway thresholds of Art 3(2)(b) and the
+  entrenchment condition of Art 3(2)(c) are met; whether the undertaking is
+  presumed to satisfy the requirements of Art 3(1) (all three thresholds met);
+  whether the requirements of Art 3(1) are met, by the presumption with the
+  rebuttal of Art 3(5) (the Commission's conclusion as an attested outside fact)
+  or by the three open-textured judgements of Art 3(1) handed to the user
+  (tri-state, unsure referred to a lawyer); and whether a Commission designation
+  decision under Art 3(9) designates the undertaking for that service (an
+  attested outside fact, never decided here). Out of scope: the notification
+  duty and time limits of Art 3(3), (4) and (10), the delegated acts of Art 3(6)
+  and (7), designation without the thresholds under Art 3(8), the definitions of
+  Art 2 and the user-counting methodology of the Annex (the caller's premises).
+
+sources:
+  - "Regulation (EU) 2022/1925 of the European Parliament and of the Council of 14 September 2022 on contestable and fair markets in the digital sector (Digital Markets Act), OJ L 265, 12.10.2022, p. 1 (CELEX 32022R1925, original act), Article 3(1), 3(2), 3(5) and 3(9)"
+
+query_interface:
+  2: "dma_art_3_gatekeeper_order_eligibility/3"     # eligibility verdict with the cited checklist
+  7: "dma_art_3_gatekeeper_order_eligibility/3"     # justification: every checklist row carries cite(Key)
+  16: "dma_art_3_gatekeeper_order_what_if/4"        # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_heading
+  units:
+  - 32022R1925#art_003
+  reason: 'The title of Article 3 carries no obligation: document structure. Deferred
+    so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: notification_to_the_commission
+  units:
+  - 32022R1925#parag_003.003
+  reason: Art 3(3) requires an undertaking that meets all the thresholds to notify
+    the Commission within 2 months, and sets out what follows a failure to notify.
+    The duty and its time limit are formalisable but are not part of this order's
+    questions; the order uses only the word 'notification' of Art 3(5) (reading (7)).
+  consequence: The answers never say whether or when a notification is due or was
+    made.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable (a duty with a 2-month time limit counted from the moment the
+    thresholds are met); a later order.
+- what: commission_designation_procedure
+  units:
+  - 32022R1925#parag_003.004
+  reason: Art 3(4) requires the Commission to designate within 45 working days after
+    receiving the complete information. It binds the Commission; the order takes the
+    designation itself as an outside fact (reading (8)).
+  consequence: The answers never say when the Commission must designate.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: delegated_acts_on_the_methodology
+  units:
+  - 32022R1925#parag_003.006
+  - 32022R1925#parag_003.007
+  reason: Art 3(6) and (7) empower the Commission to adopt delegated acts on the methodology
+    for the thresholds and on the Annex. They bind the Commission and change no answer
+    of this order.
+  consequence: None for a caller; a delegated act changing the methodology changes
+    how the caller counts its figures (Q5).
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: designation_without_the_thresholds
+  units:
+  - 32022R1925#parag_003.008
+  - 32022R1925#point_003.008_a
+  - 32022R1925#point_003.008_b
+  - 32022R1925#point_003.008_c
+  - 32022R1925#point_003.008_d
+  - 32022R1925#point_003.008_e
+  - 32022R1925#point_003.008_f
+  - 32022R1925#point_003.008_g
+  reason: Art 3(8) lets the Commission designate, after the procedure of Article 17,
+    an undertaking that meets the requirements of Art 3(1) but not each threshold,
+    weighing the elements listed in points (a) to (g). It is the Commission's assessment;
+    the order says only whether the three judgements of Art 3(1) are all true (reading
+    (7), Q8).
+  consequence: 'requirements_met without the presumption is not a designation; gatekeeper_status
+    reads the designation as an outside fact. The elements (a) to (g) are not read:
+    the three judgement keys of Art 3(1) are the caller''s reading of the undertaking,
+    which may rest on them.'
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in part (the elements as inputs to the Art 3(1) judgements);
+    a later order.
+- what: compliance_period_after_listing
+  units:
+  - 32022R1925#parag_003.010
+  reason: Art 3(10) requires the gatekeeper to comply with Articles 5, 6 and 7 within
+    6 months after a core platform service is listed in the designation decision.
+    The time limit is formalisable but is not part of this order's questions.
+  consequence: The answers never say from when the obligations of Articles 5 to 7
+    apply.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable (a 6-month time limit counted from the listing); a later order
+    with the obligations.
+
+excluded_set:
+- what: definitions
+  instrument: Regulation (EU) 2022/1925 Art 2
+  cites:
+  - 32022R1925#art_002
+  reason: Art 2 defines gatekeeper, core platform service, end user, business user,
+    undertaking and turnover. The order takes that the caller is an undertaking providing
+    a core platform service, and the meaning of its figures, as the caller's premises
+    (readings (2) to (4)).
+  consequence: The caller establishes the premises and its figures first.
+- what: annex_methodology_for_active_users
+  instrument: Regulation (EU) 2022/1925 Annex
+  cites:
+  - 32022R1925#anx_1
+  reason: The Annex sets the methodology for identifying and calculating active end
+    users and active business users. The order takes the user counts as the caller's,
+    already made by that method (reading (4), Q5).
+  consequence: The caller counts its users by the Annex.
+- what: review_and_market_investigation
+  instrument: Regulation (EU) 2022/1925 Arts 4 and 17
+  cites:
+  - 32022R1925#art_004
+  - 32022R1925#art_017
+  reason: Art 4 (review of the designation) and Art 17 (market investigation for designating
+    gatekeepers) are Commission procedures; the order reads their outcome only through
+    the outside facts.
+  consequence: A changed designation reaches the order as a new statement of the outside
+    fact.
+- what: articles_named_in_the_deferrals
+  instrument: Regulation (EU) 2022/1925 Arts 5, 6, 7, 21 and 49
+  cites:
+  - 32022R1925#art_005
+  - 32022R1925#art_006
+  - 32022R1925#art_007
+  - 32022R1925#art_021
+  - 32022R1925#art_049
+  reason: Arts 5 to 7 (the gatekeeper obligations, named by Art 3(10)), Art 21 (requests
+    for information, named by Art 3(3)) and Art 49 (delegated acts, named by Art 3(6)
+    and (7)) are named only by deferred paragraphs of Art 3; this order reads none
+    of them.
+  consequence: The answers never say what a gatekeeper must do, what information the
+    Commission may request, or what a delegated act provides.

@@ -1,0 +1,439 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/ai_act/penalties (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. Here those files are the slice
+% penalties.clausal, queries.clausal and the package facade.
+% Exception: the scaffold writes the order's input check
+% penalties_input_problems/2 here, exported, for every slice to import.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act), Art 99(3)
+% to (6a) and (8), Art 100(1) to (3), Art 101(1) and Art 113, pinned unit text
+% of the consolidated version 02024R1689-20260727 (Regulation (EU) 2024/1689
+% as amended by Regulation (EU) 2026/1744, valid from 27 July 2026; Formex
+% source CL2024R1689EN0010010.0001.xml, source sha256
+% dfeac37ec03557cfe751427429c6314c11792f88bf654a381484e5c7239f7893).
+% The kernel decides no statutory condition. It checks the shape of the
+% inputs and compares calendar days. The statutory dates, the caps and the
+% tiers live in penalties.clausal, each operative clause there opening with
+% implements(Key). The kernel is the DAG root and does not import citations,
+% so it carries no markers.
+%
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms, so every file spells them alike.
+%
+% Result terms of the called contract (INTERFACE - THE ANSWER SHAPES):
+%   maximum_fine(Profile, InfringementDate, Maximum, Citations)
+%   general_purpose_ai_model_maximum_fine(Profile, InfringementDate, Maximum, Citations)
+% Maximum is ONE term:
+%   fine_maximum(AmountEurCents, Basis)
+%     AmountEurCents: a non-negative integer of euro cents;
+%     Basis: fixed_amount | turnover_percentage.
+%   or a final atom:
+%     no_union_maximum | set_by_member_state_rules | not_applicable_on_date
+%     | earlier_version_applies   (maximum_fine/4)
+%     no_commission_fine | not_applicable_on_date
+%                                (general_purpose_ai_model_maximum_fine/4)
+%   or a not-final status compound, with Citations []:
+%     indeterminate([Key])        exactly one bare key atom, the first absent
+%                                 one in root_exports order;
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on([Key-Value, ...])]);
+%     input_problems(Problems)    profile problems first, then
+%                                 wrong_type(infringement_date).
+% Citations: one flat set-like list of cite(Key) terms.
+% Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key), and the
+% profile-wide wrong_type(profile) alone.
+%
+% Facade verdict term of the one slice (penalties.clausal):
+%   penalties_verdict(Status, Maximum, Citations)
+%     Status: union_maximum_determined | no_union_maximum_determined
+%             | information_missing | legal_review_needed | input_rejected;
+%     Maximum and Citations: as the called query gives them.
+%
+% Shared predicates (exported below):
+%   penalties_input_problems(Profile, Problems)         THE INPUT CHECK.
+%   penalties_query_input_problems(Profile, Date, Problems)
+%       the profile problems, then wrong_type(infringement_date) when Date
+%       is not a real calendar day (steps (0) and (10)).
+%   penalties_date_problems(Date, Problems)             [] or
+%       [wrong_type(infringement_date)].
+%   penalties_date_relation(Date, Reference, Relation)  Relation is before
+%       or on_or_after, for two validated date(Year, Month, Day) terms.
+%   penalties_first_absent_key(Profile, Keys, Result)   first_absent(Key)
+%       or none_absent.
+% =====================================================================
+
+:- module(kernel, [
+    penalties_input_problems/2,
+    penalties_query_input_problems/3,
+    penalties_date_problems/2,
+    penalties_date_relation/3,
+    penalties_first_absent_key/3
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_has/2, profile_lacks/2]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% penalties_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives
+%   [wrong_type(profile)] (an unbound Profile, a partial list, an unbound element or
+%   an element that is not attribute(Key, Value) included);
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% ORDER: INTERFACE - THE INPUT CHECK states that a KEY that is not an atom (a number, a
+% string, a compound term, an unbound variable) is a key outside the six, unknown_key(KEY)
+% as given. So an element with an unbound or non-ground Key IS an attribute, and keys
+% are compared by identity (==), never by unification, so no Key is ever bound.
+% Every step is complementary clauses: exactly one clause holds for each input.
+penalties_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [offender_category, infringement, offender_is_general_purpose_ai_model_provider, general_purpose_ai_model_infringement, provider_acted_intentionally_or_negligently, worldwide_annual_turnover_eur],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(offender_category, enum([micro_small_or_medium_sized_enterprise, small_mid_cap_enterprise, other_undertaking, not_an_undertaking, public_authority_or_body, union_institution_body_office_or_agency])).
+key_type(infringement, enum([prohibited_practice, prohibited_practice_under_article_5_1_ba_bb_1a_or_1b, provider_obligations_under_article_16, authorised_representative_obligations_under_article_22, importer_obligations_under_article_23, distributor_obligations_under_article_24, provider_and_operator_obligations_under_article_25_2_or_4, deployer_obligations_under_article_26, notified_body_requirements_and_obligations, transparency_obligations_under_article_50, incorrect_incomplete_or_misleading_information, other_infringement])).
+key_type(offender_is_general_purpose_ai_model_provider, boolean).
+key_type(general_purpose_ai_model_infringement, enum([infringed_relevant_provisions, information_request_not_complied_with_or_incorrect_information, measure_under_article_93_not_complied_with, access_for_evaluation_under_article_92_not_given, none_of_article_101_1])).
+key_type(provider_acted_intentionally_or_negligently, judgement).
+key_type(worldwide_annual_turnover_eur, non_negative_integer).
+
+% attribute_list_t(Term, Truth): Truth is true when Term is a proper list of
+% attribute(Key, Value) items; false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, Truth) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, Truth).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+% An element is an attribute when it is attribute(Key, Value), whatever Key is: a key
+% that is not an atom is reported as unknown_key(Key) (INTERFACE - THE INPUT CHECK).
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. Keys are
+% compared by identity, so an unbound Key is never bound to a contract key.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    identical_member_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% identical_member_t(Item, List, Truth): Truth is true when Item is identical (==) to
+% an element of List; it binds nothing.
+identical_member_t(_, [], false).
+identical_member_t(Item, [Element|_], true) :-
+    Element == Item.
+identical_member_t(Item, [Element|Elements], Truth) :-
+    Element \== Item,
+    identical_member_t(Item, Elements, Truth).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, Truth): Truth is true when every value Elements
+% gives Key is in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, Truth) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, Truth).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, Truth) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, Truth).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, Truth) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, Truth).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, Truth) :-
+    in_type_t(Type, Value, Truth).
+
+% in_type_t(Type, Value, Truth): one clause per type, for a ground Value.
+in_type_t(judgement, Value, Truth) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, Truth).
+
+in_type_t(boolean, Value, Truth) :-
+    memberd_t(Value, [true, false], Truth).
+
+in_type_t(enum(Values), Value, Truth) :-
+    memberd_t(Value, Values, Truth).
+
+in_type_t(one_of(Types), Value, Truth) :-
+    in_some_type_t(Types, Value, Truth).
+
+in_type_t(non_negative_integer, Value, Truth) :-
+    non_negative_integer_t(Value, Truth).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, Truth): Truth is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, Truth) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, Truth).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+% integer_t(Value, Truth): for a nonvar Value, Truth is true when it is an integer and
+% false when it is a float, an atom or a compound term (profile values are atoms,
+% numbers or compound terms).
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, Truth): for a ground Value, Truth is true when it is an
+% integer of 0 or more.
+non_negative_integer_t(Value, Truth) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, Truth).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+% ---- the query inputs: the profile and the infringement date -----
+% penalties_query_input_problems(Profile, Date, Problems): the profile problems first,
+% then wrong_type(infringement_date) when Date is not a ground date(Year, Month, Day) of
+% a real calendar day (INTERFACE - THE LIMBS, steps (0) and (10)). One solution.
+penalties_query_input_problems(Profile, Date, Problems) :-
+    penalties_input_problems(Profile, ProfileProblems),
+    penalties_date_problems(Date, DateProblems),
+    append(ProfileProblems, DateProblems, Problems).
+
+% penalties_date_problems(Date, Problems): [] for a real calendar day, else
+% [wrong_type(infringement_date)]. It never fails and never raises (open question Q11).
+penalties_date_problems(Date, []) :-
+    real_calendar_day_t(Date, true).
+penalties_date_problems(Date, [wrong_type(infringement_date)]) :-
+    real_calendar_day_t(Date, false).
+
+% real_calendar_day_t(Date, Truth): Truth is true when Date is date(Year, Month, Day)
+% with three integers naming a real day of the proleptic Gregorian calendar in the range
+% of the native date type (years 1 to 9999).
+real_calendar_day_t(Date, false) :-
+    var(Date).
+real_calendar_day_t(Date, Truth) :-
+    nonvar(Date),
+    Date = date(Year, Month, DayOfMonth),
+    whole_numbers_t([Year, Month, DayOfMonth], AreWhole),
+    calendar_fields_t(AreWhole, Year, Month, DayOfMonth, Truth).
+real_calendar_day_t(Date, false) :-
+    nonvar(Date),
+    Date \= date(_, _, _).
+
+whole_numbers_t([], true).
+whole_numbers_t([Field|Fields], Truth) :-
+    whole_number_t(Field, IsWhole),
+    whole_numbers_t(Fields, AreWhole),
+    truth_and(IsWhole, AreWhole, Truth).
+
+whole_number_t(Field, false) :-
+    var(Field).
+whole_number_t(Field, Truth) :-
+    nonvar(Field),
+    integer_t(Field, Truth).
+
+calendar_fields_t(false, _, _, _, false).
+calendar_fields_t(true, Year, Month, DayOfMonth, Truth) :-
+    range_t(Year, 1, 9999, YearInRange),
+    range_t(Month, 1, 12, MonthInRange),
+    truth_and(YearInRange, MonthInRange, FieldsInRange),
+    day_in_month_t(FieldsInRange, Year, Month, DayOfMonth, Truth).
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, Year, Month, DayOfMonth, Truth) :-
+    month_last_day(Year, Month, LastDay),
+    range_t(DayOfMonth, 1, LastDay, Truth).
+
+% range_t(Value, Low, High, Truth): for integers with Low =< High.
+range_t(Value, Low, High, true) :-
+    Value #>= Low,
+    Value #=< High.
+range_t(Value, Low, _, false) :-
+    Value #< Low.
+range_t(Value, _, High, false) :-
+    Value #> High.
+
+% penalties_date_relation(Date, Reference, Relation): for two validated
+% date(Year, Month, Day) terms, Relation is before when Date is an earlier calendar day
+% than Reference, else on_or_after (the stated day itself is on_or_after: open question
+% Q11). Days compare by an exact integer key, Year * 10000 + Month * 100 + Day, which
+% orders real calendar days chronologically, with no time of day and no time zone.
+penalties_date_relation(Date, Reference, before) :-
+    calendar_day_key(Date, DateKey),
+    calendar_day_key(Reference, ReferenceKey),
+    DateKey #< ReferenceKey.
+penalties_date_relation(Date, Reference, on_or_after) :-
+    calendar_day_key(Date, DateKey),
+    calendar_day_key(Reference, ReferenceKey),
+    DateKey #>= ReferenceKey.
+
+calendar_day_key(date(Year, Month, DayOfMonth), DayKey) :-
+    DayKey #= Year * 10000 + Month * 100 + DayOfMonth.
+
+% ---- the first absent key -----------------------------------------
+% penalties_first_absent_key(Profile, Keys, Result): Result is first_absent(Key) for
+% the first of Keys absent from Profile, or none_absent. Called only on a profile the
+% input check has passed, so each key occurs at most once.
+penalties_first_absent_key(_, [], none_absent).
+penalties_first_absent_key(Profile, [Key|_], first_absent(Key)) :-
+    profile_lacks(Profile, Key).
+penalties_first_absent_key(Profile, [Key|Keys], Result) :-
+    profile_has(Profile, Key),
+    penalties_first_absent_key(Profile, Keys, Result).
+
+% ---- tests ----------------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    penalties_input_problems([attribute(offender_category, other_undertaking), attribute(worldwide_annual_turnover_eur, 100)], []).
+test(an_empty_profile_has_no_problem) :-
+    penalties_input_problems([], []).
+test(a_well_formed_profile_is_not_rejected, fail) :-
+    penalties_input_problems([attribute(offender_category, other_undertaking)], [_|_]).
+test(a_duplicate_key_is_named_once_and_never_also_wrong_type) :-
+    penalties_input_problems([attribute(infringement, prohibited_practice), attribute(infringement, nonsense)], Problems),
+    Problems == [duplicate_key(infringement)].
+test(wrong_types_come_in_contract_order_before_unknown_keys) :-
+    penalties_input_problems([attribute(colour, red), attribute(worldwide_annual_turnover_eur, -1), attribute(offender_is_general_purpose_ai_model_provider, unsure), attribute(colour, blue)], Problems),
+    Problems == [wrong_type(offender_is_general_purpose_ai_model_provider), wrong_type(worldwide_annual_turnover_eur), unknown_key(colour)].
+test(the_judgement_takes_unsure) :-
+    penalties_input_problems([attribute(provider_acted_intentionally_or_negligently, unsure)], []).
+test(a_fractional_turnover_is_wrong_type) :-
+    penalties_input_problems([attribute(worldwide_annual_turnover_eur, 201/2)], Problems),
+    Problems == [wrong_type(worldwide_annual_turnover_eur)].
+test(an_unbound_value_is_wrong_type) :-
+    penalties_input_problems([attribute(provider_acted_intentionally_or_negligently, _)], Problems),
+    Problems == [wrong_type(provider_acted_intentionally_or_negligently)].
+test(an_unbound_key_is_an_unknown_key_as_given) :-
+    penalties_input_problems([attribute(Key, true)], Problems),
+    Problems == [unknown_key(Key)].
+test(a_number_key_is_an_unknown_key) :-
+    penalties_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+test(a_partial_list_is_not_a_profile) :-
+    penalties_input_problems([attribute(infringement, prohibited_practice)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_attribute_element_is_not_a_profile) :-
+    penalties_input_problems([attribute(infringement, prohibited_practice), infringement-prohibited_practice], Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_gives_one_answer) :-
+    findall(Problems, penalties_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(the_input_check_gives_one_answer) :-
+    findall(Problems, penalties_input_problems([attribute(offender_category, other_undertaking), attribute(colour, red)], Problems), Answers),
+    Answers == [[unknown_key(colour)]].
+test(a_leap_day_is_a_real_day) :-
+    penalties_date_problems(date(2028, 2, 29), []).
+test(a_non_leap_february_twenty_ninth_is_not_a_real_day) :-
+    penalties_date_problems(date(2026, 2, 29), [wrong_type(infringement_date)]).
+test(february_thirtieth_is_not_a_real_day) :-
+    penalties_date_problems(date(2026, 2, 30), [wrong_type(infringement_date)]).
+test(a_real_day_is_not_rejected, fail) :-
+    penalties_date_problems(date(2026, 7, 27), [wrong_type(infringement_date)]).
+test(an_unbound_date_is_wrong_type) :-
+    findall(Problems, penalties_date_problems(_, Problems), Answers),
+    Answers == [[wrong_type(infringement_date)]].
+test(a_date_with_an_atom_day_is_wrong_type) :-
+    penalties_date_problems(date(2026, 7, first), [wrong_type(infringement_date)]).
+test(a_date_list_is_wrong_type) :-
+    penalties_date_problems([2026, 7, 27], [wrong_type(infringement_date)]).
+test(profile_problems_come_before_the_date_problem) :-
+    penalties_query_input_problems([attribute(colour, red)], date(2026, 13, 1), Problems),
+    Problems == [unknown_key(colour), wrong_type(infringement_date)].
+test(the_day_before_is_before) :-
+    penalties_date_relation(date(2026, 7, 26), date(2026, 7, 27), before).
+test(the_stated_day_is_on_or_after) :-
+    penalties_date_relation(date(2026, 7, 27), date(2026, 7, 27), on_or_after).
+test(the_stated_day_is_not_before, fail) :-
+    penalties_date_relation(date(2026, 7, 27), date(2026, 7, 27), before).
+test(a_later_month_with_a_smaller_day_is_on_or_after) :-
+    penalties_date_relation(date(2026, 12, 1), date(2026, 8, 2), on_or_after).
+test(the_first_absent_key_is_named) :-
+    penalties_first_absent_key([attribute(offender_category, other_undertaking)], [offender_category, infringement], first_absent(infringement)).
+test(no_key_is_absent) :-
+    penalties_first_absent_key([attribute(offender_category, other_undertaking), attribute(infringement, prohibited_practice)], [offender_category, infringement], none_absent).
+test(a_present_key_is_not_named, fail) :-
+    penalties_first_absent_key([attribute(offender_category, other_undertaking)], [offender_category, infringement], first_absent(offender_category)).
+
+:- end_module(kernel).

@@ -1,0 +1,84 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_joint_controllers.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The order's own queries (rights_against_each_joint_controller/3,
+% liability_for_the_entire_damage/4, recourse_after_full_compensation/4)
+% and the facade verdict and checklist live in the slice
+% gdpr_joint_controllers.clausal. They are not redefined here.
+%   #2 eligibility   : decide_gdpr_joint_controllers/2 and
+%                      gdpr_joint_controllers_status/2 (slice). This is the
+%                      eligibility view of the Art 82(5) claim back.
+%   #7 justification : gdpr_joint_controllers_checklist/2 (slice), with one
+%                      item(Id, Status, cite(Key)) row per Art 82(5) condition.
+% This layer adds:
+%   gdpr_joint_controllers_what_if/4 (#16 what-if): override one key, then
+%       re-evaluate the facade status.
+%   gdpr_joint_controllers_profile_keys/1: the four keys of the order's typed
+%       input contract, in its order.
+%   gdpr_joint_controllers_input_problems/2: re-exported from the kernel as
+%       the scaffold wrote it ([] = no problem).
+%   The root_exports atoms the slice does not already export (the four
+%   profile keys, the judgement value unsure and the markers absent and
+%   not_attempted), served as bare atoms so the package root carries every
+%   one of the thirteen root_exports. They decide nothing.
+% No threshold exists in this order (no figure, Q7), so there is no
+% flip-point query. The open-textured judgements are handed to the user
+% through the slice's needs_legal_review referrals. No crisp test is
+% invented here.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_joint_controllers_profile_keys/1,
+    gdpr_joint_controllers_input_problems/2,
+    gdpr_joint_controllers_what_if/4,
+    controllers_jointly_determine_purposes_and_means/0,
+    responsible_under_article_82_2_and_3/0,
+    other_responsible_parties/0,
+    full_compensation_paid/0,
+    unsure/0,
+    absent/0,
+    not_attempted/0
+]).
+
+:- use_module(eu/data_protection/gdpr_joint_controllers/kernel, [gdpr_joint_controllers_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_joint_controllers/gdpr_joint_controllers, [gdpr_joint_controllers_status/2]).
+
+% ---- root_exports atoms (bare atoms; plumbing, no statutory content) ----
+controllers_jointly_determine_purposes_and_means.
+responsible_under_article_82_2_and_3.
+other_responsible_parties.
+full_compensation_paid.
+unsure.
+absent.
+not_attempted.
+
+% The schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order (the order of root_exports).
+gdpr_joint_controllers_profile_keys([controllers_jointly_determine_purposes_and_means, responsible_under_article_82_2_and_3, other_responsible_parties, full_compensation_paid]).
+
+% #16 what-if: re-evaluate the facade status with one key hypothetically
+% overridden. The hypothesis passes through the input check like any profile.
+% Side (a), the logic was wrong: kit override_key/4 works on dicts, and the
+% order's PROFILE is an attribute list, so the override is done on the list here.
+gdpr_joint_controllers_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_joint_controllers_status(Hypothesis, NewStatus).
+
+% attribute_override(Profile, Key, Value, Hypothesis): every entry for Key is
+% dropped and attribute(Key, Value) is added once (list plumbing).
+attribute_override(Profile, Key, Value, Hypothesis) :-
+    entries_without_key(Profile, Key, Kept),
+    append(Kept, [attribute(Key, Value)], Hypothesis).
+
+entries_without_key([], _, []).
+entries_without_key([attribute(ElementKey, _)|Elements], Key, Kept) :-
+    ElementKey == Key,
+    entries_without_key(Elements, Key, Kept).
+entries_without_key([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Kept]) :-
+    ElementKey \== Key,
+    entries_without_key(Elements, Key, Kept).
+
+:- end_module(queries).

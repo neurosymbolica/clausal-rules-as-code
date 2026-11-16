@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """check_citations.py -- validate a domain's citation registry (Part A).
 
 Completeness: every cited atom has exactly one citation/2 record and vice versa.
@@ -288,7 +289,7 @@ class UnreadableDomain(Exception):
 def _walk_sources(domain_dir, keep):
     out = []
     for root, dirs, files in os.walk(domain_dir):
-        dirs[:] = [d for d in dirs if d not in ("eval", "tests", "__pycache__")]
+        dirs[:] = [d for d in dirs if d not in ("eval", "tests", "iso", "__pycache__")]
         out += [os.path.join(root, f) for f in files if keep(f)]
     return sorted(out)
 

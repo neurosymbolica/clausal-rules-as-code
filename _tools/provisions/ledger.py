@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """ledger.py -- compose the readers into the generated provision tracking ledger.
 
 COVERAGE IS COMPUTED HERE AND ASSERTED NOWHERE. A unit is covered because some

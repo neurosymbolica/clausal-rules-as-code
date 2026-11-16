@@ -1,0 +1,59 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads,
+% the result terms build and destructure, the verdict atoms are distinct,
+% and a real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/nis2_incident_reporting/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/nis2_incident_reporting/kernel, [nis2_incident_reporting_input_problems/2]).
+:- use_module(eu/nis2_incident_reporting/citations, [citation/2, implements/1]).
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(significant, not_significant).
+
+test(the_timeliness_results_are_distinct) :-
+    dif(on_time, late(hour_limit)),
+    dif(late(hour_limit), late(without_undue_delay)).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = nis2_incident_reporting_verdict(significant, [cite(eu_dir_2022_2555_art_23_3_a)]),
+    Verdict = nis2_incident_reporting_verdict(Status, Citations),
+    Status == significant,
+    Citations == [cite(eu_dir_2022_2555_art_23_3_a)].
+
+test(the_step_term_builds_and_destructures) :-
+    Step = step_due(early_warning, hours_after_awareness(24), cite(eu_dir_2022_2555_art_23_4_a)),
+    Step = step_due(Name, hours_after_awareness(Hours), cite(Key)),
+    Name == early_warning,
+    Hours == 24,
+    Key == eu_dir_2022_2555_art_23_4_a.
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_dir_2022_2555_art_23_4_a, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(the_implements_marker_succeeds_for_a_recorded_key) :-
+    implements(eu_dir_2022_2555_art_23_3_b).
+
+test(an_unrecorded_key_does_not_resolve, fail) :-
+    citation(eu_dir_2022_2555_art_99_9, _Record).
+
+test(the_input_check_accepts_an_empty_profile) :-
+    nis2_incident_reporting_input_problems([], Problems),
+    Problems == [].
+
+test(the_input_check_names_an_unknown_key) :-
+    nis2_incident_reporting_input_problems([attribute(not_a_contract_key, true)], Problems),
+    Problems == [unknown_key(not_a_contract_key)].
+
+test(the_input_check_names_a_wrong_type) :-
+    nis2_incident_reporting_input_problems([attribute(incident_ongoing_at_final_report_due, unsure)], Problems),
+    Problems == [wrong_type(incident_ongoing_at_final_report_due)].
+
+test(the_input_check_rejects_a_non_list_profile) :-
+    nis2_incident_reporting_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+
+:- end_module(test_load).

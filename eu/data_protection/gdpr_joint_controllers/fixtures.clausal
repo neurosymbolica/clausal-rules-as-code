@@ -1,0 +1,131 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_joint_controllers.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The outside fact responsible_under_article_82_2_and_3
+% is given as the host supplies it, attested(VALUE, attestation(BY, AT,
+% REASON, EVIDENCE)). The order never reads the four fields.
+%
+% The order has no numeric threshold. A near-miss control here is the
+% positive case with ONE key moved by one step:
+%   joint_processor_entitled_to_claim_back   (C8, eligible)
+%     vs partial_payment_near_miss           (C3, full_compensation_paid false)
+%     vs sole_responsible_party_near_miss    (C2/B4, other_responsible_parties [])
+%     vs not_responsible_near_miss           (C1/B1, statement attested false)
+%   statement_absent_referred                (C4/B2, referred)
+%     vs statement_absent_no_other_party     (C2, settled whatever the statement)
+% The remaining subjects cover the other limbs: A1, A2, A3, B3, C5, C6, C7,
+% and the input check (step 0).
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_joint_controllers_subject/1,
+    gdpr_joint_controllers_profile_for/2,
+    gdpr_joint_controllers_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_joint_controllers/gdpr_joint_controllers, [decide_gdpr_joint_controllers/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_joint_controllers_subject(joint_processor_entitled_to_claim_back).
+gdpr_joint_controllers_subject(partial_payment_near_miss).
+gdpr_joint_controllers_subject(sole_responsible_party_near_miss).
+gdpr_joint_controllers_subject(not_responsible_near_miss).
+gdpr_joint_controllers_subject(payment_judgement_unsure).
+gdpr_joint_controllers_subject(payment_not_yet_stated).
+gdpr_joint_controllers_subject(other_parties_not_yet_known).
+gdpr_joint_controllers_subject(statement_absent_referred).
+gdpr_joint_controllers_subject(statement_absent_no_other_party).
+gdpr_joint_controllers_subject(malformed_bare_statement).
+gdpr_joint_controllers_subject(malformed_party_identifier).
+gdpr_joint_controllers_subject(malformed_duplicate_payment).
+
+% ---- Profiles --------------------------------------------------------
+% C8 / B5 / A4: responsible with two other responsible parties, full
+% compensation paid; entitled to claim back from each listed party.
+gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))),
+    attribute(other_responsible_parties, [controller_b, processor_c]),
+    attribute(full_compensation_paid, true)
+]).
+% C3 near miss: the same, but the payment was not full compensation.
+gdpr_joint_controllers_profile_for(partial_payment_near_miss, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))),
+    attribute(other_responsible_parties, [controller_b, processor_c]),
+    attribute(full_compensation_paid, false)
+]).
+% C2 / B4 near miss: the same, but no other responsible party (Q1, Q3).
+gdpr_joint_controllers_profile_for(sole_responsible_party_near_miss, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))),
+    attribute(other_responsible_parties, []),
+    attribute(full_compensation_paid, true)
+]).
+% C1 / B1 near miss: the same, but the caller is stated not responsible.
+gdpr_joint_controllers_profile_for(not_responsible_near_miss, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(responsible_under_article_82_2_and_3, attested(false, attestation(compensation_order_host, determination_moment, exempt_from_liability, document(statement_upload, statement_digest)))),
+    attribute(other_responsible_parties, [controller_b, processor_c]),
+    attribute(full_compensation_paid, true)
+]).
+% C7 / A3: both judgements unsure; each goes to a lawyer.
+gdpr_joint_controllers_profile_for(payment_judgement_unsure, [
+    attribute(controllers_jointly_determine_purposes_and_means, unsure),
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))),
+    attribute(other_responsible_parties, [controller_b]),
+    attribute(full_compensation_paid, unsure)
+]).
+% C6 / A1 / B5: payment not yet stated; not a joint controller.
+gdpr_joint_controllers_profile_for(payment_not_yet_stated, [
+    attribute(controllers_jointly_determine_purposes_and_means, false),
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))),
+    attribute(other_responsible_parties, [controller_b])
+]).
+% C5 / B3 / A2: another involved party's answer is still open (Q6).
+gdpr_joint_controllers_profile_for(other_parties_not_yet_known, [
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))),
+    attribute(full_compensation_paid, true)
+]).
+% C4 / B2: the caller's own statement is absent; referred.
+gdpr_joint_controllers_profile_for(statement_absent_referred, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(other_responsible_parties, [controller_b]),
+    attribute(full_compensation_paid, true)
+]).
+% C2 control: the statement is absent, but the empty list settles it.
+gdpr_joint_controllers_profile_for(statement_absent_no_other_party, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(other_responsible_parties, []),
+    attribute(full_compensation_paid, true)
+]).
+% Step 0: a bare true is not an attested statement.
+gdpr_joint_controllers_profile_for(malformed_bare_statement, [
+    attribute(controllers_jointly_determine_purposes_and_means, true),
+    attribute(responsible_under_article_82_2_and_3, true),
+    attribute(other_responsible_parties, [controller_b]),
+    attribute(full_compensation_paid, true)
+]).
+% Step 0: a number is not a party identifier.
+gdpr_joint_controllers_profile_for(malformed_party_identifier, [
+    attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))),
+    attribute(other_responsible_parties, [controller_b, 42]),
+    attribute(full_compensation_paid, true)
+]).
+% Step 0: a repeated contract key, plus a key outside the contract.
+gdpr_joint_controllers_profile_for(malformed_duplicate_payment, [
+    attribute(full_compensation_paid, true),
+    attribute(arrangement_names_contact_point, true),
+    attribute(full_compensation_paid, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_joint_controllers_assess(Subject, Result) :-
+    gdpr_joint_controllers_profile_for(Subject, Profile),
+    decide_gdpr_joint_controllers(Profile, Result).
+
+:- end_module(fixtures).

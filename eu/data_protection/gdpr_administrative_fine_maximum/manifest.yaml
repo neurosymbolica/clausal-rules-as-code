@@ -1,0 +1,274 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_administrative_fine_maximum
+shape_family: numeric
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_administrative_fine_maximum"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export).
+public_interface:
+  # -- kernel.clausal -- (gdpr_administrative_fine_maximum_input_problems/2 is listed under queries)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_administrative_fine_maximum.clausal --
+  - "administrative_fine_maximum/3"
+  - "decide_gdpr_administrative_fine_maximum/2"
+  - "gdpr_administrative_fine_maximum_status/2"
+  - "gdpr_administrative_fine_maximum_checklist/2"
+  - "gdpr_administrative_fine_maximum_decision_resolvable/1"
+  - "gdpr_administrative_fine_maximum_status_values/1"
+  - "fine_maximum/3"
+  - "separate_fine_maxima/1"
+  - "infringement_maximum/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "not_governed_here/1"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "gdpr_administrative_fine_maximum_profile_keys/1"
+  - "gdpr_administrative_fine_maximum_input_problems/2"
+  - "gdpr_administrative_fine_maximum_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_administrative_fine_maximum_subject/1"
+  - "gdpr_administrative_fine_maximum_profile_for/2"
+  - "gdpr_administrative_fine_maximum_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+uses: []
+
+scope: "The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6): the tier (10000000 EUR / 2 % or 20000000 EUR / 4 %) by infringed provision, the higher-of fixed amount and percentage of the economic unit's total worldwide annual turnover for an undertaking (integer euro cents, tie gives the fixed amount), the fixed amount alone for a non-undertaking, the gravest-infringement rule of Art 83(3) for several linked, intentional or negligent infringements, and separate maxima otherwise. Out of scope, handed to the lawyer: the amount actually imposed (Art 83(1)-(2)), public authorities (Art 83(7)), procedure (Art 83(8)-(9)), whether the infringer is an undertaking, foreign-currency turnover, and provisions Art 83(4)-(6) do not list."
+
+sources:
+  - "Regulation (EU) 2016/679 (GDPR), Art 83(3), 83(4), 83(5), 83(6) (pinned consolidated text of 02016R0679-20160504)"
+  - "Regulation (EU) 2016/679 (GDPR), Art 4(18) and (19), quoted as context of the undertaking judgement; Art 83(7) quoted and deferred"
+  - "CJEU C-383/23 ILVA and C-807/21 Deutsche Wohnen (authority of the undertaking ruling); EDPB Guidelines 04/2022 v2.1 para 46 (authority of the separate-maxima ruling)"
+
+query_interface:
+  2: "gdpr_administrative_fine_maximum_status/2"      # status verdict
+  7: "gdpr_administrative_fine_maximum_checklist/2"   # justification: cite(...) per item
+  16: "gdpr_administrative_fine_maximum_what_if/4"    # what_if: re-evaluate under an overridden key
+  23: "administrative_fine_maximum/3"                 # calculation: the cap in euro cents
+
+deferred_set:
+- what: art83_heading
+  units:
+  - 02016R0679-20160504#art_083
+  reason: 'The title of Article 83 carries no obligation: document structure. Deferred
+    so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: art83_1_effective_proportionate_dissuasive
+  units:
+  - 02016R0679-20160504#parag_083.001
+  reason: 'Each fine must be effective, proportionate and dissuasive in each individual
+    case: an open-textured standard on the amount actually imposed, not on the maximum.'
+  consequence: 'The answer is a maximum, not the fine: the caller must judge what
+    amount is effective, proportionate and dissuasive under Art 83(1) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art83_2_factors_for_the_amount_imposed
+  units:
+  - 02016R0679-20160504#parag_083.002
+  - 02016R0679-20160504#point_083.002_a
+  - 02016R0679-20160504#point_083.002_b
+  - 02016R0679-20160504#point_083.002_c
+  - 02016R0679-20160504#point_083.002_d
+  - 02016R0679-20160504#point_083.002_e
+  - 02016R0679-20160504#point_083.002_f
+  - 02016R0679-20160504#point_083.002_g
+  - 02016R0679-20160504#point_083.002_h
+  - 02016R0679-20160504#point_083.002_i
+  - 02016R0679-20160504#point_083.002_j
+  - 02016R0679-20160504#point_083.002_k
+  reason: 'Whether to fine and how much (points (a) to (k): gravity, intent, mitigation,
+    previous infringements and so on) are discretionary, open-textured factors that
+    fix the amount IMPOSED, which this order does not compute. It computes the legal
+    maximum only.'
+  consequence: 'The answer is the legal maximum only: whether a fine is imposed at
+    all and its amount turn on the factors of Art 83(2)(a) to (k), which the caller
+    must assess itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art83_7_public_authorities
+  units:
+  - 02016R0679-20160504#parag_083.007
+  reason: 'Each Member State may lay down whether and to what extent administrative
+    fines may be imposed on public authorities and bodies established there. That
+    is Member State law, not pinned and not formalized here. CHOICE (the order''s
+    author): DEFERRED, not modelled as an outside fact. Modelling it as an attested
+    or fetched outside fact (fetcher none, as in eu/procurement/procedure-conduct)
+    would need a public-authority input, an outside-fact key and a rule for what a
+    Member State rule does to the Art 83(4)-(6) maximum, and Art 83(7) says nothing
+    about the maximum, only about whether and to what extent a fine may be imposed.
+    Open question for the operator.'
+  consequence: for a public authority the caller must check the Member State rule;
+    this order returns the Regulation's maximum.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: art83_8_procedural_safeguards
+  units:
+  - 02016R0679-20160504#parag_083.008
+  reason: Procedural safeguards on the exercise of the power to fine; not a rule on
+    the maximum.
+  consequence: 'None for the maximum: the caller must check the procedural safeguards
+    of Art 83(8) and the law that implements them itself.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: art83_9_member_states_without_administrative_fines
+  units:
+  - 02016R0679-20160504#parag_083.009
+  reason: Member States whose legal system has no administrative fines (fine initiated
+    by the supervisory authority, imposed by national courts); procedural and Member
+    State law, not a rule on the maximum.
+  consequence: 'None for the maximum: in a Member State whose legal system has no
+    administrative fines, the caller must check under Art 83(9) and that Member State''s
+    law how the fine is initiated and imposed.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- debt: true
+  what: art4_definitions_not_used
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: Article 4 is pinned whole because it is the smallest element holding points
+    (18) and (19). The other definitions (and the article heading) are not read by
+    any limb of this order.
+  consequence: 'None for a caller: no limb turns on these definitions.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: undertaking_and_group_turnover_computation
+  units:
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  partial: true
+  reason: 'Points (18) enterprise and (19) group of undertakings are quoted and read
+    as the context of the judgement infringer_is_undertaking. The concept is ruled
+    (reading 6: the competition-law economic unit, CJEU ILVA C-383/23 and Deutsche
+    Wohnen C-807/21), but whether a given infringer is such a unit, and how the unit''s
+    turnover is composed, is not modelled: the caller supplies one turnover figure.
+    See the excluded_set entry for Recital 150.'
+  consequence: 'The answer takes the turnover figure as given: the caller must decide
+    whether the infringer forms or belongs to an economic unit and supply that unit''s
+    total worldwide annual turnover of the preceding business year itself.'
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: foreign_currency_turnover
+  units:
+  - 02016R0679-20160504#parag_083.004
+  - 02016R0679-20160504#parag_083.005
+  - 02016R0679-20160504#parag_083.006
+  partial: true
+  reason: Art 83(4), (5) and (6) set the turnover limb as a percentage of the total
+    worldwide annual turnover and do not say in which currency it is stated. The order
+    reads that turnover in whole euros only; a turnover in another currency, and the
+    exchange rate and date that would convert it, is not formalized; the caller converts
+    first.
+  consequence: 'The answer reads only a figure in whole euros: a caller whose turnover
+    is in another currency must choose the exchange rate and its date and convert
+    the figure itself before asking.'
+  declaration: not_an_exception
+- debt: true
+  what: preceding_financial_year_reference_point
+  units:
+  - 02016R0679-20160504#parag_083.004
+  - 02016R0679-20160504#parag_083.005
+  - 02016R0679-20160504#parag_083.006
+  partial: true
+  reason: '''Preceding financial year'' is not stated to precede the infringement
+    or the decision. The order takes the figure as given by the caller and does not
+    choose the reference year.'
+  consequence: The caller supplies the right year (open question for the operator).
+  declaration: answered_with_caveat
+
+excluded_set:
+- what: recital_150_undertaking_concept
+  instrument: Regulation (EU) 2016/679 Recital 150
+  cites:
+  - 32016R0679#rct_150
+  reason: Recital 150 says that an undertaking should be understood in accordance
+    with Articles 101 and 102 TFEU for the purpose of imposing fines. Not pinned and
+    not quoted; reading 6 states the concept (ruled 2026-11-01 on the CJEU authority
+    below) and leaves its application to the judgement input infringer_is_undertaking.
+  consequence: 'The order applies no test of what an undertaking is: the caller states
+    infringer_is_undertaking itself, reading Recital 150 and Articles 101 and 102
+    TFEU.'
+- what: case_law_on_the_maximum
+  instrument: Judgments of the Court of Justice C-383/23 (ILVA, paragraphs 22, 23
+    and 36) and C-807/21 (Deutsche Wohnen, paragraphs 55 to 57)
+  cites:
+  - 62023CJ0383#operative_part
+  - 62021CJ0807#operative_part
+  reason: Not pinned and not quoted. Named as the AUTHORITY of the 2026-11-01 ruling
+    in reading 6 (undertaking is the competition-law economic unit; its total worldwide
+    annual turnover of the preceding business year); no step computes from it.
+  consequence: The order computes no figure from the judgments; a caller who must
+    apply the undertaking concept or the turnover of the preceding business year as
+    the Court has read them, beyond reading 6, reads the judgments itself.
+- what: regulatory_guidance
+  instrument: EDPB Guidelines 04/2022 on the calculation of administrative fines under
+    the GDPR, version 2.1
+  cites:
+  - 02016R0679-20160504#parag_070.001
+  - 02016R0679-20160504#point_070.001_k
+  reason: 'Soft law, not pinned and not quoted. Para 46 is named as the AUTHORITY
+    of the 2026-11-01 ruling for several infringements outside Art 83(3) (separate
+    maxima, no single legal maximum for their sum: THE LIMBS, step (5b)); the rest
+    concerns the amount imposed, which is deferred.'
+  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
+    itself. A caller who needs the amount actually imposed, or the guidance beyond
+    para 46, reads the Guidelines and applies them itself.

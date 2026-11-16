@@ -1,0 +1,505 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_art36_3_consultation_request.clausal -- the gdpr_art36_3_consultation_request DETERMINATION for
+% eu/data_protection/gdpr_art36_3_consultation_request, self-contained top to bottom.
+%
+% Source: Regulation (EU) 2016/679, Article 36(3), points (a) to (f),
+% consolidated text 02016R0679-20160504 (units parag_036.003 and
+% point_036.003_a to point_036.003_f): what the controller provides to the
+% supervisory authority when it consults under Article 36(1). Article 36(1)
+% and 36(5) are read only to say which consultation the caller's key
+% consultation_under_article_36_1 names (reading (1), Q1, Q8).
+%
+% Public queries (the called contract, INTERFACE - THE LIMBS):
+%   consultation_request_status(Profile, Result, Basis, Citations)
+%   missing_consultation_request_items(Profile, Items, Basis, Citations)
+% The input check gdpr_art36_3_consultation_request_input_problems/2 lives in
+% the kernel and is imported, never redefined here.
+%
+% Each item of Art 36(3) is SATISFIED, MISSING or OPEN. Internally an item
+% status is one of: satisfied | missing | names(Key, deciding)
+% | names(Key, not_deciding) | referral (item (a) open by referral).
+% Presence, not adequacy, is what every content key states (reading (2)).
+% =====================================================================
+
+:- module(gdpr_art36_3_consultation_request, [
+    consultation_request_status/4,
+    missing_consultation_request_items/4,
+    decide_gdpr_art36_3_consultation_request/2,
+    gdpr_art36_3_consultation_request_status/2,
+    gdpr_art36_3_consultation_request_checklist/2,
+    gdpr_art36_3_consultation_request_decision_resolvable/1,
+    gdpr_art36_3_consultation_request_status_values/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_art36_3_consultation_request/kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art36_3_consultation_request/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+
+% The verdict vocabulary of consultation_request_status/4 (final atoms).
+gdpr_art36_3_consultation_request_status_values([consultation_request_complete, consultation_request_incomplete, not_governed_by_article_36_3]).
+
+% The seven citations of every final answer other than
+% not_governed_by_article_36_3: the paragraph and its six points.
+request_citations([
+    cite(eu_reg_2016_679_art_36_3),
+    cite(eu_reg_2016_679_art_36_3_a),
+    cite(eu_reg_2016_679_art_36_3_b),
+    cite(eu_reg_2016_679_art_36_3_c),
+    cite(eu_reg_2016_679_art_36_3_d),
+    cite(eu_reg_2016_679_art_36_3_e),
+    cite(eu_reg_2016_679_art_36_3_f)
+]).
+
+% The citation of not_governed_by_article_36_3: the paragraph only.
+not_governed_citations([cite(eu_reg_2016_679_art_36_3)]).
+
+% The six items of Art 36(3), in the order (a) to (f).
+consultation_request_points([
+    respective_responsibilities,
+    purposes_and_means,
+    measures_and_safeguards,
+    data_protection_officer_contact_details,
+    data_protection_impact_assessment,
+    other_requested_information
+]).
+
+% consultation_request_point(Item, ContentKey, Citation): one row per point.
+consultation_request_point(respective_responsibilities, respective_responsibilities_provided, cite(eu_reg_2016_679_art_36_3_a)).
+consultation_request_point(purposes_and_means, purposes_and_means_provided, cite(eu_reg_2016_679_art_36_3_b)).
+consultation_request_point(measures_and_safeguards, measures_and_safeguards_provided, cite(eu_reg_2016_679_art_36_3_c)).
+consultation_request_point(data_protection_officer_contact_details, data_protection_officer_contact_details_provided, cite(eu_reg_2016_679_art_36_3_d)).
+consultation_request_point(data_protection_impact_assessment, impact_assessment_provided, cite(eu_reg_2016_679_art_36_3_e)).
+consultation_request_point(other_requested_information, requested_other_information_provided, cite(eu_reg_2016_679_art_36_3_f)).
+
+% THE ABSENT REFERRAL on joint_controllers_or_processors_involved.
+absent_referral(needs_legal_review(
+    cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a), cite(controller_and_processor_roles_statement)),
+    [resolution(cite(controller_and_processor_roles_statement), not_attempted),
+     inputs_relied_on([joint_controllers_or_processors_involved-absent])])).
+
+% Point (a) table (reading (3)): responsibilities state, involvement state.
+responsibilities_row(true, true, satisfied).
+responsibilities_row(true, false, satisfied).
+responsibilities_row(true, absent, satisfied).
+responsibilities_row(false, true, missing).
+responsibilities_row(false, false, satisfied).
+responsibilities_row(false, absent, referral).
+responsibilities_row(absent, true, names(respective_responsibilities_provided, deciding)).
+responsibilities_row(absent, false, satisfied).
+responsibilities_row(absent, absent, names(respective_responsibilities_provided, not_deciding)).
+
+% Points (b), (c) and (e) table (reading (4)): the content key state.
+content_row(true, _, satisfied).
+content_row(false, _, missing).
+content_row(absent, Key, names(Key, deciding)).
+
+% Point (d) table (reading (5)): designated state, contact details state.
+officer_row(true, true, satisfied).
+officer_row(false, true, satisfied).
+officer_row(absent, true, satisfied).
+officer_row(true, false, missing).
+officer_row(false, false, satisfied).
+officer_row(absent, false, names(data_protection_officer_designated, deciding)).
+officer_row(true, absent, names(data_protection_officer_contact_details_provided, deciding)).
+officer_row(false, absent, satisfied).
+officer_row(absent, absent, names(data_protection_officer_designated, not_deciding)).
+
+% Point (f) table (reading (6)): requested state, provided state.
+other_information_row(true, true, satisfied).
+other_information_row(false, true, satisfied).
+other_information_row(absent, true, satisfied).
+other_information_row(true, false, missing).
+other_information_row(false, false, satisfied).
+other_information_row(absent, false, names(other_information_requested_by_supervisory_authority, deciding)).
+other_information_row(true, absent, names(requested_other_information_provided, deciding)).
+other_information_row(false, absent, satisfied).
+other_information_row(absent, absent, names(other_information_requested_by_supervisory_authority, not_deciding)).
+
+% ---- profile plumbing (presence first, then value) -------------------
+
+key_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(Profile, Key, Value) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+% The outside fact: its value and the attested term exactly as supplied.
+outside_fact_state(Profile, absent, absent) :-
+    profile_lacks(Profile, joint_controllers_or_processors_involved).
+outside_fact_state(Profile, Value, attested(Value, Attestation)) :-
+    profile_has(Profile, joint_controllers_or_processors_involved),
+    profile_get(Profile, joint_controllers_or_processors_involved, attested(Value, Attestation)).
+
+% ---- which consultation (reading (1)) --------------------------------
+
+consultation_footing(Profile, unstated) :-
+    profile_lacks(Profile, consultation_under_article_36_1).
+consultation_footing(Profile, article_36_1) :-
+    implements(eu_reg_2016_679_art_36_1),
+    profile_has(Profile, consultation_under_article_36_1),
+    profile_get(Profile, consultation_under_article_36_1, true).
+consultation_footing(Profile, other_footing) :-
+    implements(eu_reg_2016_679_art_36_5),
+    profile_has(Profile, consultation_under_article_36_1),
+    profile_get(Profile, consultation_under_article_36_1, false).
+
+% ---- the six items ----------------------------------------------------
+
+responsibilities_status(Responsibilities, Involved, Status) :-
+    implements(eu_reg_2016_679_art_36_3_a),
+    responsibilities_row(Responsibilities, Involved, Status).
+
+purposes_and_means_status(State, Status) :-
+    implements(eu_reg_2016_679_art_36_3_b),
+    content_row(State, purposes_and_means_provided, Status).
+
+measures_and_safeguards_status(State, Status) :-
+    implements(eu_reg_2016_679_art_36_3_c),
+    content_row(State, measures_and_safeguards_provided, Status).
+
+officer_status(Designated, ContactDetails, Status) :-
+    implements(eu_reg_2016_679_art_36_3_d),
+    officer_row(Designated, ContactDetails, Status).
+
+impact_assessment_status(State, Status) :-
+    implements(eu_reg_2016_679_art_36_3_e),
+    content_row(State, impact_assessment_provided, Status).
+
+other_information_status(Requested, Provided, Status) :-
+    implements(eu_reg_2016_679_art_36_3_f),
+    other_information_row(Requested, Provided, Status).
+
+% item_statuses(Profile, Statuses, Basis): the six item statuses in the
+% order (a) to (f), and the basis JB of a final answer.
+item_statuses(Profile, Statuses, Basis) :-
+    key_state(Profile, respective_responsibilities_provided, Responsibilities),
+    outside_fact_state(Profile, Involved, InvolvedTerm),
+    key_state(Profile, purposes_and_means_provided, PurposesAndMeans),
+    key_state(Profile, measures_and_safeguards_provided, MeasuresAndSafeguards),
+    key_state(Profile, data_protection_officer_designated, Designated),
+    key_state(Profile, data_protection_officer_contact_details_provided, ContactDetails),
+    key_state(Profile, impact_assessment_provided, ImpactAssessment),
+    key_state(Profile, other_information_requested_by_supervisory_authority, Requested),
+    key_state(Profile, requested_other_information_provided, Provided),
+    responsibilities_status(Responsibilities, Involved, ResponsibilitiesStatus),
+    purposes_and_means_status(PurposesAndMeans, PurposesStatus),
+    measures_and_safeguards_status(MeasuresAndSafeguards, MeasuresStatus),
+    officer_status(Designated, ContactDetails, OfficerStatus),
+    impact_assessment_status(ImpactAssessment, AssessmentStatus),
+    other_information_status(Requested, Provided, OtherStatus),
+    Statuses = [ResponsibilitiesStatus, PurposesStatus, MeasuresStatus, OfficerStatus, AssessmentStatus, OtherStatus],
+    outside_fact_basis(Responsibilities, InvolvedTerm, Basis).
+
+% JB: the outside fact is copied exactly when item (a) reads it.
+outside_fact_basis(true, _, []).
+outside_fact_basis(false, InvolvedTerm, Basis) :-
+    implements(eu_reg_2016_679_art_36_3_a),
+    present_basis(InvolvedTerm, Basis).
+outside_fact_basis(absent, InvolvedTerm, Basis) :-
+    implements(eu_reg_2016_679_art_36_3_a),
+    present_basis(InvolvedTerm, Basis).
+
+present_basis(absent, []).
+present_basis(attested(Value, Attestation), [outside_fact(joint_controllers_or_processors_involved, attested(Value, Attestation))]).
+
+% ---- folds over the item statuses ------------------------------------
+
+first_deciding_key([], none).
+first_deciding_key([names(Key, deciding)|_], key(Key)).
+first_deciding_key([names(_, not_deciding)|Statuses], Found) :-
+    first_deciding_key(Statuses, Found).
+first_deciding_key([satisfied|Statuses], Found) :-
+    first_deciding_key(Statuses, Found).
+first_deciding_key([missing|Statuses], Found) :-
+    first_deciding_key(Statuses, Found).
+first_deciding_key([referral|Statuses], Found) :-
+    first_deciding_key(Statuses, Found).
+
+first_named_key([], none).
+first_named_key([names(Key, _)|_], key(Key)).
+first_named_key([satisfied|Statuses], Found) :-
+    first_named_key(Statuses, Found).
+first_named_key([missing|Statuses], Found) :-
+    first_named_key(Statuses, Found).
+first_named_key([referral|Statuses], Found) :-
+    first_named_key(Statuses, Found).
+
+missing_items([], [], []).
+missing_items([Point|Points], [missing|Statuses], [Point|Items]) :-
+    missing_items(Points, Statuses, Items).
+missing_items([_|Points], [satisfied|Statuses], Items) :-
+    missing_items(Points, Statuses, Items).
+
+% ---- consultation_request_status/4 -----------------------------------
+
+consultation_request_status(Profile, Result, Basis, Citations) :-
+    gdpr_art36_3_consultation_request_input_problems(Profile, Problems),
+    status_after_check(Problems, Profile, Result, Basis, Citations).
+
+status_after_check([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+status_after_check([], Profile, Result, Basis, Citations) :-
+    consultation_footing(Profile, Footing),
+    status_for_footing(Footing, Profile, Result, Basis, Citations).
+
+status_for_footing(unstated, _, indeterminate([consultation_under_article_36_1]), [], []).
+status_for_footing(other_footing, _, not_governed_by_article_36_3, [], Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    not_governed_citations(Citations).
+status_for_footing(article_36_1, Profile, Result, ResultBasis, Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    item_statuses(Profile, Statuses, Basis),
+    memberd_t(missing, Statuses, HasMissing),
+    first_deciding_key(Statuses, Deciding),
+    first_named_key(Statuses, Named),
+    memberd_t(referral, Statuses, HasReferral),
+    status_outcome(HasMissing, Deciding, Named, HasReferral, Basis, Result, ResultBasis, Citations).
+
+% Steps 3 to 7: a MISSING item first, then a DECIDING key, then any named
+% key, then the referral, then complete.
+status_outcome(true, _, _, _, Basis, consultation_request_incomplete, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    request_citations(Citations).
+status_outcome(false, key(Key), _, _, _, indeterminate([Key]), [], []).
+status_outcome(false, none, key(Key), _, _, indeterminate([Key]), [], []).
+status_outcome(false, none, none, true, _, Review, [], []) :-
+    implements(eu_reg_2016_679_art_36_3_a),
+    absent_referral(Review).
+status_outcome(false, none, none, false, Basis, consultation_request_complete, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    request_citations(Citations).
+
+% ---- missing_consultation_request_items/4 ----------------------------
+
+missing_consultation_request_items(Profile, Items, Basis, Citations) :-
+    gdpr_art36_3_consultation_request_input_problems(Profile, Problems),
+    items_after_check(Problems, Profile, Items, Basis, Citations).
+
+items_after_check([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+items_after_check([], Profile, Items, Basis, Citations) :-
+    consultation_footing(Profile, Footing),
+    items_for_footing(Footing, Profile, Items, Basis, Citations).
+
+items_for_footing(unstated, _, indeterminate([consultation_under_article_36_1]), [], []).
+items_for_footing(other_footing, _, not_governed_by_article_36_3, [], Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    not_governed_citations(Citations).
+items_for_footing(article_36_1, Profile, Items, ResultBasis, Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    item_statuses(Profile, Statuses, Basis),
+    first_named_key(Statuses, Named),
+    memberd_t(referral, Statuses, HasReferral),
+    items_outcome(Named, HasReferral, Statuses, Basis, Items, ResultBasis, Citations).
+
+% Steps 3 to 5: any named key in the plain order (a) to (f), then the
+% referral, then the list of MISSING items.
+items_outcome(key(Key), _, _, _, indeterminate([Key]), [], []).
+items_outcome(none, true, _, _, Review, [], []) :-
+    implements(eu_reg_2016_679_art_36_3_a),
+    absent_referral(Review).
+items_outcome(none, false, Statuses, Basis, Items, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_36_3),
+    consultation_request_points(Points),
+    missing_items(Points, Statuses, Items),
+    request_citations(Citations).
+
+% ---- facade: verdict and status projection ---------------------------
+
+decide_gdpr_art36_3_consultation_request(Profile, gdpr_art36_3_consultation_request_verdict(Result, Citations)) :-
+    consultation_request_status(Profile, Result, _Basis, Citations).
+
+gdpr_art36_3_consultation_request_status(Profile, Status) :-
+    decide_gdpr_art36_3_consultation_request(Profile, gdpr_art36_3_consultation_request_verdict(Status, _Citations)).
+
+gdpr_art36_3_consultation_request_decision_resolvable(Profile) :-
+    decide_gdpr_art36_3_consultation_request(Profile, _Verdict).
+
+% ---- checklist: one row per point of Art 36(3) -----------------------
+% item(ItemAtom, Status, cite(PointKey)), Status met | unmet(not_provided(ContentKey))
+% | unknown([Key]) | unknown(referred(joint_controllers_or_processors_involved)).
+% A profile with input problems, or a consultation not under Art 36(1),
+% has no rows.
+
+gdpr_art36_3_consultation_request_checklist(Profile, Items) :-
+    gdpr_art36_3_consultation_request_input_problems(Profile, Problems),
+    checklist_after_check(Problems, Profile, Items).
+
+checklist_after_check([_|_], _, []).
+checklist_after_check([], Profile, Items) :-
+    consultation_footing(Profile, Footing),
+    checklist_for_footing(Footing, Profile, Items).
+
+checklist_for_footing(unstated, _, []).
+checklist_for_footing(other_footing, _, []).
+checklist_for_footing(article_36_1, Profile, Items) :-
+    implements(eu_reg_2016_679_art_36_3),
+    item_statuses(Profile, Statuses, _Basis),
+    consultation_request_points(Points),
+    checklist_rows(Points, Statuses, Items).
+
+checklist_rows([], [], []).
+checklist_rows([Point|Points], [Status|Statuses], [item(Point, RowStatus, Citation)|Items]) :-
+    consultation_request_point(Point, ContentKey, Citation),
+    row_status(Status, ContentKey, RowStatus),
+    checklist_rows(Points, Statuses, Items).
+
+row_status(satisfied, _, met).
+row_status(missing, ContentKey, unmet(not_provided(ContentKey))).
+row_status(names(Key, _), _, unknown([Key])).
+row_status(referral, _, unknown(referred(joint_controllers_or_processors_involved))).
+
+% ---- per-rule tests ---------------------------------------------------
+
+attested_involved(Value, attested(Value, attestation(host_user, host_time, stated_reason, none))).
+
+complete_profile([
+    attribute(consultation_under_article_36_1, true),
+    attribute(respective_responsibilities_provided, true),
+    attribute(purposes_and_means_provided, true),
+    attribute(measures_and_safeguards_provided, true),
+    attribute(data_protection_officer_designated, true),
+    attribute(data_protection_officer_contact_details_provided, true),
+    attribute(impact_assessment_provided, true),
+    attribute(other_information_requested_by_supervisory_authority, false)
+]).
+
+test(a_complete_request_is_complete_once) :-
+    complete_profile(Profile),
+    findall(Result-Basis, consultation_request_status(Profile, Result, Basis, _), Answers),
+    Answers == [consultation_request_complete-[]].
+
+test(a_complete_request_is_not_incomplete, fail) :-
+    complete_profile(Profile),
+    consultation_request_status(Profile, consultation_request_incomplete, _, _).
+
+test(a_complete_request_cites_the_seven) :-
+    complete_profile(Profile),
+    consultation_request_status(Profile, _, _, Citations),
+    request_citations(Expected),
+    Citations == Expected.
+
+test(a_complete_request_has_no_missing_items) :-
+    complete_profile(Profile),
+    findall(Items, missing_consultation_request_items(Profile, Items, _, _), Answers),
+    Answers == [[]].
+
+test(responsibilities_given_do_not_read_the_outside_fact) :-
+    attested_involved(true, Attested),
+    complete_profile(Base),
+    consultation_request_status([attribute(joint_controllers_or_processors_involved, Attested)|Base], Result, Basis, _),
+    Result == consultation_request_complete,
+    Basis == [].
+
+test(another_footing_is_not_governed) :-
+    findall(Result-Citations, consultation_request_status([attribute(consultation_under_article_36_1, false)], Result, _, Citations), Answers),
+    Answers == [not_governed_by_article_36_3-[cite(eu_reg_2016_679_art_36_3)]].
+
+test(another_footing_is_not_governed_for_the_items) :-
+    missing_consultation_request_items([attribute(consultation_under_article_36_1, false)], Items, [], _),
+    Items == not_governed_by_article_36_3.
+
+test(an_empty_profile_asks_for_the_footing) :-
+    consultation_request_status([], Result, [], []),
+    Result == indeterminate([consultation_under_article_36_1]).
+
+test(a_missing_item_decides_before_absent_keys) :-
+    Profile = [attribute(consultation_under_article_36_1, true), attribute(purposes_and_means_provided, false)],
+    findall(Result, consultation_request_status(Profile, Result, _, _), Answers),
+    Answers == [consultation_request_incomplete].
+
+test(the_items_query_asks_in_plain_order) :-
+    Profile = [attribute(consultation_under_article_36_1, true), attribute(purposes_and_means_provided, false)],
+    missing_consultation_request_items(Profile, Items, [], []),
+    Items == indeterminate([respective_responsibilities_provided]).
+
+test(a_deciding_key_goes_before_a_waiting_key) :-
+    Profile = [attribute(consultation_under_article_36_1, true)],
+    consultation_request_status(Profile, Result, [], []),
+    Result == indeterminate([purposes_and_means_provided]).
+
+test(an_absent_roles_statement_is_referred) :-
+    complete_profile(Base),
+    select(attribute(respective_responsibilities_provided, true), Base, Rest),
+    Profile = [attribute(respective_responsibilities_provided, false)|Rest],
+    absent_referral(Review),
+    findall(Result, consultation_request_status(Profile, Result, [], []), StatusAnswers),
+    StatusAnswers == [Review],
+    findall(Items, missing_consultation_request_items(Profile, Items, [], []), ItemAnswers),
+    ItemAnswers == [Review].
+
+test(involvement_attested_without_responsibilities_is_incomplete) :-
+    attested_involved(true, Attested),
+    complete_profile(Base),
+    select(attribute(respective_responsibilities_provided, true), Base, Rest),
+    Profile = [attribute(respective_responsibilities_provided, false), attribute(joint_controllers_or_processors_involved, Attested)|Rest],
+    consultation_request_status(Profile, Result, Basis, _),
+    Result == consultation_request_incomplete,
+    Basis == [outside_fact(joint_controllers_or_processors_involved, Attested)],
+    missing_consultation_request_items(Profile, Items, Basis, _),
+    Items == [respective_responsibilities].
+
+test(a_controller_alone_needs_no_responsibilities) :-
+    attested_involved(false, Attested),
+    complete_profile(Base),
+    select(attribute(respective_responsibilities_provided, true), Base, Rest),
+    Profile = [attribute(respective_responsibilities_provided, false), attribute(joint_controllers_or_processors_involved, Attested)|Rest],
+    consultation_request_status(Profile, Result, Basis, _),
+    Result == consultation_request_complete,
+    Basis == [outside_fact(joint_controllers_or_processors_involved, Attested)].
+
+test(a_designated_officer_without_contact_details_is_missing) :-
+    complete_profile(Base),
+    select(attribute(data_protection_officer_contact_details_provided, true), Base, Rest),
+    Profile = [attribute(data_protection_officer_contact_details_provided, false)|Rest],
+    missing_consultation_request_items(Profile, Items, [], _),
+    Items == [data_protection_officer_contact_details].
+
+test(no_officer_designated_needs_no_contact_details) :-
+    complete_profile(Base),
+    select(attribute(data_protection_officer_contact_details_provided, true), Base, Rest1),
+    select(attribute(data_protection_officer_designated, true), Rest1, Rest2),
+    Profile = [attribute(data_protection_officer_contact_details_provided, false), attribute(data_protection_officer_designated, false)|Rest2],
+    consultation_request_status(Profile, consultation_request_complete, [], _).
+
+test(contact_details_false_asks_whether_an_officer_is_designated) :-
+    complete_profile(Base),
+    select(attribute(data_protection_officer_contact_details_provided, true), Base, Rest1),
+    select(attribute(data_protection_officer_designated, true), Rest1, Rest2),
+    Profile = [attribute(data_protection_officer_contact_details_provided, false)|Rest2],
+    consultation_request_status(Profile, Result, [], []),
+    Result == indeterminate([data_protection_officer_designated]).
+
+test(a_later_request_of_the_authority_makes_it_incomplete) :-
+    complete_profile(Base),
+    select(attribute(other_information_requested_by_supervisory_authority, false), Base, Rest),
+    Profile = [attribute(other_information_requested_by_supervisory_authority, true), attribute(requested_other_information_provided, false)|Rest],
+    missing_consultation_request_items(Profile, Items, _, _),
+    Items == [other_requested_information].
+
+test(an_unknown_key_is_an_input_problem) :-
+    findall(Result-Basis-Citations, consultation_request_status([attribute(unrelated_key, true)], Result, Basis, Citations), Answers),
+    Answers == [input_problems([unknown_key(unrelated_key)])-[]-[]].
+
+test(an_input_problem_is_not_complete, fail) :-
+    consultation_request_status([attribute(unrelated_key, true)], consultation_request_complete, _, _).
+
+test(the_checklist_carries_a_citation_per_point) :-
+    Profile = [attribute(consultation_under_article_36_1, true), attribute(purposes_and_means_provided, false)],
+    gdpr_art36_3_consultation_request_checklist(Profile, Items),
+    Items == [
+        item(respective_responsibilities, unknown([respective_responsibilities_provided]), cite(eu_reg_2016_679_art_36_3_a)),
+        item(purposes_and_means, unmet(not_provided(purposes_and_means_provided)), cite(eu_reg_2016_679_art_36_3_b)),
+        item(measures_and_safeguards, unknown([measures_and_safeguards_provided]), cite(eu_reg_2016_679_art_36_3_c)),
+        item(data_protection_officer_contact_details, unknown([data_protection_officer_designated]), cite(eu_reg_2016_679_art_36_3_d)),
+        item(data_protection_impact_assessment, unknown([impact_assessment_provided]), cite(eu_reg_2016_679_art_36_3_e)),
+        item(other_requested_information, unknown([other_information_requested_by_supervisory_authority]), cite(eu_reg_2016_679_art_36_3_f))
+    ].
+
+test(the_facade_projects_the_status) :-
+    complete_profile(Profile),
+    gdpr_art36_3_consultation_request_status(Profile, consultation_request_complete).
+
+:- end_module(gdpr_art36_3_consultation_request).

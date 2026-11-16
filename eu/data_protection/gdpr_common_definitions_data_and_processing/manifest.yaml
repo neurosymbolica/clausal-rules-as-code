@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_common_definitions_data_and_processing
+shape_family: classification
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_common_definitions_data_and_processing"
+  - "queries"
+  - "fixtures"
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_common_definitions_data_and_processing.clausal --
+  - "decide_gdpr_common_definitions_data_and_processing/2"
+  - "gdpr_common_definitions_data_and_processing_status/2"
+  - "gdpr_common_definitions_data_and_processing_checklist/2"
+  - "gdpr_common_definitions_data_and_processing_decision_resolvable/1"
+  - "gdpr_common_definitions_data_and_processing_status_values/1"
+  - "personal_data/2"
+  - "processing/2"
+  - "restriction_of_processing/2"
+  - "profiling/2"
+  - "pseudonymisation/2"
+  - "filing_system/2"
+  - "receiving_body_is_recipient/2"
+  - "receiving_body_is_third_party/2"
+  - "consent_elements/2"
+  - "personal_data_breach/2"
+  - "information_society_service/2"
+  - "international_organisation/2"
+  - "data_and_processing_outside_facts/2"
+  # -- result constructors --
+  - "definition_answer/3"
+  - "unmet_elements/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- queries.clausal --
+  - "gdpr_common_definitions_data_and_processing_profile_keys/1"
+  - "gdpr_common_definitions_data_and_processing_input_problems/2"
+  - "gdpr_common_definitions_data_and_processing_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_common_definitions_data_and_processing_subject/1"
+  - "gdpr_common_definitions_data_and_processing_profile_for/2"
+  - "gdpr_common_definitions_data_and_processing_assess/2"
+
+independence: no_external_scorer
+
+uses: []
+
+scope: "Regulation (EU) 2016/679 Art 4 points (1)-(6), (9)-(12), (25) and (26): given a profile of facts about one situation, whether each defined term (personal data, processing, restriction of processing, profiling, pseudonymisation, filing system, recipient, third party, consent elements, personal data breach, information society service, international organisation) is met, not met, indeterminate for an absent key, or referred to a lawyer for an unsure judgement or an unattested outside fact. Only DEFINITIONS are answered: never that an obligation applies, that a processing is lawful or that a transfer may take place. Points 4(7), (8), (13)-(24) are handled in the sibling order gdpr-common-definitions-roles-and-establishments; Directive (EU) 2015/1535 Art 1(1)(b) is not pinned and is read only as an attested outside fact."
+
+sources:
+  - "Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, Art 4(1), 4(2), 4(3), 4(4), 4(5), 4(6), 4(9), 4(10), 4(11), 4(12), 4(25), 4(26)"
+
+query_interface:
+  3: "gdpr_common_definitions_data_and_processing_status/2"      # status_determination
+  7: "gdpr_common_definitions_data_and_processing_checklist/2"   # justification: cited row per relation
+  16: "gdpr_common_definitions_data_and_processing_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_heading_and_chapeau
+  units:
+  - 02016R0679-20160504#art_004
+  reason: 'The title of Article 4 and its chapeau (For the purposes of this Regulation:)
+    carry no obligation: document structure. Deferred so every unit of the pinned
+    extract is accounted for.'
+  consequence: 'None for a caller: the title and chapeau carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: points_disposed_of_in_gdpr_common_definitions_roles_and_establishments
+  units:
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  reason: disposed of in gdpr-common-definitions-roles-and-establishments, the other
+    half of the Art 4 definitions (formalized there, except 4(17), 4(20) and 4(21),
+    which it defers with their own reasons); one disposition per point across the
+    two orders
+  consequence: This order gives no answer for these points; the caller uses gdpr-common-definitions-roles-and-establishments.
+
+excluded_set:
+- what: directive_2015_1535_definition
+  instrument: Directive (EU) 2015/1535 Art 1(1)(b)
+  cites:
+  - 32015L1535#point_001.001_b
+  reason: Art 4(25) defines information society service by it; not pinned here. The
+    outside fact service_is_information_society_service carries the cross-reference.
+  consequence: The order does not decide whether a service is an information society
+    service; it reads the attested fact or refers.

@@ -1,0 +1,45 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_constructors.clausal -- the result constructors provenance/2, url/2 and
+% document/2 build and destructure, and the evidence shapes url and document
+% are accepted inside an attested national age.
+% =====================================================================
+:- module(test_constructors, []).
+:- use_module(eu/data_protection/gdpr_child_consent_age_fields/kernel, [gdpr_child_consent_age_fields_input_problems/2]).
+
+test(provenance_builds_and_destructures) :-
+    Item = provenance(national_age_stage, [cite(eu_reg_2016_679_art_8_1_second_subpara)]),
+    Item = provenance(Clause, Citations),
+    Clause == national_age_stage,
+    Citations == [cite(eu_reg_2016_679_art_8_1_second_subpara)].
+
+test(provenance_follows_inputs_relied_on_in_a_context) :-
+    Context = [inputs_relied_on([child_age_years-14]), provenance(national_age_stage, [cite(eu_reg_2016_679_art_8_1_second_subpara)])],
+    Context = [inputs_relied_on(Pairs), provenance(_Clause, _Citations)],
+    Pairs == [child_age_years-14].
+
+test(provenance_with_a_different_clause_is_a_different_term, fail) :-
+    provenance(engagement, []) = provenance(national_age_stage, []).
+
+test(url_builds_and_destructures) :-
+    Evidence = url('https://example.org/act', date(2026, 11, 9)),
+    Evidence = url(Address, RetrievedAt),
+    Address == 'https://example.org/act',
+    RetrievedAt == date(2026, 11, 9).
+
+test(document_builds_and_destructures) :-
+    Evidence = document(upload_one, sha_one),
+    Evidence = document(UploadId, Sha),
+    UploadId == upload_one,
+    Sha == sha_one.
+
+test(url_and_document_are_different_terms, fail) :-
+    url(a, b) = document(a, b).
+
+test(an_attested_age_with_url_evidence_is_no_problem) :-
+    gdpr_child_consent_age_fields_input_problems([attribute(member_state_digital_consent_age, attested(national_digital_consent_age(france, 15, national_act(some_act, article_one)), attestation(decision_layer, date(2026, 11, 9), user_declared, url('https://example.org/act', date(2026, 11, 9)))))], []).
+
+test(an_attested_age_with_document_evidence_is_no_problem) :-
+    gdpr_child_consent_age_fields_input_problems([attribute(member_state_digital_consent_age, attested(national_digital_consent_age(france, 15, national_act(some_act, article_one)), attestation(decision_layer, date(2026, 11, 9), user_declared, document(upload_one, sha_one))))], []).
+
+:- end_module(test_constructors).

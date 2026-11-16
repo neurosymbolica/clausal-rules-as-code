@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_art89_research_safeguards.
+% #3 status_determination: safeguards_status/2 (slice)
+% #7 justification: gdpr_art89_research_safeguards_justification/2
+% #13 compliance_check: gdpr_art89_research_safeguards_compliance_check/2
+% what-if: gdpr_art89_research_safeguards_what_if/4
+%
+% The constructor-shaped names at the end (gdpr_art89_verdict/3,
+% indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1,
+% input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1) are the
+% vocabulary of the verdict contract. Each is also a shape check: it holds
+% exactly when its arguments have the shape the term takes in a verdict.
+% They are defined by clauses, so they are not declared as constructors.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_art89_research_safeguards_profile_keys/1,
+    gdpr_art89_research_safeguards_input_problems/2,
+    gdpr_art89_research_safeguards_what_if/4,
+    gdpr_art89_research_safeguards_justification/2,
+    gdpr_art89_research_safeguards_compliance_check/2,
+    gdpr_art89_verdict/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/kernel, [gdpr_art89_research_safeguards_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/safeguards_status, [safeguards_status/2, safeguards_status_checklist/2]).
+
+gdpr_art89_research_safeguards_profile_keys([identifiable_data_processed, minimisation_measures_in_place, non_identifying_processing_sufficient, purpose, safeguards_appropriate, technical_organisational_measures_in_place]).
+
+% what-if: re-evaluate with one attribute hypothetically overridden
+gdpr_art89_research_safeguards_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    safeguards_status(Hypothesis, NewStatus).
+
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, _)|Elements], Key, Value, Overridden) :-
+    ElementKey = Key,
+    override_attribute(Elements, Key, Value, Overridden).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Overridden]) :-
+    dif(ElementKey, Key),
+    override_attribute(Elements, Key, Value, Overridden).
+
+% justification: the checklist, every item carrying cite(...)
+gdpr_art89_research_safeguards_justification(Profile, Items) :-
+    safeguards_status_checklist(Profile, Items).
+
+% compliance check: is the proposed research processing allowed in this state?
+gdpr_art89_research_safeguards_compliance_check(Profile, Result) :-
+    safeguards_status(Profile, Status),
+    compliance_result(Status, Result).
+
+compliance_result(in_accordance, permitted).
+compliance_result(not_applicable, permitted).
+compliance_result(not_in_accordance, prohibited).
+compliance_result(indeterminate(_), undetermined).
+compliance_result(needs_legal_review(_, _), undetermined).
+compliance_result(input_problems(_), undetermined).
+
+% ---- the verdict vocabulary: shape checks --------------------------------
+gdpr_art89_verdict(Status, Unmet, Citations) :-
+    verdict_status(Status),
+    is_list(Unmet),
+    is_list(Citations).
+
+verdict_status(in_accordance).
+verdict_status(not_in_accordance).
+verdict_status(not_applicable).
+verdict_status(indeterminate(MissingKeys)) :-
+    indeterminate(MissingKeys).
+verdict_status(needs_legal_review(Reason, Context)) :-
+    needs_legal_review(Reason, Context).
+verdict_status(input_problems(Problems)) :-
+    input_problems(Problems).
+
+indeterminate(MissingKeys) :-
+    MissingKeys = [_|_].
+
+% One clause per referral row, so the context is ground in the head
+% whenever the reason is given.
+needs_legal_review(open_textured(non_identifying_processing_sufficient, Citation), [inputs_relied_on([identifiable_data_processed-true, non_identifying_processing_sufficient-unsure])]) :-
+    open_textured(non_identifying_processing_sufficient, Citation).
+needs_legal_review(open_textured(safeguards_appropriate, Citation), [inputs_relied_on([safeguards_appropriate-unsure])]) :-
+    open_textured(safeguards_appropriate, Citation).
+
+open_textured(Input, Citation) :-
+    atom(Input),
+    Citation = cite(_).
+
+inputs_relied_on(Pairs) :-
+    Pairs = [_|_].
+
+input_problems(Problems) :-
+    Problems = [_|_].
+
+unknown_key(Key) :-
+    atom(Key).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+:- end_module(queries).

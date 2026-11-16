@@ -1,0 +1,115 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/nis2_jurisdiction_registration.
+% Profiles are attribute lists [attribute(Key, Value), ...].
+% Every route has a positive case and a near-miss control.
+% =====================================================================
+
+:- module(fixtures, [
+    nis2_jurisdiction_registration_subject/1,
+    nis2_jurisdiction_registration_profile_for/2,
+    nis2_jurisdiction_registration_assess/2,
+    nis2_jurisdiction_registration_fixtures/1
+]).
+
+:- use_module(eu/nis2_jurisdiction_registration/nis2_jurisdiction_registration, [decide_nis2_jurisdiction_registration/2]).
+
+% ---- Subject registry ------------------------------------------------
+nis2_jurisdiction_registration_subject(general_entity_established).
+nis2_jurisdiction_registration_subject(category_missing).
+nis2_jurisdiction_registration_subject(public_electronic_communications_provider_established).
+nis2_jurisdiction_registration_subject(public_administration_established).
+nis2_jurisdiction_registration_subject(provider_established_in_union).
+nis2_jurisdiction_registration_subject(provider_established_missing).
+nis2_jurisdiction_registration_subject(provider_non_union_with_representative).
+nis2_jurisdiction_registration_subject(provider_non_union_without_representative).
+nis2_jurisdiction_registration_subject(provider_non_union_no_services).
+nis2_jurisdiction_registration_subject(provider_non_union_offers_missing).
+nis2_jurisdiction_registration_subject(main_establishment_decisions).
+nis2_jurisdiction_registration_subject(main_establishment_operations).
+nis2_jurisdiction_registration_subject(main_establishment_employees).
+nis2_jurisdiction_registration_subject(main_establishment_decisions_unsure).
+nis2_jurisdiction_registration_subject(main_establishment_operations_unsure).
+nis2_jurisdiction_registration_subject(main_establishment_decisions_missing).
+nis2_jurisdiction_registration_subject(malformed_unknown_key).
+
+% ---- Profiles --------------------------------------------------------
+nis2_jurisdiction_registration_profile_for(general_entity_established, [
+    attribute(entity_category, general_entity)
+]).
+nis2_jurisdiction_registration_profile_for(category_missing, []).
+nis2_jurisdiction_registration_profile_for(public_electronic_communications_provider_established, [
+    attribute(entity_category, public_electronic_communications_provider)
+]).
+nis2_jurisdiction_registration_profile_for(public_administration_established, [
+    attribute(entity_category, public_administration_entity)
+]).
+nis2_jurisdiction_registration_profile_for(provider_established_in_union, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+nis2_jurisdiction_registration_profile_for(provider_established_missing, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(sector_and_subsector_applicable, true)
+]).
+nis2_jurisdiction_registration_profile_for(provider_non_union_with_representative, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, false),
+    attribute(offers_services_in_union, true),
+    attribute(representative_designated_in_union, true),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, false)
+]).
+nis2_jurisdiction_registration_profile_for(provider_non_union_without_representative, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, false),
+    attribute(offers_services_in_union, true),
+    attribute(representative_designated_in_union, false)
+]).
+nis2_jurisdiction_registration_profile_for(provider_non_union_no_services, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, false),
+    attribute(offers_services_in_union, false),
+    attribute(representative_designated_in_union, false)
+]).
+nis2_jurisdiction_registration_profile_for(provider_non_union_offers_missing, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, false)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_decisions, [
+    attribute(decisions_predominantly_taken_in_one_union_member_state, true)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_operations, [
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_employees, [
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_decisions_unsure, [
+    attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_operations_unsure, [
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)
+]).
+nis2_jurisdiction_registration_profile_for(main_establishment_decisions_missing, []).
+nis2_jurisdiction_registration_profile_for(malformed_unknown_key, [
+    attribute(bogus, true)
+]).
+
+% ---- Convenience wrappers --------------------------------------------
+nis2_jurisdiction_registration_assess(Subject, Result) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    decide_nis2_jurisdiction_registration(Profile, Result).
+
+nis2_jurisdiction_registration_fixtures(Fixtures) :-
+    findall(
+        Subject-Profile,
+        nis2_jurisdiction_registration_profile_for(Subject, Profile),
+        Fixtures).
+
+:- end_module(fixtures).

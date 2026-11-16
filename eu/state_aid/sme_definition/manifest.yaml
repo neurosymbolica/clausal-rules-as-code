@@ -1,0 +1,204 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/state_aid/sme_definition
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "sme_definition"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The result atoms and result constructors the order requires
+# are exported by sme_definition.clausal and listed here.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- sme_definition.clausal --
+  - "size_class/4"
+  - "sme_status/4"
+  - "at_least_medium/4"
+  - "period_size_class/4"
+  - "relationship_type/4"
+  - "decide_sme_definition/2"
+  - "sme_definition_status/2"
+  - "sme_definition_checklist/2"
+  - "sme_definition_decision_resolvable/1"
+  - "sme_definition_status_values/1"
+  - "micro_enterprise/0"
+  - "small_enterprise/0"
+  - "medium_sized_enterprise/0"
+  - "large_enterprise/0"
+  - "not_sme_public_control/0"
+  - "not_an_enterprise/0"
+  - "sme/0"
+  - "not_sme/0"
+  - "at_least_medium/0"
+  - "below_medium/0"
+  - "linked_enterprise/0"
+  - "partner_enterprise/0"
+  - "neither_partner_nor_linked/0"
+  - "partner_enterprise_data/4"
+  - "linked_enterprise_data/3"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "sme_definition_profile_keys/1"
+  - "sme_definition_input_problems/2"
+  - "sme_definition_what_if/4"
+  # -- fixtures.clausal --
+  - "sme_definition_subject/1"
+  - "sme_definition_profile_for/2"
+  - "sme_definition_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib) and its own modules.
+uses: []
+
+scope: >-
+  Whether an enterprise is a micro, small or medium-sized enterprise (SME) under
+  the Annex to Commission Recommendation 2003/361/EC, Articles 1 to 6, or under
+  Annex I to Commission Regulation (EU) No 651/2014 (GBER), Articles 1 to 6
+  (consolidated text of 2023-07-01), read as one test whose TEXT argument changes
+  only the citation keys. Decided here: the size class of one accounting period
+  from the enterprise's own figures plus the declared partner enterprises (pro
+  rata) and linked enterprises (100 %) (Articles 2, 5, 6(1), 6(2)); the size class
+  held after the two-period rule of Article 4(2), with Article 4(1) and 4(3) on
+  the reference period; the exclusion of Article 3(4) for control by public
+  bodies; the SME status; whether the medium-sized ceilings are met or exceeded
+  (at_least_medium, without Article 3(4)); and the relationship type of one other
+  enterprise (linked, partner, or neither) under Article 3(1) to 3(3), with the
+  investor exception and the presumption of no dominant influence. Handed to the
+  caller or a lawyer: whether an entity is an enterprise (Article 1), dominant
+  influence by contract or articles, same or adjacent markets (open-textured
+  judgements referred with needs_legal_review); the counting of annual work units
+  (Article 5); the building of each related enterprise's data and chains of
+  indirect relationships (Article 3(3) third subparagraph, 6(3), 6(4), deferred);
+  declarations of status (Article 3(5)); and Title II of the Recommendation's Annex.
+
+sources:
+  - "Commission Recommendation 2003/361/EC of 6 May 2003 concerning the definition of micro, small and medium-sized enterprises (OJ L 124, 20.5.2003, p. 36), Annex, Title I, Articles 1 to 6 (pinned unit text 32003H0361, units sha256 7d66a1dd5b9f1489bf2ee5fdbc1d239d70b8298367342358d99f0bf37c4f95d6, fetched 2026-11-11)"
+  - "Commission Regulation (EU) No 651/2014 of 17 June 2014 (General Block Exemption Regulation) (OJ L 187, 26.6.2014, p. 1), Annex I, Articles 1 to 6, consolidated text of 2023-07-01 (pinned unit text 02014R0651-20230701-annex-i, units sha256 f32d2d0f6da18667f8f15b6741b2535027ed3d803f16f1ba31fcc4aeaefed904, fetched 2026-11-12)"
+
+query_interface:
+  3: "sme_definition_status/2"      # status determination over query(Query, Text, Profile)
+  7: "sme_definition_checklist/2"   # justification: one cite(Key) item per provision applied
+  16: "sme_definition_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: annex_titles_and_article_headings
+  units:
+  - 32003H0361#annex_title
+  - 32003H0361#annex_art1
+  - 32003H0361#annex_art2
+  - 32003H0361#annex_art3
+  - 32003H0361#annex_art4
+  - 32003H0361#annex_art6
+  - 02014R0651-20230701-annex-i#annex_title
+  - 02014R0651-20230701-annex-i#annex_art1
+  - 02014R0651-20230701-annex-i#annex_art2
+  - 02014R0651-20230701-annex-i#annex_art3
+  - 02014R0651-20230701-annex-i#annex_art4
+  - 02014R0651-20230701-annex-i#annex_art6
+  reason: 'The titles of the two Annexes and the headings of their Articles 1, 2,
+    3, 4 and 6 carry no rule: document structure (the heading of Article 5 is cited
+    with Article 5). Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles and headings carry no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: declaration_of_status
+  units:
+  - 32003H0361#annex_art3_p5
+  - 02014R0651-20230701-annex-i#annex_art3_p5
+  reason: Article 3(5) of both Annexes lets an enterprise declare its status, in good
+    faith where its capital is spread, without prejudice to checks and investigations.
+    It is a way of stating facts, not a rule that changes a class; the caller's declared
+    lists and keys may come from such a declaration.
+  consequence: The answers never say whether a declaration was made or is in good
+    faith.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: indirect_relationships
+  units:
+  - 32003H0361#annex_art3_t14
+  - 02014R0651-20230701-annex-i#annex_art3_t3
+  reason: 'Article 3(3) third subparagraph (relationships through one or more other
+    enterprises or through a listed investor also link) is folded into the meaning
+    of the four keys of points (a) to (d) (reading (9), Q11): the order does not follow
+    a chain of enterprises.'
+  consequence: relationship_type is only as right as the caller's four values for
+    indirect relationships.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable with a list of intermediate enterprises; not in this order.
+- what: data_of_partner_and_linked_enterprises
+  units:
+  - 32003H0361#annex_art6_p3
+  - 32003H0361#annex_art6_t6
+  - 02014R0651-20230701-annex-i#annex_art6_p3
+  - 02014R0651-20230701-annex-i#annex_art6_t3
+  reason: Article 6(3) says how the data of each partner and linked enterprise are
+    built (consolidated accounts, 100 % of the enterprises linked to a partner, pro
+    rata the partners of a linked enterprise). The caller gives each declared enterprise's
+    figures as Article 6(3) builds them (reading (6), Q5).
+  consequence: The size answers are only as right as the figures the caller gives
+    for each declared enterprise.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a recursive aggregation over a typed group structure; not
+    in this order.
+- what: staff_where_consolidated_accounts_show_none
+  units:
+  - 32003H0361#annex_art6_p4
+  - 02014R0651-20230701-annex-i#annex_art6_p4
+  reason: Article 6(4) (staff figures where the consolidated accounts show none for
+    an enterprise) is left to the caller's staff figures (reading (6), Q5).
+  consequence: own_staff_annual_work_units_hundredths and the STAFF arguments are
+    taken as given.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable together with the Article 6(3) aggregation; not in this order.
+- what: recommendation_title_ii_statistics_references_revision
+  units:
+  - 32003H0361#annex_art6_t8
+  - 32003H0361#annex_art6_t9
+  - 32003H0361#annex_art7
+  - 32003H0361#annex_art7_t1
+  - 32003H0361#annex_art7_t2
+  - 32003H0361#annex_art7_t3
+  - 32003H0361#annex_art7_t4
+  - 32003H0361#annex_art7_t5
+  - 32003H0361#annex_art8
+  - 32003H0361#annex_art8_p1
+  - 32003H0361#annex_art8_p2
+  - 32003H0361#annex_art8_t3
+  - 32003H0361#annex_art9
+  - 32003H0361#annex_art9_t1
+  reason: Title II of the Recommendation's Annex (its heading, Article 7 on the Commission's
+    statistics, Article 8 on references in Community legislation and programmes and
+    the transition from Recommendation 96/280/EC, Article 9 on revision) binds the
+    Commission and law-makers and decides nothing about one enterprise's size. GBER
+    Annex I has no counterpart.
+  consequence: 'None for a caller: no answer turns on these units.'
+  declaration: not_an_exception
+  not_formalized_because: institutional

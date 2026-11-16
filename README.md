@@ -1,7 +1,6 @@
 # clausal-rules-as-code
 
-Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, and
-later others) is one **domain**: one legal question (for example, *is this person a
+Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`, `uk/`) is one **domain**: one legal question (for example, *is this person a
 beneficial owner under AMLR Art 52?*, or *does this aid stay under the de minimis
 ceiling?*). For each domain you get:
 
@@ -19,9 +18,15 @@ The programs run on [Clausal Prolog](https://github.com/neurosymbolica/clausal-p
 Documentation, with every domain, its checks and its side-by-side statute reports:
 <https://neurosymbolica.github.io/clausal-rules-as-code/>
 
+## Disclaimer
+
+These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
+
+Every domain folder added on 2026-11-16 repeats this in its own `README.md`.
+
 ## This is a preview
 
-This first release holds eight EU domains, chosen because they pass every check in this
+The first release held the eight EU domains below, chosen because they pass every check in this
 repository (see `_index/STATUS.md`), including robustness tests that feed each decision missing, mistyped and incomplete
 inputs (a bad input must be refused or answered "indeterminate", never guessed):
 
@@ -37,7 +42,21 @@ inputs (a bad input must be refused or answered "indeterminate", never guessed):
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 
 `eu/procurement/directive_2014_24/` is the shared vocabulary the procurement domains
-import. More domains follow as they pass the same checks.
+import.
+
+On 2026-11-16 sixty-six more domains were added: 64 under EU law (GDPR, the AI Act, NIS 2,
+ePrivacy, the Digital Markets Act, the Data Act, the Cyber Resilience Act, DSA Art 28, CBAM,
+working time, state aid), one under Swiss law (Art 24 of the Federal Act on Data Protection,
+breach notification) and one under UK law (recognised legitimate interests, UK GDPR Art 6(1)(ea)). Each is law in force. Each was produced through the Clausify
+harness, and its answers were scored against an independently written, sealed test oracle that
+is not published (the verdicts were recorded after the runs and are not authenticated); its
+tests here pass on all three engines. They differ from the first eight in one respect: they have
+no provision-tracking ledger (`provisions.yaml`), so no check accounts for how much of the
+statute each one covers, and they have no side-by-side report. They are listed in
+`_index/STATUS.md` and on the documentation site. Proposals that are not yet law and
+domains whose source texts are not cleared for republication are not included.
+
+The repository now holds 74 domains (72 EU, 1 Swiss, 1 UK) and 14,533 tests.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.

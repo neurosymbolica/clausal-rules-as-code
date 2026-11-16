@@ -1,0 +1,127 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: the profile key schema,
+% the re-exported input check, the #16 what-if combinator and the result
+% constructors. The #2 and #15 queries are exercised in the mode, property
+% and control suites.
+% Run: python -m clausal.testing eu/cra_art14_manufacturer_reporting/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/cra_art14_manufacturer_reporting/queries, [
+    cra_art14_manufacturer_reporting_profile_keys/1,
+    cra_art14_manufacturer_reporting_input_problems/2,
+    cra_art14_manufacturer_reporting_what_if/4,
+    severe/0,
+    not_severe/0,
+    on_time/0,
+    date/3,
+    step_due/3,
+    late/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+:- use_module(eu/cra_art14_manufacturer_reporting/fixtures, [cra_art14_manufacturer_reporting_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    cra_art14_manufacturer_reporting_profile_keys(ProfileKeys),
+    ProfileKeys == [affects_protection_of_sensitive_or_important_data_or_functions, leads_to_malicious_code_in_product_or_user_systems, early_warning_without_undue_delay, notification_without_undue_delay].
+
+test(the_re_exported_input_check_finds_no_problem_in_a_good_profile) :-
+    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
+    cra_art14_manufacturer_reporting_input_problems(Profile, []).
+
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    cra_art14_manufacturer_reporting_profile_for(unknown_extra_key, Profile),
+    cra_art14_manufacturer_reporting_input_problems(Profile, [unknown_key(severity_score)]).
+
+test(what_if_protection_true_turns_not_severe_into_severe) :-
+    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
+    findall(Status,
+            cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, true, Status),
+            Statuses),
+    Statuses == [severe].
+
+test(what_if_protection_false_leaves_the_other_limb_missing) :-
+    cra_art14_manufacturer_reporting_profile_for(severe_by_protection_limb, Profile),
+    cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, false,
+                                             indeterminate([leads_to_malicious_code_in_product_or_user_systems])).
+
+test(what_if_on_an_empty_profile_adds_the_key) :-
+    cra_art14_manufacturer_reporting_what_if([], leads_to_malicious_code_in_product_or_user_systems, true, severe).
+
+test(what_if_unsure_gives_a_referral) :-
+    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
+    cra_art14_manufacturer_reporting_what_if(Profile, leads_to_malicious_code_in_product_or_user_systems, unsure,
+                                             needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)), _Context)).
+
+test(what_if_replaces_every_duplicate_of_the_key) :-
+    cra_art14_manufacturer_reporting_profile_for(duplicate_protection_key, Profile),
+    findall(Status,
+            cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, false, Status),
+            Statuses),
+    Statuses == [indeterminate([leads_to_malicious_code_in_product_or_user_systems])].
+
+test(what_if_keeps_an_unknown_key_problem) :-
+    cra_art14_manufacturer_reporting_profile_for(unknown_extra_key, Profile),
+    cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, true,
+                                             input_problems([unknown_key(severity_score)])).
+
+test(what_if_on_a_non_attribute_list_keeps_the_problem) :-
+    cra_art14_manufacturer_reporting_profile_for(not_an_attribute_list, Profile),
+    findall(Status,
+            cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, true, Status),
+            Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+
+test(what_if_a_wrong_value_is_a_wrong_type) :-
+    cra_art14_manufacturer_reporting_what_if([], affects_protection_of_sensitive_or_important_data_or_functions, yes,
+                                             input_problems([wrong_type(affects_protection_of_sensitive_or_important_data_or_functions)])).
+
+test(what_if_false_does_not_give_severe, fail) :-
+    cra_art14_manufacturer_reporting_profile_for(severe_by_protection_limb, Profile),
+    cra_art14_manufacturer_reporting_what_if(Profile, affects_protection_of_sensitive_or_important_data_or_functions, false, severe).
+
+test(result_constructors_are_defined) :-
+    severe,
+    not_severe,
+    on_time,
+    step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)),
+    late(hour_limit),
+    indeterminate([notification_without_undue_delay]).
+
+% (b) THE TEST WAS WRONG: findall/3 copies an unbound template, so the old
+% assertion compared fresh variables with the originals; the constructor is
+% right. Collect its instances and compare the ground list.
+test(the_date_constructor_answers_its_ground_instance) :-
+    findall(Year-Month-Day, date(Year, Month, Day), Answers),
+    Answers == [2026-9-11],
+    date(2026, 9, 11).
+
+test(the_date_constructor_is_the_application_day) :-
+    date(2026, 9, 11).
+
+test(the_duplicate_key_constructor_answers_its_ground_instance) :-
+    duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions).
+
+test(the_input_problems_constructor_answers_its_ground_instance) :-
+    input_problems([wrong_type(profile)]).
+
+test(the_needs_legal_review_constructor_answers_its_ground_instance) :-
+    needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_b)),
+                       [inputs_relied_on([notification_without_undue_delay-unsure])]).
+
+test(the_provenance_constructor_answers_its_ground_instance) :-
+    provenance(undue_delay_result, [cite(eu_reg_2024_2847_art_14_2_b)]).
+
+test(the_unknown_key_constructor_answers_its_ground_instance) :-
+    unknown_key(severity_score).
+
+test(the_wrong_type_constructor_answers_its_ground_instance) :-
+    wrong_type(profile).
+
+:- end_module(test_queries).

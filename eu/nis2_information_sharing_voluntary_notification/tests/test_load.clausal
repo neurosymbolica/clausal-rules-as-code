@@ -1,0 +1,101 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/nis2_information_sharing_voluntary_notification loads (kernel and
+% citations), the result terms the order pins build and destructure, the
+% verdict atoms of the called contract are distinct, the input check of the
+% kernel answers once for each profile, and the real citation records resolve.
+% Self-contained: the determination slice is not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/nis2_information_sharing_voluntary_notification/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/nis2_information_sharing_voluntary_notification/kernel, [nis2_information_sharing_voluntary_notification_input_problems/2]).
+:- use_module(eu/nis2_information_sharing_voluntary_notification/citations, [citation/2, implements/1]).
+
+% ---- the result terms build and destructure ---------------------------
+
+test(the_indeterminate_term_carries_its_missing_keys) :-
+    Result = indeterminate([entity_class, event_kind]),
+    Result = indeterminate(MissingKeys),
+    MissingKeys == [entity_class, event_kind].
+
+test(the_needs_legal_review_term_carries_reason_and_context) :-
+    Result = needs_legal_review(open_textured(arrangement_is_a_cybersecurity_information_sharing_arrangement, cite(eu_dir_2022_2555_art_29_2)), [inputs_relied_on([arrangement_is_a_cybersecurity_information_sharing_arrangement-unsure])]),
+    Result = needs_legal_review(open_textured(InputName, cite(CitationName)), [inputs_relied_on(Pairs)]),
+    InputName == arrangement_is_a_cybersecurity_information_sharing_arrangement,
+    CitationName == eu_dir_2022_2555_art_29_2,
+    Pairs == [arrangement_is_a_cybersecurity_information_sharing_arrangement-unsure].
+
+test(the_input_problems_term_carries_its_problems) :-
+    Result = input_problems([wrong_type(entity_class), unknown_key(colour)]),
+    Result = input_problems(Problems),
+    Problems == [wrong_type(entity_class), unknown_key(colour)].
+
+% ---- the verdict atoms of the called contract are distinct -------------
+
+test(the_voluntary_notification_atoms_are_distinct) :-
+    dif(voluntary_notification_possible, voluntary_notification_not_possible).
+
+test(the_information_exchange_atoms_are_distinct) :-
+    dif(information_exchange_permitted, information_exchange_not_permitted).
+
+test(the_arrangement_notification_atoms_are_distinct) :-
+    dif(must_notify_on_entering, must_notify_on_withdrawal_taking_effect),
+    dif(must_notify_on_entering, no_notification_duty),
+    dif(must_notify_on_withdrawal_taking_effect, no_notification_duty).
+
+% ---- the input check of the kernel -------------------------------------
+
+test(an_empty_profile_has_no_problem) :-
+    nis2_information_sharing_voluntary_notification_input_problems([], []).
+
+test(a_well_formed_profile_has_no_problem) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(entity_class, out_of_scope), attribute(event_kind, near_miss), attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, unsure)], []).
+
+test(a_well_formed_profile_has_exactly_one_answer) :-
+    findall(Problems, nis2_information_sharing_voluntary_notification_input_problems([attribute(entity_class, essential_entity)], Problems), Answers),
+    Answers == [[]].
+
+test(a_value_outside_its_type_is_wrong_type) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(entity_class, banana)], [wrong_type(entity_class)]).
+
+test(a_key_outside_the_contract_is_unknown) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+
+test(a_repeated_key_is_a_duplicate_and_not_wrong_type) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(event_kind, banana), attribute(event_kind, incident)], [duplicate_key(event_kind)]).
+
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(colour, red), attribute(sharing_enhances_the_level_of_cybersecurity, maybe), attribute(entity_class, banana)], [wrong_type(entity_class), wrong_type(sharing_enhances_the_level_of_cybersecurity), unknown_key(colour)]).
+
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    nis2_information_sharing_voluntary_notification_input_problems(not_a_list, [wrong_type(profile)]).
+
+test(a_list_with_a_stray_element_is_wrong_type_profile) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(entity_class, out_of_scope), stray], [wrong_type(profile)]).
+
+test(a_well_formed_profile_is_not_wrong_type_profile, fail) :-
+    nis2_information_sharing_voluntary_notification_input_problems([attribute(entity_class, out_of_scope)], [wrong_type(profile)]).
+
+% ---- the real citation records resolve ---------------------------------
+
+test(the_art_30_1_a_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_30_1_a, _Record).
+
+test(the_art_29_4_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_29_4, _Record).
+
+test(every_returned_citation_key_implements) :-
+    implements(eu_dir_2022_2555_art_29_1),
+    implements(eu_dir_2022_2555_art_29_1_a),
+    implements(eu_dir_2022_2555_art_29_1_b),
+    implements(eu_dir_2022_2555_art_29_2),
+    implements(eu_dir_2022_2555_art_29_4),
+    implements(eu_dir_2022_2555_art_30_1_a),
+    implements(eu_dir_2022_2555_art_30_1_b).
+
+test(a_shortened_citation_key_is_not_recorded, fail) :-
+    citation(art_30_1_a, _Record).
+
+:- end_module(test_load).

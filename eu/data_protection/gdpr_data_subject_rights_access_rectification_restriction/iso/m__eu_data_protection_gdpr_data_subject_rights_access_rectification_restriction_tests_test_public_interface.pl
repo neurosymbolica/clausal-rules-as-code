@@ -1,0 +1,86 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_access_rectification_restriction_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_access_rectification_restriction_request_basis, [decide_data_subject_request/2, request_basis/2, request_basis_status/2, request_basis_checklist/2, request_basis_decision_resolvable/1, request_basis_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_access_rectification_restriction_kernel, [gdpr_data_subject_rights_access_rectification_restriction_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_access_rectification_restriction_fixtures, [gdpr_data_subject_rights_access_rectification_restriction_subject/1, gdpr_data_subject_rights_access_rectification_restriction_profile_for/2, gdpr_data_subject_rights_access_rectification_restriction_assess/2]).
+
+test(access_must_comply) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_plain, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], [cite(eu_reg_2016_679_art_15_1)])).
+test(access_unfounded_need_not_comply_with_fee_condition) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_unfounded, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_15_1)])).
+test(access_not_unfounded_near_miss_must_comply) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_not_unfounded, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
+test(access_unfounded_unsure_goes_to_review) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_unfounded_unsure, gdpr_data_subject_request_verdict(needs_legal_review(open_textured(request_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)), [inputs_relied_on([request_type - access, request_manifestly_unfounded_or_excessive - unsure])]), none, none, [], [])).
+test(access_unable_to_identify) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_unable_to_identify, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art12_2_unable_to_identify, [], [cite(eu_reg_2016_679_art_12_2), cite(eu_reg_2016_679_art_15_1)])).
+test(access_restricted_by_law) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_restricted_by_law, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art23_legislative_restriction, [], [cite(eu_reg_2016_679_art_15_1), cite(eu_reg_2016_679_art_23_1)])).
+test(access_identity_suspended) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_identity_suspended, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])).
+test(access_identity_confirmed_near_miss) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_identity_confirmed, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
+test(access_identity_unknown_names_missing_key) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_identity_unknown, gdpr_data_subject_request_verdict(indeterminate([identity_confirmed]), none, none, [], [])).
+test(rectification_inaccurate) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(rectification_inaccurate, gdpr_data_subject_request_verdict(must_comply, art16_inaccurate_data, none, [], [cite(eu_reg_2016_679_art_16)])).
+test(rectification_incomplete) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(rectification_incomplete, gdpr_data_subject_request_verdict(must_comply, art16_incomplete_data, none, [], [cite(eu_reg_2016_679_art_16)])).
+test(rectification_not_engaged) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(rectification_not_engaged, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_16)])).
+test(restriction_accuracy_contested) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(restriction_accuracy_contested, gdpr_data_subject_request_verdict(must_comply, art18_1_a, none, [], [cite(eu_reg_2016_679_art_18_1), cite(eu_reg_2016_679_art_18_1_a)])).
+test(restriction_unlawful_opposed) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(restriction_unlawful_opposed, gdpr_data_subject_request_verdict(must_comply, art18_1_b, none, [], [cite(eu_reg_2016_679_art_18_1), cite(eu_reg_2016_679_art_18_1_b)])).
+test(restriction_objection_pending) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(restriction_objection_pending, gdpr_data_subject_request_verdict(must_comply, art18_1_d, none, [], [cite(eu_reg_2016_679_art_18_1), cite(eu_reg_2016_679_art_18_1_d)])).
+test(restriction_not_engaged) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(restriction_not_engaged, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_18_1)])).
+test(restriction_verification_unknown) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(restriction_verification_unknown, gdpr_data_subject_request_verdict(indeterminate([verification_of_overriding_grounds_pending]), none, none, [], [])).
+test(unknown_key_is_an_input_problem) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(profile_with_unknown_key, gdpr_data_subject_request_verdict(input_problems([unknown_key(not_a_contract_key)]), none, none, [], [])).
+test(request_basis_field) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_unlawful_opposed, Profile),
+    request_basis(Profile, art18_1_b),
+    request_basis_status(Profile, art18_1_b).
+test(request_basis_is_none_for_a_non_final_status) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_identity_suspended, Profile),
+    request_basis(Profile, none).
+test(request_basis_names_input_problems) :-
+    request_basis(not_a_list, input_problems([wrong_type(profile)])).
+test(exactly_one_answer_per_query) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_unlawful_opposed, Profile),
+    findall(Verdict, decide_data_subject_request(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+test(a_request_type_outside_this_order_gets_one_answer) :-
+    findall(Verdict, decide_data_subject_request([attribute(request_type, erasure)], Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [])].
+test(checklist_is_non_empty_and_resolvable) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_plain, Profile),
+    request_basis_decision_resolvable(Profile),
+    request_basis_checklist(Profile, [item(right_engaged, met, cite(eu_reg_2016_679_art_15_1))|_OtherItems]).
+test(status_is_in_the_pinned_vocabulary) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_plain, Profile),
+    request_basis_status(Profile, Status),
+    request_basis_status_values(StatusValues),
+    member(Status, StatusValues).
+test(duplicate_key_is_named_by_the_input_check) :-
+    gdpr_data_subject_rights_access_rectification_restriction_input_problems([attribute(request_type, access), attribute(request_type, rectification)], Problems),
+    Problems == [duplicate_key(request_type)].
+
+test(access_unfounded_is_not_must_comply, fail) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(access_unfounded, gdpr_data_subject_request_verdict(must_comply, _, _, _, _)).
+
+cp_test_names([access_must_comply, access_unfounded_need_not_comply_with_fee_condition, access_not_unfounded_near_miss_must_comply, access_unfounded_unsure_goes_to_review, access_unable_to_identify, access_restricted_by_law, access_identity_suspended, access_identity_confirmed_near_miss, access_identity_unknown_names_missing_key, rectification_inaccurate, rectification_incomplete, rectification_not_engaged, restriction_accuracy_contested, restriction_unlawful_opposed, restriction_objection_pending, restriction_not_engaged, restriction_verification_unknown, unknown_key_is_an_input_problem, request_basis_field, request_basis_is_none_for_a_non_final_status, request_basis_names_input_problems, exactly_one_answer_per_query, a_request_type_outside_this_order_gets_one_answer, checklist_is_non_empty_and_resolvable, status_is_in_the_pinned_vocabulary, duplicate_key_is_named_by_the_input_check]).
+cp_test_fail_names([access_unfounded_is_not_must_comply]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

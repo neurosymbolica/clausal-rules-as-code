@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % thailand — vendored so an exported domain's `-import_from(thailand, [baht, satang])` resolves.
 %
 % EMPTY EXPORT LIST, ON PURPOSE, and following currency_vocab.pl, which the

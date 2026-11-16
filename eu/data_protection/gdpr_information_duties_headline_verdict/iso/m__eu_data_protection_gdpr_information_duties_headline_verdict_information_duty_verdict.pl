@@ -1,0 +1,568 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_information_duties_headline_verdict_information_duty_verdict, [decide_information_duty_verdict/2, information_duty_verdict/3, information_duty_verdict_status/2, information_duty_verdict_checklist/2, information_duty_verdict_decision_resolvable/1, information_duty_verdict_status_values/1, information_outside_facts/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_values/2]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(clausal_dates, [days_between/3]).
+:- use_module(deadline_lib, [next_day/2, month_last_day/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, int_min/3]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_kernel, [gdpr_information_duties_headline_verdict_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_citations, [implements/1]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_information_duty_exemption, [information_duty_exemption/2]).
+
+information_duty_verdict_status_values([eligible, ineligible]).
+
+route_paragraph_cite(true, cite(eu_reg_2016_679_art_13_1)).
+route_paragraph_cite(false, cite(eu_reg_2016_679_art_14_1)).
+
+route_name(true, art13).
+route_name(false, art14).
+
+basis_cite(art13_1, cite(eu_reg_2016_679_art_13_1)).
+basis_cite(art14_3_a, cite(eu_reg_2016_679_art_14_3_a)).
+basis_cite(art14_3_b, cite(eu_reg_2016_679_art_14_3_b)).
+basis_cite(art14_3_c, cite(eu_reg_2016_679_art_14_3_c)).
+
+exemption_cite(impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)).
+exemption_cite(law_lays_down_obtaining_or_disclosure, cite(eu_reg_2016_679_art_14_5_c)).
+exemption_cite(professional_secrecy_obligation, cite(eu_reg_2016_679_art_14_5_d)).
+
+further_processing_cite(art13, cite(eu_reg_2016_679_art_13_3)).
+further_processing_cite(art14, cite(eu_reg_2016_679_art_14_4)).
+
+unsure_citation(automated_decision_making_under_article_22, true, cite(eu_reg_2016_679_art_13_2_f)).
+unsure_citation(automated_decision_making_under_article_22, false, cite(eu_reg_2016_679_art_14_2_g)).
+unsure_citation(provided_within_reasonable_period, false, cite(eu_reg_2016_679_art_14_3_a)).
+unsure_citation(paragraph_2_information_relevant_to_further_processing, true, cite(eu_reg_2016_679_art_13_3)).
+unsure_citation(paragraph_2_information_relevant_to_further_processing, false, cite(eu_reg_2016_679_art_14_4)).
+
+key_rank(personal_data_collected_from_data_subject, 1).
+key_rank(items_provided, 2).
+key_rank(items_data_subject_already_has, 3).
+key_rank(data_protection_officer_designated, 4).
+key_rank(processing_based_on_legitimate_interests, 5).
+key_rank(recipients_exist, 6).
+key_rank(transfer_intended, 7).
+key_rank(processing_based_on_consent, 8).
+key_rank(automated_decision_making_under_article_22, 9).
+key_rank(obtaining_date, 10).
+key_rank(provision_date, 11).
+key_rank(data_used_for_communication_with_data_subject, 12).
+key_rank(first_communication_date, 13).
+key_rank(disclosure_to_another_recipient_envisaged, 14).
+key_rank(first_disclosure_date, 15).
+key_rank(provided_within_reasonable_period, 16).
+key_rank(provision_impossible_or_disproportionate_effort, 17).
+key_rank(protective_measures_taken, 18).
+key_rank(obtaining_or_disclosure_laid_down_by_law, 19).
+key_rank(professional_secrecy_obligation_by_law, 20).
+key_rank(further_processing_for_another_purpose_intended, 21).
+key_rank(further_processing_start_date, 22).
+key_rank(further_processing_information_date, 23).
+key_rank(further_processing_items_provided, 24).
+key_rank(paragraph_2_information_relevant_to_further_processing, 25).
+key_rank(public_holidays, 26).
+
+item_listing(art13, controller_identity_and_contact_details, cite(eu_reg_2016_679_art_13_1_a), always, one).
+item_listing(art13, data_protection_officer_contact_details, cite(eu_reg_2016_679_art_13_1_b), flag(data_protection_officer_designated), one).
+item_listing(art13, purposes_and_legal_basis, cite(eu_reg_2016_679_art_13_1_c), always, one).
+item_listing(art13, legitimate_interests, cite(eu_reg_2016_679_art_13_1_d), flag(processing_based_on_legitimate_interests), one).
+item_listing(art13, recipients_or_categories_of_recipients, cite(eu_reg_2016_679_art_13_1_e), flag(recipients_exist), one).
+item_listing(art13, third_country_transfer_information, cite(eu_reg_2016_679_art_13_1_f), flag(transfer_intended), one).
+item_listing(art13, storage_period_or_criteria, cite(eu_reg_2016_679_art_13_2_a), always, two).
+item_listing(art13, data_subject_rights, cite(eu_reg_2016_679_art_13_2_b), always, two).
+item_listing(art13, right_to_withdraw_consent, cite(eu_reg_2016_679_art_13_2_c), flag(processing_based_on_consent), two).
+item_listing(art13, right_to_lodge_complaint, cite(eu_reg_2016_679_art_13_2_d), always, two).
+item_listing(art13, statutory_or_contractual_requirement, cite(eu_reg_2016_679_art_13_2_e), always, two).
+item_listing(art13, automated_decision_making_information, cite(eu_reg_2016_679_art_13_2_f), judgement(automated_decision_making_under_article_22), two).
+item_listing(art14, controller_identity_and_contact_details, cite(eu_reg_2016_679_art_14_1_a), always, one).
+item_listing(art14, data_protection_officer_contact_details, cite(eu_reg_2016_679_art_14_1_b), flag(data_protection_officer_designated), one).
+item_listing(art14, purposes_and_legal_basis, cite(eu_reg_2016_679_art_14_1_c), always, one).
+item_listing(art14, legitimate_interests, cite(eu_reg_2016_679_art_14_2_b), flag(processing_based_on_legitimate_interests), two).
+item_listing(art14, recipients_or_categories_of_recipients, cite(eu_reg_2016_679_art_14_1_e), flag(recipients_exist), one).
+item_listing(art14, third_country_transfer_information, cite(eu_reg_2016_679_art_14_1_f), flag(transfer_intended), one).
+item_listing(art14, categories_of_personal_data, cite(eu_reg_2016_679_art_14_1_d), always, one).
+item_listing(art14, storage_period_or_criteria, cite(eu_reg_2016_679_art_14_2_a), always, two).
+item_listing(art14, data_subject_rights, cite(eu_reg_2016_679_art_14_2_c), always, two).
+item_listing(art14, right_to_withdraw_consent, cite(eu_reg_2016_679_art_14_2_d), flag(processing_based_on_consent), two).
+item_listing(art14, right_to_lodge_complaint, cite(eu_reg_2016_679_art_14_2_e), always, two).
+item_listing(art14, source_of_personal_data, cite(eu_reg_2016_679_art_14_2_f), always, two).
+item_listing(art14, automated_decision_making_information, cite(eu_reg_2016_679_art_14_2_g), judgement(automated_decision_making_under_article_22), two).
+
+value_or_absent(Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+value_or_absent(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+collect_absent([], []).
+collect_absent([Key - absent|Pairs], [Key|Keys]) :-
+    collect_absent(Pairs, Keys).
+collect_absent([_ - Value|Pairs], Keys) :-
+    dif(Value, absent),
+    collect_absent(Pairs, Keys).
+
+unsure_keys([], []).
+unsure_keys([Key - unsure|Pairs], [Key|Keys]) :-
+    unsure_keys(Pairs, Keys).
+unsure_keys([_ - true|Pairs], Keys) :-
+    unsure_keys(Pairs, Keys).
+unsure_keys([_ - false|Pairs], Keys) :-
+    unsure_keys(Pairs, Keys).
+
+first_unsure([Key - unsure|_], Key).
+first_unsure([_ - true|Pairs], Key) :-
+    first_unsure(Pairs, Key).
+first_unsure([_ - false|Pairs], Key) :-
+    first_unsure(Pairs, Key).
+
+key_ranked(Key, Rank - Key) :-
+    key_rank(Key, Rank).
+
+pair_ranked(Key - Value, Rank - (Key - Value)) :-
+    key_rank(Key, Rank).
+
+order_keys(Keys, Ordered) :-
+    maplist(key_ranked, Keys, Ranked),
+    sort(Ranked, Sorted),
+    pairs_values(Sorted, Ordered).
+
+order_pairs(Pairs, Ordered) :-
+    maplist(pair_ranked, Pairs, Ranked),
+    sort(Ranked, Sorted),
+    pairs_values(Sorted, Ordered).
+
+either_true(true, _, true).
+either_true(false, Second, Second).
+
+and_status(unmet, _, unmet).
+and_status(met, unmet, unmet).
+and_status(open, unmet, unmet).
+and_status(met, met, met).
+and_status(met, open, open).
+and_status(open, met, open).
+and_status(open, open, open).
+
+status_of([_|_], _, _, unmet).
+status_of([], [_|_], _, open).
+status_of([], [], [_|_], open).
+status_of([], [], [], met).
+
+route_absent_keys(absent, [personal_data_collected_from_data_subject]).
+route_absent_keys(true, []).
+route_absent_keys(false, []).
+
+item_outcome(Profile, Provided, AlreadyHas, row(Item, Citation, Condition), Outcome) :-
+    implements(eu_reg_2016_679_art_13_4),
+    implements(eu_reg_2016_679_art_14_5_a),
+    memberd_t(Item, Provided, IsProvided),
+    memberd_t(Item, AlreadyHas, IsAlreadyHeld),
+    either_true(IsProvided, IsAlreadyHeld, IsCovered),
+    outcome_for(IsCovered, Profile, Item, Citation, Condition, Outcome).
+
+outcome_for(true, _, _, _, _, outcome([], [], [])).
+outcome_for(false, _, Item, Citation, always, outcome([missing_item(Item, Citation)], [], [])).
+outcome_for(false, Profile, Item, Citation, flag(Key), Outcome) :-
+    value_or_absent(Profile, Key, Value),
+    flag_outcome(Value, Item, Citation, Key, Outcome).
+outcome_for(false, Profile, Item, Citation, judgement(Key), Outcome) :-
+    value_or_absent(Profile, Key, Value),
+    judgement_outcome(Value, Item, Citation, Key, Outcome).
+
+flag_outcome(true, Item, Citation, _, outcome([missing_item(Item, Citation)], [], [])).
+flag_outcome(false, _, _, _, outcome([], [], [])).
+flag_outcome(absent, _, _, Key, outcome([], [Key], [])).
+
+judgement_outcome(true, Item, Citation, Key, outcome([missing_item(Item, Citation)], [], [Key - true])).
+judgement_outcome(false, _, _, Key, outcome([], [], [Key - false])).
+judgement_outcome(unsure, _, _, Key, outcome([], [], [Key - unsure])).
+judgement_outcome(absent, _, _, Key, outcome([], [Key], [])).
+
+items_scan([], _, _, _, outcome([], [], [])).
+items_scan([Row|Rows], Profile, Provided, AlreadyHas, outcome(Missing, Absent, Reads)) :-
+    item_outcome(Profile, Provided, AlreadyHas, Row, outcome(RowMissing, RowAbsent, RowReads)),
+    items_scan(Rows, Profile, Provided, AlreadyHas, outcome(RestMissing, RestAbsent, RestReads)),
+    append(RowMissing, RestMissing, Missing),
+    append(RowAbsent, RestAbsent, Absent),
+    append(RowReads, RestReads, Reads).
+
+listing_rows(Route, Rows) :-
+    findall(row(Item, Citation, Condition), item_listing(Route, Item, Citation, Condition, _), Rows).
+
+items_component(Profile, RouteValue, Component) :-
+    value_or_absent(Profile, items_provided, Provided),
+    value_or_absent(Profile, items_data_subject_already_has, AlreadyHas),
+    collect_absent([items_provided - Provided, items_data_subject_already_has - AlreadyHas], ListAbsent),
+    items_for(RouteValue, ListAbsent, Provided, AlreadyHas, Profile, Component).
+
+items_for(absent, ListAbsent, _, _, _, component(open, Absent, [], missing([]))) :-
+    append([personal_data_collected_from_data_subject], ListAbsent, Absent).
+items_for(true, ListAbsent, Provided, AlreadyHas, Profile, Component) :-
+    items_lists(ListAbsent, art13, Provided, AlreadyHas, Profile, Component).
+items_for(false, ListAbsent, Provided, AlreadyHas, Profile, Component) :-
+    items_lists(ListAbsent, art14, Provided, AlreadyHas, Profile, Component).
+
+items_lists([Key|Keys], _, _, _, _, component(open, [Key|Keys], [], missing([]))).
+items_lists([], Route, Provided, AlreadyHas, Profile, component(Status, Absent, Reads, missing(Missing))) :-
+    listing_rows(Route, Rows),
+    items_scan(Rows, Profile, Provided, AlreadyHas, outcome(Missing, Absent, Reads)),
+    unsure_keys(Reads, Unsure),
+    status_of(Missing, Absent, Unsure, Status).
+
+next_month(Year, Month, Year, NextMonth) :-
+    Month #< 12,
+    NextMonth #= Month + 1.
+next_month(Year, 12, NextYear, 1) :-
+    NextYear #= Year + 1.
+
+calendar_month_end(date(Year, Month, DayNumber), Holidays, Result) :-
+    implements(eu_reg_1971_1182_art_3_1),
+    implements(eu_reg_1971_1182_art_3_2_c),
+    next_month(Year, Month, NextYear, NextMonth),
+    month_last_day(NextYear, NextMonth, LastDay),
+    int_min(DayNumber, LastDay, EndDay),
+    shift_to_working_day(date(NextYear, NextMonth, EndDay), Holidays, Result).
+
+nonworking_day_t(Date, Holidays, IsNonworking) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    days_between(Date, date(1900, 1, 1), DayCount),
+    WeekdayNumber is DayCount mod 7,
+    memberd_t(WeekdayNumber, [5, 6], IsWeekend),
+    memberd_t(Date, Holidays, IsHoliday),
+    either_true(IsWeekend, IsHoliday, IsNonworking).
+
+shift_to_working_day(Date, Holidays, Result) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    nonworking_day_t(Date, Holidays, IsNonworking),
+    shift_step(IsNonworking, Date, Holidays, Result).
+
+shift_step(false, Date, _, Date).
+shift_step(true, Date, Holidays, Result) :-
+    next_day(Date, NextDate),
+    shift_to_working_day(NextDate, Holidays, Result).
+
+public_holiday_list(Profile, Holidays) :-
+    value_or_absent(Profile, public_holidays, HolidayValue),
+    holiday_list_of(HolidayValue, Holidays).
+
+holiday_list_of(attested(Holidays, _), Holidays).
+holiday_list_of(absent, []).
+
+earliest_date([First|Rest], Result) :-
+    implements(eu_reg_2016_679_art_14_3),
+    earliest_step(Rest, First, Result).
+
+earliest_step([], Best, Best).
+earliest_step([Date - Basis|Rest], BestDate - _, Result) :-
+    Date @< BestDate,
+    earliest_step(Rest, Date - Basis, Result).
+earliest_step([Date - _|Rest], BestDate - BestBasis, Result) :-
+    Date @>= BestDate,
+    earliest_step(Rest, BestDate - BestBasis, Result).
+
+limb_candidate(true, Date, Basis, [Date - Basis]).
+limb_candidate(false, _, _, []).
+
+communication_date(true, Profile, Value) :-
+    value_or_absent(Profile, first_communication_date, Value).
+communication_date(false, _, not_read).
+communication_date(absent, _, not_read).
+
+disclosure_date(true, Profile, Value) :-
+    value_or_absent(Profile, first_disclosure_date, Value).
+disclosure_date(false, _, not_read).
+disclosure_date(absent, _, not_read).
+
+timing_component(Profile, RouteValue, Component) :-
+    timing_for(RouteValue, Profile, Component).
+
+timing_for(absent, Profile, component(open, Absent, [], timing(none, none))) :-
+    value_or_absent(Profile, obtaining_date, ObtainingValue),
+    value_or_absent(Profile, provision_date, ProvisionValue),
+    collect_absent([obtaining_date - ObtainingValue, provision_date - ProvisionValue], DateAbsent),
+    append([personal_data_collected_from_data_subject], DateAbsent, Absent).
+timing_for(true, Profile, Component) :-
+    value_or_absent(Profile, obtaining_date, ObtainingValue),
+    value_or_absent(Profile, provision_date, ProvisionValue),
+    collect_absent([obtaining_date - ObtainingValue, provision_date - ProvisionValue], Absent),
+    timing_art13(Absent, ObtainingValue, ProvisionValue, Component).
+timing_for(false, Profile, Component) :-
+    value_or_absent(Profile, obtaining_date, ObtainingValue),
+    value_or_absent(Profile, provision_date, ProvisionValue),
+    value_or_absent(Profile, data_used_for_communication_with_data_subject, CommunicationFlag),
+    communication_date(CommunicationFlag, Profile, CommunicationValue),
+    value_or_absent(Profile, disclosure_to_another_recipient_envisaged, DisclosureFlag),
+    disclosure_date(DisclosureFlag, Profile, DisclosureValue),
+    collect_absent([obtaining_date - ObtainingValue, provision_date - ProvisionValue, data_used_for_communication_with_data_subject - CommunicationFlag, first_communication_date - CommunicationValue, disclosure_to_another_recipient_envisaged - DisclosureFlag, first_disclosure_date - DisclosureValue], Absent),
+    timing_art14(Absent, Profile, ObtainingValue, ProvisionValue, CommunicationFlag, CommunicationValue, DisclosureFlag, DisclosureValue, Component).
+
+timing_art13([Key|Keys], _, _, component(open, [Key|Keys], [], timing(none, none))).
+timing_art13([], ObtainingValue, ProvisionValue, component(met, [], [], timing(timely, art13_1))) :-
+    implements(eu_reg_2016_679_art_13_1),
+    ProvisionValue @=< ObtainingValue.
+timing_art13([], ObtainingValue, ProvisionValue, component(unmet, [], [], timing(late, art13_1))) :-
+    implements(eu_reg_2016_679_art_13_1),
+    ProvisionValue @> ObtainingValue.
+
+timing_art14([Key|Keys], _, _, _, _, _, _, _, component(open, [Key|Keys], [], timing(none, none))).
+timing_art14([], Profile, ObtainingValue, ProvisionValue, CommunicationFlag, CommunicationValue, DisclosureFlag, DisclosureValue, Component) :-
+    implements(eu_reg_2016_679_art_14_3_a),
+    implements(eu_reg_2016_679_art_14_3_b),
+    implements(eu_reg_2016_679_art_14_3_c),
+    public_holiday_list(Profile, Holidays),
+    calendar_month_end(ObtainingValue, Holidays, LimbADate),
+    limb_candidate(CommunicationFlag, CommunicationValue, art14_3_b, CommunicationCandidates),
+    limb_candidate(DisclosureFlag, DisclosureValue, art14_3_c, DisclosureCandidates),
+    append(CommunicationCandidates, DisclosureCandidates, LaterCandidates),
+    earliest_date([LimbADate - art14_3_a|LaterCandidates], Deadline - Basis),
+    timing_judge(Profile, ProvisionValue, Deadline, Basis, Component).
+
+timing_judge(_, ProvisionValue, Deadline, Basis, component(unmet, [], [], timing(late, Basis))) :-
+    ProvisionValue @> Deadline.
+timing_judge(Profile, ProvisionValue, Deadline, Basis, Component) :-
+    ProvisionValue @=< Deadline,
+    value_or_absent(Profile, provided_within_reasonable_period, ReasonableValue),
+    timing_reasonable(ReasonableValue, Basis, Component).
+
+timing_reasonable(true, Basis, component(met, [], [provided_within_reasonable_period - true], timing(timely, Basis))).
+timing_reasonable(false, _, component(unmet, [], [provided_within_reasonable_period - false], timing(late, art14_3_a))).
+timing_reasonable(unsure, _, component(open, [], [provided_within_reasonable_period - unsure], timing(none, none))).
+timing_reasonable(absent, _, component(open, [provided_within_reasonable_period], [], timing(none, none))).
+
+further_component(Profile, RouteValue, Component) :-
+    value_or_absent(Profile, further_processing_for_another_purpose_intended, IntendedValue),
+    further_for(IntendedValue, RouteValue, Profile, Component).
+
+further_for(false, _, _, component(met, [], [], further(not_applicable, []))).
+further_for(absent, RouteValue, _, component(open, Absent, [], further(none, []))) :-
+    route_absent_keys(RouteValue, RouteKeys),
+    append(RouteKeys, [further_processing_for_another_purpose_intended], Absent).
+further_for(true, absent, Profile, component(open, Absent, [], further(none, []))) :-
+    value_or_absent(Profile, items_data_subject_already_has, AlreadyHas),
+    value_or_absent(Profile, further_processing_start_date, StartValue),
+    value_or_absent(Profile, further_processing_information_date, InformationValue),
+    value_or_absent(Profile, further_processing_items_provided, ProvidedValue),
+    value_or_absent(Profile, paragraph_2_information_relevant_to_further_processing, RelevanceValue),
+    collect_absent([items_data_subject_already_has - AlreadyHas, further_processing_start_date - StartValue, further_processing_information_date - InformationValue, further_processing_items_provided - ProvidedValue, paragraph_2_information_relevant_to_further_processing - RelevanceValue], ListAbsent),
+    append([personal_data_collected_from_data_subject], ListAbsent, Absent).
+further_for(true, true, Profile, Component) :-
+    further_known(Profile, art13, Component).
+further_for(true, false, Profile, Component) :-
+    further_known(Profile, art14, Component).
+
+date_status([_|_], _, _, open).
+date_status([], StartValue, InformationValue, met) :-
+    InformationValue @< StartValue.
+date_status([], StartValue, InformationValue, unmet) :-
+    InformationValue @>= StartValue.
+
+relevance_part(absent, [paragraph_2_information_relevant_to_further_processing], []).
+relevance_part(true, [], [paragraph_2_information_relevant_to_further_processing - true]).
+relevance_part(false, [], [paragraph_2_information_relevant_to_further_processing - false]).
+relevance_part(unsure, [], [paragraph_2_information_relevant_to_further_processing - unsure]).
+
+further_rows(true, Route, [OtherRow|TwoRows]) :-
+    further_processing_cite(Route, Citation),
+    OtherRow = row(other_purpose_information, Citation, always),
+    findall(row(Item, ItemCitation, Condition), item_listing(Route, Item, ItemCitation, Condition, two), TwoRows).
+further_rows(false, Route, [row(other_purpose_information, Citation, always)]) :-
+    further_processing_cite(Route, Citation).
+further_rows(unsure, Route, [row(other_purpose_information, Citation, always)]) :-
+    further_processing_cite(Route, Citation).
+further_rows(absent, Route, [row(other_purpose_information, Citation, always)]) :-
+    further_processing_cite(Route, Citation).
+
+further_items([_|_], _, _, _, _, _, outcome([], ListAbsent, [])) :-
+    ListAbsent = [].
+
+further_items_stage([Key|Keys], _, _, _, _, _, outcome([], [Key|Keys], [])).
+further_items_stage([], Route, Profile, ProvidedValue, AlreadyHas, RelevanceValue, Outcome) :-
+    further_rows(RelevanceValue, Route, Rows),
+    items_scan(Rows, Profile, ProvidedValue, AlreadyHas, Outcome).
+
+further_verdict(met, eligible).
+further_verdict(unmet, ineligible).
+further_verdict(open, none).
+
+further_known(Profile, Route, component(Status, Absent, Reads, further(Verdict, [Citation]))) :-
+    implements(eu_reg_2016_679_art_13_3),
+    implements(eu_reg_2016_679_art_14_4),
+    value_or_absent(Profile, further_processing_start_date, StartValue),
+    value_or_absent(Profile, further_processing_information_date, InformationValue),
+    value_or_absent(Profile, items_data_subject_already_has, AlreadyHas),
+    value_or_absent(Profile, further_processing_items_provided, ProvidedValue),
+    value_or_absent(Profile, paragraph_2_information_relevant_to_further_processing, RelevanceValue),
+    collect_absent([further_processing_start_date - StartValue, further_processing_information_date - InformationValue], DateAbsent),
+    date_status(DateAbsent, StartValue, InformationValue, DateStatus),
+    collect_absent([items_data_subject_already_has - AlreadyHas, further_processing_items_provided - ProvidedValue], ListAbsent),
+    further_items_stage(ListAbsent, Route, Profile, ProvidedValue, AlreadyHas, RelevanceValue, outcome(ItemMissing, ScanAbsent, ScanReads)),
+    relevance_part(RelevanceValue, RelevanceAbsent, RelevanceReads),
+    append(ScanAbsent, RelevanceAbsent, ItemAbsent),
+    append(ScanReads, RelevanceReads, Reads),
+    unsure_keys(Reads, Unsure),
+    status_of(ItemMissing, ItemAbsent, Unsure, ItemStatus),
+    and_status(DateStatus, ItemStatus, Status),
+    append(DateAbsent, ItemAbsent, Absent),
+    further_verdict(Status, Verdict),
+    further_processing_cite(Route, Citation).
+
+information_duty_verdict(Profile, Verdict, Citations) :-
+    gdpr_information_duties_headline_verdict_input_problems(Profile, Problems),
+    headline_for(Problems, Profile, Verdict, Citations).
+
+headline_for([Problem|Problems], _, input_problems([Problem|Problems]), []).
+headline_for([], Profile, Verdict, Citations) :-
+    value_or_absent(Profile, personal_data_collected_from_data_subject, RouteValue),
+    items_component(Profile, RouteValue, ItemsComponent),
+    timing_component(Profile, RouteValue, TimingComponent),
+    further_component(Profile, RouteValue, FurtherComponent),
+    base_state(ItemsComponent, TimingComponent, FurtherComponent, BaseStatus, BaseAbsent, BaseReads),
+    stage(BaseStatus, RouteValue, Profile, ItemsComponent, TimingComponent, FurtherComponent, BaseAbsent, BaseReads, Verdict, Citations).
+
+base_state(component(StatusOne, AbsentOne, ReadsOne, _), component(StatusTwo, AbsentTwo, ReadsTwo, _), component(StatusThree, AbsentThree, ReadsThree, _), Status, Absent, Reads) :-
+    and_status(StatusOne, StatusTwo, StatusOneTwo),
+    and_status(StatusOneTwo, StatusThree, Status),
+    append([AbsentOne, AbsentTwo, AbsentThree], Absent),
+    append([ReadsOne, ReadsTwo, ReadsThree], Reads).
+
+stage(met, RouteValue, _, _, _, component(_, _, _, further(_, FurtherCitations)), _, _, eligible, Citations) :-
+    route_paragraph_cite(RouteValue, RouteCitation),
+    Citations = [RouteCitation|FurtherCitations].
+stage(unmet, true, _, ItemsComponent, TimingComponent, FurtherComponent, _, _, ineligible, Citations) :-
+    ineligible_citations(ItemsComponent, TimingComponent, FurtherComponent, Citations).
+stage(unmet, false, Profile, ItemsComponent, TimingComponent, FurtherComponent, _, _, Verdict, Citations) :-
+    information_duty_exemption(Profile, Exemption),
+    unmet_exemption(Exemption, ItemsComponent, TimingComponent, FurtherComponent, Verdict, Citations).
+stage(open, RouteValue, _, _, _, _, BaseAbsent, BaseReads, Verdict, []) :-
+    order_keys(BaseAbsent, OrderedAbsent),
+    open_state(OrderedAbsent, RouteValue, BaseReads, Verdict).
+
+unmet_exemption(Exemption, _, _, _, eligible, [Citation]) :-
+    exemption_cite(Exemption, Citation).
+unmet_exemption(none, ItemsComponent, TimingComponent, FurtherComponent, ineligible, Citations) :-
+    ineligible_citations(ItemsComponent, TimingComponent, FurtherComponent, Citations).
+unmet_exemption(indeterminate(Keys), _, _, _, indeterminate(Keys), []).
+unmet_exemption(needs_legal_review(Reason, Context), _, _, _, needs_legal_review(Reason, Context), []).
+
+ineligible_citations(ItemsComponent, TimingComponent, FurtherComponent, Citations) :-
+    missing_citations(ItemsComponent, MissingCitations),
+    timing_citations(TimingComponent, TimingCitations),
+    further_citations(FurtherComponent, FurtherCitations),
+    append([MissingCitations, TimingCitations, FurtherCitations], Citations).
+
+missing_citations(component(_, _, _, missing(Missing)), Citations) :-
+    missing_item_citations(Missing, Citations).
+
+missing_item_citations([], []).
+missing_item_citations([missing_item(_, Citation)|Missing], [Citation|Citations]) :-
+    missing_item_citations(Missing, Citations).
+
+timing_citations(component(unmet, _, _, timing(_, Basis)), [Citation]) :-
+    basis_cite(Basis, Citation).
+timing_citations(component(met, _, _, _), []).
+timing_citations(component(open, _, _, _), []).
+
+further_citations(component(unmet, _, _, further(_, Citations)), Citations).
+further_citations(component(met, _, _, _), []).
+further_citations(component(open, _, _, _), []).
+
+open_state([Key|Keys], _, _, indeterminate([Key|Keys])).
+open_state([], RouteValue, Reads, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)])) :-
+    order_pairs(Reads, Pairs),
+    first_unsure(Pairs, Key),
+    unsure_citation(Key, RouteValue, Citation).
+
+information_outside_facts(Profile, OutsideFacts) :-
+    gdpr_information_duties_headline_verdict_input_problems(Profile, Problems),
+    outside_facts_for(Problems, Profile, OutsideFacts).
+
+outside_facts_for([Problem|Problems], _, input_problems([Problem|Problems])).
+outside_facts_for([], Profile, [outside_fact(obtaining_or_disclosure_laid_down_by_law, LawValue), outside_fact(professional_secrecy_obligation_by_law, SecrecyValue), outside_fact(public_holidays, HolidayValue)]) :-
+    value_or_absent(Profile, obtaining_or_disclosure_laid_down_by_law, LawValue),
+    value_or_absent(Profile, professional_secrecy_obligation_by_law, SecrecyValue),
+    value_or_absent(Profile, public_holidays, HolidayValue).
+
+decide_information_duty_verdict(Profile, information_duty_verdict_verdict(Status, Citations)) :-
+    information_duty_verdict(Profile, Status, Citations).
+
+information_duty_verdict_status(Profile, Status) :-
+    decide_information_duty_verdict(Profile, information_duty_verdict_verdict(Status, _Citations)).
+
+information_duty_verdict_checklist(Profile, Items) :-
+    gdpr_information_duties_headline_verdict_input_problems(Profile, Problems),
+    checklist_for(Problems, Profile, Items).
+
+checklist_for([_|_], _, [item(overall, unknown([input_problems]), cite(eu_reg_2016_679_art_14_1))]).
+checklist_for([], Profile, [ItemsRow, TimingRow, FurtherRow]) :-
+    value_or_absent(Profile, personal_data_collected_from_data_subject, RouteValue),
+    items_component(Profile, RouteValue, ItemsComponent),
+    timing_component(Profile, RouteValue, TimingComponent),
+    further_component(Profile, RouteValue, FurtherComponent),
+    checklist_citation(RouteValue, ItemsCitation),
+    component_row(items_missing, ItemsCitation, ItemsComponent, ItemsRow),
+    component_row(timing, cite(eu_reg_2016_679_art_14_3), TimingComponent, TimingRow),
+    component_row(further_processing, cite(eu_reg_2016_679_art_14_4), FurtherComponent, FurtherRow).
+
+checklist_citation(true, cite(eu_reg_2016_679_art_13_1)).
+checklist_citation(false, cite(eu_reg_2016_679_art_14_1)).
+checklist_citation(absent, cite(eu_reg_2016_679_art_14_1)).
+
+component_row(Identifier, Citation, component(met, _, _, _), item(Identifier, met, Citation)).
+component_row(Identifier, Citation, component(unmet, _, _, _), item(Identifier, unmet(not_met), Citation)).
+component_row(Identifier, Citation, component(open, [Key|Keys], _, _), item(Identifier, unknown([Key|Keys]), Citation)).
+component_row(Identifier, Citation, component(open, [], Reads, _), item(Identifier, unknown(Unsure), Citation)) :-
+    unsure_keys(Reads, Unsure).
+
+information_duty_verdict_decision_resolvable(Profile) :-
+    decide_information_duty_verdict(Profile, _Verdict).
+
+complete_art13_items([controller_identity_and_contact_details, purposes_and_legal_basis, storage_period_or_criteria, data_subject_rights, right_to_lodge_complaint, statutory_or_contractual_requirement]).
+
+art13_profile(ItemsProvided, AutomatedValue, ProvisionDate, [attribute(personal_data_collected_from_data_subject, true), attribute(items_provided, ItemsProvided), attribute(items_data_subject_already_has, []), attribute(data_protection_officer_designated, false), attribute(processing_based_on_legitimate_interests, false), attribute(recipients_exist, false), attribute(transfer_intended, false), attribute(processing_based_on_consent, false), attribute(automated_decision_making_under_article_22, AutomatedValue), attribute(obtaining_date, date(2026, 3, 2)), attribute(provision_date, ProvisionDate), attribute(further_processing_for_another_purpose_intended, false)]).
+
+test(art13_complete_is_eligible) :-
+    complete_art13_items(Items),
+    art13_profile(Items, false, date(2026, 3, 2), Profile),
+    information_duty_verdict(Profile, eligible, [cite(eu_reg_2016_679_art_13_1)]).
+test(art13_missing_statutory_item_is_ineligible) :-
+    art13_profile([controller_identity_and_contact_details, purposes_and_legal_basis, storage_period_or_criteria, data_subject_rights, right_to_lodge_complaint], false, date(2026, 3, 2), Profile),
+    information_duty_verdict(Profile, ineligible, [cite(eu_reg_2016_679_art_13_2_e)]).
+test(art13_late_provision_is_ineligible) :-
+    complete_art13_items(Items),
+    art13_profile(Items, false, date(2026, 3, 3), Profile),
+    information_duty_verdict(Profile, ineligible, [cite(eu_reg_2016_679_art_13_1)]).
+test(art13_unsure_automated_decision_is_referred) :-
+    complete_art13_items(Items),
+    art13_profile(Items, unsure, date(2026, 3, 2), Profile),
+    information_duty_verdict(Profile, needs_legal_review(open_textured(automated_decision_making_under_article_22, cite(eu_reg_2016_679_art_13_2_f)), [inputs_relied_on([automated_decision_making_under_article_22 - unsure])]), []).
+test(month_end_saturday_moves_to_monday) :-
+    calendar_month_end(date(2026, 1, 31), [], Result),
+    Result == date(2026, 3, 2).
+test(month_end_leap_february) :-
+    calendar_month_end(date(2028, 1, 31), [], Result),
+    Result == date(2028, 2, 29).
+test(month_end_attested_holiday_shifts_again) :-
+    calendar_month_end(date(2026, 12, 31), [date(2027, 2, 1)], Result),
+    Result == date(2027, 2, 2).
+test(earliest_limb_binds_on_art14) :-
+    timing_component([attribute(obtaining_date, date(2026, 1, 15)), attribute(provision_date, date(2026, 1, 20)), attribute(data_used_for_communication_with_data_subject, true), attribute(first_communication_date, date(2026, 1, 20)), attribute(disclosure_to_another_recipient_envisaged, false), attribute(provided_within_reasonable_period, true)], false, component(met, [], [provided_within_reasonable_period - true], timing(timely, art14_3_b))).
+test(art14_effort_exemption_makes_eligible) :-
+    information_duty_verdict([attribute(personal_data_collected_from_data_subject, false), attribute(items_provided, []), attribute(items_data_subject_already_has, []), attribute(data_protection_officer_designated, false), attribute(processing_based_on_legitimate_interests, false), attribute(recipients_exist, false), attribute(transfer_intended, false), attribute(processing_based_on_consent, false), attribute(automated_decision_making_under_article_22, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(provision_date, date(2026, 1, 16)), attribute(data_used_for_communication_with_data_subject, false), attribute(disclosure_to_another_recipient_envisaged, false), attribute(provided_within_reasonable_period, true), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true), attribute(further_processing_for_another_purpose_intended, false)], eligible, [cite(eu_reg_2016_679_art_14_5_b)]).
+test(empty_profile_names_the_absent_keys) :-
+    information_duty_verdict([], indeterminate([personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, obtaining_date, provision_date, further_processing_for_another_purpose_intended]), []).
+test(input_problem_is_reported) :-
+    information_duty_verdict([attribute(no_such_key, true)], input_problems([unknown_key(no_such_key)]), []).
+test(outside_facts_absent_are_reported) :-
+    information_outside_facts([attribute(personal_data_collected_from_data_subject, true)], [outside_fact(obtaining_or_disclosure_laid_down_by_law, absent), outside_fact(professional_secrecy_obligation_by_law, absent), outside_fact(public_holidays, absent)]).
+test(checklist_has_three_rows) :-
+    complete_art13_items(Items),
+    art13_profile(Items, false, date(2026, 3, 2), Profile),
+    information_duty_verdict_checklist(Profile, Rows),
+    length(Rows, 3).
+
+test(art13_missing_statutory_item_is_not_eligible, fail) :-
+    art13_profile([controller_identity_and_contact_details, purposes_and_legal_basis, storage_period_or_criteria, data_subject_rights, right_to_lodge_complaint], false, date(2026, 3, 2), Profile),
+    information_duty_verdict(Profile, eligible, _).

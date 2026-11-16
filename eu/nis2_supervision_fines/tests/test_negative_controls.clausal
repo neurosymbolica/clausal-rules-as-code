@@ -1,0 +1,143 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states "no
+% solution" as `test(Name, fail) :- Goal.` Every near-miss atom is paired
+% with a positive test over the same case, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/nis2_supervision_fines/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/nis2_supervision_fines/nis2_supervision_fines, [
+    nis2_supervision_fines_status/2,
+    nis2_supervision_fines_status_values/1,
+    fine_ceiling_floor/3,
+    minimum_powers/2,
+    escalation_powers_exercisable/3,
+    fine_barred_by_gdpr_fine/3,
+    data_protection_authority_information/2
+]).
+:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2]).
+:- use_module(eu/nis2_supervision_fines/fixtures, [nis2_supervision_fines_profile_for/2]).
+
+test(the_verdict_atoms_are_real_verdict_atoms) :-
+    nis2_supervision_fines_status_values(StatusValues),
+    member(eligible, StatusValues),
+    member(ineligible, StatusValues).
+
+% ---- facade / Art 32(5): C4 action taken within the deadline ----
+test(exercisable_profile_is_eligible) :-
+    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
+    nis2_supervision_fines_status(Profile, eligible).
+test(action_taken_is_not_eligible, fail) :-
+    nis2_supervision_fines_profile_for(escalation_action_taken_within_deadline, Profile),
+    nis2_supervision_fines_status(Profile, eligible).
+test(action_taken_gives_its_reason) :-
+    nis2_supervision_fines_profile_for(escalation_action_taken_within_deadline, Profile),
+    escalation_powers_exercisable(Profile, not_exercisable(action_taken_within_deadline), _).
+
+% ---- Art 32(5): C1 public administration ----
+test(public_administration_gives_its_reason) :-
+    nis2_supervision_fines_profile_for(escalation_public_administration_entity, Profile),
+    escalation_powers_exercisable(Profile, not_exercisable(public_administration_entity), _).
+test(public_administration_is_not_exercisable, fail) :-
+    nis2_supervision_fines_profile_for(escalation_public_administration_entity, Profile),
+    escalation_powers_exercisable(Profile, exercisable, _).
+
+% ---- Art 32(5): C2 measures not ineffective ----
+test(effective_measures_give_their_reason) :-
+    nis2_supervision_fines_profile_for(escalation_measures_not_ineffective, Profile),
+    escalation_powers_exercisable(Profile, not_exercisable(measures_not_ineffective), _).
+test(effective_measures_are_not_exercisable, fail) :-
+    nis2_supervision_fines_profile_for(escalation_measures_not_ineffective, Profile),
+    escalation_powers_exercisable(Profile, exercisable, _).
+
+% ---- Art 32(5): C3 no deadline ----
+test(no_deadline_gives_its_reason) :-
+    nis2_supervision_fines_profile_for(escalation_no_deadline_set, Profile),
+    escalation_powers_exercisable(Profile, not_exercisable(no_deadline_set), _).
+test(no_deadline_is_not_exercisable, fail) :-
+    nis2_supervision_fines_profile_for(escalation_no_deadline_set, Profile),
+    escalation_powers_exercisable(Profile, exercisable, _).
+
+% ---- Art 32(5): an unsure judgement is never crisped ----
+test(unsure_measures_refer) :-
+    nis2_supervision_fines_profile_for(escalation_measures_unsure, Profile),
+    escalation_powers_exercisable(Profile, needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), _), []).
+test(unsure_measures_are_not_eligible, fail) :-
+    nis2_supervision_fines_profile_for(escalation_measures_unsure, Profile),
+    nis2_supervision_fines_status(Profile, eligible).
+
+% ---- Art 34(4): the tie is fixed_amount, one euro more is turnover_percentage ----
+test(essential_above_tie_is_turnover_percentage) :-
+    nis2_supervision_fines_profile_for(essential_fine_above_tie, Profile),
+    fine_ceiling_floor(Profile, minimum_national_maximum(10000001, turnover_percentage), _).
+test(essential_at_tie_is_not_turnover_percentage, fail) :-
+    nis2_supervision_fines_profile_for(essential_fine_at_tie, Profile),
+    fine_ceiling_floor(Profile, minimum_national_maximum(_, turnover_percentage), _).
+
+% ---- Art 34(5) ----
+test(important_above_tie_is_turnover_percentage) :-
+    nis2_supervision_fines_profile_for(important_fine_above_tie, Profile),
+    fine_ceiling_floor(Profile, minimum_national_maximum(7000001, turnover_percentage), _).
+test(important_at_tie_is_not_turnover_percentage, fail) :-
+    nis2_supervision_fines_profile_for(important_fine_at_tie, Profile),
+    fine_ceiling_floor(Profile, minimum_national_maximum(_, turnover_percentage), _).
+
+% ---- Art 34 scope: Article 21 or 23 only ----
+test(other_infringement_has_no_union_minimum) :-
+    nis2_supervision_fines_profile_for(other_infringement, Profile),
+    fine_ceiling_floor(Profile, no_union_minimum, _).
+test(art_21_infringement_has_a_union_minimum, fail) :-
+    nis2_supervision_fines_profile_for(important_fine_above_tie, Profile),
+    fine_ceiling_floor(Profile, no_union_minimum, _).
+
+% ---- minimum powers: Art 32(5) powers removed for public administration ----
+test(essential_non_public_administration_has_escalation_powers) :-
+    minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, false)], Powers),
+    member(power(escalation, suspend_certification_or_authorisation, cite(eu_dir_2022_2555_art_32_5_a)), Powers).
+test(essential_public_administration_has_no_escalation_power, fail) :-
+    minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, true)], Powers),
+    member(power(escalation, _, _), Powers).
+test(essential_has_a_monitoring_officer) :-
+    minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, true)], Powers),
+    member(power(enforcement, monitoring_officer, cite(eu_dir_2022_2555_art_32_4_g)), Powers).
+test(important_has_no_monitoring_officer, fail) :-
+    minimum_powers([attribute(entity_class, important)], Powers),
+    member(power(enforcement, monitoring_officer, _), Powers).
+
+% ---- Art 35(2): the GDPR bar ----
+test(same_conduct_bars_the_fine) :-
+    nis2_supervision_fines_profile_for(gdpr_fine_barred, Profile),
+    fine_barred_by_gdpr_fine(Profile, fine_barred, _).
+test(not_same_conduct_does_not_bar, fail) :-
+    nis2_supervision_fines_profile_for(gdpr_not_same_conduct, Profile),
+    fine_barred_by_gdpr_fine(Profile, fine_barred, _).
+test(not_same_conduct_is_not_barred) :-
+    nis2_supervision_fines_profile_for(gdpr_not_same_conduct, Profile),
+    fine_barred_by_gdpr_fine(Profile, fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]).
+
+% ---- Art 35(1), (3): the duty to inform ----
+test(other_member_state_adds_the_own_authority) :-
+    nis2_supervision_fines_profile_for(information_other_member_state, Profile),
+    data_protection_authority_information(Profile, [_, inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]).
+test(own_member_state_has_one_duty_only, fail) :-
+    nis2_supervision_fines_profile_for(information_own_member_state, Profile),
+    data_protection_authority_information(Profile, [_, _]).
+test(own_member_state_duty) :-
+    nis2_supervision_fines_profile_for(information_own_member_state, Profile),
+    data_protection_authority_information(Profile, [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]).
+test(not_aware_has_no_duty_to_inform, fail) :-
+    nis2_supervision_fines_profile_for(information_not_aware, Profile),
+    data_protection_authority_information(Profile, [_|_]).
+
+% ---- input check ----
+test(a_clean_profile_has_no_problem) :-
+    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
+    nis2_supervision_fines_input_problems(Profile, []).
+test(a_duplicated_key_is_not_clean, fail) :-
+    nis2_supervision_fines_profile_for(duplicate_entity_class, Profile),
+    nis2_supervision_fines_input_problems(Profile, []).
+
+:- end_module(test_negative_controls).

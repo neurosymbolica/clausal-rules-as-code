@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_time_limits_tests_test_robustness, [run_tests/0]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

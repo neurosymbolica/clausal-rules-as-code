@@ -1,0 +1,687 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% transparency_art50.clausal -- the \"transparency_art50\" DETERMINATION for
+% eu/ai_act/transparency_art50, self-contained top to bottom: its statutory
+% VALUE facts, its test rows, its decision routes, THE UNSURE RULE, its
+% per-rule tests, its checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act), Art 50(1)
+% to (5), Art 3, points (1) and (4), Art 111(4) and Art 113, second
+% sentence, in the consolidated text 02024R1689-20260727 (as amended by
+% Regulation (EU) 2026/1744; the pinned Formex text).
+%
+% The question term the facade reads:
+%   transparency_question(Query, Profile, Duty, AssessmentDate)
+% with Query duty_status (transparency_duty_status/5) or compliance
+% (transparency_compliance/5). The verdict term:
+%   transparency_art50_verdict(Result, Citations)
+% =====================================================================
+
+:- module(transparency_art50, [
+    decide_transparency_art50/2,
+    transparency_art50_status/2,
+    transparency_art50_checklist/2,
+    transparency_art50_decision_resolvable/1,
+    transparency_art50_status_values/1,
+    transparency_duty_status/5,
+    transparency_compliance/5
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/ai_act/transparency_art50/kernel, [
+    transparency_art50_input_problems/2,
+    transparency_art50_calendar_day_t/2,
+    transparency_art50_item_state/3,
+    transparency_art50_test_outcome/3
+]).
+:- use_module(eu/ai_act/transparency_art50/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The result vocabulary as a ground table (used by the property tests).
+transparency_art50_status_values([
+    duty_applies,
+    limited_disclosure_applies,
+    duty_does_not_apply,
+    not_applicable_on_date,
+    not_an_ai_system,
+    in_transitional_period,
+    compliant,
+    not_compliant
+]).
+
+% Art 113, second sentence: 'It shall apply from 2 August 2026.'
+application_date(date(2026, 8, 2), cite(eu_reg_2024_1689_art_113)).
+
+% Art 111(4): 'shall take the necessary steps in order to comply with
+% Article 50(2) by 2 December 2026' (read as binding from that day, Q5).
+marking_compliance_date(date(2026, 12, 2), cite(eu_reg_2024_1689_art_111_4)).
+
+% THE DUTY TESTS (INTERFACE - THE LIMBS): conditions held by one key
+% before the exceptions held by two (Q16).
+duty_test(interaction_information,
+          [condition(intended_to_interact_directly_with_natural_persons, true),
+           condition(interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person, false),
+           not_both(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, true,
+                    available_for_the_public_to_report_a_criminal_offence, false)],
+          cite(eu_reg_2024_1689_art_50_1)).
+duty_test(machine_readable_marking,
+          [condition(generates_synthetic_audio_image_video_or_text_content, true),
+           condition(performs_an_assistive_function_for_standard_editing, false),
+           condition(does_not_substantially_alter_the_input_data_or_its_semantics, false),
+           condition(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false)],
+          cite(eu_reg_2024_1689_art_50_2)).
+duty_test(emotion_recognition_or_biometric_categorisation_information,
+          [condition(emotion_recognition_or_biometric_categorisation_system, true),
+           condition(permitted_by_law_to_detect_prevent_or_investigate_criminal_offences, false),
+           condition(used_in_a_personal_non_professional_activity, false)],
+          cite(eu_reg_2024_1689_art_50_3)).
+duty_test(deep_fake_disclosure,
+          [condition(generates_or_manipulates_deep_fake_image_audio_or_video_content, true),
+           condition(used_in_a_personal_non_professional_activity, false),
+           condition(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false)],
+          cite(eu_reg_2024_1689_art_50_4)).
+duty_test(public_interest_text_disclosure,
+          [condition(generates_or_manipulates_text_published_to_inform_the_public_on_matters_of_public_interest, true),
+           condition(used_in_a_personal_non_professional_activity, false),
+           condition(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false),
+           not_both(content_underwent_human_review_or_editorial_control, true,
+                    natural_or_legal_person_holds_editorial_responsibility, true)],
+          cite(eu_reg_2024_1689_art_50_4)).
+
+% THE COMPLIANCE TESTS (Art 50(1) to (5)).
+compliance_test(interaction_information,
+                [condition(required_information_given, true),
+                 condition(information_timing, at_or_before_first_interaction_or_exposure),
+                 condition(provided_in_a_clear_and_distinguishable_manner, true),
+                 condition(conforms_to_the_applicable_accessibility_requirements, true)],
+                cite(eu_reg_2024_1689_art_50_5)).
+compliance_test(machine_readable_marking,
+                [condition(outputs_marked_machine_readable_and_detectable_as_artificially_generated, true)],
+                cite(eu_reg_2024_1689_art_50_2)).
+compliance_test(emotion_recognition_or_biometric_categorisation_information,
+                [condition(required_information_given, true),
+                 condition(information_timing, at_or_before_first_interaction_or_exposure),
+                 condition(provided_in_a_clear_and_distinguishable_manner, true),
+                 condition(conforms_to_the_applicable_accessibility_requirements, true)],
+                cite(eu_reg_2024_1689_art_50_5)).
+compliance_test(deep_fake_disclosure,
+                [condition(required_information_given, true),
+                 condition(information_timing, at_or_before_first_interaction_or_exposure),
+                 condition(provided_in_a_clear_and_distinguishable_manner, true),
+                 condition(conforms_to_the_applicable_accessibility_requirements, true),
+                 not_both(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, true,
+                          disclosure_of_existence_appropriate_and_does_not_hamper_the_work, false)],
+                cite(eu_reg_2024_1689_art_50_5)).
+compliance_test(public_interest_text_disclosure,
+                [condition(required_information_given, true),
+                 condition(information_timing, at_or_before_first_interaction_or_exposure),
+                 condition(provided_in_a_clear_and_distinguishable_manner, true),
+                 condition(conforms_to_the_applicable_accessibility_requirements, true)],
+                cite(eu_reg_2024_1689_art_50_5)).
+
+% THE NOT-APPLYING CITATIONS of each duty.
+not_applying_citations(interaction_information,
+                       [cite(eu_reg_2024_1689_art_50_1)]).
+not_applying_citations(machine_readable_marking,
+                       [cite(eu_reg_2024_1689_art_50_2)]).
+not_applying_citations(emotion_recognition_or_biometric_categorisation_information,
+                       [cite(eu_reg_2024_1689_art_50_3), cite(eu_reg_2024_1689_art_3_4)]).
+not_applying_citations(deep_fake_disclosure,
+                       [cite(eu_reg_2024_1689_art_50_4), cite(eu_reg_2024_1689_art_3_4)]).
+not_applying_citations(public_interest_text_disclosure,
+                       [cite(eu_reg_2024_1689_art_50_4), cite(eu_reg_2024_1689_art_3_4)]).
+
+% THE COMPLIANCE CITATIONS of each duty.
+compliance_citations(interaction_information,
+                     [cite(eu_reg_2024_1689_art_50_1), cite(eu_reg_2024_1689_art_50_5)]).
+compliance_citations(machine_readable_marking,
+                     [cite(eu_reg_2024_1689_art_50_2)]).
+compliance_citations(emotion_recognition_or_biometric_categorisation_information,
+                     [cite(eu_reg_2024_1689_art_50_3), cite(eu_reg_2024_1689_art_50_5)]).
+compliance_citations(deep_fake_disclosure,
+                     [cite(eu_reg_2024_1689_art_50_4), cite(eu_reg_2024_1689_art_50_5)]).
+compliance_citations(public_interest_text_disclosure,
+                     [cite(eu_reg_2024_1689_art_50_4), cite(eu_reg_2024_1689_art_50_5)]).
+
+% The information duties: Art 50(5) is read for them (Q8), not for the
+% marking duty (Q9).
+information_duty(interaction_information).
+information_duty(emotion_recognition_or_biometric_categorisation_information).
+information_duty(deep_fake_disclosure).
+information_duty(public_interest_text_disclosure).
+
+% THE REFERRAL ROWS: each judgement key and the citation of its row.
+referral(interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person, cite(eu_reg_2024_1689_art_50_1)).
+referral(performs_an_assistive_function_for_standard_editing, cite(eu_reg_2024_1689_art_50_2)).
+referral(does_not_substantially_alter_the_input_data_or_its_semantics, cite(eu_reg_2024_1689_art_50_2)).
+referral(emotion_recognition_or_biometric_categorisation_system, cite(eu_reg_2024_1689_art_50_3)).
+referral(generates_or_manipulates_deep_fake_image_audio_or_video_content, cite(eu_reg_2024_1689_art_50_4)).
+referral(generates_or_manipulates_text_published_to_inform_the_public_on_matters_of_public_interest, cite(eu_reg_2024_1689_art_50_4)).
+referral(ai_system, cite(eu_reg_2024_1689_art_3_1)).
+referral(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, cite(eu_reg_2024_1689_art_50_4)).
+referral(disclosure_of_existence_appropriate_and_does_not_hamper_the_work, cite(eu_reg_2024_1689_art_50_4)).
+referral(provided_in_a_clear_and_distinguishable_manner, cite(eu_reg_2024_1689_art_50_5)).
+referral(conforms_to_the_applicable_accessibility_requirements, cite(eu_reg_2024_1689_art_50_5)).
+referral(outputs_marked_machine_readable_and_detectable_as_artificially_generated, cite(eu_reg_2024_1689_art_50_2)).
+
+judgement_key(Key) :-
+    referral(Key, _).
+
+% THE KEYS OF EACH QUERY, in the order the ladder reads them.
+query_keys(duty_status, interaction_information,
+           [intended_to_interact_directly_with_natural_persons,
+            interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            available_for_the_public_to_report_a_criminal_offence,
+            ai_system]).
+query_keys(duty_status, machine_readable_marking,
+           [generates_synthetic_audio_image_video_or_text_content,
+            performs_an_assistive_function_for_standard_editing,
+            does_not_substantially_alter_the_input_data_or_its_semantics,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            ai_system,
+            placed_on_the_market_before_2_august_2026]).
+query_keys(duty_status, emotion_recognition_or_biometric_categorisation_information,
+           [emotion_recognition_or_biometric_categorisation_system,
+            permitted_by_law_to_detect_prevent_or_investigate_criminal_offences,
+            used_in_a_personal_non_professional_activity,
+            ai_system]).
+query_keys(duty_status, deep_fake_disclosure,
+           [generates_or_manipulates_deep_fake_image_audio_or_video_content,
+            used_in_a_personal_non_professional_activity,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            ai_system,
+            part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work]).
+query_keys(duty_status, public_interest_text_disclosure,
+           [generates_or_manipulates_text_published_to_inform_the_public_on_matters_of_public_interest,
+            used_in_a_personal_non_professional_activity,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            content_underwent_human_review_or_editorial_control,
+            natural_or_legal_person_holds_editorial_responsibility,
+            ai_system]).
+query_keys(compliance, interaction_information,
+           [intended_to_interact_directly_with_natural_persons,
+            interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            available_for_the_public_to_report_a_criminal_offence,
+            ai_system,
+            required_information_given,
+            information_timing,
+            provided_in_a_clear_and_distinguishable_manner,
+            conforms_to_the_applicable_accessibility_requirements]).
+query_keys(compliance, machine_readable_marking,
+           [generates_synthetic_audio_image_video_or_text_content,
+            performs_an_assistive_function_for_standard_editing,
+            does_not_substantially_alter_the_input_data_or_its_semantics,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            ai_system,
+            placed_on_the_market_before_2_august_2026,
+            outputs_marked_machine_readable_and_detectable_as_artificially_generated]).
+query_keys(compliance, emotion_recognition_or_biometric_categorisation_information,
+           [emotion_recognition_or_biometric_categorisation_system,
+            permitted_by_law_to_detect_prevent_or_investigate_criminal_offences,
+            used_in_a_personal_non_professional_activity,
+            ai_system,
+            required_information_given,
+            information_timing,
+            provided_in_a_clear_and_distinguishable_manner,
+            conforms_to_the_applicable_accessibility_requirements]).
+query_keys(compliance, deep_fake_disclosure,
+           [generates_or_manipulates_deep_fake_image_audio_or_video_content,
+            used_in_a_personal_non_professional_activity,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            ai_system,
+            required_information_given,
+            information_timing,
+            provided_in_a_clear_and_distinguishable_manner,
+            conforms_to_the_applicable_accessibility_requirements,
+            part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work,
+            disclosure_of_existence_appropriate_and_does_not_hamper_the_work]).
+query_keys(compliance, public_interest_text_disclosure,
+           [generates_or_manipulates_text_published_to_inform_the_public_on_matters_of_public_interest,
+            used_in_a_personal_non_professional_activity,
+            authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences,
+            content_underwent_human_review_or_editorial_control,
+            natural_or_legal_person_holds_editorial_responsibility,
+            ai_system,
+            required_information_given,
+            information_timing,
+            provided_in_a_clear_and_distinguishable_manner,
+            conforms_to_the_applicable_accessibility_requirements]).
+
+% ---- the public queries -----------------------------------------------
+transparency_duty_status(Profile, Duty, AssessmentDate, Result, Citations) :-
+    decide_transparency_art50(transparency_question(duty_status, Profile, Duty, AssessmentDate),
+                              transparency_art50_verdict(Result, Citations)).
+
+transparency_compliance(Profile, Duty, AssessmentDate, Result, Citations) :-
+    decide_transparency_art50(transparency_question(compliance, Profile, Duty, AssessmentDate),
+                              transparency_art50_verdict(Result, Citations)).
+
+% Steps (0) and (10): input problems first, then THE UNSURE RULE over THE
+% LADDER.
+decide_transparency_art50(transparency_question(Query, Profile, Duty, AssessmentDate), Verdict) :-
+    question_problems(Profile, Duty, AssessmentDate, Problems),
+    question_verdict(Problems, Query, Profile, Duty, AssessmentDate, Verdict).
+
+question_verdict([Problem|Problems], _, _, _, _,
+                 transparency_art50_verdict(input_problems([Problem|Problems]), [])).
+question_verdict([], Query, Profile, Duty, AssessmentDate,
+                 transparency_art50_verdict(Result, Citations)) :-
+    ruled_answer(Query, Profile, Duty, AssessmentDate, Result, Citations).
+
+% The profile problems first, then wrong_type(duty), then
+% wrong_type(assessment_date).
+question_problems(Profile, Duty, AssessmentDate, Problems) :-
+    transparency_art50_input_problems(Profile, ProfileProblems),
+    duty_atom_t(Duty, DutyIsAtom),
+    duty_problems(DutyIsAtom, DutyProblems),
+    transparency_art50_calendar_day_t(AssessmentDate, DateIsDay),
+    date_problems(DateIsDay, DateProblems),
+    append([ProfileProblems, DutyProblems, DateProblems], Problems).
+
+duty_atom_t(Duty, Truth) :-
+    term_variables(Duty, Variables),
+    ground_duty_atom_t(Variables, Duty, Truth).
+
+ground_duty_atom_t([_|_], _, false).
+ground_duty_atom_t([], Duty, Truth) :-
+    findall(Known, duty_test(Known, _, _), Duties),
+    memberd_t(Duty, Duties, Truth).
+
+duty_problems(true, []).
+duty_problems(false, [wrong_type(duty)]).
+
+date_problems(true, []).
+date_problems(false, [wrong_type(assessment_date)]).
+
+% ---- THE DATES (Art 113, second sentence; Art 111(4)) -------------------
+% A checked calendar day as a day number that orders as the calendar does.
+day_number(date(Year, Month, Day), Number) :-
+    Number #= Year * 10000 + Month * 100 + Day.
+
+date_phase(AssessmentDate, before_application) :-
+    implements(eu_reg_2024_1689_art_113),
+    application_date(StartDate, cite(eu_reg_2024_1689_art_113)),
+    day_number(AssessmentDate, Number),
+    day_number(StartDate, StartNumber),
+    Number #< StartNumber.
+date_phase(AssessmentDate, transitional) :-
+    implements(eu_reg_2024_1689_art_111_4),
+    application_date(StartDate, cite(eu_reg_2024_1689_art_113)),
+    marking_compliance_date(EndDate, cite(eu_reg_2024_1689_art_111_4)),
+    day_number(AssessmentDate, Number),
+    day_number(StartDate, StartNumber),
+    day_number(EndDate, EndNumber),
+    Number #>= StartNumber,
+    Number #< EndNumber.
+date_phase(AssessmentDate, full) :-
+    implements(eu_reg_2024_1689_art_111_4),
+    marking_compliance_date(EndDate, cite(eu_reg_2024_1689_art_111_4)),
+    day_number(AssessmentDate, Number),
+    day_number(EndDate, EndNumber),
+    Number #>= EndNumber.
+
+applying_phase(transitional).
+applying_phase(full).
+
+% ---- key reading: absent or present with its value ----------------------
+key_reading(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_reading(Profile, Key, present(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+% ---- THE DUTY TESTS, one clause per duty -------------------------------
+duty_test_outcome(Profile, interaction_information, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_1),
+    duty_test(interaction_information, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+duty_test_outcome(Profile, machine_readable_marking, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_2),
+    duty_test(machine_readable_marking, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+duty_test_outcome(Profile, emotion_recognition_or_biometric_categorisation_information, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_3),
+    implements(eu_reg_2024_1689_art_3_4),
+    duty_test(emotion_recognition_or_biometric_categorisation_information, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+duty_test_outcome(Profile, deep_fake_disclosure, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_4),
+    implements(eu_reg_2024_1689_art_3_4),
+    duty_test(deep_fake_disclosure, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+duty_test_outcome(Profile, public_interest_text_disclosure, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_4),
+    implements(eu_reg_2024_1689_art_3_4),
+    duty_test(public_interest_text_disclosure, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+
+% ---- steps (1) to (3): the gate shared by both queries ------------------
+% Gate is answer(Result, Citations) or passed(Phase).
+gate(_, _, AssessmentDate, answer(not_applicable_on_date, [cite(eu_reg_2024_1689_art_113)])) :-
+    implements(eu_reg_2024_1689_art_113),
+    date_phase(AssessmentDate, before_application).
+gate(Profile, Duty, AssessmentDate, Gate) :-
+    date_phase(AssessmentDate, Phase),
+    applying_phase(Phase),
+    duty_test_outcome(Profile, Duty, Outcome),
+    tested_gate(Outcome, Profile, Duty, Phase, Gate).
+
+tested_gate(test_failed, _, Duty, _, answer(duty_does_not_apply, Citations)) :-
+    not_applying_citations(Duty, Citations).
+tested_gate(test_open(Key), _, _, _, answer(indeterminate([Key]), [])).
+tested_gate(test_met, Profile, _, Phase, Gate) :-
+    key_reading(Profile, ai_system, Reading),
+    ai_system_gate(Reading, Phase, Gate).
+
+% Step (3): Art 3(1), read only once the duty test is met (Q13).
+ai_system_gate(present(false), _, answer(not_an_ai_system, [cite(eu_reg_2024_1689_art_3_1)])) :-
+    implements(eu_reg_2024_1689_art_3_1).
+ai_system_gate(absent, _, answer(indeterminate([ai_system]), [])).
+ai_system_gate(present(true), Phase, passed(Phase)) :-
+    implements(eu_reg_2024_1689_art_3_1).
+
+% ---- transparency_duty_status/5: step (4), the kind of duty --------------
+status_answer(Profile, Duty, AssessmentDate, Result, Citations) :-
+    gate(Profile, Duty, AssessmentDate, Gate),
+    status_from_gate(Gate, Profile, Duty, Result, Citations).
+
+status_from_gate(answer(Result, Citations), _, _, Result, Citations).
+status_from_gate(passed(Phase), Profile, Duty, Result, Citations) :-
+    duty_kind(Duty, Phase, Profile, Result, Citations).
+
+duty_kind(interaction_information, _, _, duty_applies, [cite(eu_reg_2024_1689_art_50_1)]) :-
+    implements(eu_reg_2024_1689_art_50_1).
+duty_kind(emotion_recognition_or_biometric_categorisation_information, _, _, duty_applies, [cite(eu_reg_2024_1689_art_50_3)]) :-
+    implements(eu_reg_2024_1689_art_50_3).
+duty_kind(public_interest_text_disclosure, _, _, duty_applies, [cite(eu_reg_2024_1689_art_50_4)]) :-
+    implements(eu_reg_2024_1689_art_50_4).
+duty_kind(deep_fake_disclosure, _, Profile, Result, Citations) :-
+    key_reading(Profile, part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, Reading),
+    deep_fake_kind(Reading, Result, Citations).
+duty_kind(machine_readable_marking, transitional, Profile, Result, Citations) :-
+    key_reading(Profile, placed_on_the_market_before_2_august_2026, Reading),
+    marking_transition(Reading, Result, Citations).
+duty_kind(machine_readable_marking, full, _, duty_applies, [cite(eu_reg_2024_1689_art_50_2)]) :-
+    implements(eu_reg_2024_1689_art_50_2).
+
+% Art 50(4), third sentence: the artistic limit (Q3).
+deep_fake_kind(present(true), limited_disclosure_applies, [cite(eu_reg_2024_1689_art_50_4)]) :-
+    implements(eu_reg_2024_1689_art_50_4).
+deep_fake_kind(present(false), duty_applies, [cite(eu_reg_2024_1689_art_50_4)]) :-
+    implements(eu_reg_2024_1689_art_50_4).
+deep_fake_kind(absent, indeterminate([part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work]), []).
+
+% Art 111(4): systems placed on the market before 2 August 2026 (Q5, Q6).
+marking_transition(present(true), in_transitional_period, [cite(eu_reg_2024_1689_art_50_2), cite(eu_reg_2024_1689_art_111_4)]) :-
+    implements(eu_reg_2024_1689_art_111_4).
+marking_transition(present(false), duty_applies, [cite(eu_reg_2024_1689_art_50_2)]) :-
+    implements(eu_reg_2024_1689_art_111_4).
+marking_transition(absent, indeterminate([placed_on_the_market_before_2_august_2026]), []).
+
+% ---- transparency_compliance/5: steps (11) and (12) ----------------------
+compliance_answer(Profile, Duty, AssessmentDate, Result, Citations) :-
+    gate(Profile, Duty, AssessmentDate, Gate),
+    compliance_from_gate(Gate, Profile, Duty, Result, Citations).
+
+compliance_from_gate(answer(Result, Citations), _, _, Result, Citations).
+compliance_from_gate(passed(Phase), Profile, Duty, Result, Citations) :-
+    transition_check(Duty, Phase, Profile, Check),
+    compliance_after_transition(Check, Profile, Duty, Result, Citations).
+
+transition_check(machine_readable_marking, transitional, Profile, Check) :-
+    key_reading(Profile, placed_on_the_market_before_2_august_2026, Reading),
+    transition_from_reading(Reading, Check).
+transition_check(machine_readable_marking, full, _, go_on).
+transition_check(Duty, _, _, go_on) :-
+    information_duty(Duty).
+
+transition_from_reading(present(true), answer(in_transitional_period, [cite(eu_reg_2024_1689_art_50_2), cite(eu_reg_2024_1689_art_111_4)])) :-
+    implements(eu_reg_2024_1689_art_111_4).
+transition_from_reading(absent, answer(indeterminate([placed_on_the_market_before_2_august_2026]), [])).
+transition_from_reading(present(false), go_on) :-
+    implements(eu_reg_2024_1689_art_111_4).
+
+compliance_after_transition(answer(Result, Citations), _, _, Result, Citations).
+compliance_after_transition(go_on, Profile, Duty, Result, Citations) :-
+    compliance_test_outcome(Profile, Duty, Outcome),
+    compliance_verdict(Outcome, Duty, Result, Citations).
+
+compliance_test_outcome(Profile, Duty, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_5),
+    information_duty(Duty),
+    compliance_test(Duty, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+compliance_test_outcome(Profile, machine_readable_marking, Outcome) :-
+    implements(eu_reg_2024_1689_art_50_2),
+    compliance_test(machine_readable_marking, Items, _),
+    transparency_art50_test_outcome(Profile, Items, Outcome).
+
+compliance_verdict(test_failed, Duty, not_compliant, Citations) :-
+    compliance_citations(Duty, Citations).
+compliance_verdict(test_open(Key), _, indeterminate([Key]), []).
+compliance_verdict(test_met, Duty, compliant, Citations) :-
+    compliance_citations(Duty, Citations).
+
+% ---- THE LADDER, one clause per query ------------------------------------
+ladder(duty_status, Profile, Duty, AssessmentDate, Result, Citations) :-
+    status_answer(Profile, Duty, AssessmentDate, Result, Citations).
+ladder(compliance, Profile, Duty, AssessmentDate, Result, Citations) :-
+    compliance_answer(Profile, Duty, AssessmentDate, Result, Citations).
+
+% ---- THE UNSURE RULE (INTERFACE - THE STATUSES; Q15) ---------------------
+ruled_answer(Query, Profile, Duty, AssessmentDate, Result, Citations) :-
+    query_keys(Query, Duty, QueryKeys),
+    findall(Key,
+            (member(Key, QueryKeys), judgement_key(Key), profile_get(Profile, Key, unsure)),
+            UnsureKeys),
+    unsure_answer(UnsureKeys, Query, Profile, Duty, AssessmentDate, QueryKeys, Result, Citations).
+
+unsure_answer([], Query, Profile, Duty, AssessmentDate, _, Result, Citations) :-
+    ladder(Query, Profile, Duty, AssessmentDate, Result, Citations).
+unsure_answer([Unsure|Unsures], Query, Profile, Duty, AssessmentDate, QueryKeys, Result, Citations) :-
+    findall(Assignment-outcome(RunResult, SortedCitations),
+            (assignments([Unsure|Unsures], Assignment),
+             assigned_profile(Profile, Assignment, RunProfile),
+             ladder(Query, RunProfile, Duty, AssessmentDate, RunResult, RunCitations),
+             sort(RunCitations, SortedCitations)),
+            Runs),
+    findall(Outcome, member(_-Outcome, Runs), Outcomes),
+    sort(Outcomes, Distinct),
+    findall(Named, member(_-outcome(indeterminate([Named]), _), Runs), NamedKeys),
+    unsure_verdict(Distinct, NamedKeys, Runs, [Unsure|Unsures], QueryKeys, Profile, Result, Citations).
+
+% (U1) every run agrees; (U2) a missing fact matters; (U3) a referral.
+unsure_verdict([outcome(Result, Citations)], _, _, _, _, _, Result, Citations).
+unsure_verdict([_, _|_], [Named|NamedKeys], _, _, QueryKeys, _, indeterminate([First]), []) :-
+    first_named(QueryKeys, [Named|NamedKeys], First).
+unsure_verdict([_, _|_], [], Runs, UnsureKeys, QueryKeys, Profile,
+               needs_legal_review(open_textured(Judgement, Citation), [inputs_relied_on(Pairs)]), []) :-
+    turning_keys(Runs, TurningKeys),
+    first_named(UnsureKeys, TurningKeys, Judgement),
+    referral(Judgement, Citation),
+    findall(Key-Value,
+            (member(Key, QueryKeys), judgement_key(Key), profile_get(Profile, Key, Value)),
+            Pairs).
+
+assignments([], []).
+assignments([Key|Keys], [Key-Value|Settings]) :-
+    member(Value, [true, false]),
+    assignments(Keys, Settings).
+
+assigned_profile(Profile, Assignment, RunProfile) :-
+    maplist(assign_attribute(Assignment), Profile, RunProfile).
+
+assign_attribute(Assignment, attribute(Key, Given), attribute(Key, Value)) :-
+    assigned_value(Assignment, Key, Given, Value).
+
+assigned_value([], _, Given, Given).
+assigned_value([Key-Value|_], Key, _, Value).
+assigned_value([Other-_|Settings], Key, Given, Value) :-
+    dif(Other, Key),
+    assigned_value(Settings, Key, Given, Value).
+
+% A judgement turns the answer when two runs differing only in it differ.
+turning_keys(Runs, TurningKeys) :-
+    findall(Key,
+            (member(Assignment-Outcome, Runs),
+             member(Key-true, Assignment),
+             maplist(swap_setting(Key), Assignment, Swapped),
+             member(Swapped-SwappedOutcome, Runs),
+             dif(SwappedOutcome, Outcome)),
+            TurningKeys).
+
+swap_setting(Key, Key-Value, Key-Flipped) :-
+    flip(Value, Flipped).
+swap_setting(Key, Other-Value, Other-Value) :-
+    dif(Other, Key).
+
+flip(true, false).
+flip(false, true).
+
+% first_named(Ordered, Named, First): the first of Ordered that is in Named.
+first_named([Key|Keys], Named, First) :-
+    memberd_t(Key, Named, IsNamed),
+    first_named_by(IsNamed, Key, Keys, Named, First).
+
+first_named_by(true, Key, _, _, Key).
+first_named_by(false, _, Keys, Named, First) :-
+    first_named(Keys, Named, First).
+
+% ---- projection: Status only ------------------------------------------
+transparency_art50_status(Question, Status) :-
+    decide_transparency_art50(Question, transparency_art50_verdict(Status, _Citations)).
+
+% ---- checklist: one row per ground/requirement ------------------------
+% Rows: the date of application, each item of the duty test, the AI
+% system, and (for the compliance query) each item of the compliance test,
+% each with its cite(...) provenance.
+transparency_art50_checklist(transparency_question(Query, Profile, Duty, AssessmentDate), Items) :-
+    question_problems(Profile, Duty, AssessmentDate, Problems),
+    checklist_rows(Problems, Query, Profile, Duty, AssessmentDate, Items).
+
+checklist_rows([Problem|Problems], _, _, _, _, [item(input_check, unmet(input_problems([Problem|Problems])), [])]).
+checklist_rows([], Query, Profile, Duty, AssessmentDate, Items) :-
+    date_item(AssessmentDate, DateItem),
+    duty_test(Duty, DutyTests, DutyCitation),
+    maplist(test_item(Profile, DutyCitation), DutyTests, DutyItems),
+    test_item(Profile, cite(eu_reg_2024_1689_art_3_1), condition(ai_system, true), SystemItem),
+    query_compliance_items(Query, Profile, Duty, ComplianceItems),
+    append([[DateItem], DutyItems, [SystemItem], ComplianceItems], Items).
+
+date_item(AssessmentDate, item(date_of_application, Status, cite(eu_reg_2024_1689_art_113))) :-
+    date_phase(AssessmentDate, Phase),
+    phase_status(Phase, Status).
+
+phase_status(before_application, unmet(not_applicable_on_date)).
+phase_status(transitional, met).
+phase_status(full, met).
+
+query_compliance_items(duty_status, _, _, []).
+query_compliance_items(compliance, Profile, Duty, Items) :-
+    compliance_test(Duty, Tests, Citation),
+    maplist(test_item(Profile, Citation), Tests, Items).
+
+test_item(Profile, Citation, Test, item(Identifier, Status, Citation)) :-
+    test_identifier(Test, Identifier),
+    transparency_art50_item_state(Profile, Test, State),
+    item_status(State, Status).
+
+test_identifier(condition(Key, _), Key).
+test_identifier(not_both(KeyOne, _, KeyTwo, _), not_both(KeyOne, KeyTwo)).
+
+item_status(holds, met).
+item_status(fails, unmet(fails)).
+item_status(undetermined(Key), unknown([Key])).
+
+transparency_art50_decision_resolvable(Question) :-
+    decide_transparency_art50(Question, _Verdict).
+
+% ---- tests ----------------------------------------------------------
+test(before_application_is_not_applicable_on_date) :-
+    transparency_duty_status([], interaction_information, date(2026, 8, 1),
+                             not_applicable_on_date, [cite(eu_reg_2024_1689_art_113)]).
+test(before_application_is_not_duty_applies, fail) :-
+    transparency_duty_status([], interaction_information, date(2026, 8, 1), duty_applies, _).
+test(on_the_day_of_application_the_first_key_is_asked) :-
+    transparency_duty_status([], interaction_information, date(2026, 8, 2),
+                             indeterminate([intended_to_interact_directly_with_natural_persons]), []).
+test(interaction_information_applies) :-
+    findall(Result-Citations,
+            transparency_duty_status([attribute(intended_to_interact_directly_with_natural_persons, true),
+                                      attribute(interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person, false),
+                                      attribute(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false),
+                                      attribute(ai_system, true)],
+                                     interaction_information, date(2027, 1, 1), Result, Citations),
+            Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_50_1)]].
+test(law_enforcement_exception_takes_interaction_out) :-
+    transparency_duty_status([attribute(intended_to_interact_directly_with_natural_persons, true),
+                              attribute(interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person, false),
+                              attribute(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, true),
+                              attribute(available_for_the_public_to_report_a_criminal_offence, false)],
+                             interaction_information, date(2027, 1, 1),
+                             duty_does_not_apply, [cite(eu_reg_2024_1689_art_50_1)]).
+test(not_an_ai_system_after_the_duty_test) :-
+    transparency_duty_status([attribute(emotion_recognition_or_biometric_categorisation_system, true),
+                              attribute(permitted_by_law_to_detect_prevent_or_investigate_criminal_offences, false),
+                              attribute(used_in_a_personal_non_professional_activity, false),
+                              attribute(ai_system, false)],
+                             emotion_recognition_or_biometric_categorisation_information, date(2027, 1, 1),
+                             not_an_ai_system, [cite(eu_reg_2024_1689_art_3_1)]).
+test(marking_in_transitional_period) :-
+    transparency_duty_status([attribute(generates_synthetic_audio_image_video_or_text_content, true),
+                              attribute(performs_an_assistive_function_for_standard_editing, false),
+                              attribute(does_not_substantially_alter_the_input_data_or_its_semantics, false),
+                              attribute(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false),
+                              attribute(ai_system, true),
+                              attribute(placed_on_the_market_before_2_august_2026, true)],
+                             machine_readable_marking, date(2026, 12, 1),
+                             in_transitional_period,
+                             [cite(eu_reg_2024_1689_art_50_2), cite(eu_reg_2024_1689_art_111_4)]).
+test(marking_compliant_from_2_december_2026) :-
+    transparency_compliance([attribute(generates_synthetic_audio_image_video_or_text_content, true),
+                             attribute(performs_an_assistive_function_for_standard_editing, false),
+                             attribute(does_not_substantially_alter_the_input_data_or_its_semantics, false),
+                             attribute(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false),
+                             attribute(ai_system, true),
+                             attribute(placed_on_the_market_before_2_august_2026, true),
+                             attribute(outputs_marked_machine_readable_and_detectable_as_artificially_generated, true)],
+                            machine_readable_marking, date(2026, 12, 2),
+                            compliant, [cite(eu_reg_2024_1689_art_50_2)]).
+test(a_bad_duty_is_an_input_problem) :-
+    transparency_duty_status([], unknown_duty, date(2027, 1, 1), input_problems([wrong_type(duty)]), []).
+test(an_impossible_date_is_an_input_problem) :-
+    transparency_compliance([], deep_fake_disclosure, date(2026, 2, 30),
+                            input_problems([wrong_type(assessment_date)]), []).
+test(an_unsure_artistic_judgement_goes_to_a_lawyer) :-
+    transparency_duty_status([attribute(generates_or_manipulates_deep_fake_image_audio_or_video_content, true),
+                              attribute(used_in_a_personal_non_professional_activity, false),
+                              attribute(authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences, false),
+                              attribute(ai_system, true),
+                              attribute(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, unsure)],
+                             deep_fake_disclosure, date(2027, 1, 1),
+                             needs_legal_review(open_textured(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work,
+                                                              cite(eu_reg_2024_1689_art_50_4)),
+                                                [inputs_relied_on([generates_or_manipulates_deep_fake_image_audio_or_video_content-true,
+                                                                   ai_system-true,
+                                                                   part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work-unsure])]),
+                             []).
+test(a_missing_fact_that_matters_is_named_before_a_referral) :-
+    transparency_duty_status([attribute(intended_to_interact_directly_with_natural_persons, true),
+                              attribute(interaction_obvious_to_a_reasonably_well_informed_observant_and_circumspect_person, unsure)],
+                             interaction_information, date(2027, 1, 1),
+                             indeterminate([authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences]), []).
+test(an_unsure_judgement_that_does_not_matter_gives_one_answer) :-
+    findall(Result-Citations,
+            transparency_compliance([attribute(ai_system, unsure)], deep_fake_disclosure, date(2027, 1, 1), Result, Citations),
+            Answers),
+    Answers == [indeterminate([generates_or_manipulates_deep_fake_image_audio_or_video_content])-[]].
+test(the_checklist_carries_a_citation_per_row) :-
+    transparency_art50_checklist(transparency_question(duty_status, [], interaction_information, date(2027, 1, 1)), Items),
+    length(Items, 5).
+
+:- end_module(transparency_art50).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_framework_agreements_framework_agreements, [decide_framework_term/2, framework_term_limit_date/2, framework_term_within_limit/3, decide_call_off/2, call_off_route/2, call_off_award_window_status/4, framework_agreements_input_problem/2, decide_framework_agreements/2, framework_agreements_status/2, framework_agreements_checklist/2, framework_agreements_decision_resolvable/1, framework_agreements_status_values/1, framework_term_limit_years/1, call_off_method/1, call_off_route_id/1, call_off_defect_id/1, framework_term_defect_id/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

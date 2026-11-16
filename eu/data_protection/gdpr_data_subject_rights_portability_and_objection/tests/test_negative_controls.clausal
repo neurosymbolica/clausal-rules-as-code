@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% NEGATIVE CONTROLS: one positive / near-miss pair per route.
+% Every near-miss `fail` test is paired with a positive test that names the verdict it DOES get.
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/queries, [
+    decide_data_subject_request/2,
+    request_basis/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/fixtures, [gdpr_data_subject_rights_portability_and_objection_profile_for/2]).
+
+comply_of(Subject, Comply) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(Comply, _, _, _, _)).
+
+exception_of(Subject, Exception) :-
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(_, _, Exception, _, _)).
+
+% ---- portability engagement (Art 20(1)) ----
+test(portability_engaged_must_comply) :-
+    comply_of(portability_positive, must_comply).
+test(portability_not_automated_need_not_comply) :-
+    comply_of(portability_not_automated, need_not_comply).
+test(portability_not_automated_is_not_must_comply, fail) :-
+    comply_of(portability_not_automated, must_comply).
+
+% ---- Art 20(3) public task ----
+test(public_task_relieves) :-
+    exception_of(portability_public_task, art20_3_public_task).
+test(public_task_false_must_comply) :-
+    comply_of(portability_public_task_false, must_comply).
+test(public_task_false_is_not_the_exception, fail) :-
+    exception_of(portability_public_task_false, art20_3_public_task).
+
+% ---- Art 20(4) rights of others ----
+test(rights_of_others_relieves) :-
+    exception_of(portability_rights_of_others, art20_4_rights_of_others).
+test(rights_of_others_false_must_comply) :-
+    comply_of(portability_rights_of_others_false, must_comply).
+test(rights_of_others_false_is_not_the_exception, fail) :-
+    exception_of(portability_rights_of_others_false, art20_4_rights_of_others).
+
+% ---- Art 12(6) identity suspension ----
+test(unconfirmed_identity_suspends) :-
+    comply_of(portability_suspended, suspended(art12_6_identity_not_confirmed)).
+test(confirmed_identity_must_comply) :-
+    comply_of(portability_identity_confirmed, must_comply).
+test(confirmed_identity_is_not_suspended, fail) :-
+    comply_of(portability_identity_confirmed, suspended(_)).
+
+% ---- required key absent ----
+test(absent_key_is_indeterminate) :-
+    comply_of(portability_missing_key, indeterminate([personal_data_provided_by_data_subject])).
+test(complete_profile_is_not_indeterminate, fail) :-
+    comply_of(portability_positive, indeterminate(_)).
+
+% ---- unsure judgement refers ----
+test(unsure_judgement_refers) :-
+    comply_of(portability_public_task_unsure, needs_legal_review(open_textured(processing_necessary_for_public_task_or_official_authority, cite(eu_reg_2016_679_art_20_3)), _)).
+test(false_judgement_does_not_refer, fail) :-
+    comply_of(portability_public_task_false, needs_legal_review(_, _)).
+
+% ---- Art 12(2) unable to identify ----
+test(unable_to_identify_relieves) :-
+    exception_of(portability_unable_to_identify, art12_2_unable_to_identify).
+test(without_the_demonstration_no_relief, fail) :-
+    exception_of(portability_positive, art12_2_unable_to_identify).
+
+% ---- Art 23 legislative restriction ----
+test(attested_restriction_relieves) :-
+    exception_of(portability_restriction_attested, art23_legislative_restriction).
+test(denied_restriction_must_comply) :-
+    comply_of(portability_restriction_denied, must_comply).
+test(denied_restriction_is_not_the_exception, fail) :-
+    exception_of(portability_restriction_denied, art23_legislative_restriction).
+
+% ---- Art 21(1) ----
+test(art21_1_engaged_must_comply) :-
+    comply_of(objection_art21_1_positive, must_comply).
+test(art21_1_not_art6_e_f_need_not_comply) :-
+    comply_of(objection_art21_1_not_art6_e_f, need_not_comply).
+test(art21_1_not_art6_e_f_is_not_must_comply, fail) :-
+    comply_of(objection_art21_1_not_art6_e_f, must_comply).
+test(art21_1_compelling_grounds_relieve) :-
+    exception_of(objection_art21_1_compelling, art21_1_compelling_legitimate_grounds).
+test(art21_1_legal_claims_relieve) :-
+    exception_of(objection_art21_1_legal_claims, art21_1_legal_claims).
+test(art21_1_no_grounds_must_comply) :-
+    comply_of(objection_art21_1_compelling_false, must_comply).
+test(art21_1_no_grounds_is_not_relieved, fail) :-
+    exception_of(objection_art21_1_compelling_false, art21_1_compelling_legitimate_grounds).
+
+% ---- Art 21(2) and 21(3) ----
+test(art21_2_marketing_must_comply) :-
+    comply_of(objection_art21_2_positive, must_comply).
+test(art21_2_not_marketing_need_not_comply) :-
+    comply_of(objection_art21_2_not_marketing, need_not_comply).
+test(art21_2_not_marketing_is_not_must_comply, fail) :-
+    comply_of(objection_art21_2_not_marketing, must_comply).
+
+% ---- Art 12(5) manifestly unfounded or excessive ----
+test(art21_2_excessive_relieves) :-
+    exception_of(objection_art21_2_excessive, art12_5_manifestly_unfounded_or_excessive).
+test(art21_2_not_excessive_must_comply) :-
+    comply_of(objection_art21_2_not_excessive, must_comply).
+test(art21_2_not_excessive_is_not_relieved, fail) :-
+    exception_of(objection_art21_2_not_excessive, art12_5_manifestly_unfounded_or_excessive).
+
+% ---- Art 21(6) ----
+test(art21_6_engaged_must_comply) :-
+    comply_of(objection_art21_6_positive, must_comply).
+test(art21_6_not_research_need_not_comply) :-
+    comply_of(objection_art21_6_not_research, need_not_comply).
+test(art21_6_not_research_is_not_must_comply, fail) :-
+    comply_of(objection_art21_6_not_research, must_comply).
+test(art21_6_public_task_relieves) :-
+    exception_of(objection_art21_6_public_task, art21_6_public_interest_task).
+test(art21_6_engaged_is_not_relieved, fail) :-
+    exception_of(objection_art21_6_positive, art21_6_public_interest_task).
+
+% ---- objection ground claimed ----
+test(missing_ground_is_indeterminate) :-
+    comply_of(objection_missing_ground, indeterminate([objection_ground_claimed])).
+test(a_given_ground_is_not_indeterminate, fail) :-
+    comply_of(objection_art21_2_positive, indeterminate(_)).
+
+% ---- input problems and request type ----
+test(input_problem_is_reported) :-
+    comply_of(unknown_key_problem, input_problems([unknown_key(no_such_key)])).
+test(input_problem_is_not_must_comply, fail) :-
+    comply_of(unknown_key_problem, must_comply).
+test(absent_request_type_is_indeterminate) :-
+    comply_of(absent_request_type, indeterminate([request_type])).
+test(absent_request_type_is_not_need_not_comply, fail) :-
+    comply_of(absent_request_type, need_not_comply).
+
+:- end_module(test_negative_controls).

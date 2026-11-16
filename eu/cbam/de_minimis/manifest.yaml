@@ -1,0 +1,199 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/cbam/de_minimis
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "de_minimis"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # (de_minimis_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- de_minimis.clausal --
+  - "de_minimis_exemption/3"
+  - "de_minimis_goods_status/3"
+  - "decide_de_minimis/2"
+  - "de_minimis_status/2"
+  - "de_minimis_checklist/2"
+  - "de_minimis_decision_resolvable/1"
+  - "de_minimis_status_values/1"
+  # -- queries.clausal --
+  - "de_minimis_profile_keys/1"
+  - "de_minimis_input_problems/2"
+  - "de_minimis_what_if/4"
+  - "de_minimis_exemption_applies/0"
+  - "de_minimis_exemption_does_not_apply/0"
+  - "outside_de_minimis_exemption/0"
+  - "counted_toward_threshold/0"
+  - "not_goods_of_this_regulation/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "de_minimis_subject/1"
+  - "de_minimis_profile_for/2"
+  - "de_minimis_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Shared backbone packages this domain imports: none (only the kit's
+# formalize_lib, which is not a backbone package).
+uses: []
+
+scope: "Regulation (EU) 2023/956 (CBAM), consolidated as amended to 2025-10-20,
+  Art 2a(1), (2) and (4), read with Art 2(1), Art 3 point (15), Annex I point 1
+  and its Electricity division, and Annex VII point 1. Decided here: (a) for ONE
+  importer and ONE calendar year, whether the single mass-based de minimis
+  exemption applies, on the caller's figures of net mass in whole kilograms of
+  the importer's Annex I goods other than electricity and hydrogen, compared
+  (not more than) with 1000 times the threshold in tonnes the caller states for
+  the year; (b) for ONE import, whether its goods are outside the exemption
+  (electricity, hydrogen), counted toward the threshold, or not goods of this
+  Regulation. Which date puts an import into a year is not chosen: an unsure
+  date basis that decides goes to a lawyer (needs_legal_review). Out of scope:
+  the Commission's review of the threshold (Art 2a(3), Annex VII point 2), the
+  exclusions of Art 2(2) to (12), CN-code classification under Annex I, who is
+  the importer, authorised CBAM declarant status (Arts 4, 5, 17) and the annual
+  CBAM declaration (Art 6)."
+
+sources:
+  - "Regulation (EU) 2023/956 of the European Parliament and of the Council of 10 May 2023 establishing a carbon border adjustment mechanism (OJ L 130, 16.5.2023, p. 52), consolidated text 02023R0956-20251020 (Formex CL2023R0956EN0010010.0001.xml, sha256 f5e08d041849ae9025dc60958d93595225d6d8de1dcdc2275656f98b2f132617): Art 2(1); Art 2a(1), (2), (3) (deferred) and (4); Art 3, point (15); Annex I, point 1, Electricity division and Chemicals division (deferred); Annex VII, point 1"
+
+query_interface:
+  2: "de_minimis_exemption/3"   # eligibility: the exemption verdict with its cited list
+  7: "de_minimis_checklist/2"   # justification: one cite(...) row per relevant figure
+  16: "de_minimis_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings_and_containers
+  units:
+  - 02023R0956-20251020#art_002
+  - 02023R0956-20251020#art_002A
+  - 02023R0956-20251020#art_003
+  - 02023R0956-20251020#division_annex_i
+  - 02023R0956-20251020#division_annex_vii
+  reason: 'The headings of Articles 2, 2a and 3, the lead text of Article 3 (''the
+    following definitions apply'') and the titles of Annexes I and VII carry no obligation:
+    document structure. Deferred so every unit of the pinned extract is accounted
+    for.'
+  consequence: 'None for a caller: the headings carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: threshold_review_and_amendment
+  units:
+  - 02023R0956-20251020#parag_002A.003
+  - 02023R0956-20251020#point_annex_vii_2
+  reason: Art 2a(3) requires the Commission to assess the threshold each year and
+    to amend it by delegated act by the methodology of Annex VII, point 2, the amended
+    threshold applying from 1 January of the following year. That is the Commission's
+    procedure, not a rule for an importer; the order needs only the threshold in force
+    for the year, which the caller states (single_mass_based_threshold_tonnes, reading
+    (4)).
+  consequence: The answers use the threshold the caller states; the order never computes
+    or checks a threshold.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: scope_exclusions_and_third_country_lists
+  units:
+  - 02023R0956-20251020#parag_002.002
+  - 02023R0956-20251020#parag_002.003
+  - 02023R0956-20251020#parag_002.003A
+  - 02023R0956-20251020#parag_002.004
+  - 02023R0956-20251020#parag_002.005
+  - 02023R0956-20251020#parag_002.006
+  - 02023R0956-20251020#parag_002.007
+  - 02023R0956-20251020#parag_002.008
+  - 02023R0956-20251020#parag_002.009
+  - 02023R0956-20251020#parag_002.010
+  - 02023R0956-20251020#parag_002.011
+  - 02023R0956-20251020#parag_002.012
+  - 02023R0956-20251020#point_002.003A_a
+  - 02023R0956-20251020#point_002.003A_b
+  - 02023R0956-20251020#point_002.006_a
+  - 02023R0956-20251020#point_002.006_b
+  - 02023R0956-20251020#point_002.007_a
+  - 02023R0956-20251020#point_002.007_b
+  - 02023R0956-20251020#point_002.007_c
+  - 02023R0956-20251020#point_002.007_d
+  - 02023R0956-20251020#point_002.007_e
+  - 02023R0956-20251020#point_002.007_f
+  - 02023R0956-20251020#point_002.009_a
+  - 02023R0956-20251020#point_002.009_b
+  - 02023R0956-20251020#point_002.009_c
+  reason: 'Art 2(2) to (12): goods brought to installations on the continental shelf
+    or in the exclusive economic zone, the military exclusion, the continental-shelf
+    exclusion for electricity and hydrogen (Art 2(3a)), the exclusion of the countries
+    of point 1 of Annex III, non-preferential origin, and the lists of Annex III and
+    the Commission''s powers to change them. They decide whether the Regulation applies
+    to goods at all; this order leaves them to the caller (reading (9), Q3). A later
+    package (P5) is to formalise them.'
+  consequence: A caller whose goods are excluded under Art 2 does not count them and
+    does not give them as other_annex_i_goods; the order does not check this.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable (closed lists by country and place); a later package, not this
+    order's rules; the deferral stands for this run.
+- what: annex_i_classification_and_greenhouse_gases
+  units:
+  - 02023R0956-20251020#point_annex_i_2
+  - 02023R0956-20251020#division_annex_i-cement
+  - 02023R0956-20251020#division_annex_i-fertilisers
+  - 02023R0956-20251020#point_annex_i-fertilisers_72
+  - 02023R0956-20251020#division_annex_i-aluminium
+  - 02023R0956-20251020#division_annex_i-chemicals
+  reason: 'Which goods are listed in Annex I is a lookup of the CN code in the table
+    of Annex I, point 1; point 2 names the greenhouse gases for each good. The order
+    does not classify goods: the caller states goods_kind and adds up the figures
+    (reading (9)). The Chemicals division is quoted because reading (3) relies on
+    its one entry being hydrogen. The unit the corpus reader names point_annex_i-fertilisers_72
+    holds the first row of the Iron and steel division (CN 72, with its exceptions);
+    the reader places it under the Fertilisers division. Greenhouse gases are outside
+    this order.'
+  consequence: The answers never say whether a CN code is listed in Annex I; the caller's
+    goods_kind and figures carry that.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a table lookup by CN code (package P4); the deferral stands
+    for this run.
+
+excluded_set:
+- what: authorised_declarant_status_and_obligations
+  instrument: Regulation (EU) 2023/956 Arts 4, 5 and 17
+  cites:
+  - 02023R0956-20251020#art_004
+  - 02023R0956-20251020#art_005
+  reason: Who must hold the status of authorised CBAM declarant, and when, is decided
+    by Articles 4 and 5 (a later package, P3); the de minimis exemption only says
+    whether the importer is exempted from the obligations of the Regulation for the
+    year.
+  consequence: de_minimis_exemption_does_not_apply and outside_de_minimis_exemption
+    never say that the importer is, or must become, an authorised CBAM declarant.
+- what: the_annual_cbam_declaration
+  instrument: Regulation (EU) 2023/956 Art 6
+  cites:
+  - 02023R0956-20251020#art_006
+  reason: The annual CBAM declaration, its contents, units and deadline are Article
+    6, outside this package.
+  consequence: The answers never give a declaration deadline.

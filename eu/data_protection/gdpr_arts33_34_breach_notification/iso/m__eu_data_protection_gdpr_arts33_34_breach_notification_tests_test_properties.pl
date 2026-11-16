@@ -1,0 +1,126 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_arts33_34_breach_notification_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [decide_breach_notification_verdict/2, breach_notification_verdict/4, notification_obligation/2, authority_notification_deadline/3, authority_notification_content_check/2, data_subject_communication_check/2]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_fixtures, [gdpr_arts33_34_breach_notification_subject/1, gdpr_arts33_34_breach_notification_profile_for/2]).
+
+subject_classifies(Subject) :-
+    gdpr_arts33_34_breach_notification_subject(Subject),
+    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
+    decide_breach_notification_verdict(Request, _Verdict).
+
+subject_answer_count(Subject, Count) :-
+    gdpr_arts33_34_breach_notification_subject(Subject),
+    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
+    findall(Decision, decide_breach_notification_verdict(Request, Decision), Decisions),
+    length(Decisions, Count).
+
+consistent_decision(breach_notification_verdict(eligible, [cite(eu_reg_2016_679_art_33_1)])).
+consistent_decision(breach_notification_verdict(ineligible, [cite(eu_reg_2016_679_art_33_1)])).
+consistent_decision(breach_notification_verdict(notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)])).
+consistent_decision(breach_notification_verdict(notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)])).
+consistent_decision(breach_notification_verdict(indeterminate([_|_]), [])).
+consistent_decision(breach_notification_verdict(needs_legal_review(open_textured(_, cite(_)), [inputs_relied_on(_)]), [])).
+consistent_decision(breach_notification_verdict(input_problems([_|_]), [])).
+
+subject_consistent(Subject) :-
+    gdpr_arts33_34_breach_notification_subject(Subject),
+    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
+    decide_breach_notification_verdict(Request, Decision),
+    consistent_decision(Decision).
+
+obligation_sample(processor, [attribute(party_role, processor)]).
+obligation_sample(role_missing, []).
+obligation_sample(unlikely_risk, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision)]).
+obligation_sample(no_high_risk, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, false), attribute(supervisory_authority_decision_on_communication, no_decision)]).
+obligation_sample(high_risk_communicate, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false), attribute(communication_would_involve_disproportionate_effort, false)]).
+obligation_sample(high_risk_point_a, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, true), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, true), attribute(communication_would_involve_disproportionate_effort, true)]).
+obligation_sample(authority_required, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, required_communication)]).
+obligation_sample(unsure_risk, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, unsure), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(breach_likely_to_result_in_high_risk, false)]).
+obligation_sample(exemption_missing, [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, unsure), attribute(supervisory_authority_decision_on_communication, no_decision)]).
+
+obligation_answer_count(Name, Count) :-
+    obligation_sample(Name, Profile),
+    findall(Obligation, notification_obligation(Profile, Obligation), Obligations),
+    length(Obligations, Count).
+
+notification_term(no_notification_required(cite(eu_reg_2016_679_art_33_1))).
+notification_term(notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1))).
+
+article_ordered(Name) :-
+    obligation_sample(Name, Profile),
+    notification_obligation(Profile, [First, Second|_]),
+    notification_term(First),
+    Second == document_breach(cite(eu_reg_2016_679_art_33_5)).
+
+content_sample([]).
+content_sample([attribute(notification_describes_nature_of_breach, false), attribute(communication_made_without_undue_delay, unsure)]).
+content_sample([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, false), attribute(categories_and_approximate_numbers_possible, unsure), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true)]).
+content_sample(not_a_list).
+
+content_answer_counts(Profile, NotificationCount - CommunicationCount) :-
+    content_sample(Profile),
+    findall(Result, authority_notification_content_check(Profile, Result), NotificationResults),
+    length(NotificationResults, NotificationCount),
+    findall(Result, data_subject_communication_check(Profile, Result), CommunicationResults),
+    length(CommunicationResults, CommunicationCount).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_has_exactly_one_answer) :-
+    findall(Count, subject_answer_count(_, Count), Counts),
+    sort(Counts, [1]).
+test(citation_completeness_every_answer_cites_as_the_order_says) :-
+    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_consistent(Subject), ConsistentSubjects),
+    sort(ConsistentSubjects, SubjectSet).
+test(an_unlikely_risk_is_ineligible_whatever_the_hours) :-
+    findall(Verdict, (between(0, 200, HoursElapsed), breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], HoursElapsed, Verdict, _)), Verdicts),
+    length(Verdicts, 201),
+    sort(Verdicts, [ineligible]).
+test(every_late_notification_has_exactly_one_verdict) :-
+    findall(Verdict, (between(73, 150, HoursElapsed), member(Justification, [true, false, unsure]), breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, Justification)], HoursElapsed, Verdict, _)), Verdicts),
+    length(Verdicts, 234).
+test(the_flip_point_is_the_end_of_the_72nd_hour) :-
+    findall(HoursElapsed, (between(0, 100, HoursElapsed), breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], HoursElapsed, eligible, _)), EligibleHours),
+    length(EligibleHours, 73),
+    last(EligibleHours, 72).
+test(the_deadline_is_three_calendar_days_later) :-
+    findall(Day, (between(1, 28, Day), Later is Day + 3, authority_notification_deadline(date(2026, 1, Day), date(2026, 1, Later), 72)), Days),
+    length(Days, 28).
+test(the_hours_are_seventy_two_for_every_awareness_date) :-
+    findall(Hours, (member(Aware, [date(2026, 1, 1), date(2032, 2, 29), date(2025, 2, 29), nonsense]), authority_notification_deadline(Aware, _, Hours)), HoursList),
+    HoursList == [72, 72, 72, 72].
+test(determinism_every_obligation_has_exactly_one_answer) :-
+    findall(Count, obligation_answer_count(_, Count), Counts),
+    length(Counts, 9),
+    sort(Counts, [1]).
+test(every_final_controller_list_is_in_article_order) :-
+    findall(Name, article_ordered(Name), Names),
+    sort(Names, Sorted),
+    Sorted == [authority_required, high_risk_communicate, high_risk_point_a, no_high_risk, unlikely_risk].
+test(determinism_every_content_check_has_exactly_one_answer) :-
+    findall(Counts, content_answer_counts(_, Counts), AllCounts),
+    AllCounts == [1 - 1, 1 - 1, 1 - 1, 1 - 1].
+
+test(lateness_alone_is_never_ineligible, fail) :-
+    between(73, 150, HoursElapsed),
+    member(Justification, [true, false, unsure]),
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, Justification)], HoursElapsed, ineligible, _).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_exactly_one_answer, citation_completeness_every_answer_cites_as_the_order_says, an_unlikely_risk_is_ineligible_whatever_the_hours, every_late_notification_has_exactly_one_verdict, the_flip_point_is_the_end_of_the_72nd_hour, the_deadline_is_three_calendar_days_later, the_hours_are_seventy_two_for_every_awareness_date, determinism_every_obligation_has_exactly_one_answer, every_final_controller_list_is_in_article_order, determinism_every_content_check_has_exactly_one_answer]).
+cp_test_fail_names([lateness_alone_is_never_ineligible]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

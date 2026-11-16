@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_state_aid_single_undertaking_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_state_aid_single_undertaking_single_undertaking, [direct_relationship/3, same_single_undertaking/3, single_undertaking_members/4, decide_single_undertaking/2]).
+:- use_module(m__eu_state_aid_single_undertaking_kernel, [single_undertaking_input_problems/2]).
+:- use_module(m__eu_state_aid_single_undertaking_fixtures, [single_undertaking_subject/1, single_undertaking_profile_for/2]).
+
+all_subjects(SubjectSet) :-
+    findall(Subject, single_undertaking_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet).
+
+subject_classifies(Subject) :-
+    single_undertaking_subject(Subject),
+    single_undertaking_profile_for(Subject, Profile),
+    decide_single_undertaking(Profile, _Verdict).
+
+answer_counts(Subject, counts(DirectCount, SameCount, MembersCount, VerdictCount, ProblemsCount)) :-
+    single_undertaking_profile_for(Subject, Profile),
+    findall(Result - Citations, direct_relationship(Profile, Result, Citations), DirectAnswers),
+    length(DirectAnswers, DirectCount),
+    findall(Result - Citations, same_single_undertaking(Profile, Result, Citations), SameAnswers),
+    length(SameAnswers, SameCount),
+    findall(Result - Members, single_undertaking_members(Profile, Result, Members, _), MembersAnswers),
+    length(MembersAnswers, MembersCount),
+    findall(Verdict, decide_single_undertaking(Profile, Verdict), Verdicts),
+    length(Verdicts, VerdictCount),
+    findall(Problems, single_undertaking_input_problems(Profile, Problems), ProblemAnswers),
+    length(ProblemAnswers, ProblemsCount).
+
+deterministic_subject(Subject) :-
+    single_undertaking_subject(Subject),
+    answer_counts(Subject, counts(1, 1, 1, 1, 1)).
+
+allowed_citation(cite(CitationKey)) :-
+    member(CitationKey, [eu_reg_2023_2831_art_2_2, eu_reg_2023_2831_art_2_2_a, eu_reg_2023_2831_art_2_2_b, eu_reg_2023_2831_art_2_2_c, eu_reg_2023_2831_art_2_2_d, eu_reg_2023_2831_art_2_t1]).
+
+citations_well_shaped(directly_related, [cite(eu_reg_2023_2831_art_2_2)|_]).
+citations_well_shaped(not_directly_related, [cite(eu_reg_2023_2831_art_2_2)]).
+citations_well_shaped(single_undertaking, [cite(eu_reg_2023_2831_art_2_2)|_]).
+citations_well_shaped(not_single_undertaking, [cite(eu_reg_2023_2831_art_2_2)]).
+citations_well_shaped(members_settled, [cite(eu_reg_2023_2831_art_2_2)|_]).
+citations_well_shaped(indeterminate(_), []).
+citations_well_shaped(needs_legal_review(_, _), []).
+citations_well_shaped(input_problems(_), []).
+
+members_well_shaped(members_settled, Members) :-
+    Members = [_|_],
+    sort(Members, Sorted),
+    Sorted == Members.
+members_well_shaped(indeterminate(_), []).
+members_well_shaped(needs_legal_review(_, _), []).
+members_well_shaped(input_problems(_), []).
+
+well_shaped_subject(Subject) :-
+    single_undertaking_subject(Subject),
+    single_undertaking_profile_for(Subject, Profile),
+    direct_relationship(Profile, DirectResult, DirectCitations),
+    citations_well_shaped(DirectResult, DirectCitations),
+    maplist(allowed_citation, DirectCitations),
+    same_single_undertaking(Profile, SameResult, SameCitations),
+    citations_well_shaped(SameResult, SameCitations),
+    maplist(allowed_citation, SameCitations),
+    single_undertaking_members(Profile, MembersResult, Members, MembersCitations),
+    citations_well_shaped(MembersResult, MembersCitations),
+    members_well_shaped(MembersResult, Members),
+    maplist(allowed_citation, MembersCitations).
+
+test(totality_every_subject_classifies) :-
+    all_subjects(SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_has_one_answer_per_query) :-
+    all_subjects(SubjectSet),
+    findall(Subject, deterministic_subject(Subject), DeterministicSubjects),
+    sort(DeterministicSubjects, SubjectSet).
+test(every_answer_has_the_citation_shape_of_its_result) :-
+    all_subjects(SubjectSet),
+    findall(Subject, well_shaped_subject(Subject), WellShapedSubjects),
+    sort(WellShapedSubjects, SubjectSet).
+test(every_member_is_in_the_same_single_undertaking) :-
+    single_undertaking_profile_for(members_through_chain, Profile),
+    single_undertaking_members(Profile, members_settled, Members, _),
+    findall(Member, (member(Member, Members), append(Profile, [attribute(second_enterprise, Member)], PairedProfile), same_single_undertaking(PairedProfile, single_undertaking, _)), JoinedMembers),
+    JoinedMembers == Members.
+test(an_enterprise_outside_the_members_is_not_in_the_single_undertaking) :-
+    single_undertaking_profile_for(members_through_chain, Profile),
+    append(Profile, [attribute(second_enterprise, delta)], PairedProfile),
+    same_single_undertaking(PairedProfile, Result, _),
+    Result == not_single_undertaking.
+test(same_single_undertaking_is_symmetric) :-
+    single_undertaking_profile_for(sisters_through_common_holder, Profile),
+    same_single_undertaking(Profile, Result, Citations),
+    same_single_undertaking([attribute(first_enterprise, gamma), attribute(second_enterprise, beta), attribute(relationships, [relationship(alpha, beta, point_a, true), relationship(alpha, gamma, point_b, true)])], SwappedResult, SwappedCitations),
+    SwappedResult == Result,
+    sort(Citations, Sorted),
+    sort(SwappedCitations, SwappedSorted),
+    SwappedSorted == Sorted.
+test(the_order_of_attributes_does_not_change_the_answer) :-
+    direct_relationship([attribute(voting_rights_total, 100), attribute(voting_rights_held, 51), attribute(held_is_an_enterprise, true), attribute(holder_is_an_enterprise, true)], Result, Citations),
+    single_undertaking_profile_for(majority_fifty_one_of_one_hundred, Profile),
+    direct_relationship(Profile, Result, Citations).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_one_answer_per_query, every_answer_has_the_citation_shape_of_its_result, every_member_is_in_the_same_single_undertaking, an_enterprise_outside_the_members_is_not_in_the_single_undertaking, same_single_undertaking_is_symmetric, the_order_of_attributes_does_not_change_the_answer]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

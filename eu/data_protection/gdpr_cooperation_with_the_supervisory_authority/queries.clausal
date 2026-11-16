@@ -1,0 +1,130 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_cooperation_with_the_supervisory_authority.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 31, pinned unit
+% 02016R0679-20160504#art_031 (one paragraph): 'The controller and the
+% processor and, where applicable, their representatives, shall cooperate,
+% on request, with the supervisory authority in the performance of its
+% tasks.'
+%
+% gdpr_cooperation_with_the_supervisory_authority_what_if/4      (#16 what-if): put one key in place, re-evaluate
+% gdpr_cooperation_with_the_supervisory_authority_profile_keys/1: top-level profile key schema
+% gdpr_cooperation_with_the_supervisory_authority_input_problems/2: the problems a profile has ([] = none)
+%
+% Query types #2 (eligibility) and #7 (justification) are served by the
+% slice itself: cooperation_duty/4, decide_*/2, *_status/2 and the cited
+% checklist *_checklist/2 (every item carries cite(eu_reg_2016_679_art_31)).
+% This layer adds only the what-if re-evaluation.
+%
+% ROOT ATOMS: the six profile key atoms and the judgement value unsure are
+% read by the scorer as package-root attributes, so this module records each
+% as a 0-arity fact and exports it (the three result atoms are exported by
+% the slice). They decide nothing: no marker.
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a
+% dict, so the what-if replaces every attribute(Key, _) of the profile
+% (keys compared with ==) by the one attribute(Key, Value) and asks the
+% slice again. Every earlier occurrence of the key is removed, so a
+% duplicated key is put right by the what-if. List plumbing only: no marker.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_cooperation_with_the_supervisory_authority_profile_keys/1,
+    gdpr_cooperation_with_the_supervisory_authority_input_problems/2,
+    gdpr_cooperation_with_the_supervisory_authority_what_if/4,
+    acts_as_controller/0,
+    acts_as_processor/0,
+    acts_as_representative_of_controller_or_processor/0,
+    authority_request_made/0,
+    request_is_in_performance_of_authority_tasks/0,
+    cooperation_given/0,
+    unsure/0
+]).
+
+:- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/kernel, [gdpr_cooperation_with_the_supervisory_authority_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/gdpr_cooperation_with_the_supervisory_authority, [gdpr_cooperation_with_the_supervisory_authority_status/2]).
+
+% ---- root atoms (the profile keys and the judgement value unsure) ----
+acts_as_controller.
+acts_as_processor.
+acts_as_representative_of_controller_or_processor.
+authority_request_made.
+request_is_in_performance_of_authority_tasks.
+cooperation_given.
+unsure.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_cooperation_with_the_supervisory_authority_profile_keys([acts_as_controller, acts_as_processor, acts_as_representative_of_controller_or_processor, authority_request_made, request_is_in_performance_of_authority_tasks, cooperation_given]).
+
+% #16 what-if: re-evaluate with one key hypothetically put in place
+gdpr_cooperation_with_the_supervisory_authority_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_cooperation_with_the_supervisory_authority_status(Hypothesis, NewStatus).
+
+% replace_attribute(Profile, Key, Value, Hypothesis): every attribute(Key, _)
+% removed, then attribute(Key, Value) added at the end.
+replace_attribute(Profile, Key, Value, Hypothesis) :-
+    other_attributes(Profile, Key, Others),
+    append(Others, [attribute(Key, Value)], Hypothesis).
+
+other_attributes([], _, []).
+other_attributes([attribute(ElementKey, _)|Elements], Key, Others) :-
+    ElementKey == Key,
+    other_attributes(Elements, Key, Others).
+other_attributes([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Others]) :-
+    ElementKey \== Key,
+    other_attributes(Elements, Key, Others).
+
+test(what_if_a_request_is_made_asks_for_the_judgement) :-
+    gdpr_cooperation_with_the_supervisory_authority_what_if([attribute(acts_as_controller, true),
+                                                            attribute(authority_request_made, false)],
+                                                           authority_request_made,
+                                                           true,
+                                                           Status),
+    Status == indeterminate([request_is_in_performance_of_authority_tasks]).
+
+test(what_if_the_statement_is_false_is_not_met) :-
+    gdpr_cooperation_with_the_supervisory_authority_what_if([attribute(acts_as_controller, true),
+                                                            attribute(authority_request_made, true),
+                                                            attribute(request_is_in_performance_of_authority_tasks, true),
+                                                            attribute(cooperation_given, attested(true, attestation(by, at, reason, none)))],
+                                                           cooperation_given,
+                                                           attested(false, attestation(by, at, reason, none)),
+                                                           Status),
+    Status == cooperation_not_met.
+
+test(what_if_the_statement_is_false_is_not_met_not_met, fail) :-
+    gdpr_cooperation_with_the_supervisory_authority_what_if([attribute(acts_as_controller, true),
+                                                            attribute(authority_request_made, true),
+                                                            attribute(request_is_in_performance_of_authority_tasks, true),
+                                                            attribute(cooperation_given, attested(true, attestation(by, at, reason, none)))],
+                                                           cooperation_given,
+                                                           attested(false, attestation(by, at, reason, none)),
+                                                           cooperation_met).
+
+test(what_if_removes_a_duplicated_key) :-
+    gdpr_cooperation_with_the_supervisory_authority_what_if([attribute(acts_as_controller, true),
+                                                            attribute(acts_as_controller, false),
+                                                            attribute(authority_request_made, false)],
+                                                           acts_as_controller,
+                                                           true,
+                                                           Status),
+    Status == cooperation_not_required.
+
+test(the_key_schema_has_six_keys) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_keys(Keys),
+    length(Keys, 6).
+
+test(the_root_atoms_hold) :-
+    acts_as_controller,
+    acts_as_processor,
+    acts_as_representative_of_controller_or_processor,
+    authority_request_made,
+    request_is_in_performance_of_authority_tasks,
+    cooperation_given,
+    unsure.
+
+:- end_module(queries).

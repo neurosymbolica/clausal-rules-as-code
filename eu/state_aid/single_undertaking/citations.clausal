@@ -1,0 +1,67 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% citations.clausal -- statutory citation records for eu/state_aid/single_undertaking.
+%
+% Instrument: Commission Regulation (EU) 2023/2831 of 13 December 2023 on the
+% application of Articles 107 and 108 of the Treaty on the Functioning of the
+% European Union to de minimis aid (CELEX 32023R2831), the original act as
+% published, not a consolidation; pinned raw sha256
+% 30093854d5d4d4b18887359983d09a9239aeaa2250a68fab09689af6260bbf35.
+%
+% citation/2 record form: a FACT, the key an atom, the second argument a
+% pair list with keys exactly label, ref, verbatim, in that order:
+%   citation(Key, [label-'...', ref-'...', verbatim-'...']).
+% Each verbatim is the pinned unit text of the order (citations-sources.yaml:
+% status verified). Pinned units:
+%   eu_reg_2023_2831_art_2_2    32023R2831#art2_p2    (lead-in, the definition)
+%   eu_reg_2023_2831_art_2_2_a  32023R2831#art2_p2_a  (majority of voting rights)
+%   eu_reg_2023_2831_art_2_2_b  32023R2831#art2_p2_b  (appoint or remove a majority of the body)
+%   eu_reg_2023_2831_art_2_2_c  32023R2831#art2_p2_c  (dominant influence by contract or articles)
+%   eu_reg_2023_2831_art_2_2_d  32023R2831#art2_p2_d  (majority of voting rights by agreement)
+%   eu_reg_2023_2831_art_2_t1   32023R2831#art2_t1    (through one or more other enterprises)
+% Recitals (4) and (5) are quoted by the order as reasons for its readings;
+% they carry no limb and no citation key (deferred set), so no record here.
+%
+% PROVENANCE: every clause that decides a statutory condition or computes a
+% statutory value opens its body with implements(Key), Key the provision for
+% THAT condition or value. implements/1 succeeds for every recorded key and
+% fails for any other.
+% =====================================================================
+
+:- module(citations, [
+    citation/2,
+    implements/1
+]).
+
+citation(eu_reg_2023_2831_art_2_2, [label-'Commission Regulation (EU) 2023/2831 Art 2(2) lead-in, definition of single undertaking', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_p2)', verbatim-'‘Single undertaking’ means, for the purposes of this Regulation, all enterprises having at least one of the following relationships with each other:']).
+
+citation(eu_reg_2023_2831_art_2_2_a, [label-'Commission Regulation (EU) 2023/2831 Art 2(2)(a) majority of the shareholders’ or members’ voting rights', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_p2_a)', verbatim-'one enterprise has a majority of the shareholders’ or members’ voting rights in another enterprise;']).
+
+citation(eu_reg_2023_2831_art_2_2_b, [label-'Commission Regulation (EU) 2023/2831 Art 2(2)(b) right to appoint or remove a majority of the administrative, management or supervisory body', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_p2_b)', verbatim-'one enterprise has the right to appoint or remove a majority of the members of the administrative, management or supervisory body of another enterprise;']).
+
+citation(eu_reg_2023_2831_art_2_2_c, [label-'Commission Regulation (EU) 2023/2831 Art 2(2)(c) right to exercise a dominant influence pursuant to a contract or the memorandum or articles of association', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_p2_c)', verbatim-'one enterprise has the right to exercise a dominant influence over another enterprise pursuant to a contract entered into with that enterprise or pursuant to a provision in its memorandum or articles of association;']).
+
+citation(eu_reg_2023_2831_art_2_2_d, [label-'Commission Regulation (EU) 2023/2831 Art 2(2)(d) sole control of a majority of voting rights pursuant to an agreement with other shareholders or members', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_p2_d)', verbatim-'one enterprise, which is a shareholder in or member of another enterprise, controls alone, pursuant to an agreement with other shareholders in or members of that enterprise, a majority of shareholders’ or members’ voting rights in that enterprise.']).
+
+citation(eu_reg_2023_2831_art_2_t1, [label-'Commission Regulation (EU) 2023/2831 Art 2(2) closing sentence, relationships through one or more other enterprises', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2831 (unit art2_t1)', verbatim-'Enterprises having any of the relationships referred to in points (a) to (d) through one or more other enterprises shall also be considered to be a single undertaking.']).
+
+% implements(Key): the provenance marker; true exactly for a recorded key.
+implements(Key) :-
+    citation(Key, _).
+
+test(the_lead_in_is_recorded) :-
+    implements(eu_reg_2023_2831_art_2_2).
+test(the_closing_sentence_is_recorded) :-
+    implements(eu_reg_2023_2831_art_2_t1).
+test(every_point_is_recorded) :-
+    implements(eu_reg_2023_2831_art_2_2_a),
+    implements(eu_reg_2023_2831_art_2_2_b),
+    implements(eu_reg_2023_2831_art_2_2_c),
+    implements(eu_reg_2023_2831_art_2_2_d).
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_reg_2023_2831_art_2_2_e).
+test(six_keys_are_recorded) :-
+    findall(Key, citation(Key, _), Keys),
+    length(Keys, 6).
+
+:- end_module(citations).

@@ -1,0 +1,56 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input tolerance.
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/request_basis, [request_basis_status/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/queries, [gdpr_data_subject_rights_erasure_basis_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/fixtures, [gdpr_data_subject_rights_erasure_basis_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    request_basis_status(Profile, art17_1_a).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    request_basis_status(Profile, art17_1_b).
+
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_no_longer, Profile),
+    gdpr_data_subject_rights_erasure_basis_input_problems(Profile, []).
+
+test(an_absent_key_is_not_a_problem) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_type, erasure)], []).
+
+test(the_empty_profile_has_no_problem) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([], []).
+
+test(an_unknown_key_is_named) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(no_such_key, true)], [unknown_key(no_such_key)]).
+
+test(an_enum_outside_its_values_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_type, shopping)], [wrong_type(request_type)]).
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(consent_withdrawn, unsure)], [wrong_type(consent_withdrawn)]).
+
+test(a_judgement_may_be_unsure) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(data_no_longer_necessary_for_purposes, unsure)], []).
+
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(legislative_restriction_applies_to_the_right, true)], [wrong_type(legislative_restriction_applies_to_the_right)]).
+
+test(an_impossible_date_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_received_on, date(2026, 2, 30))], [wrong_type(request_received_on)]).
+
+test(a_duplicate_key_is_named_once) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_type, erasure), attribute(request_type, erasure)], [duplicate_key(request_type)]).
+
+test(a_non_list_is_not_a_profile) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems(not_a_list, [wrong_type(profile)]).
+
+test(a_profile_with_a_problem_has_no_basis, fail) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_type, shopping)], []).
+
+:- end_module(test_input_mode).

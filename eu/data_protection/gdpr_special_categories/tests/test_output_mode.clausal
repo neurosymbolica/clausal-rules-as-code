@@ -1,0 +1,111 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the result argument UNBOUND,
+% read out and compared whole (every solution collected, so a duplicate
+% answer is a failure, as the scorer counts).
+% Run: python -m clausal.testing eu/data_protection/gdpr_special_categories/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_special_categories/processing_permitted, [
+    decide_special_category_processing/2,
+    processing_permitted/2,
+    special_category_scope/2,
+    special_category_outside_facts/2
+]).
+:- use_module(eu/data_protection/gdpr_special_categories/permitted_bases, [permitted_bases/2]).
+:- use_module(eu/data_protection/gdpr_special_categories/fixtures, [gdpr_special_categories_profile_for/2]).
+
+verdicts_of(Subject, Verdicts) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Verdict, decide_special_category_processing(Profile, Verdict), Verdicts).
+
+scopes_of(Subject, Scopes) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Scope, special_category_scope(Profile, Scope), Scopes).
+
+test(not_special_category_verdict) :-
+    verdicts_of(not_special_category, Verdicts),
+    Verdicts == [special_category_verdict(eligible, [not_special_category_data], [], [cite(eu_reg_2016_679_art_10), cite(eu_reg_2016_679_art_9_1)])].
+
+test(no_claim_verdict_cites_article_9_1_alone) :-
+    verdicts_of(health_without_claim, Verdicts),
+    Verdicts == [special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])].
+
+test(point_h_verdict_carries_article_9_3) :-
+    verdicts_of(health_care_contract, Verdicts),
+    Verdicts == [special_category_verdict(eligible, [art9_2_h], [necessity, health_care_purpose, law_or_contract, professional_secrecy], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_h), cite(eu_reg_2016_679_art_9_3)])].
+
+test(route_b_verdict) :-
+    verdicts_of(criminal_authorised_by_law, Verdicts),
+    Verdicts == [special_category_verdict(eligible, [art10_authorised_by_law], [authorising_law, appropriate_safeguards], [cite(eu_reg_2016_679_art_10)])].
+
+test(no_route_verdict_cites_article_10) :-
+    verdicts_of(criminal_no_route, Verdicts),
+    Verdicts == [special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_10)])].
+
+test(absent_enabling_fact_verdict) :-
+    verdicts_of(employment_law_absent_cross_reference, Verdicts),
+    Verdicts == [special_category_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_2_b), cite(eu_reg_2016_679_art_9_2_b)), [resolution(cite(eu_reg_2016_679_art_9_2_b), not_attempted), inputs_relied_on([exception_claimed-art9_2_b, appropriate_safeguards-true, employment_law_or_collective_agreement_authorises-absent, processing_necessary-true])]), [], [], [])].
+
+test(unsure_judgement_verdict) :-
+    verdicts_of(made_public_unsure, Verdicts),
+    Verdicts == [special_category_verdict(needs_legal_review(open_textured(manifestly_made_public_by_data_subject, cite(eu_reg_2016_679_art_9_2_e)), [inputs_relied_on([exception_claimed-art9_2_e, manifestly_made_public_by_data_subject-unsure])]), [], [], [])].
+
+test(article_9_4_applicability_unsure_verdict) :-
+    verdicts_of(health_unsure_further_conditions, Verdicts),
+    Verdicts == [special_category_verdict(needs_legal_review(open_textured(concerns_health, cite(eu_reg_2016_679_art_4_15)), [inputs_relied_on([exception_claimed-art9_2_a, concerns_health-unsure])]), [], [], [])].
+
+test(article_9_4_not_reached_for_settled_non_health_data) :-
+    verdicts_of(health_false_further_conditions, Verdicts),
+    Verdicts == [special_category_verdict(eligible, [art9_2_a], [explicit_consent, specified_purposes, consent_definition, no_legal_bar], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_a)])].
+
+test(absent_article_10_scope_flag_verdict) :-
+    verdicts_of(criminal_scope_absent, Verdicts),
+    Verdicts == [special_category_verdict(indeterminate([criminal_offence_data_present]), [], [], [])].
+
+test(input_problems_verdict) :-
+    verdicts_of(duplicate_and_unknown_keys, Verdicts),
+    Verdicts == [special_category_verdict(input_problems([duplicate_key(concerns_health), unknown_key(colour)]), [], [], [])].
+
+test(empty_profile_names_every_missing_key_once) :-
+    findall(Status, processing_permitted([], Status), Statuses),
+    Statuses = [indeterminate(Missing)],
+    sort(Missing, Missing).
+
+test(bases_read_out_once_for_both_parts) :-
+    gdpr_special_categories_profile_for(explicit_consent, Consent),
+    select(attribute(criminal_offence_data_present, false), Consent, Rest),
+    findall(Bases, permitted_bases([attribute(criminal_offence_data_present, true), attribute(processing_under_official_authority_control, true)|Rest], Bases), Answers),
+    Answers == [[art9_2_a, art10_official_authority]].
+
+test(scope_reads_out_the_biometric_category) :-
+    scopes_of(biometric_with_identification, Scopes),
+    Scopes == [[biometric_data]].
+
+test(scope_reads_out_no_category) :-
+    scopes_of(biometric_without_identification, Scopes),
+    Scopes == [[]].
+
+test(scope_reads_out_the_unsure_referral) :-
+    scopes_of(scope_unsure_referral, Scopes),
+    Scopes == [needs_legal_review(open_textured(concerns_sex_life_or_sexual_orientation, cite(eu_reg_2016_679_art_9_1)), [inputs_relied_on([exception_claimed-absent, concerns_health-false, concerns_sex_life_or_sexual_orientation-unsure, reveals_political_opinions-false, reveals_racial_or_ethnic_origin-false, reveals_religious_or_philosophical_beliefs-unsure, reveals_trade_union_membership-unsure])])].
+
+test(scope_of_an_empty_profile_names_the_category_keys) :-
+    findall(Scope, special_category_scope([], Scope), Scopes),
+    Scopes == [indeterminate([biometric_data_present, biometric_used_for_unique_identification, concerns_health, concerns_sex_life_or_sexual_orientation, genetic_data_present, reveals_political_opinions, reveals_racial_or_ethnic_origin, reveals_religious_or_philosophical_beliefs, reveals_trade_union_membership])].
+
+test(outside_facts_read_out_in_block_order) :-
+    gdpr_special_categories_profile_for(further_conditions_attested_true, Profile),
+    findall(Items, special_category_outside_facts(Profile, Items), Answers),
+    Answers == [[
+        outside_fact(prohibition_lifting_barred_by_law, absent),
+        outside_fact(employment_law_or_collective_agreement_authorises, absent),
+        outside_fact(substantial_public_interest_law_exists, absent),
+        outside_fact(health_care_law_basis_exists, absent),
+        outside_fact(public_health_law_basis_exists, absent),
+        outside_fact(research_archiving_statistics_law_basis_exists, absent),
+        outside_fact(criminal_data_authorising_law_exists, absent),
+        outside_fact(member_state_further_conditions_exist, attested(true, attestation(decision_layer, attested_at, attested_reason, none)))
+    ]].
+
+:- end_module(test_output_mode).

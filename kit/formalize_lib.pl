@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % formalize_lib.pl -- reusable formalization PRIMITIVES (domain-independent)
 % Clausify kit. ISO Prolog, cut-free, ->-free, ASCII-only.

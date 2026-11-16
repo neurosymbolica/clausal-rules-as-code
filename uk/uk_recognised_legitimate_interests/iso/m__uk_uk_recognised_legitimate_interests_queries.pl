@@ -1,0 +1,78 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_recognised_legitimate_interests_queries, [uk_recognised_legitimate_interests_profile_keys/1, uk_recognised_legitimate_interests_what_if/4, processing_by_a_public_authority_in_the_performance_of_its_tasks/0, processing_necessary_for_a_disclosure_in_response_to_a_request/0, request_states_need_for_article_6_1_e_processing_with_article_6_3_basis/0, processing_necessary_for_national_security_public_security_or_defence/0, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004/0, processing_necessary_for_responding_to_the_emergency/0, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders/0, processing_necessary_for_safeguarding_an_individual/0, individual_aged_under_18/0, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk/0, legitimate_interest_pursued_by_the_controller_or_a_third_party/0, processing_necessary_for_that_legitimate_interest/0, interests_overridden_by_data_subject_interests_or_fundamental_rights/0, basis_relied_on/0, objection_on_grounds_relating_to_particular_situation/0, controller_demonstrates_compelling_legitimate_grounds_that_override/0, processing_for_establishment_exercise_or_defence_of_legal_claims/0, unsure/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [is_list/1]).
+:- use_module(m__uk_uk_recognised_legitimate_interests_kernel, [uk_recognised_legitimate_interests_input_problems/2]).
+:- use_module(m__uk_uk_recognised_legitimate_interests_uk_recognised_legitimate_interests, [uk_recognised_legitimate_interests_status/2]).
+
+uk_recognised_legitimate_interests_profile_keys([processing_by_a_public_authority_in_the_performance_of_its_tasks, processing_necessary_for_a_disclosure_in_response_to_a_request, request_states_need_for_article_6_1_e_processing_with_article_6_3_basis, processing_necessary_for_national_security_public_security_or_defence, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, processing_necessary_for_responding_to_the_emergency, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, processing_necessary_for_safeguarding_an_individual, individual_aged_under_18, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, legitimate_interest_pursued_by_the_controller_or_a_third_party, processing_necessary_for_that_legitimate_interest, interests_overridden_by_data_subject_interests_or_fundamental_rights, basis_relied_on, objection_on_grounds_relating_to_particular_situation, controller_demonstrates_compelling_legitimate_grounds_that_override, processing_for_establishment_exercise_or_defence_of_legal_claims]).
+
+processing_by_a_public_authority_in_the_performance_of_its_tasks.
+
+processing_necessary_for_a_disclosure_in_response_to_a_request.
+
+request_states_need_for_article_6_1_e_processing_with_article_6_3_basis.
+
+processing_necessary_for_national_security_public_security_or_defence.
+
+event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004.
+
+processing_necessary_for_responding_to_the_emergency.
+
+processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders.
+
+processing_necessary_for_safeguarding_an_individual.
+
+individual_aged_under_18.
+
+controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk.
+
+legitimate_interest_pursued_by_the_controller_or_a_third_party.
+
+processing_necessary_for_that_legitimate_interest.
+
+interests_overridden_by_data_subject_interests_or_fundamental_rights.
+
+basis_relied_on.
+
+objection_on_grounds_relating_to_particular_situation.
+
+controller_demonstrates_compelling_legitimate_grounds_that_override.
+
+processing_for_establishment_exercise_or_defence_of_legal_claims.
+
+unsure.
+
+uk_recognised_legitimate_interests_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    is_list(Profile),
+    profile_without_key(Profile, OverriddenKey, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis),
+    uk_recognised_legitimate_interests_status(Hypothesis, NewStatus).
+
+profile_without_key([], _, []).
+profile_without_key([attribute(Key, _)|Attributes], OverriddenKey, Remaining) :-
+    Key == OverriddenKey,
+    profile_without_key(Attributes, OverriddenKey, Remaining).
+profile_without_key([attribute(Key, Value)|Attributes], OverriddenKey, [attribute(Key, Value)|Remaining]) :-
+    Key \== OverriddenKey,
+    profile_without_key(Attributes, OverriddenKey, Remaining).
+
+test(what_if_public_authority_turns_applies_into_does_not_apply) :-
+    findall(Status, uk_recognised_legitimate_interests_what_if([attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false), attribute(processing_necessary_for_national_security_public_security_or_defence, true)], processing_by_a_public_authority_in_the_performance_of_its_tasks, true, Status), Statuses),
+    Statuses == [recognised_legitimate_interest_does_not_apply].
+test(what_if_not_a_public_authority_applies) :-
+    findall(Status, uk_recognised_legitimate_interests_what_if([attribute(processing_necessary_for_national_security_public_security_or_defence, true)], processing_by_a_public_authority_in_the_performance_of_its_tasks, false, Status), Statuses),
+    Statuses == [recognised_legitimate_interest_applies].
+test(profile_keys_are_seventeen) :-
+    uk_recognised_legitimate_interests_profile_keys(Keys),
+    length(Keys, 17).
+test(root_export_atoms_hold) :-
+    unsure,
+    basis_relied_on,
+    individual_aged_under_18.
+
+test(what_if_not_a_public_authority_is_not_does_not_apply, fail) :-
+    uk_recognised_legitimate_interests_what_if([attribute(processing_necessary_for_national_security_public_security_or_defence, true)], processing_by_a_public_authority_in_the_performance_of_its_tasks, false, recognised_legitimate_interest_does_not_apply).

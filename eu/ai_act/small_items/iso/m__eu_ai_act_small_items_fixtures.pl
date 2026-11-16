@@ -1,0 +1,151 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_small_items_fixtures, [small_items_subject/1, small_items_profile_for/2, small_items_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_small_items_small_items, [decide_small_items/2]).
+
+small_items_subject(Subject) :-
+    fixture_case(Subject, _, _, _).
+
+small_items_profile_for(Subject, small_items_request(Query, Profile, AssessmentDate)) :-
+    fixture_case(Subject, Query, Profile, AssessmentDate).
+
+small_items_assess(Subject, Verdict) :-
+    small_items_profile_for(Subject, Request),
+    decide_small_items(Request, Verdict).
+
+fixture_case(bias_provider_all_conditions_met, bias_data_processing, Profile, date(2026, 7, 27)) :-
+    bias_provider_conditions(true, Profile).
+fixture_case(bias_provider_on_twenty_sixth_july, bias_data_processing, Profile, date(2026, 7, 26)) :-
+    bias_provider_conditions(true, Profile).
+fixture_case(bias_provider_without_records_of_reasons, bias_data_processing, Profile, date(2026, 7, 27)) :-
+    bias_provider_conditions(false, Profile).
+fixture_case(bias_other_deployer_all_conditions_met, bias_data_processing, Profile, date(2026, 8, 1)) :-
+    bias_other_conditions(true, Profile).
+fixture_case(bias_other_deployer_safeguards_unsure, bias_data_processing, Profile, date(2026, 8, 1)) :-
+    bias_other_conditions(unsure, Profile).
+fixture_case(bias_capacity_absent, bias_data_processing, [], date(2026, 8, 1)).
+fixture_case(sandbox_outside_law_enforcement, sandbox_personal_data_processing, Profile, date(2026, 8, 2)) :-
+    sandbox_conditions(public_safety_and_public_health, [attribute(for_law_enforcement_purposes_under_law_enforcement_authority_control, false)], Profile).
+fixture_case(sandbox_on_first_august, sandbox_personal_data_processing, Profile, date(2026, 8, 1)) :-
+    sandbox_conditions(public_safety_and_public_health, [attribute(for_law_enforcement_purposes_under_law_enforcement_authority_control, false)], Profile).
+fixture_case(sandbox_law_enforcement_with_specific_law, sandbox_personal_data_processing, Profile, date(2026, 8, 2)) :-
+    sandbox_conditions(energy_sustainability, [attribute(for_law_enforcement_purposes_under_law_enforcement_authority_control, true), attribute(based_on_specific_union_or_national_law, true)], Profile).
+fixture_case(sandbox_law_enforcement_without_specific_law, sandbox_personal_data_processing, Profile, date(2026, 8, 2)) :-
+    sandbox_conditions(energy_sustainability, [attribute(for_law_enforcement_purposes_under_law_enforcement_authority_control, true), attribute(based_on_specific_union_or_national_law, false)], Profile).
+fixture_case(sandbox_none_of_the_listed_areas, sandbox_personal_data_processing, Profile, date(2026, 8, 2)) :-
+    sandbox_conditions(none_of_the_listed_areas, [attribute(for_law_enforcement_purposes_under_law_enforcement_authority_control, false)], Profile).
+fixture_case(sandbox_nothing_known, sandbox_personal_data_processing, [], date(2026, 8, 2)).
+fixture_case(testing_section_b_without_framework, real_world_testing, [attribute(testing_route, annex_i_section_b), attribute(member_state_has_adopted_a_real_world_testing_framework, false)], date(2026, 8, 2)).
+fixture_case(testing_section_b_with_framework, real_world_testing, [attribute(testing_route, annex_i_section_b), attribute(member_state_has_adopted_a_real_world_testing_framework, true)], date(2026, 8, 2)).
+fixture_case(testing_annex_iii_all_conditions_met, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions(Approval, Duration, Cooperation, Consent, Profile).
+fixture_case(testing_on_first_august, real_world_testing, Profile, date(2026, 8, 1)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions(Approval, Duration, Cooperation, Consent, Profile).
+fixture_case(testing_tacit_approval_allowed, real_world_testing, Profile, date(2026, 8, 2)) :-
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions([attribute(approval_status, no_answer_within_30_days), attribute(national_law_provides_for_tacit_approval, true)], Duration, Cooperation, Consent, Profile).
+fixture_case(testing_tacit_approval_not_in_national_law, real_world_testing, Profile, date(2026, 8, 2)) :-
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions([attribute(approval_status, no_answer_within_30_days), attribute(national_law_provides_for_tacit_approval, false)], Duration, Cooperation, Consent, Profile).
+fixture_case(testing_extension_notified, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions(Approval, [attribute(testing_duration, extended_up_to_twelve_months), attribute(extension_notified_in_advance_with_explanation, true)], Cooperation, Consent, Profile).
+fixture_case(testing_extension_not_notified, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions(Approval, [attribute(testing_duration, extended_up_to_twelve_months), attribute(extension_notified_in_advance_with_explanation, false)], Cooperation, Consent, Profile).
+fixture_case(testing_longer_than_twelve_months, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    no_deployers_variant(Cooperation),
+    consent_variant(Consent),
+    testing_conditions(Approval, [attribute(testing_duration, longer)], Cooperation, Consent, Profile).
+fixture_case(testing_law_enforcement_without_consent, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    testing_conditions(Approval, Duration, Cooperation, [attribute(informed_consent_given_in_accordance_with_article_61, false), attribute(law_enforcement_testing_where_seeking_consent_would_prevent_the_test, true), attribute(no_negative_effect_on_subjects_and_data_deleted_after_the_test, true)], Profile).
+fixture_case(testing_law_enforcement_with_negative_effect, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    testing_conditions(Approval, Duration, Cooperation, [attribute(informed_consent_given_in_accordance_with_article_61, false), attribute(law_enforcement_testing_where_seeking_consent_would_prevent_the_test, true), attribute(no_negative_effect_on_subjects_and_data_deleted_after_the_test, false)], Profile).
+fixture_case(testing_deployers_bound_by_agreement, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    consent_variant(Consent),
+    testing_conditions(Approval, Duration, [attribute(testing_in_cooperation_with_deployers, true), attribute(deployers_informed_instructed_and_agreement_concluded, true)], Consent, Profile).
+fixture_case(testing_deployers_without_agreement, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    consent_variant(Consent),
+    testing_conditions(Approval, Duration, [attribute(testing_in_cooperation_with_deployers, true), attribute(deployers_informed_instructed_and_agreement_concluded, false)], Consent, Profile).
+fixture_case(testing_consent_facts_absent, real_world_testing, Profile, date(2026, 8, 2)) :-
+    approved_variant(Approval),
+    six_months_variant(Duration),
+    no_deployers_variant(Cooperation),
+    testing_conditions(Approval, Duration, Cooperation, [], Profile).
+fixture_case(consent_meets_all_conditions, informed_consent, Profile, date(2026, 8, 2)) :-
+    consent_conditions(true, true, Profile).
+fixture_case(consent_without_copy, informed_consent, Profile, date(2026, 8, 2)) :-
+    consent_conditions(true, false, Profile).
+fixture_case(consent_freely_given_unsure, informed_consent, Profile, date(2026, 8, 2)) :-
+    consent_conditions(unsure, true, Profile).
+fixture_case(sme_independent, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(has_partner_or_linked_enterprises, false)], date(2026, 8, 2)).
+fixture_case(sme_with_linked_enterprises, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(has_partner_or_linked_enterprises, true)], date(2026, 8, 2)).
+fixture_case(sme_not_an_sme, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, false), attribute(has_partner_or_linked_enterprises, false)], date(2026, 8, 2)).
+fixture_case(explanation_all_conditions_met, explanation_right, Profile, date(2026, 8, 2)) :-
+    explanation_conditions(false, false, false, Profile).
+fixture_case(explanation_on_first_august, explanation_right, Profile, date(2026, 8, 1)) :-
+    explanation_conditions(false, false, false, Profile).
+fixture_case(explanation_point_2_system, explanation_right, Profile, date(2026, 8, 2)) :-
+    explanation_conditions(true, false, false, Profile).
+fixture_case(explanation_exception_in_union_or_national_law, explanation_right, Profile, date(2026, 8, 2)) :-
+    explanation_conditions(false, true, false, Profile).
+fixture_case(explanation_otherwise_provided_for, explanation_right, Profile, date(2026, 8, 2)) :-
+    explanation_conditions(false, false, true, Profile).
+fixture_case(input_duplicate_and_unknown_key, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(is_an_sme_including_a_start_up, false), attribute(unlisted_key, true)], date(2026, 8, 2)).
+fixture_case(input_unsure_for_a_crisp_key, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(has_partner_or_linked_enterprises, unsure)], date(2026, 8, 2)).
+fixture_case(input_impossible_date, sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(has_partner_or_linked_enterprises, false)], date(2026, 2, 30)).
+
+bias_provider_conditions(Records, [attribute(bias_processing_capacity, provider_of_a_high_risk_system), attribute(strictly_necessary_for_bias_detection_and_correction_under_article_10_2_f_and_g, true), attribute(appropriate_safeguards_for_fundamental_rights_and_freedoms, true), attribute(bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data, true), attribute(technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures, true), attribute(measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation, true), attribute(data_not_transmitted_transferred_or_otherwise_accessed_by_other_parties, true), attribute(data_deleted_once_bias_corrected_or_retention_period_ended, true), attribute(records_of_processing_include_the_reasons_for_the_processing, Records)]).
+
+bias_other_conditions(Safeguards, [attribute(bias_processing_capacity, other_provider_or_deployer), attribute(strictly_necessary_for_bias_detection_and_correction_of_biases_affecting_health_safety_or_fundamental_rights, true), attribute(appropriate_safeguards_for_fundamental_rights_and_freedoms, Safeguards), attribute(bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data, true), attribute(technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures, true), attribute(measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation, true), attribute(data_not_transmitted_transferred_or_otherwise_accessed_by_other_parties, true), attribute(data_deleted_once_bias_corrected_or_retention_period_ended, true), attribute(records_of_processing_include_the_reasons_for_the_processing, true)]).
+
+sandbox_conditions(Area, LawEnforcement, Profile) :-
+    append([attribute(sandbox_processing_of_data_collected_for_other_purposes_solely_for_developing_training_and_testing, true), attribute(developed_for_safeguarding_substantial_public_interest, true), attribute(public_interest_area, Area), attribute(data_necessary_for_chapter_iii_section_2_requirements_and_non_personal_data_not_effective, true), attribute(effective_monitoring_and_response_mechanisms, true), attribute(functionally_separate_isolated_and_protected_environment_under_provider_control, true), attribute(data_shared_only_as_article_59_allows, true), attribute(processing_leads_to_no_measures_or_decisions_affecting_data_subjects_or_their_rights, true), attribute(appropriate_technical_and_organisational_measures, true), attribute(data_deleted_at_end_of_participation_or_retention_period, true), attribute(processing_logs_kept_for_the_duration_of_participation, true), attribute(description_of_process_and_rationale_kept_in_technical_documentation, true), attribute(project_summary_published_on_competent_authority_website, true)], LawEnforcement, Profile).
+
+testing_conditions(Approval, Duration, Cooperation, Consent, Profile) :-
+    append([attribute(testing_route, annex_iii), attribute(testing_plan_drawn_up_and_submitted_to_the_market_surveillance_authority, true), attribute(testing_registered_as_article_60_4_c_requires, true), attribute(established_in_the_union_or_legal_representative_established_in_the_union, true), attribute(third_country_transfers_only_with_appropriate_and_applicable_safeguards, true), attribute(testing_no_longer_than_necessary_to_achieve_its_objectives, true), attribute(vulnerable_subjects_appropriately_protected, true), attribute(effectively_overseen_by_suitably_qualified_persons, true), attribute(outputs_can_be_effectively_reversed_and_disregarded, true)], Approval, WithApproval),
+    append(WithApproval, Duration, WithDuration),
+    append(WithDuration, Cooperation, WithCooperation),
+    append(WithCooperation, Consent, Profile).
+
+approved_variant([attribute(approval_status, approved)]).
+
+six_months_variant([attribute(testing_duration, up_to_six_months)]).
+
+no_deployers_variant([attribute(testing_in_cooperation_with_deployers, false)]).
+
+consent_variant([attribute(informed_consent_given_in_accordance_with_article_61, true)]).
+
+consent_conditions(FreelyGiven, CopyGiven, [attribute(consent_freely_given, FreelyGiven), attribute(consent_obtained_before_participation, true), attribute(information_concise_clear_relevant_and_understandable, true), attribute(informed_of_nature_objectives_and_possible_inconvenience, true), attribute(informed_of_conditions_and_expected_duration, true), attribute(informed_of_rights_and_guarantees_including_refusal_and_withdrawal, true), attribute(informed_of_arrangements_for_reversal_or_disregarding, true), attribute(informed_of_identification_number_and_contact_details, true), attribute(consent_dated_and_documented, true), attribute(copy_given_to_the_subject_or_legal_representative, CopyGiven)]).
+
+explanation_conditions(PointTwoSystem, Exception, OtherwiseProvided, [attribute(affected_person_subject_to_a_deployer_decision_based_on_the_system_output, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(system_listed_under_point_2_of_annex_iii, PointTwoSystem), attribute(decision_produces_legal_effects_or_similarly_significantly_affects_the_person, true), attribute(person_considers_an_adverse_impact_on_health_safety_or_fundamental_rights, true), attribute(union_or_national_law_provides_an_exception_or_restriction, Exception), attribute(right_otherwise_provided_for_under_union_law, OtherwiseProvided)]).

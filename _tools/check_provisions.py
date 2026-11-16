@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """check_provisions.py -- statute<->rulebase coverage (T1, T2, T3, T5),
 deferral discipline (spec §6), the enforcement ratchet (spec §5) and `--emit`.
 

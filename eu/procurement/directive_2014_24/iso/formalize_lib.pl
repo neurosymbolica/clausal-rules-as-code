@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2, profile_set/3, profile_keys/2, check_gte/5, check_lte/5, status_gte/4, status_gt/4, status_lte/4, status_lt/4, check_ratio_gte/6, check_ratio_lte/6, ratio_bps/4, required_numerator_gte/3, max_denom_gte/3, max_numerator_lte/3, min_denom_lte/3, check_tri/4, check_tri_neg/4, sum_list/2, first_applicable/2, not_member/2, member_matching/2, memberd/2, term_mismatch/2, usable_positive/3, missing_keys/3, all_present/2, check_eq/5, check_true/4, check_false/4, check_holds/5, or_status/2, and_status/2, collect_unknown/2, member_unmet/1, mark_unmet/3, mark_unknown/3, assess/6, eval_requirements/4, decide_labeled/3, summarize/3, classify_labeled/4, has_unmet/1, has_unknown/1, not_defeated/3, int_min/3, int_max/3, int_abs/2]).
 
 :- use_module(library(lists), [append/3]).

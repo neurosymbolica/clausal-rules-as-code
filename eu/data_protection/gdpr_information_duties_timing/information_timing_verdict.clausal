@@ -1,0 +1,483 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% information_timing_verdict.clausal -- the "information_timing_verdict" DETERMINATION for
+% eu/data_protection/gdpr_information_duties_timing, self-contained top to bottom: its
+% statutory VALUE facts, its derived arithmetic, its per-rule tests, its checklist and
+% its verdict assembly.
+% Verdict family pinned by the order: information_timing_verdict/3 -> {timely, late}.
+%
+% Answers (F) information_timing_verdict(PROFILE, VERDICT, CITES) of the order.
+% The deadline and its basis, answers (D) and (E), are owned by the sibling slice
+% information_deadline_basis; this slice reads its outcome term
+%   deadline(date(Y, M, D), Basis) | indeterminate(MissingKeys) | input_problems(P)
+% and adds provision_date (key 11) and, on the Art 14 route when the information
+% came in on or before DEADLINE, the judgement provided_within_reasonable_period
+% (key 16).
+%
+% Sources:
+%   - Regulation (EU) 2016/679 (GDPR) Art 13(1), chapeau: 'at the time when
+%     personal data are obtained' -- information on or before the obtaining day
+%     is timely (Q8), after it late; CITES [cite(eu_reg_2016_679_art_13_1)].
+%   - GDPR Art 14(3), chapeau and (a), (b), (c): the earliest applicable date
+%     binds (Q1); information after DEADLINE is late, CITES the limb of the basis.
+%   - GDPR Art 14(3)(a): 'within a reasonable period ... having regard to the
+%     specific circumstances' -- the USER's tri-state judgement, read only on the
+%     Art 14 route and only when on time (Q17): true timely, false late (cite _a),
+%     unsure needs_legal_review(open_textured(...)), absent indeterminate.
+%
+% Precedence: input_problems first, then the deadline (indeterminate while its
+% keys are absent, provision_date merged in root_exports order), then the
+% comparison with provision_date, then the judgement. Exactly one solution.
+% =====================================================================
+
+:- module(information_timing_verdict, [
+    decide_information_timing_verdict/2,
+    information_timing_verdict_status/2,
+    information_timing_verdict_checklist/2,
+    information_timing_verdict_decision_resolvable/1,
+    information_timing_verdict_status_values/1,
+    information_timing_verdict/3
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/kernel, [gdpr_information_duties_timing_date_order/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/information_deadline_basis, [information_deadline_basis_outcome/2]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The verdict vocabulary as a ground table (used by the property tests).
+information_timing_verdict_status_values([timely, late]).
+
+% Each Art 14(3) basis and the provision it answers with.
+article_14_basis(art14_3_a, cite(eu_reg_2016_679_art_14_3_a)).
+article_14_basis(art14_3_b, cite(eu_reg_2016_679_art_14_3_b)).
+article_14_basis(art14_3_c, cite(eu_reg_2016_679_art_14_3_c)).
+
+% Every basis and its citation (the checklist row citation).
+basis_citation(art13_1, cite(eu_reg_2016_679_art_13_1)).
+basis_citation(art14_3_a, cite(eu_reg_2016_679_art_14_3_a)).
+basis_citation(art14_3_b, cite(eu_reg_2016_679_art_14_3_b)).
+basis_citation(art14_3_c, cite(eu_reg_2016_679_art_14_3_c)).
+
+% The contract (root_exports) position of every key this relation can name
+% as missing; MISSING_KEYS follow this order.
+contract_position(personal_data_collected_from_data_subject, 1).
+contract_position(obtaining_date, 10).
+contract_position(provision_date, 11).
+contract_position(data_used_for_communication_with_data_subject, 12).
+contract_position(first_communication_date, 13).
+contract_position(disclosure_to_another_recipient_envisaged, 14).
+contract_position(first_disclosure_date, 15).
+contract_position(provided_within_reasonable_period, 16).
+
+% The order of provision_date against DEADLINE: the last day is inclusive.
+order_standing(before, on_time).
+order_standing(same, on_time).
+order_standing(after, past_deadline).
+
+% ---- the stage reached: input check, deadline, provision, judgement ----
+% timing_stage(Profile, Stage): exactly one Stage per profile:
+%   problems(Problems) | deadline_open(MissingKeys) | provision_open(Basis)
+%   | past(Basis) | on_time_article_13 | on_time_article_14(Basis, Judgement)
+%   Judgement in true | false | unsure | absent.
+timing_stage(Profile, Stage) :-
+    information_deadline_basis_outcome(Profile, Outcome),
+    outcome_stage(Outcome, Profile, Stage).
+
+outcome_stage(input_problems(Problems), _, problems(Problems)).
+outcome_stage(indeterminate(MissingKeys), Profile, deadline_open(AllMissingKeys)) :-
+    provision_keys(Profile, MissingKeys, AllMissingKeys).
+outcome_stage(deadline(DeadlineDate, Basis), Profile, Stage) :-
+    provision_stage(Profile, DeadlineDate, Basis, Stage).
+
+% provision_date is read on both routes: absent, it joins the missing keys in
+% contract order.
+provision_keys(Profile, MissingKeys, MissingKeys) :-
+    profile_has(Profile, provision_date).
+provision_keys(Profile, MissingKeys, AllMissingKeys) :-
+    profile_lacks(Profile, provision_date),
+    insert_in_contract_order(MissingKeys, provision_date, AllMissingKeys).
+
+insert_in_contract_order([], NewKey, [NewKey]).
+insert_in_contract_order([ProfileKey|ProfileKeys], NewKey, Result) :-
+    contract_position(ProfileKey, KeyPosition),
+    contract_position(NewKey, NewPosition),
+    compare(Order, KeyPosition, NewPosition),
+    insert_step(Order, ProfileKey, ProfileKeys, NewKey, Result).
+
+insert_step((<), ProfileKey, ProfileKeys, NewKey, [ProfileKey|Rest]) :-
+    insert_in_contract_order(ProfileKeys, NewKey, Rest).
+insert_step((>), ProfileKey, ProfileKeys, NewKey, [NewKey, ProfileKey|ProfileKeys]).
+
+provision_stage(Profile, _, Basis, provision_open(Basis)) :-
+    profile_lacks(Profile, provision_date).
+provision_stage(Profile, DeadlineDate, Basis, Stage) :-
+    profile_has(Profile, provision_date),
+    profile_get(Profile, provision_date, ProvisionDate),
+    gdpr_information_duties_timing_date_order(ProvisionDate, DeadlineDate, Order),
+    order_standing(Order, Standing),
+    standing_stage(Standing, Basis, Profile, Stage).
+
+% Art 13(1): 'at the time when personal data are obtained' -- not later than
+% the obtaining day (Q8).
+standing_stage(past_deadline, art13_1, _, past(art13_1)) :-
+    implements(eu_reg_2016_679_art_13_1).
+standing_stage(on_time, art13_1, _, on_time_article_13) :-
+    implements(eu_reg_2016_679_art_13_1).
+% Art 14(3): 'at the latest' -- after the binding date is late.
+standing_stage(past_deadline, Basis, _, past(Basis)) :-
+    implements(eu_reg_2016_679_art_14_3),
+    article_14_basis(Basis, _).
+% Art 14(3)(a): when on time, the reasonable-period judgement is read (Q17).
+standing_stage(on_time, Basis, Profile, on_time_article_14(Basis, Judgement)) :-
+    implements(eu_reg_2016_679_art_14_3_a),
+    article_14_basis(Basis, _),
+    reasonable_period_judgement(Profile, Judgement).
+
+reasonable_period_judgement(Profile, absent) :-
+    profile_lacks(Profile, provided_within_reasonable_period).
+reasonable_period_judgement(Profile, Judgement) :-
+    profile_has(Profile, provided_within_reasonable_period),
+    profile_get(Profile, provided_within_reasonable_period, Judgement).
+
+% ---- the verdict of each stage: ground verdict in the head ------------
+stage_verdict(problems(Problems), input_problems(Problems), []).
+stage_verdict(deadline_open(MissingKeys), indeterminate(MissingKeys), []).
+stage_verdict(provision_open(_), indeterminate([provision_date]), []).
+stage_verdict(past(art13_1), late, [cite(eu_reg_2016_679_art_13_1)]) :-
+    implements(eu_reg_2016_679_art_13_1).
+stage_verdict(past(Basis), late, [Citation]) :-
+    implements(eu_reg_2016_679_art_14_3),
+    article_14_basis(Basis, Citation).
+stage_verdict(on_time_article_13, timely, [cite(eu_reg_2016_679_art_13_1)]) :-
+    implements(eu_reg_2016_679_art_13_1).
+stage_verdict(on_time_article_14(Basis, true), timely, [Citation]) :-
+    implements(eu_reg_2016_679_art_14_3_a),
+    article_14_basis(Basis, Citation).
+stage_verdict(on_time_article_14(_, false), late, [cite(eu_reg_2016_679_art_14_3_a)]) :-
+    implements(eu_reg_2016_679_art_14_3_a).
+stage_verdict(on_time_article_14(_, unsure),
+              needs_legal_review(
+                  open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
+                  [inputs_relied_on([provided_within_reasonable_period-unsure]),
+                   provenance(reasonable_period_for_art14_information, [cite(eu_reg_2016_679_art_14_3_a)])]),
+              []) :-
+    implements(eu_reg_2016_679_art_14_3_a).
+stage_verdict(on_time_article_14(_, absent), indeterminate([provided_within_reasonable_period]), []).
+
+% ---- public relation (F) ----------------------------------------------
+information_timing_verdict(Profile, Verdict, Citations) :-
+    timing_stage(Profile, Stage),
+    stage_verdict(Stage, Verdict, Citations).
+
+% ---- verdict assembly -------------------------------------------------
+decide_information_timing_verdict(Profile, information_timing_verdict_verdict(Status, Citations)) :-
+    information_timing_verdict(Profile, Status, Citations).
+
+% ---- projection: Status only ------------------------------------------
+information_timing_verdict_status(Profile, Status) :-
+    decide_information_timing_verdict(Profile, information_timing_verdict_verdict(Status, _Citations)).
+
+% ---- checklist: one row per ground ------------------------------------
+% provided_by_deadline: the information came in on or before DEADLINE.
+% provided_within_reasonable_period: Art 14(3)(a), the user's judgement.
+information_timing_verdict_checklist(Profile,
+        [item(provided_by_deadline, DeadlineStatus, DeadlineCitation),
+         item(provided_within_reasonable_period, PeriodStatus, cite(eu_reg_2016_679_art_14_3_a))]) :-
+    timing_stage(Profile, Stage),
+    deadline_row_status(Stage, DeadlineStatus),
+    stage_citation(Stage, Profile, DeadlineCitation),
+    period_row_status(Stage, PeriodStatus).
+
+deadline_row_status(problems(Problems), unmet(input_problems(Problems))).
+deadline_row_status(deadline_open(MissingKeys), unknown(MissingKeys)).
+deadline_row_status(provision_open(_), unknown([provision_date])).
+deadline_row_status(past(_), unmet(provided_after_the_deadline)).
+deadline_row_status(on_time_article_13, met).
+deadline_row_status(on_time_article_14(_, _), met).
+
+period_row_status(problems(Problems), unmet(input_problems(Problems))).
+period_row_status(deadline_open(MissingKeys), unknown(MissingKeys)).
+period_row_status(provision_open(art13_1), inapplicable).
+period_row_status(provision_open(Basis), unknown([provision_date])) :-
+    article_14_basis(Basis, _).
+period_row_status(past(_), inapplicable).
+period_row_status(on_time_article_13, inapplicable).
+period_row_status(on_time_article_14(_, true), met).
+period_row_status(on_time_article_14(_, false), unmet(not_within_a_reasonable_period)).
+period_row_status(on_time_article_14(_, unsure), unknown([provided_within_reasonable_period])).
+period_row_status(on_time_article_14(_, absent), unknown([provided_within_reasonable_period])).
+
+stage_citation(problems(_), _, cite(eu_reg_2016_679_art_13_1)).
+stage_citation(deadline_open(_), Profile, Citation) :-
+    route_citation(Profile, Citation).
+stage_citation(provision_open(Basis), _, Citation) :-
+    basis_citation(Basis, Citation).
+stage_citation(past(Basis), _, Citation) :-
+    basis_citation(Basis, Citation).
+stage_citation(on_time_article_13, _, cite(eu_reg_2016_679_art_13_1)).
+stage_citation(on_time_article_14(Basis, _), _, Citation) :-
+    basis_citation(Basis, Citation).
+
+route_citation(Profile, cite(eu_reg_2016_679_art_13_1)) :-
+    profile_lacks(Profile, personal_data_collected_from_data_subject).
+route_citation(Profile, cite(eu_reg_2016_679_art_13_1)) :-
+    profile_has(Profile, personal_data_collected_from_data_subject),
+    profile_get(Profile, personal_data_collected_from_data_subject, true).
+route_citation(Profile, cite(eu_reg_2016_679_art_14_3_a)) :-
+    profile_has(Profile, personal_data_collected_from_data_subject),
+    profile_get(Profile, personal_data_collected_from_data_subject, false).
+
+information_timing_verdict_decision_resolvable(Profile) :-
+    decide_information_timing_verdict(Profile, _Verdict).
+
+% ---- tests ---------------------------------------------------------
+test(art13_on_the_obtaining_day_is_timely) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 10))],
+        timely,
+        [cite(eu_reg_2016_679_art_13_1)]).
+test(art13_before_the_obtaining_day_is_timely) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 1))],
+        timely,
+        [cite(eu_reg_2016_679_art_13_1)]).
+test(art13_after_the_obtaining_day_is_late) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 11))],
+        late,
+        [cite(eu_reg_2016_679_art_13_1)]).
+test(art13_after_the_obtaining_day_is_not_timely, fail) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 11))],
+        timely,
+        _).
+test(art13_ignores_the_reasonable_period_judgement) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 10)),
+         attribute(provided_within_reasonable_period, false)],
+        timely,
+        [cite(eu_reg_2016_679_art_13_1)]).
+test(art14_on_the_last_day_and_reasonable_is_timely) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 16)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, true)],
+        timely,
+        [cite(eu_reg_2016_679_art_14_3_a)]).
+test(art14_after_the_month_is_late_whatever_the_judgement) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 17)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, true)],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_a)]).
+test(art14_late_needs_no_judgement) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 17)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false)],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_a)]).
+test(art14_on_time_but_unreasonable_is_late) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 10)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, false)],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_a)]).
+test(art14_on_time_and_unsure_needs_legal_review) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 10)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, unsure)],
+        needs_legal_review(
+            open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
+            [inputs_relied_on([provided_within_reasonable_period-unsure])|_]),
+        []).
+test(art14_on_time_and_unsure_is_not_timely, fail) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 10)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, unsure)],
+        timely,
+        _).
+test(art14_on_time_without_judgement_is_indeterminate) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 2, 10)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, false)],
+        indeterminate([provided_within_reasonable_period]),
+        []).
+test(art14_first_communication_binds_late) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 21)),
+         attribute(data_used_for_communication_with_data_subject, true),
+         attribute(first_communication_date, date(2026, 1, 20)),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, true)],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_b)]).
+test(art14_first_communication_binds_timely) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 20)),
+         attribute(data_used_for_communication_with_data_subject, true),
+         attribute(first_communication_date, date(2026, 1, 20)),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, true)],
+        timely,
+        [cite(eu_reg_2016_679_art_14_3_b)]).
+test(art14_unreasonable_under_a_shorter_limb_cites_limb_a) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 20)),
+         attribute(data_used_for_communication_with_data_subject, true),
+         attribute(first_communication_date, date(2026, 1, 20)),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, false)],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_a)]).
+test(art14_first_disclosure_binds_late) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 31)),
+         attribute(data_used_for_communication_with_data_subject, false),
+         attribute(disclosure_to_another_recipient_envisaged, true),
+         attribute(first_disclosure_date, date(2026, 1, 30))],
+        late,
+        [cite(eu_reg_2016_679_art_14_3_c)]).
+test(an_unknown_route_names_route_obtaining_and_provision) :-
+    information_timing_verdict(
+        [],
+        indeterminate([personal_data_collected_from_data_subject, obtaining_date, provision_date]),
+        []).
+test(an_unknown_route_never_names_the_article_14_flags) :-
+    information_timing_verdict(
+        [attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 15))],
+        indeterminate([personal_data_collected_from_data_subject]),
+        []).
+test(provision_date_is_merged_in_contract_order) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false)],
+        indeterminate([obtaining_date, provision_date, data_used_for_communication_with_data_subject, disclosure_to_another_recipient_envisaged]),
+        []).
+test(provision_date_after_the_obtaining_date_slot) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(data_used_for_communication_with_data_subject, true),
+         attribute(disclosure_to_another_recipient_envisaged, false)],
+        indeterminate([provision_date, first_communication_date]),
+        []).
+test(an_absent_provision_date_is_indeterminate) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10))],
+        indeterminate([provision_date]),
+        []).
+test(input_problems_come_first) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, unsure),
+         attribute(provision_date, date(2026, 3, 10))],
+        input_problems([wrong_type(personal_data_collected_from_data_subject)]),
+        []).
+test(a_wrong_unread_key_is_still_an_input_problem) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 10)),
+         attribute(protective_measures_taken, unsure)],
+        input_problems([wrong_type(protective_measures_taken)]),
+        []).
+test(an_unread_key_does_not_change_the_answer) :-
+    information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 10)),
+         attribute(items_provided, []),
+         attribute(automated_decision_making_under_article_22, unsure)],
+        timely,
+        [cite(eu_reg_2016_679_art_13_1)]).
+test(the_verdict_has_exactly_one_answer) :-
+    findall(Verdict-Citations,
+            information_timing_verdict(
+                [attribute(personal_data_collected_from_data_subject, false),
+                 attribute(obtaining_date, date(2026, 1, 31)),
+                 attribute(provision_date, date(2026, 3, 2)),
+                 attribute(data_used_for_communication_with_data_subject, true),
+                 attribute(first_communication_date, date(2026, 3, 2)),
+                 attribute(disclosure_to_another_recipient_envisaged, true),
+                 attribute(first_disclosure_date, date(2026, 3, 2)),
+                 attribute(provided_within_reasonable_period, true)],
+                Verdict,
+                Citations),
+            Answers),
+    Answers == [timely-[cite(eu_reg_2016_679_art_14_3_a)]].
+test(the_decision_wraps_the_verdict) :-
+    decide_information_timing_verdict(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 11))],
+        information_timing_verdict_verdict(late, [cite(eu_reg_2016_679_art_13_1)])).
+test(the_status_projection) :-
+    information_timing_verdict_status(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 10))],
+        timely).
+test(the_checklist_on_the_article_14_route) :-
+    information_timing_verdict_checklist(
+        [attribute(personal_data_collected_from_data_subject, false),
+         attribute(obtaining_date, date(2026, 1, 15)),
+         attribute(provision_date, date(2026, 1, 20)),
+         attribute(data_used_for_communication_with_data_subject, true),
+         attribute(first_communication_date, date(2026, 1, 20)),
+         attribute(disclosure_to_another_recipient_envisaged, false),
+         attribute(provided_within_reasonable_period, false)],
+        [item(provided_by_deadline, met, cite(eu_reg_2016_679_art_14_3_b)),
+         item(provided_within_reasonable_period, unmet(not_within_a_reasonable_period), cite(eu_reg_2016_679_art_14_3_a))]).
+test(the_checklist_on_the_article_13_route) :-
+    information_timing_verdict_checklist(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2026, 3, 10)),
+         attribute(provision_date, date(2026, 3, 11))],
+        [item(provided_by_deadline, unmet(provided_after_the_deadline), cite(eu_reg_2016_679_art_13_1)),
+         item(provided_within_reasonable_period, inapplicable, cite(eu_reg_2016_679_art_14_3_a))]).
+
+:- end_module(information_timing_verdict).

@@ -1,0 +1,55 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_child_consent_age_verdict_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_child_consent_age_verdict_child_consent_ground, [child_consent_ground_status/2, child_consent_ground/2, decide_child_consent/2]).
+:- use_module(m__eu_data_protection_gdpr_child_consent_age_verdict_kernel, [gdpr_child_consent_age_verdict_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_child_consent_age_verdict_fixtures, [gdpr_child_consent_age_verdict_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground_status(Profile, eligible).
+test(ground_holds_with_the_ground_bound) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground(Profile, child_at_least_16).
+test(full_verdict_bound_for_a_child_below_thirteen) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_without_parental_consent, Profile),
+    decide_child_consent(Profile, gdpr_child_consent_verdict(ineligible, parental_consent_missing_below_13, not_applicable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)])).
+test(a_negative_age_is_an_input_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, -1)], [wrong_type(child_age_years)]).
+test(a_float_age_is_an_input_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, 15.0)], [wrong_type(child_age_years)]).
+test(an_unknown_key_is_named) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(favourite_colour, blue)], [unknown_key(favourite_colour)]).
+test(a_duplicate_key_is_named_once) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, 15), attribute(child_age_years, 16)], [duplicate_key(child_age_years)]).
+test(a_non_list_is_not_a_profile) :-
+    gdpr_child_consent_age_verdict_input_problems(not_a_profile, [wrong_type(profile)]).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([], []).
+test(an_unsure_crisp_flag_is_an_input_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(processing_rests_on_consent, unsure)], [wrong_type(processing_rests_on_consent)]).
+test(an_impossible_date_is_an_input_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(consent_date, date(2026, 2, 30))], [wrong_type(consent_date)]).
+test(a_malformed_profile_gets_the_input_problems_verdict) :-
+    decide_child_consent([attribute(child_age_years, -1)], gdpr_child_consent_verdict(input_problems([wrong_type(child_age_years)]), none, not_reached, [])).
+test(a_malformed_profile_has_no_ground_but_none) :-
+    child_consent_ground([attribute(child_age_years, -1)], none).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground_status(Profile, ineligible).
+test(the_wrong_bound_ground_is_rejected, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground(Profile, parental_consent_given).
+
+cp_test_names([status_holds_with_the_verdict_bound, ground_holds_with_the_ground_bound, full_verdict_bound_for_a_child_below_thirteen, a_negative_age_is_an_input_problem, a_float_age_is_an_input_problem, an_unknown_key_is_named, a_duplicate_key_is_named_once, a_non_list_is_not_a_profile, an_empty_profile_has_no_problem, an_unsure_crisp_flag_is_an_input_problem, an_impossible_date_is_an_input_problem, a_malformed_profile_gets_the_input_problems_verdict, a_malformed_profile_has_no_ground_but_none]).
+cp_test_fail_names([the_wrong_bound_status_is_rejected, the_wrong_bound_ground_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

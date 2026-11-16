@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_life_cycle_costing_queries, [life_cycle_costing_profile_keys/1, life_cycle_costing_what_if/4, life_cycle_costing_eligibility/2, life_cycle_costing_status/2, life_cycle_costing_defect_enumeration/2, life_cycle_costing_checklist/2, life_cycle_costing_calculation/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

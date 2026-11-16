@@ -1,0 +1,169 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/nis2_information_sharing_voluntary_notification.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC predicate
+% it calls -- that is the whole import list. Profile keys and subject ids are
+% atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The order has no numeric threshold, so each route has
+% a positive subject and a one-unit near-miss control: the same profile with
+% ONE key changed (or dropped) so the answer flips.
+%
+% Routes and their pairs (expected answers asserted in
+% tests/test_public_interface.clausal):
+%   Art 30(1)(a)  essential_entity_notifying_an_incident            possible
+%      control    other_entity_notifying_an_incident                not possible
+%   Art 30(1)(b)  other_entity_notifying_a_significant_incident     possible
+%      control    other_entity_notifying_an_incident (shared)       not possible
+%   class absent  unclassified_entity_notifying_a_cyber_threat      possible (a + b)
+%      control    unclassified_entity_notifying_an_incident         indeterminate
+%   Art 29(1)(a)  exchange_aiming_at_response                       permitted
+%      control    exchange_meeting_neither_point                    not permitted
+%   Art 29(1)(b)  exchange_enhancing_cybersecurity_only             permitted
+%      control    exchange_of_irrelevant_information                not permitted
+%   referral R    exchange_with_unsure_relevance                    needs_legal_review
+%      control    exchange_with_unsure_relevance_and_no_points      indeterminate
+%   Art 29(4) in  essential_entity_entering_an_arrangement          must notify on entering
+%      control    other_entity_entering_an_arrangement              no duty
+%   Art 29(4) out important_entity_withdrawing_from_an_arrangement  must notify on withdrawal
+%      control    important_entity_withdrawing_from_an_informal_contact  no duty
+%   Art 29(2)     essential_entity_entering_an_unsure_arrangement   needs_legal_review
+%      control    essential_entity_with_an_unsure_arrangement_and_no_event  indeterminate
+%   input check   profile_with_an_untyped_key                       input_problems
+%      control    empty_profile                                     no problem
+% =====================================================================
+
+:- module(fixtures, [
+    nis2_information_sharing_voluntary_notification_subject/1,
+    nis2_information_sharing_voluntary_notification_profile_for/2,
+    nis2_information_sharing_voluntary_notification_assess/2
+]).
+
+:- use_module(eu/nis2_information_sharing_voluntary_notification/nis2_information_sharing_voluntary_notification, [decide_nis2_information_sharing_voluntary_notification/2]).
+
+% ---- Subject registry ------------------------------------------------
+nis2_information_sharing_voluntary_notification_subject(essential_entity_notifying_an_incident).
+nis2_information_sharing_voluntary_notification_subject(other_entity_notifying_an_incident).
+nis2_information_sharing_voluntary_notification_subject(other_entity_notifying_a_significant_incident).
+nis2_information_sharing_voluntary_notification_subject(unclassified_entity_notifying_a_cyber_threat).
+nis2_information_sharing_voluntary_notification_subject(unclassified_entity_notifying_an_incident).
+nis2_information_sharing_voluntary_notification_subject(exchange_aiming_at_response).
+nis2_information_sharing_voluntary_notification_subject(exchange_meeting_neither_point).
+nis2_information_sharing_voluntary_notification_subject(exchange_enhancing_cybersecurity_only).
+nis2_information_sharing_voluntary_notification_subject(exchange_of_irrelevant_information).
+nis2_information_sharing_voluntary_notification_subject(exchange_with_unsure_relevance).
+nis2_information_sharing_voluntary_notification_subject(exchange_with_unsure_relevance_and_no_points).
+nis2_information_sharing_voluntary_notification_subject(essential_entity_entering_an_arrangement).
+nis2_information_sharing_voluntary_notification_subject(other_entity_entering_an_arrangement).
+nis2_information_sharing_voluntary_notification_subject(important_entity_withdrawing_from_an_arrangement).
+nis2_information_sharing_voluntary_notification_subject(important_entity_withdrawing_from_an_informal_contact).
+nis2_information_sharing_voluntary_notification_subject(essential_entity_entering_an_unsure_arrangement).
+nis2_information_sharing_voluntary_notification_subject(essential_entity_with_an_unsure_arrangement_and_no_event).
+nis2_information_sharing_voluntary_notification_subject(profile_with_an_untyped_key).
+nis2_information_sharing_voluntary_notification_subject(empty_profile).
+
+% ---- Profiles --------------------------------------------------------
+% Art 30(1)(a): an essential entity may notify any incident.
+nis2_information_sharing_voluntary_notification_profile_for(essential_entity_notifying_an_incident, [
+    attribute(entity_class, essential_entity),
+    attribute(event_kind, incident)
+]).
+% Control: one key changed (the class), point (b) excludes an incident not significant.
+nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_an_incident, [
+    attribute(entity_class, out_of_scope),
+    attribute(event_kind, incident)
+]).
+% Art 30(1)(b): an other entity may notify a significant incident.
+nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_a_significant_incident, [
+    attribute(entity_class, out_of_scope),
+    attribute(event_kind, significant_incident)
+]).
+% Class absent: a cyber threat is open to every entity, so the class is not needed.
+nis2_information_sharing_voluntary_notification_profile_for(unclassified_entity_notifying_a_cyber_threat, [
+    attribute(event_kind, cyber_threat)
+]).
+% Control: an incident not significant needs the class.
+nis2_information_sharing_voluntary_notification_profile_for(unclassified_entity_notifying_an_incident, [
+    attribute(event_kind, incident)
+]).
+% Art 29(1)(a): relevant information, sharing aimed at response.
+nis2_information_sharing_voluntary_notification_profile_for(exchange_aiming_at_response, [
+    attribute(information_is_relevant_cybersecurity_information, true),
+    attribute(sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, true)
+]).
+% Control: neither point holds.
+nis2_information_sharing_voluntary_notification_profile_for(exchange_meeting_neither_point, [
+    attribute(information_is_relevant_cybersecurity_information, true),
+    attribute(sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, false),
+    attribute(sharing_enhances_the_level_of_cybersecurity, false)
+]).
+% Art 29(1)(b) alone suffices (points read as alternatives, Q1).
+nis2_information_sharing_voluntary_notification_profile_for(exchange_enhancing_cybersecurity_only, [
+    attribute(information_is_relevant_cybersecurity_information, true),
+    attribute(sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, false),
+    attribute(sharing_enhances_the_level_of_cybersecurity, true)
+]).
+% Control: the information is not relevant.
+nis2_information_sharing_voluntary_notification_profile_for(exchange_of_irrelevant_information, [
+    attribute(information_is_relevant_cybersecurity_information, false),
+    attribute(sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, false),
+    attribute(sharing_enhances_the_level_of_cybersecurity, true)
+]).
+% Referral on relevance: nothing missing that matters, relevance unsure.
+nis2_information_sharing_voluntary_notification_profile_for(exchange_with_unsure_relevance, [
+    attribute(information_is_relevant_cybersecurity_information, unsure),
+    attribute(sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, true)
+]).
+% Control: the points are missing, so they are named before the referral.
+nis2_information_sharing_voluntary_notification_profile_for(exchange_with_unsure_relevance_and_no_points, [
+    attribute(information_is_relevant_cybersecurity_information, unsure)
+]).
+% Art 29(4): an essential entity entering an arrangement of Art 29(2).
+nis2_information_sharing_voluntary_notification_profile_for(essential_entity_entering_an_arrangement, [
+    attribute(entity_class, essential_entity),
+    attribute(arrangement_event, entered),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, true)
+]).
+% Control: an other entity has no duty.
+nis2_information_sharing_voluntary_notification_profile_for(other_entity_entering_an_arrangement, [
+    attribute(entity_class, out_of_scope),
+    attribute(arrangement_event, entered),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, true)
+]).
+% Art 29(4): an important entity whose withdrawal has taken effect.
+nis2_information_sharing_voluntary_notification_profile_for(important_entity_withdrawing_from_an_arrangement, [
+    attribute(entity_class, important_entity),
+    attribute(arrangement_event, withdrew),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, true)
+]).
+% Control: not an arrangement of Art 29(2) (Q6).
+nis2_information_sharing_voluntary_notification_profile_for(important_entity_withdrawing_from_an_informal_contact, [
+    attribute(entity_class, important_entity),
+    attribute(arrangement_event, withdrew),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, false)
+]).
+% Referral on Art 29(2): every fact present, the arrangement judgement unsure.
+nis2_information_sharing_voluntary_notification_profile_for(essential_entity_entering_an_unsure_arrangement, [
+    attribute(entity_class, essential_entity),
+    attribute(arrangement_event, entered),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, unsure)
+]).
+% Control: the event is missing, so it is named before the referral.
+nis2_information_sharing_voluntary_notification_profile_for(essential_entity_with_an_unsure_arrangement_and_no_event, [
+    attribute(entity_class, essential_entity),
+    attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, unsure)
+]).
+% Input check: a author's key that is not typed (reading 7).
+nis2_information_sharing_voluntary_notification_profile_for(profile_with_an_untyped_key, [
+    attribute(entity_in_scope, true)
+]).
+% Control: the empty profile is well-formed; absence is not a problem.
+nis2_information_sharing_voluntary_notification_profile_for(empty_profile, []).
+
+% ---- Convenience wrapper ---------------------------------------------
+nis2_information_sharing_voluntary_notification_assess(Subject, Result) :-
+    nis2_information_sharing_voluntary_notification_profile_for(Subject, Profile),
+    decide_nis2_information_sharing_voluntary_notification(Profile, Result).
+
+:- end_module(fixtures).

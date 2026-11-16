@@ -1,0 +1,86 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_territorial_material_scope_fixtures, [gdpr_territorial_material_scope_subject/1, gdpr_territorial_material_scope_profile_for/2, gdpr_territorial_material_scope_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_queries, [decide_gdpr_scope/2]).
+
+gdpr_territorial_material_scope_subject(eu_controller_in_context).
+gdpr_territorial_material_scope_subject(eu_controller_context_lacking).
+gdpr_territorial_material_scope_subject(non_eu_offering).
+gdpr_territorial_material_scope_subject(non_eu_no_targeting).
+gdpr_territorial_material_scope_subject(non_eu_monitoring).
+gdpr_territorial_material_scope_subject(non_eu_offering_occasional_exempt).
+gdpr_territorial_material_scope_subject(non_eu_offering_large_scale).
+gdpr_territorial_material_scope_subject(non_eu_offering_public_authority).
+gdpr_territorial_material_scope_subject(non_eu_offering_occasional_unsure).
+gdpr_territorial_material_scope_subject(public_international_law_place).
+gdpr_territorial_material_scope_subject(public_international_law_not_attested).
+gdpr_territorial_material_scope_subject(processor_in_law_place).
+gdpr_territorial_material_scope_subject(outside_union_law).
+gdpr_territorial_material_scope_subject(member_state_security_activity).
+gdpr_territorial_material_scope_subject(household_processing).
+gdpr_territorial_material_scope_subject(household_processing_unsure).
+gdpr_territorial_material_scope_subject(legal_person_household_claim).
+gdpr_territorial_material_scope_subject(law_enforcement_authority).
+gdpr_territorial_material_scope_subject(authority_other_purpose).
+gdpr_territorial_material_scope_subject(union_institution).
+gdpr_territorial_material_scope_subject(no_personal_data).
+gdpr_territorial_material_scope_subject(manual_without_filing_system).
+gdpr_territorial_material_scope_subject(manual_in_filing_system).
+gdpr_territorial_material_scope_subject(exclusion_flag_missing).
+gdpr_territorial_material_scope_subject(unknown_key_given).
+gdpr_territorial_material_scope_subject(wrong_type_given).
+
+gdpr_territorial_material_scope_profile_for(Subject, Profile) :-
+    base_attributes(Base),
+    subject_changes(Subject, Changes),
+    apply_changes(Changes, Base, Profile).
+
+base_attributes([attribute(personal_data_processed, true), attribute(processing_wholly_or_partly_automated, true), attribute(personal_data_in_filing_system, false), attribute(activity_outside_union_law, false), attribute(member_state_common_foreign_security_activity, false), attribute(processing_by_natural_person, false), attribute(purely_personal_or_household_activity, false), attribute(processing_by_competent_authority, false), attribute(criminal_law_enforcement_purpose, false), attribute(processing_by_union_institution, false), attribute(party_role, controller), attribute(established_in_union, true), attribute(processing_in_context_of_establishment_activities, true), attribute(data_subjects_in_union, true), attribute(offering_goods_or_services_to_data_subjects_in_union, false), attribute(monitoring_behaviour_of_data_subjects_in_union, false), attribute(member_state_law_applies_by_public_international_law, attested(false, attestation(decision_layer, fixture_time, fixture_reason, none))), attribute(public_authority_or_body, false), attribute(occasional_processing, false), attribute(special_or_criminal_data_on_large_scale, false), attribute(unlikely_to_result_in_risk, false)]).
+
+subject_changes(eu_controller_in_context, []).
+subject_changes(eu_controller_context_lacking, [processing_in_context_of_establishment_activities - false]).
+subject_changes(non_eu_offering, [established_in_union - false, processing_in_context_of_establishment_activities - false, offering_goods_or_services_to_data_subjects_in_union - true]).
+subject_changes(non_eu_no_targeting, [established_in_union - false, processing_in_context_of_establishment_activities - false]).
+subject_changes(non_eu_monitoring, [established_in_union - false, processing_in_context_of_establishment_activities - false, monitoring_behaviour_of_data_subjects_in_union - true]).
+subject_changes(non_eu_offering_occasional_exempt, [established_in_union - false, processing_in_context_of_establishment_activities - false, offering_goods_or_services_to_data_subjects_in_union - true, occasional_processing - true, unlikely_to_result_in_risk - true]).
+subject_changes(non_eu_offering_large_scale, [established_in_union - false, processing_in_context_of_establishment_activities - false, offering_goods_or_services_to_data_subjects_in_union - true, occasional_processing - true, unlikely_to_result_in_risk - true, special_or_criminal_data_on_large_scale - true]).
+subject_changes(non_eu_offering_public_authority, [established_in_union - false, processing_in_context_of_establishment_activities - false, offering_goods_or_services_to_data_subjects_in_union - true, public_authority_or_body - true]).
+subject_changes(non_eu_offering_occasional_unsure, [established_in_union - false, processing_in_context_of_establishment_activities - false, offering_goods_or_services_to_data_subjects_in_union - true, occasional_processing - unsure, unlikely_to_result_in_risk - true]).
+subject_changes(public_international_law_place, [established_in_union - false, processing_in_context_of_establishment_activities - false, member_state_law_applies_by_public_international_law - attested(true, attestation(decision_layer, fixture_time, fixture_reason, none))]).
+subject_changes(public_international_law_not_attested, [established_in_union - false, processing_in_context_of_establishment_activities - false, member_state_law_applies_by_public_international_law - absent]).
+subject_changes(processor_in_law_place, [established_in_union - false, processing_in_context_of_establishment_activities - false, party_role - processor, member_state_law_applies_by_public_international_law - attested(true, attestation(decision_layer, fixture_time, fixture_reason, none))]).
+subject_changes(outside_union_law, [activity_outside_union_law - true]).
+subject_changes(member_state_security_activity, [member_state_common_foreign_security_activity - true]).
+subject_changes(household_processing, [processing_by_natural_person - true, purely_personal_or_household_activity - true]).
+subject_changes(household_processing_unsure, [processing_by_natural_person - true, purely_personal_or_household_activity - unsure]).
+subject_changes(legal_person_household_claim, [processing_by_natural_person - false, purely_personal_or_household_activity - true]).
+subject_changes(law_enforcement_authority, [processing_by_competent_authority - true, criminal_law_enforcement_purpose - true]).
+subject_changes(authority_other_purpose, [processing_by_competent_authority - true, criminal_law_enforcement_purpose - false]).
+subject_changes(union_institution, [processing_by_union_institution - true]).
+subject_changes(no_personal_data, [personal_data_processed - false]).
+subject_changes(manual_without_filing_system, [processing_wholly_or_partly_automated - false, personal_data_in_filing_system - false]).
+subject_changes(manual_in_filing_system, [processing_wholly_or_partly_automated - false, personal_data_in_filing_system - true]).
+subject_changes(exclusion_flag_missing, [activity_outside_union_law - absent]).
+subject_changes(unknown_key_given, [place_of_processing - ireland]).
+subject_changes(wrong_type_given, [established_in_union - maybe]).
+
+apply_changes([], Profile, Profile).
+apply_changes([Key - Value|Changes], Profile, Result) :-
+    change_attribute(Profile, Key, Value, Changed),
+    apply_changes(Changes, Changed, Result).
+
+change_attribute([], _, absent, []).
+change_attribute([], Key, Value, [attribute(Key, Value)]) :-
+    dif(Value, absent).
+change_attribute([attribute(Key, _)|Rest], Key, Value, Result) :-
+    change_attribute(Rest, Key, Value, Result).
+change_attribute([attribute(Other, Existing)|Rest], Key, Value, [attribute(Other, Existing)|Result]) :-
+    dif(Other, Key),
+    change_attribute(Rest, Key, Value, Result).
+
+gdpr_territorial_material_scope_assess(Subject, Result) :-
+    gdpr_territorial_material_scope_profile_for(Subject, Profile),
+    decide_gdpr_scope(Profile, Result).

@@ -1,6 +1,7 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_kleene.pl
 % Generated-companion of clausal.stdlib.kleene (source:
-% clausal/clausal/stdlib/kleene.clausal). Pure, cut-free, ->-free.
+% clausal/stdlib/kleene.clausal). Pure, cut-free, ->-free.
 % Strong-Kleene three-valued (K3) connectives ported row-for-row from the
 % Clausal source: True->true, False->false, Undefined->undefined. The 9-row
 % and3/or3 tables are copied verbatim (deliberately no wildcard short-circuit

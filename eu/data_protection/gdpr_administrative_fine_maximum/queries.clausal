@@ -1,0 +1,38 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_administrative_fine_maximum.
+% A top-layer consumer of the determination slice's public predicates.
+%
+% #23 calculation: administrative_fine_maximum/3 (slice) gives the cap in euro cents.
+% #7 justification: gdpr_administrative_fine_maximum_checklist/2 (slice) carries cite(...) per item.
+% #16 what-if: gdpr_administrative_fine_maximum_what_if/4 overrides one attribute and re-evaluates.
+%     The profile is an attribute list, not a dict, so the override is written here
+%     over attribute(Key, Value) items.
+% gdpr_administrative_fine_maximum_profile_keys/1: the profile key schema
+% gdpr_administrative_fine_maximum_input_problems/2: the problems a profile has ([] = none)
+% =====================================================================
+
+:- module(queries, [
+    gdpr_administrative_fine_maximum_profile_keys/1,
+    gdpr_administrative_fine_maximum_input_problems/2,
+    gdpr_administrative_fine_maximum_what_if/4
+]).
+
+:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/kernel, [gdpr_administrative_fine_maximum_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/gdpr_administrative_fine_maximum, [administrative_fine_maximum/3]).
+
+% schema of top-level profile keys, in the order of the typed input contract
+gdpr_administrative_fine_maximum_profile_keys([infringed_provisions, infringer_is_undertaking, total_worldwide_annual_turnover_in_euros, infringements_concern_same_or_linked_processing_operations, infringements_intentional_or_negligent]).
+
+% what-if: re-evaluate with one attribute hypothetically overridden (or added)
+gdpr_administrative_fine_maximum_what_if(Profile, OverriddenKey, NewValue, NewVerdict) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    administrative_fine_maximum(Hypothesis, NewVerdict, _).
+
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(Key, _)|Attributes], Key, Value, [attribute(Key, Value)|Attributes]).
+override_attribute([attribute(Other, Existing)|Attributes], Key, Value, [attribute(Other, Existing)|Overridden]) :-
+    dif(Other, Key),
+    override_attribute(Attributes, Key, Value, Overridden).
+
+:- end_module(queries).

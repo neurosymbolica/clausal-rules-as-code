@@ -1,0 +1,89 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_arts33_34_breach_notification.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served by the slice itself and re-exported
+% by the package facade (manifest.yaml query_interface):
+%   #2  eligibility   breach_notification_verdict/4, with the cited checklist
+%                     breach_notification_verdict_checklist/2
+%   #14 obligation    notification_obligation/2
+%   #15 deadline      authority_notification_deadline/3 and
+%                     authority_notification_period_end/3 (the consequence of
+%                     missing the period is the verdict beyond 72 hours:
+%                     reasons for the delay must accompany the notification)
+% This layer adds:
+%   gdpr_arts33_34_breach_notification_what_if/4 (#16 what-if): put one key
+%       (a profile key, or the argument hours_elapsed) in place and re-evaluate
+%       the verdict. The request term is case(Profile, HoursElapsed). Scanning
+%       hours_elapsed with it finds the flip point of the 72-hour period.
+%   gdpr_arts33_34_breach_notification_profile_keys/1: the profile key schema
+%   gdpr_arts33_34_breach_notification_input_problems/2: re-exported from the kernel
+%
+% The PROFILE is an attribute list [attribute(Key, Value), ...], not a dict,
+% so the kit's override_key/4 (a dict operation) does not apply: the
+% override below replaces every attribute(Key, _) item by one
+% attribute(Key, Value) item. The input check still runs first on the
+% hypothesis, so an override with a mistyped value gives input_problems.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_arts33_34_breach_notification_profile_keys/1,
+    gdpr_arts33_34_breach_notification_input_problems/2,
+    gdpr_arts33_34_breach_notification_what_if/4
+]).
+
+:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/breach_notification_verdict, [breach_notification_verdict_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_arts33_34_breach_notification_profile_keys([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, delay_justified_by_reasons, party_role, notification_made_without_undue_delay, notification_accompanied_by_reasons_for_delay, supervisory_authority_decision_on_communication, appropriate_protection_measures_applied_to_affected_data, subsequent_measures_ensure_high_risk_no_longer_likely, communication_would_involve_disproportionate_effort, notification_describes_nature_of_breach, notification_gives_categories_and_approximate_numbers, categories_and_approximate_numbers_possible, notification_gives_contact_point, notification_describes_likely_consequences, notification_describes_measures_taken_or_proposed, notification_describes_mitigation_measures, mitigation_measures_appropriate, information_not_possible_to_provide_at_the_same_time, communication_made_without_undue_delay, communication_describes_nature_in_clear_and_plain_language, communication_gives_contact_point, communication_describes_likely_consequences, communication_describes_measures_taken_or_proposed, communication_describes_mitigation_measures]).
+
+% #16 what-if: re-evaluate with one input hypothetically put in place.
+% The argument hours_elapsed replaces the HOURS_ELAPSED of the request.
+gdpr_arts33_34_breach_notification_what_if(case(Profile, _), hours_elapsed, NewHoursElapsed, NewStatus) :-
+    breach_notification_verdict_status(case(Profile, NewHoursElapsed), NewStatus).
+% Any other key replaces that key's attribute in the profile.
+gdpr_arts33_34_breach_notification_what_if(case(Profile, HoursElapsed), OverriddenKey, NewValue, NewStatus) :-
+    dif(OverriddenKey, hours_elapsed),
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    breach_notification_verdict_status(case(Hypothesis, HoursElapsed), NewStatus).
+
+% override_attribute(Profile, Key, Value, Hypothesis): list plumbing only.
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    is_list(Profile),
+    replace_attribute_items(Profile, Key, Value, Hypothesis).
+
+replace_attribute_items([], Key, Value, [attribute(Key, Value)]).
+replace_attribute_items([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
+    ElementKey == Key,
+    replace_attribute_items(Elements, Key, Value, Hypothesis).
+replace_attribute_items([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== Key,
+    replace_attribute_items(Elements, Key, Value, Hypothesis).
+replace_attribute_items([Element|Elements], Key, Value, [Element|Hypothesis]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    replace_attribute_items(Elements, Key, Value, Hypothesis).
+
+test(an_override_replaces_the_stated_value) :-
+    override_attribute([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false)], breach_unlikely_to_result_in_risk, true, Hypothesis),
+    Hypothesis == [attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true)].
+test(an_override_adds_an_absent_key) :-
+    override_attribute([], party_role, processor, Hypothesis),
+    Hypothesis == [attribute(party_role, processor)].
+test(what_if_the_risk_were_unlikely) :-
+    gdpr_arts33_34_breach_notification_what_if(case([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 10), breach_unlikely_to_result_in_risk, true, ineligible).
+test(what_if_one_hour_later) :-
+    gdpr_arts33_34_breach_notification_what_if(case([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72), hours_elapsed, 73, indeterminate([notification_accompanied_by_reasons_for_delay])).
+test(what_if_has_one_solution) :-
+    findall(Status, gdpr_arts33_34_breach_notification_what_if(case([attribute(breach_unlikely_to_result_in_risk, false)], 10), notification_made_without_undue_delay, false, Status), Statuses),
+    Statuses == [notification_requirement_not_met(without_undue_delay)].
+test(what_if_a_mistyped_value_is_refused) :-
+    gdpr_arts33_34_breach_notification_what_if(case([attribute(breach_unlikely_to_result_in_risk, false)], 10), breach_unlikely_to_result_in_risk, maybe, input_problems([wrong_type(breach_unlikely_to_result_in_risk)])).
+test(the_schema_has_twenty_five_keys) :-
+    gdpr_arts33_34_breach_notification_profile_keys(Keys),
+    length(Keys, 25).
+
+:- end_module(queries).

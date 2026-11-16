@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed -> different verdict). Every near-miss atom is also
+% asserted positively against a real profile, so a misspelt atom cannot pass.
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_consent_conditions/gdpr_consent_conditions, [
+    gdpr_consent_conditions_status/2,
+    gdpr_consent_conditions_status_values/1,
+    consent_conditions_status/4,
+    consent_declaration_effect/3,
+    consent_assessment_factors/2,
+    identification_obligation/4,
+    identification_information_duty/4,
+    identification_rights_effect/4
+]).
+:- use_module(eu/data_protection/gdpr_consent_conditions/fixtures, [gdpr_consent_conditions_profile_for/2]).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    gdpr_consent_conditions_status_values(StatusValues),
+    member(conditions_not_met, StatusValues).
+
+test(the_plain_profile_is_not_conditions_not_met, fail) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+
+% Route: Art 7(1) demonstrability.
+test(demonstrable_true_met) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+test(demonstrable_false_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_not_demonstrable, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(demonstrable_false_is_not_met_status, fail) :-
+    gdpr_consent_conditions_profile_for(consent_not_demonstrable, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: Art 7(2) request presentation.
+test(request_clear_met) :-
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+test(request_unclear_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_request_unclear, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(request_unclear_is_not_met_status, fail) :-
+    gdpr_consent_conditions_profile_for(consent_request_unclear, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: Art 7(3) information about withdrawal.
+test(informed_false_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_withdrawal_not_informed, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(informed_false_is_not_met_status, fail) :-
+    gdpr_consent_conditions_profile_for(consent_withdrawal_not_informed, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: Art 7(4) freely given.
+test(freely_false_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_not_freely_given, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(freely_false_is_not_met_status, fail) :-
+    gdpr_consent_conditions_profile_for(consent_not_freely_given, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: scope.
+test(scope_false_not_applicable) :-
+    gdpr_consent_conditions_profile_for(processing_not_on_consent, Profile),
+    gdpr_consent_conditions_status(Profile, not_applicable).
+test(scope_false_is_not_conditions_met, fail) :-
+    gdpr_consent_conditions_profile_for(processing_not_on_consent, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: an absent outside fact refers, never decides.
+test(absent_freely_given_refers) :-
+    gdpr_consent_conditions_profile_for(consent_freely_given_not_stated, Profile),
+    gdpr_consent_conditions_status(Profile, needs_legal_review(_, _)).
+test(absent_freely_given_is_not_met, fail) :-
+    gdpr_consent_conditions_profile_for(consent_freely_given_not_stated, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_met).
+
+% Route: Art 7(2) last sentence.
+test(infringing_part_not_binding) :-
+    gdpr_consent_conditions_profile_for(declaration_part_infringing, Profile),
+    consent_declaration_effect(Profile, part_not_binding, _).
+test(clean_declaration_no_part_infringing) :-
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    consent_declaration_effect(Profile, no_part_infringing, _).
+test(clean_declaration_is_not_part_not_binding, fail) :-
+    gdpr_consent_conditions_profile_for(consent_met_with_declaration, Profile),
+    consent_declaration_effect(Profile, part_not_binding, _).
+
+% Route: the Art 7(4) factor is reported only when the key is true.
+test(factor_reported_when_true) :-
+    gdpr_consent_conditions_profile_for(contract_conditional_consent, Profile),
+    consent_assessment_factors(Profile, [factor(contract_conditional_on_unneeded_consent, _)]).
+test(factor_not_reported_when_false, fail) :-
+    gdpr_consent_conditions_profile_for(contract_unconditional_consent, Profile),
+    consent_assessment_factors(Profile, [factor(_, _)]).
+test(factor_list_empty_when_false) :-
+    gdpr_consent_conditions_profile_for(contract_unconditional_consent, Profile),
+    consent_assessment_factors(Profile, []).
+
+% Route: Art 11(1).
+test(purposes_true_relief) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_obligation(Profile, not_obliged_to_acquire_identifying_information, _, _).
+test(purposes_false_not_engaged) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    identification_obligation(Profile, art11_1_not_engaged, _, _).
+test(purposes_false_has_no_relief, fail) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    identification_obligation(Profile, not_obliged_to_acquire_identifying_information, _, _).
+
+% Route: Art 11(2) informing duty.
+test(possible_true_must_inform) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_information_duty(Profile, must_inform_data_subject, _, _).
+test(possible_false_need_not_inform) :-
+    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
+    identification_information_duty(Profile, need_not_inform_data_subject, _, _).
+test(possible_false_is_not_must_inform, fail) :-
+    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
+    identification_information_duty(Profile, must_inform_data_subject, _, _).
+test(purposes_false_duty_not_engaged) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    identification_information_duty(Profile, art11_2_not_engaged, _, _).
+
+% Route: Art 11(2) Arts 15 to 20.
+test(provided_true_rights_apply) :-
+    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
+    identification_rights_effect(Profile, articles_15_to_20_apply, _, _).
+test(provided_false_rights_do_not_apply) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_rights_effect(Profile, articles_15_to_20_do_not_apply, _, _).
+test(provided_false_is_not_apply, fail) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_rights_effect(Profile, articles_15_to_20_apply, _, _).
+test(purposes_false_rights_not_engaged) :-
+    gdpr_consent_conditions_profile_for(identification_purposes_require, Profile),
+    identification_rights_effect(Profile, art11_2_not_engaged, _, _).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,65 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
+% result terms build and destructure, the verdict atoms are distinct, and a
+% real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/nis2_scope_entity_class/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_input_problems/2]).
+:- use_module(eu/nis2_scope_entity_class/citations, [citation/2, implements/1]).
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(eligible, ineligible).
+
+test(the_result_atoms_are_distinct) :-
+    dif(in_scope, out_of_scope),
+    dif(essential_entity, important_entity).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = nis2_scope_entity_class_verdict(eligible, [cite(eu_dir_2022_2555_art_2_1)]),
+    Verdict = nis2_scope_entity_class_verdict(Status, Citations),
+    Status == eligible,
+    Citations == [cite(eu_dir_2022_2555_art_2_1)].
+
+test(the_indeterminate_status_destructures) :-
+    Status = indeterminate([staff_headcount]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys == [staff_headcount].
+
+test(the_needs_legal_review_status_destructures) :-
+    Status = needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), [inputs_relied_on([annex_i_type-unsure])]),
+    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == annex_i_type,
+    CitationKey == eu_dir_2022_2555_art_2_1,
+    Pairs == [annex_i_type-unsure].
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_dir_2022_2555_art_2_1, _Record).
+
+test(a_class_citation_record_resolves) :-
+    citation(eu_dir_2022_2555_art_3_2, _Record).
+
+test(the_provenance_marker_accepts_a_recorded_key) :-
+    implements(eu_dir_2022_2555_art_2_4).
+
+test(the_provenance_marker_refuses_an_unrecorded_key, fail) :-
+    implements(eu_dir_2022_2555_art_9_9).
+
+test(an_empty_profile_has_no_input_problem) :-
+    nis2_scope_entity_class_input_problems([], []).
+
+test(a_well_formed_profile_has_no_input_problem) :-
+    nis2_scope_entity_class_input_problems([attribute(staff_headcount, 10), attribute(tld_name_registry, false)], []).
+
+test(an_unknown_key_is_named) :-
+    nis2_scope_entity_class_input_problems([attribute(shoe_size, 42)], [unknown_key(shoe_size)]).
+
+test(a_non_list_profile_is_wrong_type) :-
+    nis2_scope_entity_class_input_problems(not_a_profile, [wrong_type(profile)]).
+
+test(a_wrong_typed_value_is_named_and_a_well_formed_one_is_not, fail) :-
+    nis2_scope_entity_class_input_problems([attribute(staff_headcount, -1)], []).
+
+:- end_module(test_load).

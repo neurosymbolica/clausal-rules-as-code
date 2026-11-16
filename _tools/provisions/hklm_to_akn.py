@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Hong Kong e-Legislation (HKLM XML, the DoJ bulk data on data.gov.hk) -> an Akoma Ntoso
 extract the units reader already reads.
 

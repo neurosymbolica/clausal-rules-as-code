@@ -1,0 +1,118 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/cra_art14_manufacturer_reporting.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Declared query types and where they are served:
+%   #2 eligibility  -- severe_incident_status/3 (Art 14(5)), with the cited
+%                      checklist cra_art14_manufacturer_reporting_checklist/2;
+%                      both live in the determination slice and are exported
+%                      by the package facade.
+%   #15 deadline    -- manufacturer_reporting_steps/4 (what is due, with its
+%                      limit: Art 14(2), (4), (6), gated by Art 71(2)) and
+%                      manufacturer_reporting_step_timeliness/5 (the
+%                      consequence of missing the 24-hour or 72-hour limit
+%                      or 'without undue delay'); both live in the slice.
+%   #16 what-if     -- cra_art14_manufacturer_reporting_what_if/4 below.
+%
+% cra_art14_manufacturer_reporting_profile_keys/1: top-level profile key schema
+% cra_art14_manufacturer_reporting_input_problems/2: the problems a profile has ([] = none),
+%   re-exported from the kernel as the scaffold wrote it.
+%
+% RESULT CONSTRUCTORS (the order: exported, never called as queries) are
+% defined below as plain GROUND facts, one per constructor, each a
+% representative instance of the term, so that the package root exposes
+% them and any call gives a ground answer. The root_exports atoms (the four
+% profile keys, the two EVENT atoms, the two STEP argument atoms and the
+% judgement value unsure) are atoms, never exported here: they are listed
+% under root_atoms in manifest.yaml, and the generated package facade
+% carries them. None of them decides anything statutory.
+%
+% The what-if override works on the order's ATTRIBUTE LIST profile
+% [attribute(Key, Value), ...]: every attribute whose key is identical (==)
+% to the overridden key is dropped and one attribute(Key, Value) is added at
+% the end. (kit/query_combinators override_key/4 is typed for dict profiles,
+% so it is not used here; see the working notes (not published), recurring-module candidates.) A
+% profile that is not an attribute list is left as it is, so the verdict is
+% its input_problems([wrong_type(profile)]). Every step is complementary
+% clauses: exactly one solution per call.
+% =====================================================================
+
+:- module(queries, [
+    cra_art14_manufacturer_reporting_profile_keys/1,
+    cra_art14_manufacturer_reporting_input_problems/2,
+    cra_art14_manufacturer_reporting_what_if/4,
+    severe/0,
+    not_severe/0,
+    on_time/0,
+    date/3,
+    step_due/3,
+    hours_after_awareness/1,
+    days_after_measure_available/1,
+    months_after_notification/1,
+    late/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/cra_art14_manufacturer_reporting/kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
+:- use_module(eu/cra_art14_manufacturer_reporting/cra_art14_manufacturer_reporting, [cra_art14_manufacturer_reporting_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+cra_art14_manufacturer_reporting_profile_keys([affects_protection_of_sensitive_or_important_data_or_functions, leads_to_malicious_code_in_product_or_user_systems, early_warning_without_undue_delay, notification_without_undue_delay]).
+
+% #16 what-if: re-evaluate the facade status with one key hypothetically overridden.
+cra_art14_manufacturer_reporting_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    cra_art14_manufacturer_reporting_input_problems(Profile, Problems),
+    hypothesis(Problems, Profile, OverriddenKey, NewValue, Hypothesis),
+    cra_art14_manufacturer_reporting_status(Hypothesis, NewStatus).
+
+% hypothesis(Problems, Profile, Key, Value, Hypothesis): a profile that is
+% not an attribute list is kept as it is; any attribute list is overridden.
+hypothesis([wrong_type(profile)], Profile, _, _, Profile).
+hypothesis([], Profile, OverriddenKey, NewValue, Hypothesis) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis).
+hypothesis([Problem|Problems], Profile, OverriddenKey, NewValue, Hypothesis) :-
+    dif([Problem|Problems], [wrong_type(profile)]),
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis).
+
+% attribute_override(Elements, Key, Value, NewElements): keys compared by
+% identity, never by unification.
+attribute_override([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+attribute_override([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Overridden]) :-
+    ElementKey \== OverriddenKey,
+    attribute_override(Elements, OverriddenKey, NewValue, Overridden).
+attribute_override([attribute(ElementKey, _)|Elements], OverriddenKey, NewValue, Overridden) :-
+    ElementKey == OverriddenKey,
+    attribute_override(Elements, OverriddenKey, NewValue, Overridden).
+
+% ---- result constructors (data terms; exported, never called as queries) ----
+% Each is a GROUND representative instance, so a call yields a ground answer.
+severe.
+not_severe.
+on_time.
+date(2026, 9, 11).
+step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)).
+hours_after_awareness(24).
+days_after_measure_available(14).
+months_after_notification(1).
+late(hour_limit).
+indeterminate([notification_without_undue_delay]).
+needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_b)), [inputs_relied_on([notification_without_undue_delay-unsure])]).
+open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_b)).
+inputs_relied_on([notification_without_undue_delay-unsure]).
+provenance(undue_delay_result, [cite(eu_reg_2024_2847_art_14_2_b)]).
+input_problems([wrong_type(profile)]).
+unknown_key(severity_score).
+wrong_type(profile).
+duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions).
+
+:- end_module(queries).

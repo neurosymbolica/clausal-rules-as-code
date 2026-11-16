@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """clauses.py -- scan a domain's OPERATIVE Clausal for cites and exemptions.
 
 MATCHES TERMS, NOT SOURCE. Clausal is homoiconic and

@@ -1,0 +1,158 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for ch/swiss_fadp_art24_breach_notification.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). There are no numeric thresholds in this order, so
+% each route has a positive subject and a one-key near-miss control that
+% flips it (one judgement changed, added or dropped).
+%
+% Routes and their pairs:
+%   Art 24(1) required          high_risk_breach_all_duties
+%     near miss (risk false)    breach_without_high_risk
+%   Art 24(1) referral          controller_unsure_breach
+%     near miss (risk false)    controller_unsure_breach_settled_by_risk
+%   Art 24(1)/(3) no breach     no_breach
+%   Art 24(3) required          breach_only (also Art 24(1) indeterminate)
+%   Art 24(4)/(5) may restrict  information_commissioner_request_with_public_announcement
+%     near miss (no exception)  information_commissioner_request_without_exception
+%     near miss (ground fails)  information_ground_failed
+%   Art 24(5) referral          information_exception_unsure
+%     near miss (held)          information_exception_unsure_settled_by_announcement
+%   GDPR Art 33(1) not required eu_unlikely_risk_settles_absent_breach
+%     near miss (not unlikely)  eu_not_unlikely_risk_absent_breach
+%   comparison differs (Q4)     swiss_and_eu_both_true_thresholds
+%   input check                 duplicate_and_unknown_keys, crisp_key_unsure,
+%     near miss                 crisp_key_true
+%                               not_an_attribute_list
+% =====================================================================
+
+:- module(fixtures, [
+    swiss_fadp_art24_breach_notification_subject/1,
+    swiss_fadp_art24_breach_notification_profile_for/2,
+    swiss_fadp_art24_breach_notification_assess/2
+]).
+
+:- use_module(ch/swiss_fadp_art24_breach_notification/swiss_fadp_art24_breach_notification, [decide_swiss_fadp_art24_breach_notification/2]).
+
+% ---- Subject registry ------------------------------------------------
+swiss_fadp_art24_breach_notification_subject(high_risk_breach_all_duties).
+swiss_fadp_art24_breach_notification_subject(breach_without_high_risk).
+swiss_fadp_art24_breach_notification_subject(no_breach).
+swiss_fadp_art24_breach_notification_subject(breach_only).
+swiss_fadp_art24_breach_notification_subject(controller_unsure_breach).
+swiss_fadp_art24_breach_notification_subject(controller_unsure_breach_settled_by_risk).
+swiss_fadp_art24_breach_notification_subject(information_commissioner_request_with_public_announcement).
+swiss_fadp_art24_breach_notification_subject(information_commissioner_request_without_exception).
+swiss_fadp_art24_breach_notification_subject(information_ground_failed).
+swiss_fadp_art24_breach_notification_subject(information_exception_unsure).
+swiss_fadp_art24_breach_notification_subject(information_exception_unsure_settled_by_announcement).
+swiss_fadp_art24_breach_notification_subject(eu_unlikely_risk_settles_absent_breach).
+swiss_fadp_art24_breach_notification_subject(eu_not_unlikely_risk_absent_breach).
+swiss_fadp_art24_breach_notification_subject(swiss_and_eu_both_true_thresholds).
+swiss_fadp_art24_breach_notification_subject(duplicate_and_unknown_keys).
+swiss_fadp_art24_breach_notification_subject(crisp_key_unsure).
+swiss_fadp_art24_breach_notification_subject(crisp_key_true).
+swiss_fadp_art24_breach_notification_subject(not_an_attribute_list).
+
+% ---- Profiles --------------------------------------------------------
+swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, [
+    attribute(breach_of_data_security, true),
+    attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true),
+    attribute(information_necessary_for_protection_of_data_subject, true),
+    attribute(commissioner_requested_information_of_data_subject, false),
+    attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, false),
+    attribute(information_ensured_comparably_by_public_announcement, false),
+    attribute(personal_data_breach, true),
+    attribute(breach_unlikely_to_result_in_risk, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, [
+    attribute(breach_of_data_security, true),
+    attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false),
+    attribute(information_necessary_for_protection_of_data_subject, true),
+    attribute(commissioner_requested_information_of_data_subject, false),
+    attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, false),
+    attribute(information_ensured_comparably_by_public_announcement, false),
+    attribute(personal_data_breach, true),
+    attribute(breach_unlikely_to_result_in_risk, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(no_breach, [
+    attribute(breach_of_data_security, false),
+    attribute(personal_data_breach, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(breach_only, [
+    attribute(breach_of_data_security, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach, [
+    attribute(breach_of_data_security, unsure),
+    attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach_settled_by_risk, [
+    attribute(breach_of_data_security, unsure),
+    attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_with_public_announcement, [
+    attribute(breach_of_data_security, true),
+    attribute(commissioner_requested_information_of_data_subject, true),
+    attribute(information_ensured_comparably_by_public_announcement, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_without_exception, [
+    attribute(breach_of_data_security, true),
+    attribute(commissioner_requested_information_of_data_subject, true),
+    attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, false),
+    attribute(information_ensured_comparably_by_public_announcement, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(information_ground_failed, [
+    attribute(breach_of_data_security, true),
+    attribute(information_necessary_for_protection_of_data_subject, false),
+    attribute(commissioner_requested_information_of_data_subject, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure, [
+    attribute(breach_of_data_security, true),
+    attribute(information_necessary_for_protection_of_data_subject, true),
+    attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, unsure),
+    attribute(information_ensured_comparably_by_public_announcement, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure_settled_by_announcement, [
+    attribute(breach_of_data_security, true),
+    attribute(information_necessary_for_protection_of_data_subject, true),
+    attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, unsure),
+    attribute(information_ensured_comparably_by_public_announcement, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(eu_unlikely_risk_settles_absent_breach, [
+    attribute(breach_unlikely_to_result_in_risk, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(eu_not_unlikely_risk_absent_breach, [
+    attribute(breach_unlikely_to_result_in_risk, false)
+]).
+swiss_fadp_art24_breach_notification_profile_for(swiss_and_eu_both_true_thresholds, [
+    attribute(breach_of_data_security, true),
+    attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true),
+    attribute(personal_data_breach, true),
+    attribute(breach_unlikely_to_result_in_risk, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(duplicate_and_unknown_keys, [
+    attribute(breach_of_data_security, true),
+    attribute(breach_of_data_security, false),
+    attribute(colour, red)
+]).
+swiss_fadp_art24_breach_notification_profile_for(crisp_key_unsure, [
+    attribute(commissioner_requested_information_of_data_subject, unsure)
+]).
+swiss_fadp_art24_breach_notification_profile_for(crisp_key_true, [
+    attribute(commissioner_requested_information_of_data_subject, true)
+]).
+swiss_fadp_art24_breach_notification_profile_for(not_an_attribute_list, nothing).
+
+% ---- Convenience wrapper ---------------------------------------------
+swiss_fadp_art24_breach_notification_assess(Subject, Result) :-
+    swiss_fadp_art24_breach_notification_profile_for(Subject, Profile),
+    decide_swiss_fadp_art24_breach_notification(Profile, Result).
+
+:- end_module(fixtures).

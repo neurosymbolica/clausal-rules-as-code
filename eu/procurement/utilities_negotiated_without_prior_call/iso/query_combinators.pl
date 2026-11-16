@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(query_combinators, [diff_checklists/3, changed_deltas/2, flip_scan/4, bisect_flip/4, override_key/4, what_if/5, override_where/4]).
 
 :- use_module(library(lists), [append/3]).

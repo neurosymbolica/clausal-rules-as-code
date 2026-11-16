@@ -1,0 +1,79 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_erasure_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_queries, [gdpr_data_subject_rights_erasure_profile_keys/1, gdpr_data_subject_rights_erasure_what_if/4, gdpr_data_subject_rights_erasure_compliance_check/3]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_kernel, [gdpr_data_subject_rights_erasure_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_fixtures, [gdpr_data_subject_rights_erasure_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_data_subject_rights_erasure_profile_keys(ProfileKeys),
+    ProfileKeys == [request_type, objection_ground_claimed, request_received_on, extension_claimed, controller_demonstrates_unable_to_identify_data_subject, identity_confirmed, personal_data_inaccurate, consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, accuracy_contested_by_data_subject, data_subject_opposes_erasure, data_required_by_data_subject_for_legal_claims, verification_of_overriding_grounds_pending, personal_data_provided_by_data_subject, processing_based_on_consent_or_contract, processing_carried_out_by_automated_means, processing_based_on_art6_1_e_or_f, processing_for_direct_marketing, processing_for_research_or_statistics_pursuant_to_art89_1, data_subject_gave_explicit_consent, decision_based_on_special_categories, special_category_condition_and_safeguards_met_for_decision, personal_data_disclosed_to_recipients, data_subject_asks_who_the_recipients_are, extension_necessary_for_complexity_and_number, reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, personal_data_incomplete_in_light_of_purposes, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed, processing_necessary_for_freedom_of_expression_and_information, processing_necessary_for_public_task_or_official_authority, processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, erasure_would_render_impossible_or_seriously_impair_processing_objectives, processing_necessary_for_legal_claims, controller_no_longer_needs_data_for_processing_purposes, transmission_would_adversely_affect_rights_and_freedoms_of_others, objection_grounds_relate_to_particular_situation, controller_demonstrates_compelling_legitimate_grounds, decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects, decision_necessary_for_contract_with_data_subject, recipient_notification_impossible_or_disproportionate_effort, legislative_restriction_applies_to_the_right, erasure_required_by_union_or_member_state_law, processing_required_by_union_or_member_state_law, decision_authorised_by_union_or_member_state_law, public_holidays].
+test(the_reexported_input_check_answers_once) :-
+    findall(Problems, gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure)], Problems), ProblemLists),
+    ProblemLists == [[]].
+test(what_if_adding_legal_claims_relieves) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_what_if(Profile, processing_necessary_for_legal_claims, true, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(need_not_comply, art17_1_a, art17_3_e, [], [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_a), cite(eu_reg_2016_679_art_17_3), cite(eu_reg_2016_679_art_17_3_e)])].
+test(what_if_replacing_the_manifest_character_gives_the_fee) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_request_not_manifestly_unfounded, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_what_if(Profile, request_manifestly_unfounded_or_excessive, true, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(need_not_comply, art17_1_a, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_a)])].
+test(what_if_confirming_the_identity_lifts_the_suspension) :-
+    gdpr_data_subject_rights_erasure_profile_for(suspended_identity_not_confirmed, Profile),
+    findall(Comply, gdpr_data_subject_rights_erasure_what_if(Profile, identity_confirmed, true, gdpr_data_subject_request_verdict(Comply, _, _, _, _)), Complies),
+    Complies == [must_comply].
+test(what_if_keeps_the_request_type) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    findall(Comply, gdpr_data_subject_rights_erasure_what_if(Profile, data_no_longer_necessary_for_purposes, true, gdpr_data_subject_request_verdict(Comply, _, _, _, _)), Complies),
+    Complies == [must_comply].
+test(what_if_ruling_out_the_only_ground_opens_the_engagement) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    gdpr_data_subject_rights_erasure_what_if(Profile, data_no_longer_necessary_for_purposes, false, gdpr_data_subject_request_verdict(indeterminate([_|_]), none, none, [], [])).
+test(what_if_on_a_term_that_is_not_a_list_answers_input_problems) :-
+    findall(Verdict, gdpr_data_subject_rights_erasure_what_if(not_a_profile, request_type, erasure, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(input_problems([wrong_type(profile)]), none, none, [], [])].
+test(refusing_is_permitted_under_an_exception) :-
+    gdpr_data_subject_rights_erasure_profile_for(need_not_comply_freedom_of_expression, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, refuse_erasure, Verdict), Verdicts),
+    Verdicts == [permitted].
+test(refusing_is_forbidden_when_the_controller_must_comply) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, refuse_erasure, Verdict), Verdicts),
+    Verdicts == [forbidden].
+test(a_fee_is_permitted_for_a_manifestly_unfounded_request) :-
+    gdpr_data_subject_rights_erasure_profile_for(need_not_comply_manifestly_unfounded_with_fee, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, charge_reasonable_fee, Verdict), Verdicts),
+    Verdicts == [permitted].
+test(a_fee_is_forbidden_under_another_exception) :-
+    gdpr_data_subject_rights_erasure_profile_for(need_not_comply_freedom_of_expression, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, charge_reasonable_fee, Verdict), Verdicts),
+    Verdicts == [forbidden].
+test(deferring_is_permitted_while_the_identity_is_unconfirmed) :-
+    gdpr_data_subject_rights_erasure_profile_for(suspended_identity_not_confirmed, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, defer_pending_identity, Verdict), Verdicts),
+    Verdicts == [permitted].
+test(an_open_verdict_leaves_the_action_undetermined) :-
+    gdpr_data_subject_rights_erasure_profile_for(needs_legal_review_legal_claims_unsure, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, refuse_erasure, Verdict), Verdicts),
+    Verdicts == [not_yet_determined].
+test(an_unknown_action_is_undetermined) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    findall(Verdict, gdpr_data_subject_rights_erasure_compliance_check(Profile, notify_recipients, Verdict), Verdicts),
+    Verdicts == [not_yet_determined].
+
+test(an_unknown_action_is_not_permitted, fail) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    gdpr_data_subject_rights_erasure_compliance_check(Profile, notify_recipients, permitted).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_reexported_input_check_answers_once, what_if_adding_legal_claims_relieves, what_if_replacing_the_manifest_character_gives_the_fee, what_if_confirming_the_identity_lifts_the_suspension, what_if_keeps_the_request_type, what_if_ruling_out_the_only_ground_opens_the_engagement, what_if_on_a_term_that_is_not_a_list_answers_input_problems, refusing_is_permitted_under_an_exception, refusing_is_forbidden_when_the_controller_must_comply, a_fee_is_permitted_for_a_manifestly_unfounded_request, a_fee_is_forbidden_under_another_exception, deferring_is_permitted_while_the_identity_is_unconfirmed, an_open_verdict_leaves_the_action_undetermined, an_unknown_action_is_undetermined]).
+cp_test_fail_names([an_unknown_action_is_not_permitted]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

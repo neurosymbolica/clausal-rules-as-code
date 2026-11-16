@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/eprivacy_art_5_3_terminal_equipment
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "eprivacy_art_5_3_terminal_equipment"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule, plus the
+# bare root_exports atoms (the six profile keys and the judgement value
+# unsure) that the order requires at the package root -- the atoms are
+# carried by the generated facade from root_atoms below, never from a
+# :- module(...) export list.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- eprivacy_art_5_3_terminal_equipment.clausal --
+  - "terminal_equipment_storage_or_access_permitted/3"
+  - "decide_eprivacy_art_5_3_terminal_equipment/2"
+  - "eprivacy_art_5_3_terminal_equipment_status/2"
+  - "eprivacy_art_5_3_terminal_equipment_checklist/2"
+  - "eprivacy_art_5_3_terminal_equipment_decision_resolvable/1"
+  - "eprivacy_art_5_3_terminal_equipment_status_values/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  # -- queries.clausal --
+  - "eprivacy_art_5_3_terminal_equipment_profile_keys/1"
+  - "eprivacy_art_5_3_terminal_equipment_input_problems/2"
+  - "eprivacy_art_5_3_terminal_equipment_what_if/4"
+  # -- root atoms (root_exports) --
+  - "storage_or_access_in_terminal_equipment"
+  - "storage_or_access_solely_for_transmission"
+  - "service_explicitly_requested_by_user"
+  - "strictly_necessary_to_provide_requested_service"
+  - "user_consent_given"
+  - "clear_and_comprehensive_information_provided"
+  - "unsure"
+  # -- fixtures.clausal --
+  - "eprivacy_art_5_3_terminal_equipment_subject/1"
+  - "eprivacy_art_5_3_terminal_equipment_profile_for/2"
+  - "eprivacy_art_5_3_terminal_equipment_assess/2"
+
+# root_atoms: the bare atoms the test harness reads off the package root
+# (root_exports of the order), in root_exports order.
+root_atoms:
+  - "storage_or_access_in_terminal_equipment"
+  - "storage_or_access_solely_for_transmission"
+  - "service_explicitly_requested_by_user"
+  - "strictly_necessary_to_provide_requested_service"
+  - "user_consent_given"
+  - "clear_and_comprehensive_information_provided"
+  - "unsure"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: no shared backbone package is imported (the kit
+# module formalize_lib is the only library the slice calls).
+uses: []
+
+scope: "Directive 2002/58/EC (ePrivacy Directive) Article 5(3), first and second
+  sentences, consolidated text 02002L0058-20091219 (as amended by Directive
+  2009/136/EC), read with Article 2, second paragraph, point (f) (consent) and
+  point (a) (user, context only). Decided here: whether the storing of
+  information, or the gaining of access to information already stored, in the
+  terminal equipment of a subscriber or user is permitted, not permitted or
+  outside Article 5(3), as the Directive states what the Member States shall
+  ensure: permitted when any one of three ways is met (the transmission
+  exemption; the strictly necessary exemption for an explicitly requested
+  information society service; consent given after clear and comprehensive
+  information), not permitted when all three fail. Every open-textured point
+  (scope, sole purpose, explicit request, strict necessity, valid consent,
+  clear and comprehensive information) is a judgement the caller states; an
+  unsure judgement goes to a lawyer (needs_legal_review), a missing key is
+  asked for (indeterminate). Out of scope: any Member State's
+  transposing law, the conditions of valid consent under Directive 95/46/EC
+  and Regulation (EU) 2016/679, the definition of an information society
+  service (Directive (EU) 2015/1535), case law and guidance."
+
+sources:
+  - "Directive 2002/58/EC of the European Parliament and of the Council of 12 July 2002 concerning the processing of personal data and the protection of privacy in the electronic communications sector (Directive on privacy and electronic communications), OJ L 201, 31.7.2002, p. 37; consolidated text 02002L0058-20091219 as amended by Directive 2009/136/EC; Article 5(3), first and second sentences (units #art5_p3_s1, #art5_p3_s2)"
+  - "Directive 2002/58/EC, Article 2, second paragraph, point (f) ('consent', unit #art2_f) and point (a) ('user', unit #art2_a, marker only)"
+  - "Directive 2002/58/EC, Article 5 heading (unit #art5; deferred, carries no rule)"
+
+query_interface:
+  2: "terminal_equipment_storage_or_access_permitted/3"   # eligibility: permitted / not_permitted / not_applicable, non-final indeterminate/needs_legal_review; cited checklist eprivacy_art_5_3_terminal_equipment_checklist/2
+  16: "eprivacy_art_5_3_terminal_equipment_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_5_heading
+  units:
+  - 02002L0058-20091219#art5
+  reason: The title of Article 5 carries no rule. Deferred so every unit of the pinned
+    extract is accounted for.
+  consequence: 'None for a caller: a title carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: national_transposition
+  instrument: Member States' laws transposing Directive 2002/58/EC Art 5(3)
+  cites:
+  - 02002L0058-20091219#art17
+  reason: A directive binds the Member States; their transposing laws are not pinned
+    and are not read (reading (1), open question (a)). The cite is the Directive's
+    transposition article.
+  consequence: An answer states what Article 5(3) requires the Member States to ensure;
+    a caller checks the applicable national law, a matter for a lawyer.
+- what: consent_under_the_gdpr
+  instrument: Regulation (EU) 2016/679 Arts 4(11), 7 and 94(2); Directive 95/46/EC
+  cites:
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#art_007
+  - 02016R0679-20160504#parag_094.002
+  reason: Art 2(f) refers to the consent of Directive 95/46/EC, read as the GDPR's
+    by its Art 94(2); not pinned here. The caller states valid consent as the judgement
+    user_consent_given (reading (7)).
+  consequence: The order does not check the conditions of valid consent; the caller
+    does.
+- what: information_society_service_definition
+  instrument: Directive (EU) 2015/1535 Art 1(1)(b)
+  cites:
+  - 32015L1535#point_001.001_b
+  reason: Not pinned; the caller's judgement service_explicitly_requested_by_user
+    covers whether the service is an information society service (reading (5)).
+  consequence: The order takes the caller's judgement as given.

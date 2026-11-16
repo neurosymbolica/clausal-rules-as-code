@@ -1,0 +1,77 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_queries, [decide_prior_consultation/2, prior_consultation_duty/2, impact_assessment_outside_facts/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_kernel, [gdpr_impact_assessment_prior_consultation_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_prior_consultation_fixtures, [gdpr_impact_assessment_prior_consultation_profile_for/2]).
+
+test(article_36_1_required_holds_with_the_status_bound) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(residual_high_risk_no_measures, Profile),
+    prior_consultation_duty(Profile, required).
+test(article_36_5_required_holds_with_the_basis_bound) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(member_state_prior_authorisation, Profile),
+    decide_prior_consultation(Profile, prior_consultation_verdict(required, [art36_5_member_state_prior_authorisation], _, [cite(eu_reg_2016_679_art_36_5)])).
+test(not_required_holds_with_the_status_bound) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(measures_bring_risk_below_high, Profile),
+    prior_consultation_duty(Profile, not_required).
+test(no_assessment_referral_holds_with_the_reason_bound) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(no_assessment_public_interest_unmet, Profile),
+    prior_consultation_duty(Profile, needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_36_1)]), _)).
+test(reading_13_not_required_holds_with_the_status_bound) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(assessment_status_absent_no_way_open, Profile),
+    prior_consultation_duty(Profile, not_required).
+test(a_number_profile_is_wrong_type_profile) :-
+    findall(Verdict, decide_prior_consultation(42, Verdict), Verdicts),
+    Verdicts == [prior_consultation_verdict(input_problems([wrong_type(profile)]), [], [], [])].
+test(an_atom_profile_is_wrong_type_profile) :-
+    prior_consultation_duty(profile, input_problems([wrong_type(profile)])).
+test(a_list_of_pairs_is_not_an_attribute_list) :-
+    prior_consultation_duty([impact_assessment_carried_out - true], input_problems([wrong_type(profile)])).
+test(the_outside_facts_of_a_malformed_profile_are_its_problems) :-
+    impact_assessment_outside_facts(profile, input_problems([wrong_type(profile)])).
+test(a_capitalised_quoted_boolean_is_wrong_type) :-
+    prior_consultation_duty([attribute(impact_assessment_carried_out, 'True')], input_problems([wrong_type(impact_assessment_carried_out)])).
+test(a_compound_value_is_wrong_type) :-
+    prior_consultation_duty([attribute(mitigating_measures_taken, value(true))], input_problems([wrong_type(mitigating_measures_taken)])).
+test(a_criteria_key_outside_its_three_atoms_is_wrong_type) :-
+    prior_consultation_duty([attribute(vulnerable_data_subjects, maybe)], input_problems([wrong_type(vulnerable_data_subjects)])).
+test(an_unattested_outside_fact_is_wrong_type) :-
+    prior_consultation_duty([attribute(member_state_requires_prior_authorisation, true)], input_problems([wrong_type(member_state_requires_prior_authorisation)])).
+test(an_absent_key_is_no_input_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(impact_assessment_carried_out, true)], []).
+test(the_fixture_problems_are_named_in_contract_order) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(duplicate_and_unknown_keys, Profile),
+    gdpr_impact_assessment_prior_consultation_input_problems(Profile, [duplicate_key(impact_assessment_carried_out), wrong_type(mitigating_measures_taken), unknown_key(stray_flag)]).
+test(an_unread_route_approval_changes_no_answer) :-
+    prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false), attribute(route_approvals, approvals(viewer(account), [approval(another_route, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', rejected, at, reason)]))], required).
+
+test(article_36_1_required_rejects_not_required, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(residual_high_risk_no_measures, Profile),
+    prior_consultation_duty(Profile, not_required).
+test(article_36_5_required_rejects_the_article_36_1_basis, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(member_state_prior_authorisation, Profile),
+    decide_prior_consultation(Profile, prior_consultation_verdict(required, [art36_1_residual_high_risk], _, _)).
+test(not_required_rejects_required, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(measures_bring_risk_below_high, Profile),
+    prior_consultation_duty(Profile, required).
+test(no_assessment_referral_rejects_not_required, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(no_assessment_public_interest_unmet, Profile),
+    prior_consultation_duty(Profile, not_required).
+test(reading_13_does_not_name_the_assessment_missing, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(assessment_status_absent_no_way_open, Profile),
+    prior_consultation_duty(Profile, indeterminate(_)).
+test(a_problem_profile_gets_no_final_status, fail) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(duplicate_and_unknown_keys, Profile),
+    prior_consultation_duty(Profile, required).
+
+cp_test_names([article_36_1_required_holds_with_the_status_bound, article_36_5_required_holds_with_the_basis_bound, not_required_holds_with_the_status_bound, no_assessment_referral_holds_with_the_reason_bound, reading_13_not_required_holds_with_the_status_bound, a_number_profile_is_wrong_type_profile, an_atom_profile_is_wrong_type_profile, a_list_of_pairs_is_not_an_attribute_list, the_outside_facts_of_a_malformed_profile_are_its_problems, a_capitalised_quoted_boolean_is_wrong_type, a_compound_value_is_wrong_type, a_criteria_key_outside_its_three_atoms_is_wrong_type, an_unattested_outside_fact_is_wrong_type, an_absent_key_is_no_input_problem, the_fixture_problems_are_named_in_contract_order, an_unread_route_approval_changes_no_answer]).
+cp_test_fail_names([article_36_1_required_rejects_not_required, article_36_5_required_rejects_the_article_36_1_basis, not_required_rejects_required, no_assessment_referral_rejects_not_required, reading_13_does_not_name_the_assessment_missing, a_problem_profile_gets_no_final_status]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

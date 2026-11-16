@@ -1,0 +1,270 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/ai_act/deployer_duties_fria (deontic family).
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> deployer_duties_fria -> queries
+%   -> fixtures -> package facade.
+%
+% Source (the law the package formalizes): Regulation (EU) 2024/1689
+% (Artificial Intelligence Act), consolidated text 02024R1689-20260727
+% (as amended by Regulation (EU) 2026/1744): Art 3 point (4) (deployer),
+% Art 26(6), 26(7) and 26(11), Art 27(1), (2) and (3), Art 111(1) and (2),
+% and Art 113, third paragraph, point (c)(i) and (ii).
+% The input check below implements NO provision: it is the order's input
+% contract (INTERFACE - THE INPUT CHECK), so it carries no implements/1
+% marker.
+%
+% WHAT LIVES HERE. Only the PREDICATES that two or more files CALL. This
+% package has ONE determination slice (deployer_duties_fria.clausal), so no
+% predicate is shared slice-to-slice. The one exception is the order's
+% input check deployer_duties_fria_input_problems/2, written here by the
+% scaffold from the typed input_contract, exported for the slice to import
+% and re-exported by queries.clausal:
+%   :- use_module(eu/ai_act/deployer_duties_fria/kernel,
+%                 [deployer_duties_fria_input_problems/2]).
+% It is defined nowhere else.
+%
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms, so every file spells them alike.
+%
+% THE RESULT TERM the slice builds (scaffold facade):
+%   deployer_duties_fria_verdict(Result, Citations)
+%     Result    -- ONE term: a final RESULT atom of the query asked, or a
+%                  not-final status compound itself (never in a list).
+%     Citations -- ONE flat, set-like list of cite(Key) terms, Key a
+%                  canonical citation atom recorded in citations.clausal;
+%                  [] whenever Result is not final.
+%
+% The contracted queries return the same two terms in their last two
+% argument positions:
+%   deployer_obligation_status(Profile, Obligation, AssessmentDate,
+%                              Result, Citations)
+%   log_retention_period_status(Profile, RetentionMonths, AssessmentDate,
+%                               Result, Citations)
+%
+% Final RESULT atoms of deployer_obligation_status/5:
+%   not_applicable_on_date, not_a_deployer, not_a_high_risk_ai_system,
+%   obligation_does_not_apply,
+%   information_under_article_13_of_directive_2016_680,
+%   compliance_required_by_31_december_2030,
+%   existing_system_without_significant_changes_not_covered,
+%   compliance_required_by_2_august_2030, obligation_applies.
+% Final RESULT atoms of log_retention_period_status/5:
+%   not_applicable_on_date, not_a_deployer, not_a_high_risk_ai_system,
+%   obligation_does_not_apply, compliance_required_by_31_december_2030,
+%   existing_system_without_significant_changes_not_covered,
+%   compliance_required_by_2_august_2030,
+%   period_set_by_other_union_or_national_law,
+%   retention_period_of_at_least_six_months,
+%   retention_period_shorter_than_six_months.
+% OBLIGATION atoms (argument 2 of deployer_obligation_status/5, never
+% enumerated): log_retention,
+%   information_of_workers_and_their_representatives,
+%   information_of_natural_persons_subject_to_decisions,
+%   fundamental_rights_impact_assessment,
+%   notification_of_assessment_results.
+% Not-final status compounds (CITATIONS always []; the bare atom
+% indeterminate is NEVER written):
+%   input_problems(Problems)      -- Problems the flat list of
+%                                    duplicate_key(Key), wrong_type(Key),
+%                                    unknown_key(Key) terms, then
+%                                    wrong_type(obligation) or
+%                                    wrong_type(retention_months), then
+%                                    wrong_type(assessment_date);
+%   indeterminate([Key])          -- exactly one bare missing key atom;
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                                 -- Key the first unsure judgement that
+%                                    matters, Pairs the Key-Value pairs of
+%                                    the present judgement query keys in
+%                                    root_exports order (an optional
+%                                    trailing provenance(Clause, Citations)
+%                                    element is unscored).
+% Judgement value besides true and false: unsure.
+% ASSESSMENT_DATE is a ground date(Year, Month, Day) argument, never a
+% profile key (there is no as_of_date key in this order).
+% =====================================================================
+
+:- module(kernel, [deployer_duties_fria_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% deployer_duties_fria_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+deployer_duties_fria_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [deployer_of_the_system, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, logs_automatically_generated_by_the_system_under_the_deployers_control, union_or_national_law_provides_otherwise_on_the_log_retention_period, deployer_is_an_employer, put_into_service_or_used_at_the_workplace, makes_or_assists_in_making_decisions_related_to_natural_persons, used_for_law_enforcement_purposes, system_listed_under_point_2_of_annex_iii, body_governed_by_public_law, private_entity_providing_public_services, system_listed_under_point_5_b_of_annex_iii, system_listed_under_point_5_c_of_annex_iii, exempt_from_notification_in_the_case_of_article_46_1, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, significant_changes_in_design_as_from_the_chapter_iii_date, intended_to_be_used_by_public_authorities],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(deployer_of_the_system, boolean).
+key_type(system_is_a_high_risk_ai_system_listed_in_annex_iii, boolean).
+key_type(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, boolean).
+key_type(logs_automatically_generated_by_the_system_under_the_deployers_control, boolean).
+key_type(union_or_national_law_provides_otherwise_on_the_log_retention_period, boolean).
+key_type(deployer_is_an_employer, boolean).
+key_type(put_into_service_or_used_at_the_workplace, boolean).
+key_type(makes_or_assists_in_making_decisions_related_to_natural_persons, judgement).
+key_type(used_for_law_enforcement_purposes, boolean).
+key_type(system_listed_under_point_2_of_annex_iii, boolean).
+key_type(body_governed_by_public_law, judgement).
+key_type(private_entity_providing_public_services, judgement).
+key_type(system_listed_under_point_5_b_of_annex_iii, boolean).
+key_type(system_listed_under_point_5_c_of_annex_iii, boolean).
+key_type(exempt_from_notification_in_the_case_of_article_46_1, boolean).
+key_type(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, boolean).
+key_type(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, boolean).
+key_type(significant_changes_in_design_as_from_the_chapter_iii_date, judgement).
+key_type(intended_to_be_used_by_public_authorities, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

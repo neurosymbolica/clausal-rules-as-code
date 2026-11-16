@@ -1,0 +1,210 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/eprivacy_art_5_3_terminal_equipment.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A PROFILE of this order is an attribute list [attribute(Key, Value), ...]
+% (the order's typed input contract), every value the atom true, false or
+% unsure. Every route has a positive subject and a one-unit near-miss
+% control (one key changed) that gets a different result; the pairs are
+% listed in tests/test_public_interface.clausal.
+%
+% Routes: (0) input problems; (1) scope absent / scope false; (3) a MET way
+% (each of the three ways), three FAILED ways, scope unsure and settled;
+% (4) the first missing key (fewest unresolved, tie by contract order,
+% beside an unsure judgement); (5) the referral of each unsure
+% judgement.
+% =====================================================================
+
+:- module(fixtures, [
+    eprivacy_art_5_3_terminal_equipment_subject/1,
+    eprivacy_art_5_3_terminal_equipment_profile_for/2,
+    eprivacy_art_5_3_terminal_equipment_assess/2
+]).
+
+:- use_module(eu/eprivacy_art_5_3_terminal_equipment/eprivacy_art_5_3_terminal_equipment, [decide_eprivacy_art_5_3_terminal_equipment/2]).
+
+% ---- Subject registry ------------------------------------------------
+eprivacy_art_5_3_terminal_equipment_subject(empty_profile).
+eprivacy_art_5_3_terminal_equipment_subject(out_of_scope).
+eprivacy_art_5_3_terminal_equipment_subject(scope_only).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_only).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_failed_alone).
+eprivacy_art_5_3_terminal_equipment_subject(requested_and_strictly_necessary).
+eprivacy_art_5_3_terminal_equipment_subject(requested_but_not_strictly_necessary).
+eprivacy_art_5_3_terminal_equipment_subject(informed_consent).
+eprivacy_art_5_3_terminal_equipment_subject(consent_without_information).
+eprivacy_art_5_3_terminal_equipment_subject(all_ways_failed).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_restores_permission).
+eprivacy_art_5_3_terminal_equipment_subject(fewest_unresolved_first).
+eprivacy_art_5_3_terminal_equipment_subject(unsure_open_way_skipped_for_missing).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_missing_named).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_settled_permitted).
+eprivacy_art_5_3_terminal_equipment_subject(scope_unsure_settled_forbidden).
+eprivacy_art_5_3_terminal_equipment_subject(transmission_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(consent_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(information_unsure_referred).
+eprivacy_art_5_3_terminal_equipment_subject(full_referral_row).
+eprivacy_art_5_3_terminal_equipment_subject(full_row_transmission_met).
+eprivacy_art_5_3_terminal_equipment_subject(attested_value).
+eprivacy_art_5_3_terminal_equipment_subject(duplicate_scope_key).
+eprivacy_art_5_3_terminal_equipment_subject(not_attribute_list).
+
+% ---- Profiles --------------------------------------------------------
+% (1) scope absent: asks for the scope key.
+eprivacy_art_5_3_terminal_equipment_profile_for(empty_profile, []).
+% (1) scope false: not_applicable.
+eprivacy_art_5_3_terminal_equipment_profile_for(out_of_scope, [
+    attribute(storage_or_access_in_terminal_equipment, false)
+]).
+% (4) scope true alone: way (a) needs one key, so its key is named.
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_only, [
+    attribute(storage_or_access_in_terminal_equipment, true)
+]).
+% (3) way (a) MET.
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_only, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, true)
+]).
+% (4) near-miss of transmission_only: ways (b) and (c) tie, broken by
+% contract order.
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_failed_alone, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false)
+]).
+% (3) way (b) MET.
+eprivacy_art_5_3_terminal_equipment_profile_for(requested_and_strictly_necessary, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, true),
+    attribute(strictly_necessary_to_provide_requested_service, true),
+    attribute(user_consent_given, false)
+]).
+% near-miss: strictly necessary false, so all three ways fail.
+eprivacy_art_5_3_terminal_equipment_profile_for(requested_but_not_strictly_necessary, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, true),
+    attribute(strictly_necessary_to_provide_requested_service, false),
+    attribute(user_consent_given, false)
+]).
+% (3) way (c) MET.
+eprivacy_art_5_3_terminal_equipment_profile_for(informed_consent, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, true),
+    attribute(clear_and_comprehensive_information_provided, true)
+]).
+% near-miss: consent without the information (reading (7)).
+eprivacy_art_5_3_terminal_equipment_profile_for(consent_without_information, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, true),
+    attribute(clear_and_comprehensive_information_provided, false)
+]).
+% (3) three FAILED ways.
+eprivacy_art_5_3_terminal_equipment_profile_for(all_ways_failed, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, false)
+]).
+% near-miss: transmission true, so way (a) is MET.
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_restores_permission, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, true),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, false)
+]).
+% (4) way (b) needs one key, way (c) two: way (b)'s key is named.
+eprivacy_art_5_3_terminal_equipment_profile_for(fewest_unresolved_first, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, true)
+]).
+% (4) way (a) is OPEN with no absent key: the missing key of way (b) is
+% named before the unsure judgement is referred.
+eprivacy_art_5_3_terminal_equipment_profile_for(unsure_open_way_skipped_for_missing, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, unsure)
+]).
+% (4) scope unsure: a missing key is still named.
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_missing_named, [
+    attribute(storage_or_access_in_terminal_equipment, unsure)
+]).
+% (3) scope unsure with a MET way: referral on the scope.
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_settled_permitted, [
+    attribute(storage_or_access_in_terminal_equipment, unsure),
+    attribute(storage_or_access_solely_for_transmission, true)
+]).
+% (3) scope unsure with three FAILED ways: referral on the scope.
+eprivacy_art_5_3_terminal_equipment_profile_for(scope_unsure_settled_forbidden, [
+    attribute(storage_or_access_in_terminal_equipment, unsure),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, false)
+]).
+% (5) transmission unsure, ways (b) and (c) failed.
+eprivacy_art_5_3_terminal_equipment_profile_for(transmission_unsure_referred, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, unsure),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, false)
+]).
+% (5) consent unsure: referral citing Art 2(f).
+eprivacy_art_5_3_terminal_equipment_profile_for(consent_unsure_referred, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, unsure),
+    attribute(clear_and_comprehensive_information_provided, true)
+]).
+% (5) information unsure: referral citing the first sentence.
+eprivacy_art_5_3_terminal_equipment_profile_for(information_unsure_referred, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, false),
+    attribute(service_explicitly_requested_by_user, false),
+    attribute(user_consent_given, true),
+    attribute(clear_and_comprehensive_information_provided, unsure)
+]).
+% (5) all six present, five unsure: the first unsure key is referred,
+% with all six PAIRS.
+eprivacy_art_5_3_terminal_equipment_profile_for(full_referral_row, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, unsure),
+    attribute(service_explicitly_requested_by_user, unsure),
+    attribute(strictly_necessary_to_provide_requested_service, unsure),
+    attribute(user_consent_given, unsure),
+    attribute(clear_and_comprehensive_information_provided, unsure)
+]).
+% near-miss: transmission true, so way (a) is MET whatever else is unsure.
+eprivacy_art_5_3_terminal_equipment_profile_for(full_row_transmission_met, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_solely_for_transmission, true),
+    attribute(service_explicitly_requested_by_user, unsure),
+    attribute(strictly_necessary_to_provide_requested_service, unsure),
+    attribute(user_consent_given, unsure),
+    attribute(clear_and_comprehensive_information_provided, unsure)
+]).
+% (0) an attested value is outside the type.
+eprivacy_art_5_3_terminal_equipment_profile_for(attested_value, [
+    attribute(storage_or_access_in_terminal_equipment, attested(true))
+]).
+% (0) a duplicated contract key and an unknown key.
+eprivacy_art_5_3_terminal_equipment_profile_for(duplicate_scope_key, [
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(storage_or_access_in_terminal_equipment, true),
+    attribute(zzz, 1)
+]).
+% (0) not an attribute list.
+eprivacy_art_5_3_terminal_equipment_profile_for(not_attribute_list, [foo]).
+
+% ---- Convenience wrapper ---------------------------------------------
+eprivacy_art_5_3_terminal_equipment_assess(Subject, Result) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(Subject, Profile),
+    decide_eprivacy_art_5_3_terminal_equipment(Profile, Result).
+
+:- end_module(fixtures).

@@ -1,0 +1,415 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/state_aid/single_undertaking (deontic family,
+% used here as a classification: the order gives no permission and no obligation).
+% Source: Commission Regulation (EU) 2023/2831 of 13 December 2023 on de minimis aid,
+% Art 2(2) (lead-in, points (a) to (d)) and its closing sentence; the original act as
+% published (CELEX 32023R2831, raw sha256
+% 30093854d5d4d4b18887359983d09a9239aeaa2250a68fab09689af6260bbf35).
+%
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one exception is the order's
+% input check single_undertaking_input_problems/2, which the scaffold writes
+% here, exported, for the slice and the queries to import:
+%   :- use_module(eu/state_aid/single_undertaking/kernel, [single_undertaking_input_problems/2]).
+% There is one determination slice (single_undertaking.clausal), so no other
+% domain predicate is shared and none lives here.
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS (exact spellings; the scorer compares them verbatim):
+%   direct_relationship(Profile, Result, Citations)
+%     Result: directly_related | not_directly_related | a status compound.
+%     Citations: a flat set-like list of cite(Key) terms, [] when not final.
+%   same_single_undertaking(Profile, Result, Citations)
+%     Result: single_undertaking | not_single_undertaking | a status compound.
+%   single_undertaking_members(Profile, Result, Members, Citations)
+%     Result: members_settled | a status compound; Members a sorted flat list
+%     of enterprise atoms, each once, [] when Result is not members_settled.
+%   Status compounds, written ITSELF in the Result position (never a bare atom):
+%     input_problems(Problems)  -- Problems the non-empty list of this check;
+%     indeterminate([Key])      -- ONE missing key (relationships_complete is
+%                                  named also when present and false);
+%     needs_legal_review(open_textured(Input, cite(Key)),
+%                        [inputs_relied_on(Pairs)])
+%                               -- Pairs the present Key-Value pairs of the
+%                                  firing referral row's inputs, optionally
+%                                  followed by one unscored provenance(Clause,
+%                                  Citations) term.
+%   Input problems: unknown_key(Key), wrong_type(Key), duplicate_key(Key),
+%     and wrong_type(profile) alone for a term that is not an attribute list.
+%   Profile input term: relationship(Holder, Held, Limb, Certainty), Limb one of
+%     point_a | point_b | point_c | point_d, Certainty true | unsure.
+%   Facade term of the slice:
+%     single_undertaking_verdict(Status, Citations)
+%     Status the Result of same_single_undertaking/3, Citations its list.
+%   Judgement value besides true and false: unsure.
+% =====================================================================
+
+:- module(kernel, [single_undertaking_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% single_undertaking_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list) and the order's INPUT CHECK.
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives input_problems(Problems).
+% It gives exactly one answer for every Profile:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] (an unbound
+%   term, a partial list, a list with an unbound element or an element that is not
+%   attribute(Key, Value)) gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type or fails one of the two added checks; then unknown_key(Key) for each
+%   key outside the contract (a key that is not an atom, an unbound one included, as
+%   given), in the order of its first occurrence in Profile. Each key is named once.
+%   An absent key is not a problem.
+% TWO ADDED CHECKS (the order's INPUT CHECK; they govern over the typed contract):
+%   voting_rights_total of 0 is wrong_type(voting_rights_total);
+%   voting_rights_held greater than voting_rights_total, when voting_rights_total is
+%   present once with a value that passes its own check, is wrong_type(voting_rights_held).
+% Every step is complementary clauses: exactly one clause holds for each input.
+single_undertaking_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [holder_is_an_enterprise, held_is_an_enterprise, voting_rights_held, voting_rights_total, right_to_appoint_or_remove_majority_of_board, dominant_influence_by_contract_or_articles, holder_is_shareholder_or_member, controls_majority_of_voting_rights_alone_by_agreement, first_enterprise, second_enterprise, relationships, relationships_complete],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(holder_is_an_enterprise, judgement).
+key_type(held_is_an_enterprise, judgement).
+key_type(voting_rights_held, non_negative_integer).
+key_type(voting_rights_total, non_negative_integer).
+key_type(right_to_appoint_or_remove_majority_of_board, boolean).
+key_type(dominant_influence_by_contract_or_articles, judgement).
+key_type(holder_is_shareholder_or_member, boolean).
+key_type(controls_majority_of_voting_rights_alone_by_agreement, boolean).
+key_type(first_enterprise, atom).
+key_type(second_enterprise, atom).
+key_type(relationships, relationship_list).
+key_type(relationships_complete, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a proper list of attribute(Key, Value)
+% items; false for anything else, an unbound Term, a partial list and a list with an
+% unbound element included. A Key that is not an atom (unbound included) does not make
+% the list ill-formed: it is reported as unknown_key(Key).
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. Keys are
+% compared by identity (==), so an unbound key is never bound by the check.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    key_known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+key_known_t(_, [], false).
+key_known_t(Key, [KnownKey|_], true) :-
+    KnownKey == Key.
+key_known_t(Key, [KnownKey|KnownKeys], T) :-
+    KnownKey \== Key,
+    key_known_t(Key, KnownKeys, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type or fails an added check. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    added_check_t(InType, Key, Profile, PassesChecks),
+    name_wrong_type(PassesChecks, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% ---- the two added checks of the order's INPUT CHECK --------------
+% added_check_t(InType, Key, Profile, T): a value already outside its type stays a
+% problem; a value in its type is then put to the added check of its key, if any.
+% Called only for a key that occurs exactly once in Profile.
+added_check_t(false, _, _, false).
+added_check_t(true, Key, Profile, T) :-
+    added_key_check_t(Key, Profile, T).
+
+% voting_rights_total: at least 1.
+added_key_check_t(voting_rights_total, Profile, T) :-
+    key_value(Profile, voting_rights_total, TotalVotingRights),
+    at_least_one_t(TotalVotingRights, T).
+% voting_rights_held: not greater than voting_rights_total, when the total is present
+% once with a value that passes its own check.
+added_key_check_t(voting_rights_held, Profile, T) :-
+    key_value(Profile, voting_rights_held, HeldVotingRights),
+    total_voting_rights_standing(Profile, TotalStanding),
+    held_within_total_t(TotalStanding, HeldVotingRights, T).
+% Every other contract key has no added check.
+added_key_check_t(Key, _, true) :-
+    dif(Key, voting_rights_total),
+    dif(Key, voting_rights_held).
+
+% key_value(Elements, Key, Value): the value of the one item giving Key.
+key_value([attribute(ElementKey, Value)|_], Key, Value) :-
+    ElementKey == Key.
+key_value([attribute(ElementKey, _)|Elements], Key, Value) :-
+    ElementKey \== Key,
+    key_value(Elements, Key, Value).
+
+% at_least_one_t(Count, T): for a non-negative integer Count.
+at_least_one_t(Count, true) :-
+    Count >= 1.
+at_least_one_t(Count, false) :-
+    Count < 1.
+
+% total_voting_rights_standing(Profile, Standing): usable(Total) when voting_rights_total
+% occurs once with a non-negative integer of at least 1; not_usable otherwise.
+total_voting_rights_standing(Profile, Standing) :-
+    key_occurrences(Profile, voting_rights_total, Occurrences),
+    total_standing_from_occurrences(Occurrences, Profile, Standing).
+
+total_standing_from_occurrences(none, _, not_usable).
+total_standing_from_occurrences(many, _, not_usable).
+total_standing_from_occurrences(one, Profile, Standing) :-
+    key_value(Profile, voting_rights_total, TotalVotingRights),
+    value_in_type_t(non_negative_integer, TotalVotingRights, InType),
+    total_standing_from_value(InType, TotalVotingRights, Standing).
+
+total_standing_from_value(false, _, not_usable).
+total_standing_from_value(true, TotalVotingRights, usable(TotalVotingRights)) :-
+    TotalVotingRights >= 1.
+total_standing_from_value(true, TotalVotingRights, not_usable) :-
+    TotalVotingRights < 1.
+
+held_within_total_t(not_usable, _, true).
+held_within_total_t(usable(TotalVotingRights), HeldVotingRights, true) :-
+    HeldVotingRights =< TotalVotingRights.
+held_within_total_t(usable(TotalVotingRights), HeldVotingRights, false) :-
+    HeldVotingRights > TotalVotingRights.
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(relationship_list, Value, T) :-
+    in_type_t(list(relationship), Value, T).
+
+% A relationship is relationship(Holder, Held, Limb, Certainty): Holder and Held atoms
+% naming enterprises, Limb one of point_a, point_b, point_c and point_d, Certainty true
+% or unsure (the order's INPUT CHECK; the input contract lists its eight shapes).
+in_type_t(relationship, Value, T) :-
+    relationship_t(Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(list(Type), Value, T) :-
+    list_in_type_t(Value, Type, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+in_type_t(atom, Value, T) :-
+    atom_t(Value, T).
+
+% relationship_t(Value, T): for a ground Value.
+relationship_t(Value, T) :-
+    Value = relationship(Holder, Held, Limb, Certainty),
+    atom_t(Holder, HolderIsAtom),
+    atom_t(Held, HeldIsAtom),
+    memberd_t(Limb, [point_a, point_b, point_c, point_d], LimbIsKnown),
+    memberd_t(Certainty, [true, unsure], CertaintyIsKnown),
+    truth_and(HolderIsAtom, HeldIsAtom, EnterprisesAreAtoms),
+    truth_and(LimbIsKnown, CertaintyIsKnown, LabelsAreKnown),
+    truth_and(EnterprisesAreAtoms, LabelsAreKnown, T).
+relationship_t(Value, false) :-
+    Value \= relationship(_, _, _, _).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% list_in_type_t(Value, Type, T): T is true when Value is a list whose every element is in Type.
+list_in_type_t(Value, _, true) :-
+    Value == [].
+list_in_type_t([Element|Elements], Type, T) :-
+    in_type_t(Type, Element, ElementInType),
+    list_in_type_t(Elements, Type, ElementsInType),
+    truth_and(ElementInType, ElementsInType, T).
+list_in_type_t(Value, _, false) :-
+    Value \== [],
+    Value \= [_|_].
+
+% atom_t(Value, T): for a ground Value, T is true when it is an atom and false when it is [],
+% an integer, a float or a compound term. [] is the empty list here, not an atom.
+atom_t(Value, true) :-
+    atom(Value),
+    Value \== [].
+atom_t(Value, false) :-
+    Value == [].
+atom_t(Value, false) :-
+    integer(Value).
+atom_t(Value, false) :-
+    float(Value).
+atom_t(Value, false) :-
+    compound(Value).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+% ---- tests of the input check ---------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    single_undertaking_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    single_undertaking_input_problems([attribute(holder_is_an_enterprise, unsure), attribute(voting_rights_held, 51), attribute(voting_rights_total, 100), attribute(first_enterprise, alpha), attribute(relationships, [relationship(alpha, beta, point_a, true), relationship(beta, gamma, point_c, unsure)]), attribute(relationships_complete, false)], Problems),
+    Problems == [].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    single_undertaking_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_an_attribute_list) :-
+    single_undertaking_input_problems([attribute(first_enterprise, alpha)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_foreign_element_makes_the_profile_wrong_alone) :-
+    single_undertaking_input_problems([attribute(first_enterprise, 7), stray], Problems),
+    Problems == [wrong_type(profile)].
+test(a_total_of_zero_is_wrong_type) :-
+    single_undertaking_input_problems([attribute(voting_rights_held, 0), attribute(voting_rights_total, 0)], Problems),
+    Problems == [wrong_type(voting_rights_total)].
+test(held_above_total_is_wrong_type) :-
+    single_undertaking_input_problems([attribute(voting_rights_held, 5), attribute(voting_rights_total, 3)], Problems),
+    Problems == [wrong_type(voting_rights_held)].
+test(held_equal_to_total_is_well_formed) :-
+    single_undertaking_input_problems([attribute(voting_rights_held, 3), attribute(voting_rights_total, 3)], Problems),
+    Problems == [].
+test(a_relationship_with_an_unknown_limb_is_wrong_type) :-
+    single_undertaking_input_problems([attribute(relationships, [relationship(alpha, beta, point_e, true)])], Problems),
+    Problems == [wrong_type(relationships)].
+test(a_relationship_list_with_an_unbound_tail_is_wrong_type) :-
+    single_undertaking_input_problems([attribute(relationships, [relationship(alpha, beta, point_a, true)|_])], Problems),
+    Problems == [wrong_type(relationships)].
+test(a_repeated_key_is_a_duplicate_only) :-
+    single_undertaking_input_problems([attribute(first_enterprise, alpha), attribute(first_enterprise, 9)], Problems),
+    Problems == [duplicate_key(first_enterprise)].
+test(an_unbound_key_is_unknown_as_given) :-
+    single_undertaking_input_problems([attribute(Key, alpha)], Problems),
+    Problems == [unknown_key(Key)].
+test(contract_problems_come_before_unknown_keys) :-
+    single_undertaking_input_problems([attribute(colour, red), attribute(colour, blue), attribute(held_is_an_enterprise, maybe)], Problems),
+    Problems == [wrong_type(held_is_an_enterprise), unknown_key(colour)].
+test(an_unbound_value_is_wrong_type) :-
+    single_undertaking_input_problems([attribute(relationships_complete, _)], Problems),
+    Problems == [wrong_type(relationships_complete)].
+test(the_check_has_one_answer) :-
+    findall(Problems, single_undertaking_input_problems([attribute(voting_rights_held, 2)], Problems), Answers),
+    Answers == [[]].
+
+:- end_module(kernel).

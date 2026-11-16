@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one required
+% condition changed -> different verdict), proving the route is LOAD-BEARING.
+% Each `fail` test is paired with a positive test of the verdict the near miss DOES
+% get, so a misspelt atom cannot pass silently.
+% Run: python -m clausal.testing eu/nis2_scope_entity_class/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/nis2_scope_entity_class/nis2_scope_entity_class, [
+    nis2_scope_entity_class_status/2,
+    nis2_scope_entity_class_status_values/1,
+    scope_decision/3,
+    entity_class/3
+]).
+:- use_module(eu/nis2_scope_entity_class/fixtures, [nis2_scope_entity_class_profile_for/2]).
+
+scope_of(Subject, Result) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile),
+    scope_decision(Profile, Result, _).
+
+class_of(Subject, Class) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile),
+    entity_class(Profile, Class, _).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    nis2_scope_entity_class_status_values(StatusValues),
+    member(ineligible, StatusValues),
+    member(eligible, StatusValues).
+
+test(the_baseline_profile_is_not_eligible, fail) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_status(Profile, eligible).
+test(the_baseline_profile_is_ineligible) :-
+    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
+    nis2_scope_entity_class_status(Profile, ineligible).
+
+% ---- scope grounds: positive / near miss ----
+test(g1_critical_entity_in_scope) :- scope_of(critical_entity, in_scope).
+test(g1_without_it_out_of_scope) :- scope_of(baseline_out_of_scope, out_of_scope).
+test(g1_without_it_not_in_scope, fail) :- scope_of(baseline_out_of_scope, in_scope).
+
+test(g2_registrar_in_scope) :- scope_of(domain_registrar, in_scope).
+test(g2_registrar_is_not_out_of_scope, fail) :- scope_of(domain_registrar, out_of_scope).
+
+test(g3_communications_provider_in_scope) :- scope_of(electronic_communications_micro, in_scope).
+test(g3_non_provider_out_of_scope) :- scope_of(electronic_communications_not_provider, out_of_scope).
+test(g3_non_provider_not_in_scope, fail) :- scope_of(electronic_communications_not_provider, in_scope).
+
+test(g4_non_qualified_trust_in_scope) :- scope_of(non_qualified_trust_provider, in_scope).
+test(g5_tld_registry_in_scope) :- scope_of(tld_registry, in_scope).
+test(g6_dns_provider_in_scope) :- scope_of(dns_provider, in_scope).
+test(g456_without_annex_type_out_of_scope) :- scope_of(micro_at_ceiling, out_of_scope).
+
+test(g7_sole_provider_in_scope) :- scope_of(sole_provider, in_scope).
+test(g7_without_annex_type_out_of_scope) :- scope_of(sole_provider_without_annex_type, out_of_scope).
+test(g7_without_annex_type_not_in_scope, fail) :- scope_of(sole_provider_without_annex_type, in_scope).
+
+test(g8_safety_disruption_in_scope) :- scope_of(safety_disruption, in_scope).
+test(g9_systemic_risk_in_scope) :- scope_of(systemic_risk, in_scope).
+test(g10_national_importance_in_scope) :- scope_of(national_importance, in_scope).
+
+test(g11_central_government_in_scope) :- scope_of(central_government, in_scope).
+test(g12_regional_government_in_scope) :- scope_of(regional_government, in_scope).
+test(g11_other_public_administration_out_of_scope) :- scope_of(other_public_administration, out_of_scope).
+test(g11_other_public_administration_not_in_scope, fail) :- scope_of(other_public_administration, in_scope).
+
+test(g13_staff_fifty_in_scope) :- scope_of(medium_annex_at_staff_floor, in_scope).
+test(g13_staff_forty_nine_out_of_scope) :- scope_of(small_annex_just_below, out_of_scope).
+test(g13_staff_forty_nine_not_in_scope, fail) :- scope_of(small_annex_just_below, in_scope).
+test(g13_both_financials_over_in_scope) :- scope_of(small_annex_one_euro_over_both, in_scope).
+test(g13_one_financial_over_out_of_scope) :- scope_of(small_annex_one_figure_over, out_of_scope).
+test(g13_one_financial_over_not_in_scope, fail) :- scope_of(small_annex_one_figure_over, in_scope).
+
+% ---- exclusions ----
+test(x1_national_security_out_of_scope) :- scope_of(national_security_exclusion, out_of_scope).
+test(x1_trust_provider_is_not_excluded) :- scope_of(national_security_trust_provider, in_scope).
+test(x1_trust_provider_not_out_of_scope, fail) :- scope_of(national_security_trust_provider, out_of_scope).
+test(x1_exclusion_not_in_scope, fail) :- scope_of(national_security_exclusion, in_scope).
+
+test(x2_dora_exemption_out_of_scope) :- scope_of(dora_exemption, out_of_scope).
+test(x2_without_exemption_in_scope) :- scope_of(critical_entity, in_scope).
+test(x2_exemption_not_in_scope, fail) :- scope_of(dora_exemption, in_scope).
+
+% ---- essential grounds: positive / near miss ----
+test(e1_large_annex_i_essential) :- class_of(large_annex_by_staff, essential_entity).
+test(e1_medium_annex_i_important) :- class_of(medium_annex_staff_just_below_large, important_entity).
+test(e1_medium_not_essential, fail) :- class_of(medium_annex_staff_just_below_large, essential_entity).
+test(e1_large_by_financials_essential) :- class_of(large_annex_by_financials, essential_entity).
+test(e1_one_financial_at_ceiling_important) :- class_of(medium_annex_one_figure_at_ceiling, important_entity).
+
+test(e2_qualified_essential) :- class_of(qualified_trust_provider, essential_entity).
+test(e2_non_qualified_important) :- class_of(non_qualified_trust_provider, important_entity).
+test(e2_non_qualified_not_essential, fail) :- class_of(non_qualified_trust_provider, essential_entity).
+
+test(e3_tld_essential) :- class_of(tld_registry, essential_entity).
+test(e4_dns_essential) :- class_of(dns_provider, essential_entity).
+
+test(e5_medium_communications_essential) :- class_of(electronic_communications_medium, essential_entity).
+test(e5_micro_communications_important) :- class_of(electronic_communications_micro, important_entity).
+test(e5_micro_not_essential, fail) :- class_of(electronic_communications_micro, essential_entity).
+
+test(e6_central_government_essential) :- class_of(central_government, essential_entity).
+test(e6_regional_government_important) :- class_of(regional_government, important_entity).
+test(e6_regional_not_essential, fail) :- class_of(regional_government, essential_entity).
+
+test(e7_identified_essential) :- class_of(identified_essential, essential_entity).
+test(e7_not_identified_important) :- class_of(sole_provider, important_entity).
+test(e7_not_identified_not_essential, fail) :- class_of(sole_provider, essential_entity).
+
+test(e8_critical_essential) :- class_of(critical_entity, essential_entity).
+test(e8_registrar_important) :- class_of(domain_registrar, important_entity).
+test(e8_registrar_not_essential, fail) :- class_of(domain_registrar, essential_entity).
+
+test(e9_former_operator_essential) :- class_of(former_operator_essential, essential_entity).
+test(e9_without_it_important) :- class_of(sole_provider, important_entity).
+
+% ---- open-textured judgements go to the user, not to a crisp answer ----
+test(unsure_sole_provider_needs_review) :-
+    scope_of(unsure_sole_provider, needs_legal_review(_, _)).
+test(sure_sole_provider_is_a_final_answer) :-
+    scope_of(sole_provider, in_scope).
+test(unsure_sole_provider_is_not_in_scope, fail) :-
+    scope_of(unsure_sole_provider, in_scope).
+test(unsure_sole_provider_is_not_out_of_scope, fail) :-
+    scope_of(unsure_sole_provider, out_of_scope).
+
+test(missing_exclusion_keys_are_indeterminate) :-
+    scope_of(empty_profile, indeterminate(_)).
+test(missing_exclusion_keys_are_not_in_scope, fail) :-
+    scope_of(empty_profile, in_scope).
+
+:- end_module(test_negative_controls).

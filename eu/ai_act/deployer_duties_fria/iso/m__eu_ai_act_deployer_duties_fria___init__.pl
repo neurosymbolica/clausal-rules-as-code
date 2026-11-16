@@ -1,0 +1,52 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_deployer_duties_fria___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_deployer_duties_fria_kernel, [deployer_duties_fria_input_problems/2]).
+:- use_module(m__eu_ai_act_deployer_duties_fria_citations, [citation/2, citation_vocabulary/1, implements/1]).
+:- use_module(m__eu_ai_act_deployer_duties_fria_deployer_duties_fria, [compliance_required_by_2_august_2030/0, compliance_required_by_31_december_2030/0, date/3, decide_deployer_duties_fria/2, deployer_duties_fria_checklist/2, deployer_duties_fria_decision_resolvable/1, deployer_duties_fria_status/2, deployer_duties_fria_status_values/1, deployer_obligation_status/5, existing_system_without_significant_changes_not_covered/0, indeterminate/1, information_under_article_13_of_directive_2016_680/0, input_problems/1, inputs_relied_on/1, log_retention_period_status/5, needs_legal_review/2, not_a_deployer/0, not_a_high_risk_ai_system/0, not_applicable_on_date/0, obligation_applies/0, obligation_does_not_apply/0, open_textured/2, period_set_by_other_union_or_national_law/0, provenance/2, retention_period_of_at_least_six_months/0, retention_period_shorter_than_six_months/0]).
+:- use_module(m__eu_ai_act_deployer_duties_fria_queries, [deployer_duties_fria_chapter_iii_date/2, deployer_duties_fria_compliance_check/2, deployer_duties_fria_obligation_status/2, deployer_duties_fria_profile_keys/1, deployer_duties_fria_what_if/4]).
+:- use_module(m__eu_ai_act_deployer_duties_fria_fixtures, [deployer_duties_fria_assess/2, deployer_duties_fria_profile_for/2, deployer_duties_fria_subject/1]).
+
+root_export(body_governed_by_public_law).
+root_export(compliance_required_by_2_august_2030).
+root_export(compliance_required_by_31_december_2030).
+root_export(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027).
+root_export(deployer_is_an_employer).
+root_export(deployer_of_the_system).
+root_export(duplicate_key).
+root_export(exempt_from_notification_in_the_case_of_article_46_1).
+root_export(existing_system_without_significant_changes_not_covered).
+root_export(fundamental_rights_impact_assessment).
+root_export(information_of_natural_persons_subject_to_decisions).
+root_export(information_of_workers_and_their_representatives).
+root_export(information_under_article_13_of_directive_2016_680).
+root_export(intended_to_be_used_by_public_authorities).
+root_export(log_retention).
+root_export(logs_automatically_generated_by_the_system_under_the_deployers_control).
+root_export(makes_or_assists_in_making_decisions_related_to_natural_persons).
+root_export(not_a_deployer).
+root_export(not_a_high_risk_ai_system).
+root_export(not_applicable_on_date).
+root_export(notification_of_assessment_results).
+root_export(obligation_applies).
+root_export(obligation_does_not_apply).
+root_export(period_set_by_other_union_or_national_law).
+root_export(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date).
+root_export(private_entity_providing_public_services).
+root_export(put_into_service_or_used_at_the_workplace).
+root_export(retention_period_of_at_least_six_months).
+root_export(retention_period_shorter_than_six_months).
+root_export(significant_changes_in_design_as_from_the_chapter_iii_date).
+root_export(system_is_a_high_risk_ai_system_listed_in_annex_iii).
+root_export(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i).
+root_export(system_listed_under_point_2_of_annex_iii).
+root_export(system_listed_under_point_5_b_of_annex_iii).
+root_export(system_listed_under_point_5_c_of_annex_iii).
+root_export(union_or_national_law_provides_otherwise_on_the_log_retention_period).
+root_export(unknown_key).
+root_export(unsure).
+root_export(used_for_law_enforcement_purposes).
+root_export(wrong_type).

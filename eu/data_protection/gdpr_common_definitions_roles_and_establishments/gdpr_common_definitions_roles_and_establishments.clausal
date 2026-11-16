@@ -1,0 +1,431 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_common_definitions_roles_and_establishments.clausal -- the DETERMINATION for
+% eu/data_protection/gdpr_common_definitions_roles_and_establishments.
+% Source: Regulation (EU) 2016/679 Art 4(7), (8), (13)-(16), (18), (19), (22)-(24).
+%
+% Each relation NAME(Profile, definition_answer(Status, Ground, Citations)).
+% Every formula element evaluates by strong Kleene to met, unmet or
+% open(Missing, Outside, Unsure): the absent profile keys, the absent
+% outside facts and the unsure judgements the descent reaches.
+% The input check comes first. The package is cut-free.
+% =====================================================================
+
+:- module(gdpr_common_definitions_roles_and_establishments, [
+    party_is_controller/2,
+    party_is_processor/2,
+    genetic_data/2,
+    biometric_data/2,
+    data_concerning_health/2,
+    main_establishment/2,
+    enterprise/2,
+    group_of_undertakings/2,
+    supervisory_authority_concerned/2,
+    cross_border_processing/2,
+    relevant_and_reasoned_objection/2,
+    roles_and_establishments_outside_facts/2,
+    decide_gdpr_common_definitions_roles_and_establishments/2,
+    gdpr_common_definitions_roles_and_establishments_status/2,
+    gdpr_common_definitions_roles_and_establishments_checklist/2,
+    gdpr_common_definitions_roles_and_establishments_decision_resolvable/1,
+    gdpr_common_definitions_roles_and_establishments_status_values/1
+]).
+
+:- constructors([
+    definition_answer(status, ground, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, outcome),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(address, retrieved_at),
+    document(upload, digest)
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/citations, [implements/1]).
+
+% ---- value tables owned by this determination -------------------------
+gdpr_common_definitions_roles_and_establishments_status_values([met, not_met, indeterminate, needs_legal_review, input_problems]).
+
+% The twenty-six keys in root_exports order.
+contract_key_order([data_are_personal_data, party_determines_purposes_and_means, purposes_and_means_determined_by_law, party_provided_for_as_controller_by_law, party_processes_on_behalf_of_controller, data_relate_to_genetic_characteristics_giving_unique_information, data_result_from_technical_processing_allowing_unique_identification, data_relate_to_health_and_reveal_health_status, party_role, established_in_more_than_one_member_state, central_administration_in_union, decisions_taken_in_other_union_establishment, other_establishment_can_have_decisions_implemented, processor_subject_to_specific_obligations, entity_is_person_partnership_or_association, entity_engaged_in_economic_activity, controlling_undertaking_and_controlled_undertakings, party_established_in_authority_member_state, data_subjects_in_authority_member_state_substantially_affected, complaint_lodged_with_authority, processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state, objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action, objection_demonstrates_significance_of_risks]).
+
+relation_order([party_is_controller, party_is_processor, genetic_data, biometric_data, data_concerning_health, main_establishment, enterprise, group_of_undertakings, supervisory_authority_concerned, cross_border_processing, relevant_and_reasoned_objection]).
+
+relation_point(party_is_controller, eu_reg_2016_679_art_4_7).
+relation_point(party_is_processor, eu_reg_2016_679_art_4_8).
+relation_point(genetic_data, eu_reg_2016_679_art_4_13).
+relation_point(biometric_data, eu_reg_2016_679_art_4_14).
+relation_point(data_concerning_health, eu_reg_2016_679_art_4_15).
+relation_point(main_establishment, eu_reg_2016_679_art_4_16).
+relation_point(enterprise, eu_reg_2016_679_art_4_18).
+relation_point(group_of_undertakings, eu_reg_2016_679_art_4_19).
+relation_point(supervisory_authority_concerned, eu_reg_2016_679_art_4_22).
+relation_point(cross_border_processing, eu_reg_2016_679_art_4_23).
+relation_point(relevant_and_reasoned_objection, eu_reg_2016_679_art_4_24).
+
+% Relations whose GROUND is always none.
+plain_relation(party_is_processor).
+plain_relation(genetic_data).
+plain_relation(biometric_data).
+plain_relation(data_concerning_health).
+plain_relation(enterprise).
+plain_relation(group_of_undertakings).
+plain_relation(relevant_and_reasoned_objection).
+
+% The formulas (main_establishment is a procedure, below).
+relation_formula(party_is_controller, or([key(party_determines_purposes_and_means), and([key(purposes_and_means_determined_by_law), outside(party_provided_for_as_controller_by_law)])])).
+relation_formula(party_is_processor, key(party_processes_on_behalf_of_controller)).
+relation_formula(genetic_data, and([key(data_are_personal_data), key(data_relate_to_genetic_characteristics_giving_unique_information)])).
+relation_formula(biometric_data, and([key(data_are_personal_data), key(data_result_from_technical_processing_allowing_unique_identification)])).
+relation_formula(data_concerning_health, and([key(data_are_personal_data), key(data_relate_to_health_and_reveal_health_status)])).
+relation_formula(enterprise, and([key(entity_is_person_partnership_or_association), key(entity_engaged_in_economic_activity)])).
+relation_formula(group_of_undertakings, key(controlling_undertaking_and_controlled_undertakings)).
+relation_formula(supervisory_authority_concerned, or([key(party_established_in_authority_member_state), key(data_subjects_in_authority_member_state_substantially_affected), key(complaint_lodged_with_authority)])).
+relation_formula(cross_border_processing, or([and([key(established_in_more_than_one_member_state), key(processing_in_context_of_establishments_in_more_than_one_member_state)]), and([key(processing_in_context_of_single_union_establishment), key(substantially_affects_data_subjects_in_more_than_one_member_state)])])).
+relation_formula(relevant_and_reasoned_objection, and([key(objection_to_draft_decision), key(objection_concerns_infringement_or_envisaged_action), key(objection_demonstrates_significance_of_risks)])).
+
+% Referral rows: referral(Input, cite(Citation), InputsRelied).
+referral(data_are_personal_data, cite(eu_reg_2016_679_art_4_1), [data_are_personal_data]).
+referral(party_determines_purposes_and_means, cite(eu_reg_2016_679_art_4_7), [party_determines_purposes_and_means, purposes_and_means_determined_by_law]).
+referral(party_processes_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8), [party_processes_on_behalf_of_controller]).
+referral(data_relate_to_genetic_characteristics_giving_unique_information, cite(eu_reg_2016_679_art_4_13), [data_relate_to_genetic_characteristics_giving_unique_information]).
+referral(data_result_from_technical_processing_allowing_unique_identification, cite(eu_reg_2016_679_art_4_14), [data_result_from_technical_processing_allowing_unique_identification]).
+referral(data_relate_to_health_and_reveal_health_status, cite(eu_reg_2016_679_art_4_15), [data_relate_to_health_and_reveal_health_status]).
+referral(other_establishment_can_have_decisions_implemented, cite(eu_reg_2016_679_art_4_16_a), [decisions_taken_in_other_union_establishment, other_establishment_can_have_decisions_implemented]).
+referral(entity_engaged_in_economic_activity, cite(eu_reg_2016_679_art_4_18), [entity_is_person_partnership_or_association, entity_engaged_in_economic_activity]).
+referral(controlling_undertaking_and_controlled_undertakings, cite(eu_reg_2016_679_art_4_19), [controlling_undertaking_and_controlled_undertakings]).
+referral(data_subjects_in_authority_member_state_substantially_affected, cite(eu_reg_2016_679_art_4_22_b), [party_established_in_authority_member_state, data_subjects_in_authority_member_state_substantially_affected, complaint_lodged_with_authority]).
+referral(processing_in_context_of_establishments_in_more_than_one_member_state, cite(eu_reg_2016_679_art_4_23_a), [processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state]).
+referral(processing_in_context_of_single_union_establishment, cite(eu_reg_2016_679_art_4_23_b), [processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state]).
+referral(substantially_affects_data_subjects_in_more_than_one_member_state, cite(eu_reg_2016_679_art_4_23_b), [processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state]).
+referral(objection_demonstrates_significance_of_risks, cite(eu_reg_2016_679_art_4_24), [objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action, objection_demonstrates_significance_of_risks]).
+
+% The outside fact row: outside_fact_row(Key, Citation, Target, InputsRelied).
+outside_fact_row(party_provided_for_as_controller_by_law, eu_reg_2016_679_art_4_7, union_or_member_state_law_providing_for_controller, [party_determines_purposes_and_means, purposes_and_means_determined_by_law]).
+
+% Lettered grounds and their citation keys.
+ground_cite(supervisory_authority_concerned, point_a, eu_reg_2016_679_art_4_22_a).
+ground_cite(supervisory_authority_concerned, point_b, eu_reg_2016_679_art_4_22_b).
+ground_cite(supervisory_authority_concerned, point_c, eu_reg_2016_679_art_4_22_c).
+ground_cite(cross_border_processing, point_a, eu_reg_2016_679_art_4_23_a).
+ground_cite(cross_border_processing, point_b, eu_reg_2016_679_art_4_23_b).
+
+role_cite(controller, eu_reg_2016_679_art_4_16_a).
+role_cite(processor, eu_reg_2016_679_art_4_16_b).
+
+% ---- the relations ----------------------------------------------------
+party_is_controller(Profile, Answer) :-
+    answer_for(party_is_controller, Profile, Answer).
+
+party_is_processor(Profile, Answer) :-
+    answer_for(party_is_processor, Profile, Answer).
+
+genetic_data(Profile, Answer) :-
+    answer_for(genetic_data, Profile, Answer).
+
+biometric_data(Profile, Answer) :-
+    answer_for(biometric_data, Profile, Answer).
+
+data_concerning_health(Profile, Answer) :-
+    answer_for(data_concerning_health, Profile, Answer).
+
+main_establishment(Profile, Answer) :-
+    answer_for(main_establishment, Profile, Answer).
+
+enterprise(Profile, Answer) :-
+    answer_for(enterprise, Profile, Answer).
+
+group_of_undertakings(Profile, Answer) :-
+    answer_for(group_of_undertakings, Profile, Answer).
+
+supervisory_authority_concerned(Profile, Answer) :-
+    answer_for(supervisory_authority_concerned, Profile, Answer).
+
+cross_border_processing(Profile, Answer) :-
+    answer_for(cross_border_processing, Profile, Answer).
+
+relevant_and_reasoned_objection(Profile, Answer) :-
+    answer_for(relevant_and_reasoned_objection, Profile, Answer).
+
+% The input check comes first: a profile with a problem gets input_problems.
+answer_for(Relation, Profile, Answer) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, Problems),
+    checked_answer(Problems, Relation, Profile, Answer).
+
+checked_answer([Problem|Problems], _, _, definition_answer(input_problems([Problem|Problems]), none, [])).
+checked_answer([], Relation, Profile, Answer) :-
+    relation_answer(Relation, Profile, Answer).
+
+relation_answer(Relation, Profile, Answer) :-
+    relation_point(Relation, Point),
+    relation_formula(Relation, Formula),
+    evaluate_formula(Formula, Profile, Result),
+    result_answer(Result, Relation, Profile, Point, Answer).
+relation_answer(main_establishment, Profile, Answer) :-
+    implements(eu_reg_2016_679_art_4_16),
+    read_key(Profile, established_in_more_than_one_member_state, MoreThanOne),
+    read_key(Profile, party_role, Role),
+    main_cites(Role, Base),
+    main_status(MoreThanOne, Role, Profile, Base, Answer).
+
+result_answer(met, Relation, Profile, Point, definition_answer(met, Ground, Citations)) :-
+    ground_for(Relation, Profile, Ground),
+    cite_list(Ground, Relation, Point, Citations).
+result_answer(unmet, _, _, Point, definition_answer(not_met, none, [cite(Point)])).
+result_answer(open(Missing, Outside, Unsure), _, Profile, Point, Answer) :-
+    open_answer(open(Missing, Outside, Unsure), Profile, [cite(Point)], Answer).
+
+% ---- profile reading --------------------------------------------------
+read_key(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+read_key(Profile, Key, value(Value)) :-
+    profile_get(Profile, Key, Value).
+
+% ---- strong Kleene evaluation -----------------------------------------
+evaluate_formula(key(Key), Profile, Result) :-
+    read_key(Profile, Key, Read),
+    key_result(Read, Key, Result).
+evaluate_formula(outside(Key), Profile, Result) :-
+    read_key(Profile, Key, Read),
+    outside_result(Read, Key, Result).
+evaluate_formula(and(Children), Profile, Result) :-
+    maplist(evaluate_child(Profile), Children, Results),
+    and_all(Results, Result).
+evaluate_formula(or(Children), Profile, Result) :-
+    maplist(evaluate_child(Profile), Children, Results),
+    or_all(Results, Result).
+
+evaluate_child(Profile, Formula, Result) :-
+    evaluate_formula(Formula, Profile, Result).
+
+key_result(absent, Key, open([Key], [], [])).
+key_result(value(true), _, met).
+key_result(value(false), _, unmet).
+key_result(value(unsure), Key, open([], [], [Key])).
+
+outside_result(absent, Key, open([], [Key], [])).
+outside_result(value(attested(true, _)), _, met).
+outside_result(value(attested(false, _)), _, unmet).
+
+and_all([], met).
+and_all([Result|Results], Combined) :-
+    and_all(Results, Later),
+    and_two(Result, Later, Combined).
+
+and_two(unmet, _, unmet).
+and_two(met, Later, Later).
+and_two(open(_, _, _), unmet, unmet).
+and_two(open(Missing, Outside, Unsure), met, open(Missing, Outside, Unsure)).
+and_two(open(MissingOne, OutsideOne, UnsureOne), open(MissingTwo, OutsideTwo, UnsureTwo), open(Missing, Outside, Unsure)) :-
+    append(MissingOne, MissingTwo, Missing),
+    append(OutsideOne, OutsideTwo, Outside),
+    append(UnsureOne, UnsureTwo, Unsure).
+
+or_all([], unmet).
+or_all([Result|Results], Combined) :-
+    or_all(Results, Later),
+    or_two(Result, Later, Combined).
+
+or_two(met, _, met).
+or_two(unmet, Later, Later).
+or_two(open(_, _, _), met, met).
+or_two(open(Missing, Outside, Unsure), unmet, open(Missing, Outside, Unsure)).
+or_two(open(MissingOne, OutsideOne, UnsureOne), open(MissingTwo, OutsideTwo, UnsureTwo), open(Missing, Outside, Unsure)) :-
+    append(MissingOne, MissingTwo, Missing),
+    append(OutsideOne, OutsideTwo, Outside),
+    append(UnsureOne, UnsureTwo, Unsure).
+
+% ---- the status of an open node ---------------------------------------
+% Precedence: indeterminate, then cross_reference_unresolved, then open_textured.
+open_answer(open(Missing, Outside, Unsure), Profile, Base, Answer) :-
+    ordered_keys(Missing, OrderedMissing),
+    ordered_keys(Outside, OrderedOutside),
+    ordered_keys(Unsure, OrderedUnsure),
+    open_status(OrderedMissing, OrderedOutside, OrderedUnsure, Profile, Base, Answer).
+
+open_status([Key|Keys], _, _, _, Base, definition_answer(indeterminate([Key|Keys]), none, Base)).
+open_status([], [Outside|_], _, Profile, _, definition_answer(needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on(Pairs)]), none, [cite(Citation), cite(Target)])) :-
+    implements(union_or_member_state_law_providing_for_controller),
+    outside_fact_row(Outside, Citation, Target, Inputs),
+    relied_pairs(Inputs, Profile, Pairs).
+open_status([], [], [Input|_], Profile, _, definition_answer(needs_legal_review(open_textured(Input, Citation), [inputs_relied_on(Pairs)]), none, [Citation])) :-
+    referral(Input, Citation, Inputs),
+    relied_pairs(Inputs, Profile, Pairs).
+
+% The present Key-Value pairs of the keys relied on, in the row's order.
+relied_pairs([], _, []).
+relied_pairs([Key|Keys], Profile, Pairs) :-
+    read_key(Profile, Key, Read),
+    relied_pairs(Keys, Profile, Later),
+    add_pair(Read, Key, Later, Pairs).
+
+add_pair(absent, _, Pairs, Pairs).
+add_pair(value(Value), Key, Pairs, [Key-Value|Pairs]).
+
+% Found keys, once each, in root_exports order.
+ordered_keys(Found, Ordered) :-
+    contract_key_order(Keys),
+    filter_found(Keys, Found, Ordered).
+
+filter_found([], _, []).
+filter_found([Key|Keys], Found, Ordered) :-
+    memberd_t(Key, Found, IsFound),
+    keep_key(IsFound, Key, Rest, Ordered),
+    filter_found(Keys, Found, Rest).
+
+keep_key(true, Key, Rest, [Key|Rest]).
+keep_key(false, _, Rest, Rest).
+
+% ---- grounds ----------------------------------------------------------
+ground_for(party_is_controller, Profile, Ground) :-
+    implements(eu_reg_2016_679_art_4_7),
+    evaluate_formula(key(party_determines_purposes_and_means), Profile, Result),
+    control_ground(Result, Ground).
+ground_for(supervisory_authority_concerned, Profile, Ground) :-
+    implements(eu_reg_2016_679_art_4_22),
+    evaluate_formula(key(party_established_in_authority_member_state), Profile, First),
+    evaluate_formula(key(data_subjects_in_authority_member_state_substantially_affected), Profile, Second),
+    pick_ground(First, Second, Ground).
+ground_for(cross_border_processing, Profile, Ground) :-
+    implements(eu_reg_2016_679_art_4_23),
+    evaluate_formula(and([key(established_in_more_than_one_member_state), key(processing_in_context_of_establishments_in_more_than_one_member_state)]), Profile, First),
+    cross_ground(First, Ground).
+ground_for(Relation, _, none) :-
+    plain_relation(Relation).
+
+control_ground(met, determines_purposes_and_means).
+control_ground(unmet, provided_for_by_law).
+control_ground(open(_, _, _), provided_for_by_law).
+
+pick_ground(met, _, point_a) :-
+    implements(eu_reg_2016_679_art_4_22_a).
+pick_ground(unmet, met, point_b) :-
+    implements(eu_reg_2016_679_art_4_22_b).
+pick_ground(unmet, unmet, point_c) :-
+    implements(eu_reg_2016_679_art_4_22_c).
+pick_ground(unmet, open(_, _, _), point_c) :-
+    implements(eu_reg_2016_679_art_4_22_c).
+pick_ground(open(_, _, _), met, point_b) :-
+    implements(eu_reg_2016_679_art_4_22_b).
+pick_ground(open(_, _, _), unmet, point_c) :-
+    implements(eu_reg_2016_679_art_4_22_c).
+pick_ground(open(_, _, _), open(_, _, _), point_c) :-
+    implements(eu_reg_2016_679_art_4_22_c).
+
+cross_ground(met, point_a) :-
+    implements(eu_reg_2016_679_art_4_23_a).
+cross_ground(unmet, point_b) :-
+    implements(eu_reg_2016_679_art_4_23_b).
+cross_ground(open(_, _, _), point_b) :-
+    implements(eu_reg_2016_679_art_4_23_b).
+
+% Citations of a met answer: the point, plus the cite of a lettered ground.
+cite_list(none, _, Point, [cite(Point)]).
+cite_list(determines_purposes_and_means, _, Point, [cite(Point)]).
+cite_list(provided_for_by_law, _, Point, [cite(Point)]).
+cite_list(point_a, Relation, Point, [cite(Point), cite(Key)]) :-
+    ground_cite(Relation, point_a, Key).
+cite_list(point_b, Relation, Point, [cite(Point), cite(Key)]) :-
+    ground_cite(Relation, point_b, Key).
+cite_list(point_c, Relation, Point, [cite(Point), cite(Key)]) :-
+    ground_cite(Relation, point_c, Key).
+
+% ---- main establishment: a procedure (Art 4(16)) ----------------------
+main_cites(absent, [cite(eu_reg_2016_679_art_4_16)]).
+main_cites(value(Role), [cite(eu_reg_2016_679_art_4_16), cite(RoleKey)]) :-
+    role_cite(Role, RoleKey).
+
+main_status(value(false), _, _, Base, definition_answer(not_met, not_established_in_more_than_one_member_state, Base)).
+main_status(value(true), absent, _, Base, definition_answer(indeterminate([party_role]), none, Base)).
+main_status(value(true), value(controller), Profile, Base, Answer) :-
+    implements(eu_reg_2016_679_art_4_16_a),
+    controller_main(Profile, Base, Answer).
+main_status(value(true), value(processor), Profile, Base, Answer) :-
+    implements(eu_reg_2016_679_art_4_16_b),
+    processor_main(Profile, Base, Answer).
+main_status(absent, absent, _, Base, definition_answer(indeterminate([party_role, established_in_more_than_one_member_state]), none, Base)).
+main_status(absent, value(_), _, Base, definition_answer(indeterminate([established_in_more_than_one_member_state]), none, Base)).
+
+controller_main(Profile, Base, Answer) :-
+    evaluate_formula(and([key(decisions_taken_in_other_union_establishment), key(other_establishment_can_have_decisions_implemented)]), Profile, Result),
+    controller_after(Result, Profile, Base, Answer).
+
+controller_after(met, _, Base, definition_answer(met, establishment_taking_decisions, Base)).
+controller_after(unmet, Profile, Base, Answer) :-
+    read_key(Profile, central_administration_in_union, Read),
+    central_answer(Read, Base, Answer).
+controller_after(open(Missing, Outside, Unsure), Profile, Base, Answer) :-
+    open_answer(open(Missing, Outside, Unsure), Profile, Base, Answer).
+
+central_answer(value(true), Base, definition_answer(met, central_administration, Base)).
+central_answer(value(false), Base, definition_answer(not_met, no_main_establishment_identified, Base)).
+central_answer(absent, Base, definition_answer(indeterminate([central_administration_in_union]), none, Base)).
+
+processor_main(Profile, Base, Answer) :-
+    read_key(Profile, central_administration_in_union, Read),
+    processor_central(Read, Profile, Base, Answer).
+
+processor_central(value(true), _, Base, definition_answer(met, central_administration, Base)).
+processor_central(absent, _, Base, definition_answer(indeterminate([central_administration_in_union]), none, Base)).
+processor_central(value(false), Profile, Base, Answer) :-
+    read_key(Profile, processor_subject_to_specific_obligations, Read),
+    obligations_answer(Read, Base, Answer).
+
+obligations_answer(value(true), Base, definition_answer(met, establishment_of_main_processing_activities, Base)).
+obligations_answer(value(false), Base, definition_answer(not_met, no_main_establishment_identified, Base)).
+obligations_answer(absent, Base, definition_answer(indeterminate([processor_subject_to_specific_obligations]), none, Base)).
+
+% ---- the outside facts ------------------------------------------------
+roles_and_establishments_outside_facts(Profile, Result) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, Problems),
+    outside_after_check(Problems, Profile, Result).
+
+outside_after_check([Problem|Problems], _, input_problems([Problem|Problems])).
+outside_after_check([], Profile, [outside_fact(party_provided_for_as_controller_by_law, Attested)]) :-
+    read_key(Profile, party_provided_for_as_controller_by_law, Read),
+    attested_term(Read, Attested).
+
+attested_term(absent, absent).
+attested_term(value(Attested), Attested).
+
+% ---- facade: headline verdict, status, checklist ----------------------
+% The headline verdict is the controller determination (Art 4(7)).
+decide_gdpr_common_definitions_roles_and_establishments(Profile, gdpr_common_definitions_roles_and_establishments_verdict(StatusAtom, Citations)) :-
+    answer_for(party_is_controller, Profile, definition_answer(Status, _, Citations)),
+    status_atom(Status, StatusAtom).
+
+gdpr_common_definitions_roles_and_establishments_status(Profile, Status) :-
+    decide_gdpr_common_definitions_roles_and_establishments(Profile, gdpr_common_definitions_roles_and_establishments_verdict(Status, _Citations)).
+
+gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items) :-
+    relation_order(Relations),
+    maplist(checklist_item(Profile), Relations, Items).
+
+checklist_item(Profile, Relation, item(Relation, StatusAtom, cite(Point))) :-
+    relation_point(Relation, Point),
+    answer_for(Relation, Profile, definition_answer(Status, _, _)),
+    status_atom(Status, StatusAtom).
+
+gdpr_common_definitions_roles_and_establishments_decision_resolvable(Profile) :-
+    decide_gdpr_common_definitions_roles_and_establishments(Profile, _Verdict).
+
+status_atom(met, met).
+status_atom(not_met, not_met).
+status_atom(indeterminate(_), indeterminate).
+status_atom(needs_legal_review(_, _), needs_legal_review).
+status_atom(input_problems(_), input_problems).
+
+:- end_module(gdpr_common_definitions_roles_and_establishments).

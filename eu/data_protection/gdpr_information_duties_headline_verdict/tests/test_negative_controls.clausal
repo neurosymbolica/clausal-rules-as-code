@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% One positive case and one near-miss per route (one condition changed ->
+% different verdict). Every near-miss atom is also shown to be a real verdict
+% atom, so a misspelt atom cannot pass a fail test unnoticed.
+% Run: python -m clausal.testing eu/data_protection/gdpr_information_duties_headline_verdict/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/information_duty_verdict, [
+    information_duty_verdict/3,
+    information_duty_verdict_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/information_duty_exemption, [
+    information_duty_exemption/2,
+    information_duty_exemption_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/queries, [gdpr_information_duties_headline_verdict_what_if/4]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/fixtures, [gdpr_information_duties_headline_verdict_profile_for/2]).
+
+test(verdict_atoms_are_real) :-
+    information_duty_verdict_status_values(Values),
+    member(eligible, Values),
+    member(ineligible, Values).
+
+test(exemption_atoms_are_real) :-
+    information_duty_exemption_status_values(Values),
+    member(impossible_or_disproportionate_effort, Values),
+    member(law_lays_down_obtaining_or_disclosure, Values),
+    member(professional_secrecy_obligation, Values),
+    member(none, Values).
+
+% Route Art 13: on time versus one day late.
+test(art13_positive_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_on_time, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(art13_one_day_late_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_one_day_late, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(art13_one_day_late_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_one_day_late, Profile),
+    information_duty_verdict(Profile, ineligible, _).
+
+% Route Art 13: a missing statutory-or-contractual item.
+test(art13_missing_item_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_missing_statutory_item, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+% Route Art 14: boundary day versus one day over.
+test(art14_positive_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_on_time_at_boundary, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(art14_one_day_over_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_one_day_late, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(art14_one_day_over_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_one_day_late, Profile),
+    information_duty_verdict(Profile, ineligible, _).
+
+% Art 14(3)(b): the earlier communication date binds.
+test(art14_communication_limb_late_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_communication_limb_late, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(art14_communication_limb_on_time_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_communication_limb_on_time, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+% Calendar rule: Art 3(4) shift, with and without the attested holiday.
+test(holiday_attested_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_holiday_shift_on_time, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(holiday_absent_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_holiday_absent_late, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+% Exemption (b): protective measures are a condition.
+test(effort_with_measures_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_effort_exemption, Profile),
+    information_duty_verdict(Profile, eligible, [cite(eu_reg_2016_679_art_14_5_b)]).
+
+test(effort_without_measures_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_effort_without_measures, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(effort_without_measures_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_effort_without_measures, Profile),
+    information_duty_verdict(Profile, ineligible, _).
+
+% Exemption (c): attested true versus attested false.
+test(law_attested_true_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_law_exemption, Profile),
+    information_duty_verdict(Profile, eligible, [cite(eu_reg_2016_679_art_14_5_c)]).
+
+test(law_attested_false_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_law_attested_false, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(law_attested_false_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_law_attested_false, Profile),
+    information_duty_verdict(Profile, ineligible, _).
+
+% Exemption (d): the secrecy fact flipped to attested false.
+test(secrecy_attested_true_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_secrecy_exemption, Profile),
+    information_duty_verdict(Profile, eligible, [cite(eu_reg_2016_679_art_14_5_d)]).
+
+test(secrecy_flipped_to_false_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_secrecy_exemption, Profile),
+    gdpr_information_duties_headline_verdict_what_if(Profile, professional_secrecy_obligation_by_law, attested(false, attestation(host, none, fixture_reason, none)), Status),
+    Status == ineligible.
+
+test(secrecy_flipped_to_false_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_secrecy_exemption, Profile),
+    gdpr_information_duties_headline_verdict_what_if(Profile, professional_secrecy_obligation_by_law, attested(false, attestation(host, none, fixture_reason, none)), eligible).
+
+% Further processing: strictly prior versus same day.
+test(further_processing_prior_is_eligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_further_processing_prior, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(further_processing_same_day_is_not_eligible, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_further_processing_same_day, Profile),
+    information_duty_verdict(Profile, eligible, _).
+
+test(further_processing_same_day_is_ineligible) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_further_processing_same_day, Profile),
+    information_duty_verdict(Profile, ineligible, _).
+
+% Exemption slice: the Art 13 route reads no exemption.
+test(art13_has_no_effort_exemption, fail) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_on_time, Profile),
+    information_duty_exemption(Profile, impossible_or_disproportionate_effort).
+
+test(art13_exemption_is_none) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_on_time, Profile),
+    information_duty_exemption(Profile, none).
+
+:- end_module(test_negative_controls).

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """labels.py -- stable assigned identity for a Clausal clause or fact.
 
 A label is `@` plus 8 lowercase hex digits, written in a comment above the

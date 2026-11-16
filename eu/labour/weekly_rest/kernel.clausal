@@ -1,0 +1,253 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/labour/weekly_rest (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003 (the original act, CELEX 32003L0088; pinned raw sha256
+% 0d23ad4953be900de8a614fea4022aa46086e0bdc2fdfd6d0fde0cd84429e4b6):
+% Art 5, first and second subparagraphs (the weekly rest), read with
+% Art 2(1) and Art 2(2) (working time and rest period), Art 16(a) (the
+% reference period), Art 2(7) with Art 20(1) and Art 21(1) (workers Art 5
+% does not apply to), and Art 17(1), 17(3), 17(4) and Art 18, first and
+% second subparagraphs (derogations from Art 5).
+%
+% This domain has ONE determination slice (weekly_rest.clausal), so no
+% domain predicate is called by two or more files. The only predicate
+% here is the exception the scaffold places in the kernel: the order's
+% input check weekly_rest_input_problems/2, written from the typed input
+% contract and exported for the slice and queries.clausal to import:
+%   :- use_module(eu/labour/weekly_rest/kernel, [weekly_rest_input_problems/2]).
+% Minute arithmetic over date_time(Y, M, D, H, MIN) terms, run extraction
+% and the completion search stay in weekly_rest.clausal; they move here
+% only when a second slice (for example a daily-rest slice) calls them.
+%
+% deontic family: the STATUS is a modal vocabulary of what the rota gives
+% under Art 5 (cf. eu/procurement/exclusion_grounds).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike. An atom spelled differently is a DIFFERENT atom.
+%
+% ---- result terms ---------------------------------------------------
+% The slice's facade result term:
+%   weekly_rest_verdict(Status, Citations)
+%     Status    -- one RESULT of weekly_rest_status/7 (below);
+%     Citations -- a set-like list of cite(Key) terms, [] when the
+%                  Status is not final.
+%
+% The contract queries (five inputs each: Profile, Worker, Shifts,
+% PeriodStart, PeriodEnd) and the shape of their answer arguments:
+%   weekly_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd,
+%                      Result, Citations)
+%     Result is ONE of the atoms
+%       weekly_rest_given                  (every block holds the rest)
+%       weekly_rest_not_given              (short; other_worker, no_derogation)
+%       weekly_rest_not_applied_to_worker  (short; Art 20(1) or Art 21(1))
+%       weekly_rest_derogation_applies     (short; Art 17 or Art 18)
+%     or a status compound ITSELF (below), never wrapped in a list.
+%   shortest_weekly_rest_minutes(Profile, Worker, Shifts, PeriodStart,
+%                                PeriodEnd, Minutes)
+%     Minutes is ONE bare integer of minutes, 0 to 10080 (never a float,
+%     never hours), or a status compound ITSELF.
+%   first_period_without_weekly_rest(Profile, Worker, Shifts, PeriodStart,
+%                                    PeriodEnd, Day)
+%     Day is date(Year, Month, Day) of three bare integers, or the atom
+%     no_period_without_weekly_rest, or a status compound ITSELF.
+%   weekly_rest_input_problems(Profile, Problems)
+%     Problems is the BARE flat list: [] or duplicate_key(Key),
+%     wrong_type(Key) and unknown_key(Key) terms, in contract order.
+%
+% Status compounds (not final):
+%   input_problems(Problems)       -- step 0, before everything else;
+%   indeterminate([Key])           -- exactly ONE bare key atom;
+%                                     the bare atom indeterminate is
+%                                     never written;
+%   needs_legal_review(open_textured(Key, cite(eu_dir_2003_88_art_2_1)),
+%                      [inputs_relied_on(Pairs)])
+%                                  -- Key the unsure on-call key whose
+%                                     kind matters; Pairs the present
+%                                     judgement keys as Key-Value, in
+%                                     root_exports order; an unscored
+%                                     provenance(Clause, Citations) may
+%                                     follow.
+% Problem terms: unknown_key(Key), wrong_type(Key), duplicate_key(Key),
+% with Key also one of profile, worker, shifts, period_start, period_end
+% in wrong_type/1 at step 0.
+% =====================================================================
+
+:- module(kernel, [weekly_rest_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% weekly_rest_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
+%   Key in every item gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+weekly_rest_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, weekly_rest_minimum, weekly_rest_reference_period, worker_category, derogation_from_article_5],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(on_call_on_site_counts_as_working_time, judgement).
+key_type(on_call_standby_counts_as_working_time, judgement).
+key_type(weekly_rest_minimum, weekly_rest_minimum_atom).
+key_type(weekly_rest_reference_period, weekly_rest_reference_period_atom).
+key_type(worker_category, worker_category_atom).
+key_type(derogation_from_article_5, derogation_from_article_5_atom).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, each Key ground; false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, T) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+no_variables_t([], true).
+no_variables_t([_|_], false).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    memberd_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(weekly_rest_minimum_atom, Value, T) :-
+    in_type_t(enum([rest_of_24_plus_11_hours, reduced_rest_of_24_hours]), Value, T).
+
+in_type_t(weekly_rest_reference_period_atom, Value, T) :-
+    in_type_t(enum([seven_day_period, fourteen_day_reference_period]), Value, T).
+
+in_type_t(worker_category_atom, Value, T) :-
+    in_type_t(enum([other_worker, mobile_worker, seagoing_fishing_vessel_worker]), Value, T).
+
+in_type_t(derogation_from_article_5_atom, Value, T) :-
+    in_type_t(enum([no_derogation, derogation_under_article_17_1, derogation_under_article_17_3, derogation_under_article_17_4, derogation_under_article_18]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

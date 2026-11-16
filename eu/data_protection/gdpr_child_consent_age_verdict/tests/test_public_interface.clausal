@@ -1,0 +1,127 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Run: python -m clausal.testing eu/data_protection/gdpr_child_consent_age_verdict/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict, [
+    decide_child_consent/2,
+    child_consent_ground/2,
+    child_consent_ground_status/2,
+    child_consent_ground_checklist/2,
+    child_consent_ground_decision_resolvable/1,
+    child_consent_ground_status_values/1,
+    gdpr_child_consent_age_verdict_input_problems/2,
+    gdpr_child_consent_age_verdict_what_if/4,
+    gdpr_child_consent_age_verdict_subject/1,
+    gdpr_child_consent_age_verdict_profile_for/2,
+    gdpr_child_consent_age_verdict_assess/2
+]).
+
+answers_once([]).
+answers_once([Subject|Subjects]) :-
+    findall(Verdict, gdpr_child_consent_age_verdict_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, 1),
+    answers_once(Subjects).
+
+test(every_subject_answers_exactly_once) :-
+    findall(Subject, gdpr_child_consent_age_verdict_subject(Subject), Subjects),
+    answers_once(Subjects).
+
+test(the_ground_vocabulary_is_tabulated) :-
+    child_consent_ground_status_values(Values),
+    member(art8_not_engaged, Values),
+    member(parental_consent_missing_below_national_age, Values).
+
+test(consent_not_the_basis_does_not_engage_art_8) :-
+    gdpr_child_consent_age_verdict_assess(consent_not_the_basis, gdpr_child_consent_verdict(eligible, art8_not_engaged, not_applicable, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(an_unsure_service_judgement_refers) :-
+    gdpr_child_consent_age_verdict_assess(service_judgement_unsure, gdpr_child_consent_verdict(needs_legal_review(open_textured(information_society_service, cite(eu_reg_2016_679_art_4_25)), [inputs_relied_on([processing_rests_on_consent-true, information_society_service-unsure, offered_directly_to_child-true])]), none, not_reached, [cite(eu_reg_2016_679_art_4_25)])).
+
+test(a_missing_engagement_key_is_indeterminate) :-
+    gdpr_child_consent_age_verdict_assess(service_key_missing, gdpr_child_consent_verdict(indeterminate([information_society_service]), none, not_reached, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(sixteen_is_eligible_by_own_consent) :-
+    gdpr_child_consent_age_verdict_assess(adult_at_sixteen, gdpr_child_consent_verdict(eligible, child_at_least_16, not_applicable, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(sixteen_does_not_read_the_parental_flag) :-
+    gdpr_child_consent_age_verdict_assess(adult_ignores_parental_flag, gdpr_child_consent_verdict(eligible, child_at_least_16, not_applicable, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(fifteen_is_not_eligible_by_own_consent) :-
+    gdpr_child_consent_age_verdict_assess(fifteen_without_parental_answer, gdpr_child_consent_verdict(indeterminate([parental_consent_given]), none, not_reached, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(fifteen_is_not_eligible_near_miss, fail) :-
+    gdpr_child_consent_age_verdict_assess(fifteen_without_parental_answer, gdpr_child_consent_verdict(eligible, _, _, _)).
+
+test(an_absent_national_age_refers) :-
+    gdpr_child_consent_age_verdict_assess(fifteen_national_age_not_shown, gdpr_child_consent_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_8_1_second_subpara), cite(member_state_digital_consent_age_law)), [resolution(cite(member_state_digital_consent_age_law), not_attempted), inputs_relied_on([child_age_years-15, parental_consent_given-false, member_state-austria, member_state_selection_test-controller_establishment, consent_date-date(2026, 10, 1)])]), none, not_reached, [cite(eu_reg_2016_679_art_8_1_second_subpara), cite(member_state_digital_consent_age_law)])).
+
+test(a_national_age_for_another_state_refers) :-
+    gdpr_child_consent_age_verdict_assess(fourteen_national_age_other_state, gdpr_child_consent_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_8_1_second_subpara), cite(member_state_digital_consent_age_law)), _), none, not_reached, [cite(eu_reg_2016_679_art_8_1_second_subpara), cite(member_state_digital_consent_age_law)])).
+
+test(the_child_at_the_national_age_is_eligible) :-
+    gdpr_child_consent_age_verdict_assess(fourteen_at_national_age, gdpr_child_consent_verdict(eligible, child_at_least_national_age, not_applicable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)])).
+
+test(the_child_one_year_below_the_national_age_is_ineligible) :-
+    gdpr_child_consent_age_verdict_assess(thirteen_below_national_age, gdpr_child_consent_verdict(ineligible, parental_consent_missing_below_national_age, not_applicable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)])).
+
+test(a_missing_stage_four_key_is_named) :-
+    gdpr_child_consent_age_verdict_assess(fourteen_missing_consent_date, gdpr_child_consent_verdict(indeterminate([consent_date]), none, not_reached, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)])).
+
+test(twelve_without_parental_consent_is_ineligible) :-
+    gdpr_child_consent_age_verdict_assess(twelve_without_parental_consent, gdpr_child_consent_verdict(ineligible, parental_consent_missing_below_13, not_applicable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)])).
+
+test(twelve_with_reasonable_verification_is_eligible) :-
+    gdpr_child_consent_age_verdict_assess(twelve_with_reasonable_verification, gdpr_child_consent_verdict(eligible, parental_consent_given, efforts_reasonable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_2)])).
+
+test(unreasonable_verification_leaves_the_status_eligible) :-
+    gdpr_child_consent_age_verdict_assess(twelve_with_unreasonable_verification, gdpr_child_consent_verdict(eligible, parental_consent_given, efforts_not_reasonable, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_2)])).
+
+test(an_unsure_verification_judgement_refers) :-
+    gdpr_child_consent_age_verdict_assess(twelve_with_unsure_verification, gdpr_child_consent_verdict(eligible, parental_consent_given, needs_legal_review(open_textured(verification_efforts_reasonable, cite(eu_reg_2016_679_art_8_2)), [inputs_relied_on([verification_efforts_reasonable-unsure])]), [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_2)])).
+
+test(an_absent_verification_judgement_is_indeterminate) :-
+    gdpr_child_consent_age_verdict_assess(twelve_without_verification_answer, gdpr_child_consent_verdict(eligible, parental_consent_given, indeterminate([verification_efforts_reasonable]), [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_2)])).
+
+test(a_missing_age_is_indeterminate) :-
+    gdpr_child_consent_age_verdict_assess(no_age_given, gdpr_child_consent_verdict(indeterminate([child_age_years]), none, not_reached, [cite(eu_reg_2016_679_art_8_1)])).
+
+test(a_negative_age_is_an_input_problem) :-
+    gdpr_child_consent_age_verdict_assess(negative_age, gdpr_child_consent_verdict(input_problems([wrong_type(child_age_years)]), none, not_reached, [])).
+
+test(the_input_check_names_the_negative_age) :-
+    gdpr_child_consent_age_verdict_profile_for(negative_age, Profile),
+    gdpr_child_consent_age_verdict_input_problems(Profile, [wrong_type(child_age_years)]).
+
+test(the_ground_projection_answers_once) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_at_national_age, Profile),
+    findall(Ground, child_consent_ground(Profile, Ground), Grounds),
+    Grounds == [child_at_least_national_age].
+
+test(the_status_projection_answers) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground_status(Profile, eligible).
+
+test(the_decision_is_resolvable) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground_decision_resolvable(Profile).
+
+test(the_checklist_carries_provenance_per_item) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground_checklist(Profile, [item(art8_engaged, met, cite(eu_reg_2016_679_art_8_1)), item(child_at_least_16, met, cite(eu_reg_2016_679_art_8_1)), item(parental_consent_given, not_applicable, cite(eu_reg_2016_679_art_8_1)), item(child_at_least_national_age, not_applicable, cite(eu_reg_2016_679_art_8_1_second_subpara)), item(verification_efforts_reasonable, not_applicable, cite(eu_reg_2016_679_art_8_2))]).
+
+test(the_checklist_of_an_input_problem_is_not_empty) :-
+    gdpr_child_consent_age_verdict_profile_for(negative_age, Profile),
+    child_consent_ground_checklist(Profile, [_FirstItem|_OtherItems]).
+
+test(what_if_parental_consent_makes_twelve_eligible) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_without_parental_consent, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, parental_consent_given, true, eligible).
+
+test(what_if_age_fifteen_needs_the_parental_answer) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 15, indeterminate([parental_consent_given])).
+
+:- end_module(test_public_interface).

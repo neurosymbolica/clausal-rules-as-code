@@ -1,0 +1,611 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_procedural_regulation
+shape_family: deontic
+kit_version: '0.1.0'
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - kernel
+  - citations
+  - parameters
+  - gdpr_procedural_regulation
+  - queries
+  - fixtures
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via __init__.clausal.
+public_interface:
+  # -- kernel.clausal -- (its input check is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - citation/2
+  # -- gdpr_procedural_regulation.clausal --
+  - complaint_admissibility/3
+  - prior_request_condition/3
+  - early_resolution/3
+  - simple_cooperation_procedure/4
+  - draft_decision_time_limit/4
+  - late_step_effect/4
+  - procedural_time_limit/4
+  - temporal_application/5
+  - decide_gdpr_procedural_regulation/2
+  - gdpr_procedural_regulation_status/2
+  - gdpr_procedural_regulation_checklist/2
+  - gdpr_procedural_regulation_decision_resolvable/1
+  - gdpr_procedural_regulation_status_values/1
+  # -- queries.clausal --
+  - gdpr_procedural_regulation_profile_keys/1
+  - gdpr_procedural_regulation_input_problems/2
+  - gdpr_procedural_regulation_what_if/4
+  - admissible/0
+  - inadmissible/0
+  - prior_request_not_required/0
+  - prior_request_made/0
+  - prior_request_not_made/0
+  - early_resolution_not_available/0
+  - complaint_not_devoid_of_purpose/0
+  - early_resolution_objected/0
+  - resolution_established_by_receiving_authority/0
+  - draft_decision_establishing_resolution/0
+  - chapter_iii_not_applicable/0
+  - simple_procedure_not_available/0
+  - simple_procedure_excluded_by_objection/0
+  - simple_procedure_available/0
+  - legality_and_validity_not_affected/0
+  - not_governed_by_article_14/0
+  - part_applies/0
+  - part_does_not_apply/0
+  - suspended_until_board_binding_decision/0
+  - extension_not_permitted/0
+  - no_extension/0
+  - up_to/0
+  - exactly/0
+  - weeks/0
+  - months/0
+  - within/0
+  - at_least_before/0
+  - receipt_of_complaint/0
+  - complainant_receiving_early_resolution_information/0
+  - expiry_of_objection_time_limit/0
+  - confirmation_of_competence_or_board_binding_decision/0
+  - notification_of_simple_cooperation_procedure/0
+  - receipt_of_summary_of_key_issues/0
+  - expiry_of_comment_period/0
+  - expiry_of_draft_decision_time_limit/0
+  - being_informed_of_extension/0
+  - expiry_of_simple_procedure_time_limit/0
+  - date/3
+  - draft_decision_limit/2
+  - extension/3
+  - limit/5
+  - indeterminate/1
+  - needs_legal_review/2
+  - open_textured/2
+  - cross_reference_unresolved/2
+  - resolution/2
+  - inputs_relied_on/1
+  - outside_fact/2
+  - attested/2
+  - attestation/4
+  - url/2
+  - document/2
+  - input_problems/1
+  - unknown_key/1
+  - wrong_type/1
+  - duplicate_key/1
+  # -- fixtures.clausal --
+  - gdpr_procedural_regulation_subject/1
+  - gdpr_procedural_regulation_profile_for/2
+  - gdpr_procedural_regulation_assess/2
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Shared backbone packages imported: none (only kit modules formalize_lib and
+# kit/query_combinators, which are not domain packages).
+uses: []
+
+scope: >-
+  Regulation (EU) 2025/2518 (GDPR Procedural Regulation), for a complaint or an
+  investigation concerning cross-border processing (the caller establishes the
+  cross-border character and the roles of the authorities). Decided here, from the
+  pinned text only: the admissibility of a complaint (Art 4(1), 4(2), 4(5)); whether
+  the prior request to the controller of Art 4(3) is required and made (reported, not
+  made an item of admissibility); what follows from an early resolution (Art 5(1) to
+  (4) and (6)); whether the simple cooperation procedure is available (Art 6(1), 6(3),
+  6(5)); which time limit applies to the draft decision and whether its extension is
+  permitted (Art 6(1), Art 12(1) to (3) and (6)); the effect of a procedural step
+  taken late (Art 14); a table of sixteen time limits (Arts 4, 5, 6, 10 and 12) stated
+  as a number, a unit, a relation, an event and any extension; and from when Chapters
+  II to VI apply (Art 36, Art 37(2)). Open-textured terms (a right exercised by
+  request, issues addressable without additional cooperation, exceptional complexity)
+  are tri-state judgements handed to the caller, with unsure referred to a lawyer;
+  determinations under other law (a case handled under Art 56(2) GDPR, what national
+  law requires, the source of a missed time limit) are attested outside facts, an
+  absent one referred. Out of scope: calendar end dates of periods (deferred,
+  period_end_dates), Arts 1 to 3, 7 to 9, 11, 13, 15 to 35 and 37(1) (deferred set),
+  and Regulation (EU) 2016/679 Arts 56, 60, 65, 66, 77, 78 and 80 (excluded set).
+
+sources:
+  - 'Regulation (EU) 2025/2518 of the European Parliament and of the Council (GDPR Procedural Regulation), CELEX 32025R2518, OJ L, 12.12.2025: Art 4(1), (2), (3), (5), (6)'
+  - 'Regulation (EU) 2025/2518, Art 5(1), Art 5(2) opening words and point (c), Art 5(3), (4), (6)'
+  - 'Regulation (EU) 2025/2518, Art 6(1), (2), (3), (5)'
+  - 'Regulation (EU) 2025/2518, Art 10(3), (4), (5)'
+  - 'Regulation (EU) 2025/2518, Art 12(1), (2), (3), (4), (6)'
+  - 'Regulation (EU) 2025/2518, Art 14, Art 36, Art 37(2)'
+
+query_interface:
+  2: gdpr_procedural_regulation_status/2        # facade status projection (admissibility)
+  3: complaint_admissibility/3                  # status_determination: admissible | inadmissible
+  13: simple_cooperation_procedure/4            # compliance_check: may the lead authority use the simple procedure
+  15: procedural_time_limit/4                   # deadline: the time limit of a procedural step
+  16: gdpr_procedural_regulation_what_if/4      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32025R2518#art_003
+  - 32025R2518#art_004
+  - 32025R2518#art_005
+  - 32025R2518#art_006
+  - 32025R2518#art_009
+  - 32025R2518#art_010
+  - 32025R2518#art_011
+  - 32025R2518#art_012
+  - 32025R2518#art_013
+  - 32025R2518#art_016
+  - 32025R2518#art_019
+  - 32025R2518#art_020
+  - 32025R2518#art_021
+  - 32025R2518#art_022
+  - 32025R2518#art_023
+  - 32025R2518#art_024
+  - 32025R2518#art_025
+  - 32025R2518#art_026
+  - 32025R2518#art_027
+  - 32025R2518#art_028
+  - 32025R2518#art_029
+  - 32025R2518#art_030
+  - 32025R2518#art_031
+  - 32025R2518#art_032
+  - 32025R2518#art_033
+  - 32025R2518#art_034
+  - 32025R2518#art_037
+  reason: The article units of Articles 3 to 6, 9 to 13, 16, 19 to 34 and 37 hold
+    only the article number and title; their paragraphs and points are separate units.
+    Document structure, not operative law. Deferred so every unit of the pinned extract
+    is accounted for.
+  consequence: 'None for a caller: an article title carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: subject_matter_and_definitions
+  units:
+  - 32025R2518#art_001
+  - 32025R2518#art_002
+  reason: 'Article 1 (subject matter and scope: procedural rules for complaints and
+    investigations in cases concerning cross-border processing, including the determination
+    whether a case concerns cross-border processing) and Article 2 (the definitions
+    of Article 4 of Regulation (EU) 2016/679 apply; ''party under investigation'')
+    are read by no limb: every query is asked about a cross-border case (reading (1))
+    and no limb turns on a definition.'
+  consequence: The caller establishes that the case concerns cross-border processing
+    before asking (reading (1)); no answer decides it.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: principles_of_enforcement
+  units:
+  - 32025R2518#parag_003.001
+  - 32025R2518#parag_003.002
+  - 32025R2518#parag_003.003
+  - 32025R2518#parag_003.004
+  - 32025R2518#parag_003.005
+  reason: Article 3 states general principles (expedient and efficient proceedings
+    and sincere cooperation, joining or separating proceedings under national law,
+    the complainant communicating with the authority where it lodged, a decision subject
+    to a judicial remedy, limits on the length of submissions). None gives an answer
+    this order returns.
+  consequence: None of these principles is tested by any answer.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: complaint_handling_steps_without_time_limit
+  units:
+  - 32025R2518#parag_004.004
+  - 32025R2518#point_004.004_a
+  - 32025R2518#point_004.004_b
+  - 32025R2518#point_004.004_c
+  - 32025R2518#parag_004.007
+  - 32025R2518#parag_004.008
+  reason: Article 4(4) (the preliminary conclusion on cross-border processing, the
+    presumed lead authority and Article 56(2)), Article 4(7) (a request for supplementary
+    information, without prejudice to admissibility) and Article 4(8) (the lead authority
+    informs the party under investigation 'without delay'; lawyer question L1) are
+    steps of the authorities with no answer of this order.
+  consequence: The caller gives the roles and the cross-border character of the case
+    (reading (1)); no answer says whether supplementary information was rightly requested
+    or the party informed in time.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: early_resolution_information_and_powers
+  units:
+  - 32025R2518#point_005.002_a
+  - 32025R2518#point_005.002_b
+  - 32025R2518#parag_005.005
+  reason: 'Article 5(2), points (a) and (b) (what the complainant is told: that the
+    infringement has ended and the complaint is considered devoid of purpose, and
+    the consequences of early resolution), and Article 5(5) (early resolution is without
+    prejudice to the powers of Article 58 of Regulation (EU) 2016/679) give no answer
+    of this order; point (c) is in scope (step 6 of early_resolution).'
+  consequence: No answer checks the content of the information to the complainant
+    or limits the powers of the lead authority.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: simple_procedure_hearing
+  units:
+  - 32025R2518#parag_006.004
+  reason: Article 6(4) (under the simple procedure the parties under investigation
+    are heard and the complainant may make its views known before the draft decision,
+    under national administrative modalities) is a step with no answer of this order.
+  consequence: No answer checks that the right to be heard was given under the simple
+    procedure.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: consensus_and_information_exchange
+  units:
+  - 32025R2518#art_007
+  - 32025R2518#art_008
+  - 32025R2518#parag_009.001
+  - 32025R2518#point_009.001_a
+  - 32025R2518#point_009.001_b
+  - 32025R2518#point_009.001_c
+  - 32025R2518#point_009.001_d
+  - 32025R2518#point_009.001_e
+  - 32025R2518#point_009.001_f
+  - 32025R2518#point_009.001_g
+  - 32025R2518#point_009.001_h
+  - 32025R2518#point_009.001_i
+  - 32025R2518#point_009.001_j
+  - 32025R2518#point_009.001_k
+  - 32025R2518#point_009.001_l
+  - 32025R2518#point_009.001_m
+  - 32025R2518#point_009.001_n
+  - 32025R2518#point_009.001_o
+  - 32025R2518#point_009.001_p
+  - 32025R2518#parag_009.002
+  - 32025R2518#parag_009.003
+  - 32025R2518#parag_011.001
+  - 32025R2518#parag_011.002
+  - 32025R2518#point_011.002_a
+  - 32025R2518#point_011.002_b
+  - 32025R2518#point_011.002_c
+  - 32025R2518#parag_011.003
+  - 32025R2518#parag_011.004
+  - 32025R2518#parag_011.005
+  - 32025R2518#parag_011.006
+  - 32025R2518#parag_011.007
+  - 32025R2518#point_011.007_a
+  - 32025R2518#point_011.007_b
+  - 32025R2518#point_011.007_c
+  - 32025R2518#point_011.007_d
+  - 32025R2518#parag_011.008
+  reason: 'Articles 7 to 9 and 11 govern the cooperation between supervisory authorities
+    in reaching consensus, the information exchanged and the means to reach consensus
+    (including the request to the Board of Article 11(6), which draft_decision_time_limit
+    reads only as the stated fact board_request_under_article_11_6_made); the time
+    limits they set (Art 9(2): information exchanged no later than one week from when
+    it becomes available; Art 11(3): a request within one month of the expiry of the
+    period of Art 10(5); Art 11(4): a response within one month of receipt) are not
+    rows of THE TIME LIMITS.'
+  consequence: No answer says whether the authorities cooperated or exchanged information
+    as these articles require.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: summary_of_key_issues_content
+  units:
+  - 32025R2518#parag_010.001
+  - 32025R2518#parag_010.002
+  - 32025R2518#point_010.002_a
+  - 32025R2518#point_010.002_b
+  - 32025R2518#point_010.002_c
+  - 32025R2518#point_010.002_d
+  - 32025R2518#point_010.002_e
+  - 32025R2518#parag_010.006
+  - 32025R2518#parag_010.007
+  reason: Article 10(1), (2) with its points, (6) and (7) say when a summary of key
+    issues is drafted, what it includes, what the receiving authority may provide
+    and that the Board may set modalities; only the time limits of Article 10(3) to
+    (5) are in scope (THE TIME LIMITS).
+  consequence: No answer checks the content of the summary of key issues.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: provisional_measure_after_extended_limit
+  units:
+  - 32025R2518#parag_012.005
+  reason: Article 12(5) (after an extension, an authority concerned that informed
+    the lead authority of a need to act may adopt a provisional measure under Article
+    55 of Regulation (EU) 2016/679 when the extended limit passes, the urgency of
+    Article 66(1) presumed) concerns the powers of another authority, not the time
+    limit this order states.
+  consequence: No answer says whether a provisional measure may be adopted.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: subsequent_domestic_proceedings
+  units:
+  - 32025R2518#parag_013.001
+  - 32025R2518#point_013.001_a
+  - 32025R2518#point_013.001_b
+  - 32025R2518#point_013.001_c
+  - 32025R2518#parag_013.002
+  reason: Article 13 governs subsequent domestic proceedings under national law; it
+    gives no answer of this order (Article 12(6) is read only for the outside fact
+    national_law_requires_domestic_proceedings_after_time_limit, attested by the caller).
+  consequence: No answer applies national procedural law.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: time_limits_and_judicial_remedy
+  units:
+  - 32025R2518#art_015
+  - 32025R2518#point_015_a
+  - 32025R2518#point_015_b
+  reason: 'Article 15 (in judging under Article 78(2) of Regulation (EU) 2016/679
+    whether an authority has not handled a complaint, consideration is given to whether
+    it failed to submit a draft or revised draft decision, or to adopt a final decision,
+    within the time limit) is the link between the time limits and the judicial remedy:
+    a factor for the court deciding a judicial remedy, not an answer of this order;
+    no answer here depends on it.'
+  consequence: late_step_effect says only that a late step keeps its legality and
+    validity (Article 14); it does not say whether a complainant has a remedy for
+    the delay.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: rejection_preliminary_findings_and_hearings
+  units:
+  - 32025R2518#parag_016.001
+  - 32025R2518#parag_016.002
+  - 32025R2518#parag_016.003
+  - 32025R2518#parag_016.004
+  - 32025R2518#art_017
+  - 32025R2518#art_018
+  - 32025R2518#parag_019.001
+  - 32025R2518#parag_019.002
+  - 32025R2518#parag_019.003
+  - 32025R2518#parag_019.004
+  - 32025R2518#parag_019.005
+  - 32025R2518#parag_019.006
+  - 32025R2518#parag_019.007
+  - 32025R2518#parag_020.001
+  - 32025R2518#parag_020.002
+  - 32025R2518#parag_020.003
+  - 32025R2518#point_020.003_a
+  - 32025R2518#point_020.003_b
+  - 32025R2518#point_020.003_c
+  - 32025R2518#parag_021.001
+  - 32025R2518#point_021.001_a
+  - 32025R2518#point_021.001_b
+  - 32025R2518#parag_021.002
+  - 32025R2518#point_021.002_a
+  - 32025R2518#point_021.002_b
+  - 32025R2518#parag_022.001
+  - 32025R2518#parag_022.002
+  - 32025R2518#parag_022.003
+  reason: 'Articles 16 to 22 (rejection or dismissal of a complaint and its revised
+    draft decision and decision, preliminary findings and the right to be heard, transmission
+    of the preliminary findings to complainants, the final decision, and the hearing
+    on a revised draft decision) set procedures and time limits: some fixed by the
+    text (Art 16(2) and Art 22(3), one week from when the views become available;
+    Art 19(3), four weeks from the transmission of the preliminary findings, which
+    the lead authority shall extend by two weeks on request; Art 21(1), one month
+    from the end of the period of Art 60(4) or (5) of Regulation (EU) 2016/679), and
+    some set by the lead authority within a range of three to six weeks (Art 16(1),
+    Art 19(5), Art 20(1), Art 22(2)); this order does not formalise them, and none
+    is a row of THE TIME LIMITS.'
+  consequence: 'No answer gives these procedures or their periods: the caller reads
+    Articles 16 to 22 itself.'
+  declaration: not_an_exception
+  debt: true
+  open: formalisable; a later order could add them; the deferral stands for this order.
+- what: relevant_and_reasoned_objections
+  units:
+  - 32025R2518#parag_023.001
+  - 32025R2518#point_023.001_a
+  - 32025R2518#point_023.001_b
+  - 32025R2518#point_023.001_c
+  - 32025R2518#parag_023.002
+  - 32025R2518#point_023.002_a
+  - 32025R2518#point_023.002_b
+  - 32025R2518#parag_023.003
+  reason: Article 23 governs relevant and reasoned objections of the authorities concerned
+    to a draft decision.
+  consequence: No answer says whether an objection is relevant and reasoned.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: files_and_confidential_information
+  units:
+  - 32025R2518#parag_024.001
+  - 32025R2518#parag_024.002
+  - 32025R2518#parag_024.003
+  - 32025R2518#point_024.003_a
+  - 32025R2518#point_024.003_b
+  - 32025R2518#parag_024.004
+  - 32025R2518#parag_025.001
+  - 32025R2518#parag_025.002
+  - 32025R2518#parag_025.003
+  - 32025R2518#parag_025.004
+  - 32025R2518#parag_025.005
+  - 32025R2518#point_025.005_a
+  - 32025R2518#point_025.005_b
+  - 32025R2518#point_025.005_c
+  - 32025R2518#parag_025.006
+  - 32025R2518#parag_025.007
+  - 32025R2518#parag_025.008
+  - 32025R2518#parag_026.001
+  - 32025R2518#parag_026.002
+  reason: Articles 24 to 26 govern the administrative file, the identification and
+    protection of confidential information, and the cooperation file; none gives an
+    answer of this order.
+  consequence: No answer says what is in a file, who may see it or what is confidential.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: dispute_resolution
+  units:
+  - 32025R2518#parag_027.001
+  - 32025R2518#parag_027.002
+  - 32025R2518#parag_027.003
+  - 32025R2518#point_027.003_a
+  - 32025R2518#point_027.003_b
+  - 32025R2518#point_027.003_c
+  - 32025R2518#point_027.003_d
+  - 32025R2518#point_027.003_e
+  - 32025R2518#point_027.003_f
+  - 32025R2518#parag_027.004
+  - 32025R2518#parag_027.005
+  - 32025R2518#parag_027.006
+  - 32025R2518#parag_028.001
+  - 32025R2518#parag_028.002
+  - 32025R2518#parag_028.003
+  - 32025R2518#parag_029.001
+  - 32025R2518#point_029.001_a
+  - 32025R2518#point_029.001_b
+  - 32025R2518#point_029.001_c
+  - 32025R2518#point_029.001_d
+  - 32025R2518#point_029.001_e
+  - 32025R2518#parag_029.002
+  - 32025R2518#parag_029.003
+  - 32025R2518#parag_030.001
+  - 32025R2518#point_030.001_a
+  - 32025R2518#point_030.001_b
+  - 32025R2518#point_030.001_c
+  - 32025R2518#parag_030.002
+  - 32025R2518#point_030.002_a
+  - 32025R2518#point_030.002_b
+  - 32025R2518#parag_030.003
+  - 32025R2518#parag_030.004
+  - 32025R2518#parag_030.005
+  reason: Articles 27 to 30 govern referral to dispute resolution under Article 65(1)
+    of Regulation (EU) 2016/679 and the Board procedures; temporal_application says
+    only from when Chapter V applies.
+  consequence: No answer runs the dispute resolution procedure.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: urgency_procedure
+  units:
+  - 32025R2518#parag_031.001
+  - 32025R2518#point_031.001_a
+  - 32025R2518#point_031.001_b
+  - 32025R2518#point_031.001_c
+  - 32025R2518#parag_031.002
+  - 32025R2518#parag_031.003
+  - 32025R2518#parag_032.001
+  - 32025R2518#point_032.001_a
+  - 32025R2518#point_032.001_b
+  - 32025R2518#point_032.001_c
+  - 32025R2518#point_032.001_d
+  - 32025R2518#point_032.001_e
+  - 32025R2518#point_032.001_f
+  - 32025R2518#parag_032.002
+  - 32025R2518#parag_032.003
+  - 32025R2518#parag_032.004
+  - 32025R2518#parag_032.005
+  - 32025R2518#parag_033.001
+  - 32025R2518#point_033.001_a
+  - 32025R2518#point_033.001_b
+  - 32025R2518#point_033.001_c
+  - 32025R2518#point_033.001_d
+  - 32025R2518#parag_033.002
+  - 32025R2518#parag_033.003
+  reason: Articles 31 to 33 govern urgent opinions and urgent binding decisions under
+    Article 66 of Regulation (EU) 2016/679; temporal_application says only from when
+    Chapter VI applies.
+  consequence: No answer runs the urgency procedure.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: statistics_and_commission_report
+  units:
+  - 32025R2518#parag_034.001
+  - 32025R2518#point_034.001_a
+  - 32025R2518#point_034.001_b
+  - 32025R2518#point_034.001_c
+  - 32025R2518#point_034.001_d
+  - 32025R2518#point_034.001_e
+  - 32025R2518#point_034.001_f
+  - 32025R2518#point_034.001_g
+  - 32025R2518#parag_034.002
+  - 32025R2518#art_035
+  reason: Article 34 (enforcement statistics) and Article 35 (the Commission report)
+    concern the institutions, not a case.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: entry_into_force
+  units:
+  - 32025R2518#parag_037.001
+  reason: 'Article 37(1) (entry into force on the twentieth day after publication)
+    gives no answer of this order: application follows Article 37(2) and Article 36
+    (temporal_application).'
+  consequence: 'None for a caller: the Regulation applies from 2 April 2027, whatever
+    its date of entry into force.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: period_end_dates
+  units: []
+  instrument: Regulation (EEC, Euratom) No 1182/71 (rules applicable to periods, dates
+    and time limits), Article 3
+  debt: true
+  reason: 'This order states every time limit as a number, a unit and an event (THE
+    TIME LIMITS, draft_decision_time_limit) and computes no calendar end date: counting
+    weeks and months from an event, the day of the event, a period ending on a month
+    without that date, and a Saturday, Sunday or public holiday at the end are, in
+    the author''s reading (Q14), for the rules on periods of Regulation (EEC, Euratom)
+    No 1182/71, Article 3, which are not pinned here and not re-derived; Article 1
+    of that Regulation names acts of the Council or Commission, Regulation (EU) 2025/2518
+    is an act of the European Parliament and of the Council, and its own text does
+    not refer to Regulation (EEC, Euratom) No 1182/71. The shared order periods-regulation-1182-71
+    is to give them; it is not on this order''s branch.'
+  consequence: The caller counts the end date of each period itself from the event
+    the answer names, under the rule it holds applicable; the facts that an objection
+    or a step came in time (complainant_objected_to_early_resolution_in_time, concerned_authority_objected_to_simple_procedure_in_time)
+    are stated by the caller after that count.
+  declaration: answered_with_caveat
+  open: formalisable once the shared periods order is promoted; the deferral stands
+    for this order.
+
+excluded_set:
+- what: gdpr_competence_of_the_lead_authority
+  instrument: Regulation (EU) 2016/679 Art 56
+  cites:
+  - 02016R0679-20160504#art_056
+  reason: Which authority is the lead authority, which are concerned, and whether
+    a case is a local one under Article 56(2) are decided under Article 56 of Regulation
+    (EU) 2016/679, not pinned here; the roles are given by the caller (reading (1)),
+    and whether the case is handled under Article 56(2) is the outside fact case_handled_under_article_56_2,
+    attested by the caller (reading (10)).
+  consequence: The caller establishes the roles of the authorities first.
+- what: gdpr_cooperation_and_draft_decision
+  instrument: Regulation (EU) 2016/679 Art 60
+  cites:
+  - 02016R0679-20160504#art_060
+  reason: Article 60 of Regulation (EU) 2016/679 (the cooperation procedure and the
+    draft and final decisions this Regulation times) is not pinned here; this order
+    states only the time limits and conditions the 2025 Regulation adds.
+  consequence: No answer applies Article 60 itself.
+- what: gdpr_dispute_resolution_and_urgency
+  instrument: Regulation (EU) 2016/679 Arts 65 and 66
+  cites:
+  - 02016R0679-20160504#art_065
+  - 02016R0679-20160504#art_066
+  reason: The Board's dispute resolution and the urgency procedure of Regulation (EU)
+    2016/679, to which the time limits refer (the Board's binding decision under Article
+    65(1)(b), Article 65(6)), are not pinned here.
+  consequence: The caller attests whether a time limit was set by this Regulation
+    or Article 65(6) (the outside fact time_limit_set_by_this_regulation_or_article_65_6)
+    and states when the Board decided.
+- what: gdpr_complaint_remedies_and_representation
+  instrument: Regulation (EU) 2016/679 Arts 77, 78 and 80
+  cites:
+  - 02016R0679-20160504#art_077
+  - 02016R0679-20160504#art_078
+  - 02016R0679-20160504#art_080
+  reason: The right to lodge a complaint, the judicial remedy against an authority
+    and the representation of data subjects by bodies are in Regulation (EU) 2016/679,
+    not pinned here; complaint_lodged_by takes the Article 80 basis as stated.
+  consequence: The caller establishes the basis on which a body lodges the complaint;
+    no answer says whether a remedy lies.

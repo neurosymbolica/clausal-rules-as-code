@@ -1,0 +1,291 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_joint_controllers (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This domain has ONE
+% determination slice (gdpr_joint_controllers.clausal), so no domain
+% predicate is shared and nothing beyond the scaffold's input check
+% lives here.
+% Exception: the scaffold writes the order's input check
+% gdpr_joint_controllers_input_problems/2 here, exported, for the slice and
+% queries.clausal to import:
+%   :- use_module(eu/data_protection/gdpr_joint_controllers/kernel, [gdpr_joint_controllers_input_problems/2]).
+% The input check is profile plumbing: it decides no statutory condition
+% and carries no implements/1 marker.
+%
+% Source (the law the slice formalizes; a reading, not a lawyer's):
+%   Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504
+%   (fmx4 cut by tools/pin_statute.py, fetched 2026-11-12):
+%   - Art 26(3)  [parag_026.003]  rights in respect of and against each joint controller;
+%   - Art 28(10) [parag_028.010]  a processor determining purposes and means is
+%                                 considered a controller (pointer to Art 26);
+%   - Art 82(4)  [parag_082.004]  liability of each responsible party for the entire damage;
+%   - Art 82(5)  [parag_082.005]  claim back after full compensation.
+%   Deferred, read only through profile keys: Art 26(1) and (2)
+%   (gdpr-accountability-security), Art 82(1) to (3)
+%   (gdpr-compensation-and-liability), the rest of Art 28
+%   (gdpr-processor-contract), Art 4 (the common-definitions orders).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike (spelling is the interface: a different spelling never matches).
+%
+% ---- Result terms built by the slice gdpr_joint_controllers.clausal ----
+% The order's queries (PROFILE first, exactly ONE solution each):
+%   rights_against_each_joint_controller(Profile, Result, Citations)
+%     Result: not_joint_controllers | rights_exercisable_against_this_controller
+%             | a status compound (below).
+%   liability_for_the_entire_damage(Profile, Result, Basis, Citations)
+%     Result: not_responsible_for_the_damage | no_other_responsible_party
+%             | liable_for_the_entire_damage | a status compound.
+%   recourse_after_full_compensation(Profile, Result, Basis, Citations)
+%     Result: not_entitled_to_claim_back | entitled_to_claim_back(Parties)
+%             (Parties: other_responsible_parties exactly as given)
+%             | a status compound.
+%   Basis: [outside_fact(responsible_under_article_82_2_and_3, Attested)]
+%     where the limb copies the attested term exactly as supplied, else [].
+%   Citations: a set-like list of cite(Key) terms; [] on every not-final Result.
+% Status compounds (the bare atom indeterminate is NEVER written):
+%   input_problems(Problems)     Problems a list of duplicate_key(Key),
+%                                wrong_type(Key) and unknown_key(Key) terms;
+%   indeterminate([Key])         the ONE first missing key, never the
+%                                outside fact;
+%   needs_legal_review(Reason, Context)
+%     Reason open_textured(Input, cite(Key)),
+%       Context [inputs_relied_on(Pairs)];
+%     Reason cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4),
+%                                       cite(responsibility_under_article_82_statement)),
+%       Context [resolution(cite(responsibility_under_article_82_statement), not_attempted),
+%                inputs_relied_on([responsible_under_article_82_2_and_3-absent])].
+% Outside fact as supplied:
+%   attested(true | false, attestation(By, At, Reason, Evidence)),
+%   Evidence none | url(Url, RetrievedAt) | document(UploadId, Sha256).
+% Facade verdict (eligibility view of the Art 82(5) claim back):
+%   gdpr_joint_controllers_verdict(Status, Citations)
+%   Status: eligible | ineligible | unresolved | referred_for_legal_review
+%           | malformed_input; Citations the recourse query's cite(Key) list.
+% Facade checklist rows: item(RequirementId, ItemStatus, cite(Key)).
+% =====================================================================
+
+:- module(kernel, [gdpr_joint_controllers_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_joint_controllers_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_joint_controllers_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [controllers_jointly_determine_purposes_and_means, responsible_under_article_82_2_and_3, other_responsible_parties, full_compensation_paid],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(controllers_jointly_determine_purposes_and_means, judgement).
+key_type(responsible_under_article_82_2_and_3, outside_fact).
+key_type(other_responsible_parties, list(atom)).
+key_type(full_compensation_paid, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(list(Type), Value, T) :-
+    list_in_type_t(Value, Type, T).
+
+in_type_t(atom, Value, T) :-
+    atom_t(Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% list_in_type_t(Value, Type, T): T is true when Value is a list whose every element is in Type.
+list_in_type_t(Value, _, true) :-
+    Value == [].
+list_in_type_t([Element|Elements], Type, T) :-
+    in_type_t(Type, Element, ElementInType),
+    list_in_type_t(Elements, Type, ElementsInType),
+    truth_and(ElementInType, ElementsInType, T).
+list_in_type_t(Value, _, false) :-
+    Value \== [],
+    Value \= [_|_].
+
+% atom_t(Value, T): for a ground Value, T is true when it is an atom and false when it is [],
+% an integer, a float or a compound term. [] is the empty list here, not an atom.
+atom_t(Value, true) :-
+    atom(Value),
+    Value \== [].
+atom_t(Value, false) :-
+    Value == [].
+atom_t(Value, false) :-
+    integer(Value).
+atom_t(Value, false) :-
+    float(Value).
+atom_t(Value, false) :-
+    compound(Value).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+:- end_module(kernel).

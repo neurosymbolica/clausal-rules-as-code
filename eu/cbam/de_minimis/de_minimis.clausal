@@ -1,0 +1,332 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% de_minimis.clausal -- the "de_minimis" DETERMINATION for eu/cbam/de_minimis,
+% self-contained top to bottom: its statutory VALUE facts, its derived
+% arithmetic, its per-rule tests, its checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2023/956 (CBAM), consolidated as amended to
+% 2025-10-20 (pinned text 02023R0956-20251020): Art 2(1); Art 2a(1), (2) and (4);
+% Art 3, point (15); Annex I, point 1 and its Electricity division;
+% Annex VII, point 1 (the single mass-based threshold, 50 tonnes).
+% Deferred: Art 2a(3) and the Chemicals division of Annex I (each marked
+% by implements/1 where the order relies on it, never returned).
+%
+% Queries:
+%   de_minimis_exemption(Profile, Result, Citations)
+%     -- one importer, one calendar year: does the Art 2a(1) exemption
+%        apply (readings (1) to (7) of the order).
+%   de_minimis_goods_status(Profile, Result, Citations)
+%     -- one import: outside the exemption (Art 2a(4)), counted toward
+%        the threshold, or not goods of this Regulation (readings (8), (9)).
+% The input check de_minimis_input_problems/2 lives in the kernel and is
+% called first by both queries (THE LIMBS step 0).
+%
+% Figures are whole KILOGRAMS of net mass; LIMIT is 1000 times the
+% caller's single_mass_based_threshold_tonnes. 'Does not cumulatively
+% exceed' is read as NOT MORE THAN (reading (5)). Exact integers only.
+%
+% Every route is one clause with a disjoint guard and its ground verdict
+% in the head; exactly one solution per query.
+% =====================================================================
+
+:- module(de_minimis, [
+    de_minimis_exemption/3,
+    de_minimis_goods_status/3,
+    decide_de_minimis/2,
+    de_minimis_status/2,
+    de_minimis_checklist/2,
+    de_minimis_decision_resolvable/1,
+    de_minimis_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/cbam/de_minimis/kernel, [de_minimis_input_problems/2]).
+:- use_module(eu/cbam/de_minimis/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% 1 tonne is 1,000 kilograms (reading (5)): the caller's threshold in
+% tonnes is converted once to the kilograms of the figures.
+:- constant_value(kilograms_per_tonne, 1000).
+
+% The threshold under the pinned text (Annex VII, point 1). The caller
+% states the threshold in force for the year (reading (4), Q5); this row
+% records the pinned value for the tests and fixtures.
+de_minimis_pinned_threshold_tonnes(50, cite(eu_reg_2023_956_annex_vii_1)).
+
+% The verdict vocabulary of de_minimis_exemption/3 as a ground table.
+de_minimis_status_values([de_minimis_exemption_applies, de_minimis_exemption_does_not_apply]).
+
+% ---- derived arithmetic ----------------------------------------------
+% LIMIT in kilograms: Annex VII, point 1 sets the threshold in tonnes;
+% the threshold read is the one in force for the year, which Art 2a(3)
+% (deferred) lets the Commission amend from 1 January of a later year.
+limit_kilograms(ThresholdTonnes, LimitKilograms) :-
+    implements(eu_reg_2023_956_annex_vii_1),
+    implements(eu_reg_2023_956_art_2a_3),
+    LimitKilograms #= ThresholdTonnes * constant(kilograms_per_tonne).
+
+% threshold_comparison(Kilograms, LimitKilograms, State): Art 2a(1),
+% 'does not cumulatively exceed' read as not more than LIMIT.
+threshold_comparison(Kilograms, LimitKilograms, within) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    Kilograms #=< LimitKilograms.
+threshold_comparison(Kilograms, LimitKilograms, above) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    Kilograms #> LimitKilograms.
+
+% ---- the RELEVANT FIGURES (reading (6), open question Q1) ------------
+relevant_figures(Profile, [net_mass_kg_by_acceptance_date]) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_get(Profile, year_date_basis, acceptance_of_the_customs_declaration).
+relevant_figures(Profile, [net_mass_kg_by_release_date]) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_get(Profile, year_date_basis, release_for_free_circulation).
+relevant_figures(Profile, [net_mass_kg_by_acceptance_date, net_mass_kg_by_release_date]) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_get(Profile, year_date_basis, unsure).
+relevant_figures(Profile, [net_mass_kg_by_acceptance_date, net_mass_kg_by_release_date]) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_lacks(Profile, year_date_basis).
+
+% ---- the state of one figure -----------------------------------------
+% figure_state(Profile, Key, State): absent, within, above, or
+% not_comparable (a figure above 0 with the threshold absent).
+figure_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+figure_state(Profile, Key, State) :-
+    profile_get(Profile, Key, Kilograms),
+    present_figure_state(Profile, Kilograms, State).
+
+% A figure of 0 exceeds no threshold: the threshold is not read.
+present_figure_state(_, Kilograms, within) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    Kilograms #= 0.
+present_figure_state(Profile, Kilograms, not_comparable) :-
+    Kilograms #> 0,
+    profile_lacks(Profile, single_mass_based_threshold_tonnes).
+present_figure_state(Profile, Kilograms, State) :-
+    implements(eu_reg_2023_956_annex_vii_1),
+    Kilograms #> 0,
+    profile_get(Profile, single_mass_based_threshold_tonnes, ThresholdTonnes),
+    limit_kilograms(ThresholdTonnes, LimitKilograms),
+    threshold_comparison(Kilograms, LimitKilograms, State).
+
+% first_absent_key(Keys, States, Key): the first absent relevant figure,
+% in root_exports order.
+first_absent_key([Key|_], [absent|_], Key).
+first_absent_key([_|Keys], [State|States], Key) :-
+    dif(State, absent),
+    first_absent_key(Keys, States, Key).
+
+% ---- de_minimis_exemption: the verdict -------------------------------
+de_minimis_exemption(Profile, Result, Citations) :-
+    decide_de_minimis(Profile, de_minimis_verdict(Result, Citations)).
+
+decide_de_minimis(Profile, Verdict) :-
+    de_minimis_input_problems(Profile, Problems),
+    verdict_for_problems(Problems, Profile, Verdict).
+
+% THE LIMBS step 0: input problems first.
+verdict_for_problems([Problem|Problems], _, de_minimis_verdict(input_problems([Problem|Problems]), [])).
+verdict_for_problems([], Profile, Verdict) :-
+    exemption_verdict(Profile, Verdict).
+
+exemption_verdict(Profile, Verdict) :-
+    relevant_figures(Profile, Keys),
+    maplist(figure_state(Profile), Keys, States),
+    memberd_t(absent, States, HasAbsent),
+    memberd_t(not_comparable, States, HasNotComparable),
+    memberd_t(within, States, HasWithin),
+    memberd_t(above, States, HasAbove),
+    exemption_route(HasAbsent, HasNotComparable, HasWithin, HasAbove, Profile, Keys, States, Verdict).
+
+% Step 1: every relevant figure present and within: Art 2a(1) exempts.
+exemption_route(false, false, true, false, _, _, _, de_minimis_verdict(de_minimis_exemption_applies, [cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_annex_vii_1), cite(eu_reg_2023_956_art_3_15)])) :-
+    implements(eu_reg_2023_956_art_2a_1).
+% Step 2: every relevant figure present and above: Art 2a(2), all
+% obligations for all goods of that year.
+exemption_route(false, false, false, true, _, _, _, de_minimis_verdict(de_minimis_exemption_does_not_apply, [cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_art_2a_2), cite(eu_reg_2023_956_annex_vii_1), cite(eu_reg_2023_956_art_3_15)])) :-
+    implements(eu_reg_2023_956_art_2a_2).
+% Step 3: an absent relevant figure is named first.
+exemption_route(true, _, _, _, _, Keys, States, de_minimis_verdict(indeterminate([Key]), [])) :-
+    first_absent_key(Keys, States, Key).
+% Step 4: every relevant figure present, the threshold absent.
+exemption_route(false, true, _, _, _, _, _, de_minimis_verdict(indeterminate([single_mass_based_threshold_tonnes]), [])).
+% Steps 5 and 6: the two figures fall on different sides of LIMIT.
+exemption_route(false, false, true, true, Profile, _, _, Verdict) :-
+    date_basis_verdict(Profile, Verdict).
+
+date_basis_verdict(Profile, de_minimis_verdict(indeterminate([year_date_basis]), [])) :-
+    profile_lacks(Profile, year_date_basis).
+date_basis_verdict(Profile, de_minimis_verdict(needs_legal_review(open_textured(year_date_basis, cite(eu_reg_2023_956_art_2a_1)), [inputs_relied_on([year_date_basis-unsure])]), [])) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_get(Profile, year_date_basis, unsure).
+
+% ---- de_minimis_goods_status: one import -----------------------------
+de_minimis_goods_status(Profile, Result, Citations) :-
+    de_minimis_input_problems(Profile, Problems),
+    goods_status_for_problems(Problems, Profile, Result, Citations).
+
+goods_status_for_problems([Problem|Problems], _, input_problems([Problem|Problems]), []).
+goods_status_for_problems([], Profile, Result, Citations) :-
+    goods_kind_status(Profile, Result, Citations).
+
+% Step 7: electricity, Art 2a(4) and the Electricity division of Annex I.
+goods_kind_status(Profile, outside_de_minimis_exemption, [cite(eu_reg_2023_956_art_2a_4), cite(eu_reg_2023_956_annex_i_electricity)]) :-
+    implements(eu_reg_2023_956_art_2a_4),
+    profile_get(Profile, goods_kind, electricity).
+% Step 8: hydrogen, cited by Art 2a(4) alone; the Chemicals division
+% (deferred) is what identifies hydrogen, and is never returned.
+goods_kind_status(Profile, outside_de_minimis_exemption, [cite(eu_reg_2023_956_art_2a_4)]) :-
+    implements(eu_reg_2023_956_art_2a_4),
+    implements(eu_reg_2023_956_annex_i_chemicals),
+    profile_get(Profile, goods_kind, hydrogen).
+% Step 9: other goods listed in Annex I are added up (reading (3), Q4).
+goods_kind_status(Profile, counted_toward_threshold, [cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_annex_i_1)]) :-
+    implements(eu_reg_2023_956_art_2a_1),
+    profile_get(Profile, goods_kind, other_annex_i_goods).
+% Step 10: goods not listed in Annex I are outside the Regulation.
+goods_kind_status(Profile, not_goods_of_this_regulation, [cite(eu_reg_2023_956_art_2_1), cite(eu_reg_2023_956_annex_i_1)]) :-
+    implements(eu_reg_2023_956_art_2_1),
+    profile_get(Profile, goods_kind, goods_not_listed_in_annex_i).
+% Step 11: goods_kind absent.
+goods_kind_status(Profile, indeterminate([goods_kind]), []) :-
+    profile_lacks(Profile, goods_kind).
+
+% ---- projection: Status only ------------------------------------------
+de_minimis_status(Profile, Status) :-
+    decide_de_minimis(Profile, de_minimis_verdict(Status, _Citations)).
+
+% ---- checklist: one row per relevant figure ---------------------------
+de_minimis_checklist(Profile, Items) :-
+    de_minimis_input_problems(Profile, Problems),
+    checklist_for_problems(Problems, Profile, Items).
+
+checklist_for_problems([Problem|Problems], _, [item(profile, unmet(input_problems([Problem|Problems])), cite(eu_reg_2023_956_art_2a_1))]).
+checklist_for_problems([], Profile, Items) :-
+    relevant_figures(Profile, Keys),
+    maplist(figure_item(Profile), Keys, Items).
+
+figure_item(Profile, Key, item(Key, Status, cite(eu_reg_2023_956_art_2a_1))) :-
+    figure_state(Profile, Key, State),
+    state_item_status(State, Key, Status).
+
+state_item_status(within, _, met).
+state_item_status(above, _, unmet(exceeds_single_mass_based_threshold)).
+state_item_status(absent, Key, unknown([Key])).
+state_item_status(not_comparable, _, unknown([single_mass_based_threshold_tonnes])).
+
+de_minimis_decision_resolvable(Profile) :-
+    decide_de_minimis(Profile, _Verdict).
+
+% ---- tests -------------------------------------------------------------
+test(the_pinned_threshold_is_fifty_tonnes) :-
+    de_minimis_pinned_threshold_tonnes(50, cite(eu_reg_2023_956_annex_vii_1)).
+
+test(the_limit_is_fifty_thousand_kilograms) :-
+    limit_kilograms(50, LimitKilograms),
+    LimitKilograms =:= 50000.
+
+test(a_figure_equal_to_the_limit_is_within) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, acceptance_of_the_customs_declaration), attribute(net_mass_kg_by_acceptance_date, 50000)],
+    findall(Result-Citations, de_minimis_exemption(Profile, Result, Citations), Answers),
+    Answers == [de_minimis_exemption_applies-[cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_annex_vii_1), cite(eu_reg_2023_956_art_3_15)]].
+
+test(a_figure_one_kilogram_above_the_limit_exceeds) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, acceptance_of_the_customs_declaration), attribute(net_mass_kg_by_acceptance_date, 50001)],
+    findall(Result-Citations, de_minimis_exemption(Profile, Result, Citations), Answers),
+    Answers == [de_minimis_exemption_does_not_apply-[cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_art_2a_2), cite(eu_reg_2023_956_annex_vii_1), cite(eu_reg_2023_956_art_3_15)]].
+
+test(a_figure_above_the_limit_is_not_exempt, fail) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, acceptance_of_the_customs_declaration), attribute(net_mass_kg_by_acceptance_date, 50001)],
+    de_minimis_exemption(Profile, de_minimis_exemption_applies, _).
+
+test(the_release_basis_reads_the_release_figure_only) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, release_for_free_circulation), attribute(net_mass_kg_by_acceptance_date, 90000), attribute(net_mass_kg_by_release_date, 10000)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [de_minimis_exemption_applies].
+
+test(zero_figures_need_no_threshold_and_no_date_basis) :-
+    Profile = [attribute(net_mass_kg_by_acceptance_date, 0), attribute(net_mass_kg_by_release_date, 0)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [de_minimis_exemption_applies].
+
+test(both_figures_above_with_an_unsure_basis_exceed) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, unsure), attribute(net_mass_kg_by_acceptance_date, 60000), attribute(net_mass_kg_by_release_date, 70000)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [de_minimis_exemption_does_not_apply].
+
+test(figures_across_the_limit_with_an_unsure_basis_go_to_a_lawyer) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, unsure), attribute(net_mass_kg_by_acceptance_date, 40000), attribute(net_mass_kg_by_release_date, 60000)],
+    findall(Result-Citations, de_minimis_exemption(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(year_date_basis, cite(eu_reg_2023_956_art_2a_1)), [inputs_relied_on([year_date_basis-unsure])])-[]].
+
+test(figures_across_the_limit_without_a_basis_name_the_basis) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(net_mass_kg_by_acceptance_date, 40000), attribute(net_mass_kg_by_release_date, 60000)],
+    findall(Result-Citations, de_minimis_exemption(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([year_date_basis])-[]].
+
+test(figures_above_zero_without_a_threshold_name_the_threshold) :-
+    Profile = [attribute(year_date_basis, unsure), attribute(net_mass_kg_by_acceptance_date, 40000), attribute(net_mass_kg_by_release_date, 0)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [indeterminate([single_mass_based_threshold_tonnes])].
+
+test(an_absent_figure_is_named_before_the_threshold) :-
+    Profile = [attribute(net_mass_kg_by_release_date, 40000)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [indeterminate([net_mass_kg_by_acceptance_date])].
+
+test(the_release_basis_names_the_absent_release_figure) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, release_for_free_circulation), attribute(net_mass_kg_by_acceptance_date, 10000)],
+    findall(Result, de_minimis_exemption(Profile, Result, _), Results),
+    Results == [indeterminate([net_mass_kg_by_release_date])].
+
+test(a_fractional_threshold_is_an_input_problem) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 101/2), attribute(net_mass_kg_by_acceptance_date, 0), attribute(net_mass_kg_by_release_date, 0)],
+    findall(Result-Citations, de_minimis_exemption(Profile, Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(single_mass_based_threshold_tonnes)])-[]].
+
+test(a_profile_with_a_problem_is_not_exempt, fail) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 101/2), attribute(net_mass_kg_by_acceptance_date, 0), attribute(net_mass_kg_by_release_date, 0)],
+    de_minimis_exemption(Profile, de_minimis_exemption_applies, _).
+
+test(electricity_is_outside_the_exemption) :-
+    findall(Result-Citations, de_minimis_goods_status([attribute(goods_kind, electricity)], Result, Citations), Answers),
+    Answers == [outside_de_minimis_exemption-[cite(eu_reg_2023_956_art_2a_4), cite(eu_reg_2023_956_annex_i_electricity)]].
+
+test(hydrogen_is_outside_the_exemption) :-
+    findall(Result-Citations, de_minimis_goods_status([attribute(goods_kind, hydrogen)], Result, Citations), Answers),
+    Answers == [outside_de_minimis_exemption-[cite(eu_reg_2023_956_art_2a_4)]].
+
+test(hydrogen_is_not_counted, fail) :-
+    de_minimis_goods_status([attribute(goods_kind, hydrogen)], counted_toward_threshold, _).
+
+test(other_annex_i_goods_are_counted) :-
+    findall(Result-Citations, de_minimis_goods_status([attribute(goods_kind, other_annex_i_goods)], Result, Citations), Answers),
+    Answers == [counted_toward_threshold-[cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_annex_i_1)]].
+
+test(goods_not_listed_are_not_goods_of_this_regulation) :-
+    findall(Result-Citations, de_minimis_goods_status([attribute(goods_kind, goods_not_listed_in_annex_i)], Result, Citations), Answers),
+    Answers == [not_goods_of_this_regulation-[cite(eu_reg_2023_956_art_2_1), cite(eu_reg_2023_956_annex_i_1)]].
+
+test(an_absent_goods_kind_is_named) :-
+    findall(Result-Citations, de_minimis_goods_status([attribute(year_date_basis, unsure)], Result, Citations), Answers),
+    Answers == [indeterminate([goods_kind])-[]].
+
+test(an_unknown_key_blocks_the_goods_status) :-
+    findall(Result, de_minimis_goods_status([attribute(goods_kind, electricity), attribute(importer_name, acme)], Result, _), Results),
+    Results == [input_problems([unknown_key(importer_name)])].
+
+test(the_checklist_rows_follow_the_relevant_figures) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, unsure), attribute(net_mass_kg_by_acceptance_date, 40000)],
+    findall(Items, de_minimis_checklist(Profile, Items), Checklists),
+    Checklists == [[item(net_mass_kg_by_acceptance_date, met, cite(eu_reg_2023_956_art_2a_1)), item(net_mass_kg_by_release_date, unknown([net_mass_kg_by_release_date]), cite(eu_reg_2023_956_art_2a_1))]].
+
+test(the_status_projection_gives_the_verdict_atom) :-
+    Profile = [attribute(single_mass_based_threshold_tonnes, 50), attribute(year_date_basis, acceptance_of_the_customs_declaration), attribute(net_mass_kg_by_acceptance_date, 120000)],
+    findall(Status, de_minimis_status(Profile, Status), Statuses),
+    Statuses == [de_minimis_exemption_does_not_apply].
+
+:- end_module(de_minimis).

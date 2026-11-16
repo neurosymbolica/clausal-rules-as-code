@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: one test group
+% per query type registered in manifest.yaml query_interface (#2 verdict,
+% #7 cited checklist, #16 what-if) and the key schema and input check.
+% Run: python -m clausal.testing eu/data_protection/gdpr_compensation_and_liability/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_compensation_and_liability/queries, [
+    gdpr_compensation_and_liability_profile_keys/1,
+    gdpr_compensation_and_liability_input_problems/2,
+    gdpr_compensation_and_liability_what_if/4
+]).
+:- use_module(eu/data_protection/gdpr_compensation_and_liability/gdpr_compensation_and_liability, [
+    decide_gdpr_compensation_and_liability/2,
+    gdpr_compensation_and_liability_checklist/2
+]).
+:- use_module(eu/data_protection/gdpr_compensation_and_liability/fixtures, [gdpr_compensation_and_liability_profile_for/2]).
+
+cited_item(item(_Identifier, _Status, cite(_Key))).
+
+% ---- key schema and input check -----------------------------------------
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_compensation_and_liability_profile_keys(ProfileKeys),
+    ProfileKeys == [party_role, involved_in_the_processing, processor_breached_obligations_directed_to_processors, processor_acted_outside_or_contrary_to_lawful_instructions, damage_suffered, infringement_of_the_regulation_occurred, damage_resulted_from_the_infringement, not_in_any_way_responsible_for_the_event].
+
+test(the_reexported_input_check_reports_an_unknown_key) :-
+    gdpr_compensation_and_liability_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+% ---- #2 eligibility: the verdict with its citations -----------------------
+test(the_verdict_of_a_liable_controller) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    decide_gdpr_compensation_and_liability(Profile, gdpr_compensation_and_liability_verdict(liable_for_damage, [cite(eu_reg_2016_679_art_82_1), cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)])).
+
+% ---- #7 justification: the cited checklist --------------------------------
+test(every_checklist_item_carries_a_citation) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_checklist(Profile, Items),
+    length(Items, 5),
+    maplist(cited_item, Items).
+
+test(the_liable_checklist_meets_every_row) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_checklist(Profile, Items),
+    Items == [item(damage_suffered, met, cite(eu_reg_2016_679_art_82_1)), item(infringement_of_the_regulation_occurred, met, cite(eu_reg_2016_679_art_82_1)), item(damage_resulted_from_the_infringement, met, cite(eu_reg_2016_679_art_82_1)), item(liability_limb_of_article_82_2, met, cite(eu_reg_2016_679_art_82_2)), item(exemption_under_article_82_3_not_proved, met, cite(eu_reg_2016_679_art_82_3))].
+
+test(the_exempt_checklist_shows_the_exemption_row_unmet) :-
+    gdpr_compensation_and_liability_profile_for(controller_exempt, Profile),
+    gdpr_compensation_and_liability_checklist(Profile, Items),
+    member(item(exemption_under_article_82_3_not_proved, unmet(not_in_any_way_responsible_for_the_event), cite(eu_reg_2016_679_art_82_3)), Items).
+
+test(the_outside_checklist_shows_the_limb_unmet) :-
+    gdpr_compensation_and_liability_profile_for(controller_not_involved, Profile),
+    gdpr_compensation_and_liability_checklist(Profile, Items),
+    member(item(liability_limb_of_article_82_2, unmet(caller_outside_article_82_2), cite(eu_reg_2016_679_art_82_2)), Items),
+    member(item(exemption_under_article_82_3_not_proved, inapplicable, cite(eu_reg_2016_679_art_82_3)), Items).
+
+test(a_profile_with_input_problems_has_no_checklist, fail) :-
+    gdpr_compensation_and_liability_profile_for(input_unknown_key, Profile),
+    gdpr_compensation_and_liability_checklist(Profile, _Items).
+
+% ---- #16 what-if ----------------------------------------------------------
+test(what_if_the_controller_was_not_involved) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, involved_in_the_processing, false, not_liable_for_damage).
+
+test(what_if_the_statement_was_attested_true) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, not_in_any_way_responsible_for_the_event, attested(true, attestation(host_operator, recorded_at, reason_given, none)), exempt_from_liability).
+
+test(what_if_an_uninvolved_controller_was_involved) :-
+    gdpr_compensation_and_liability_profile_for(controller_not_involved, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, involved_in_the_processing, true, liable_for_damage).
+
+test(what_if_the_processor_breached_its_obligations) :-
+    gdpr_compensation_and_liability_profile_for(processor_outside_both_false, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, processor_breached_obligations_directed_to_processors, true, liable_for_damage).
+
+% (b) THE TEST WAS WRONG: THE PAIRS RULE puts the judgement pairs in root_exports order (damage_suffered first), not in the order the override left the profile; step 9 applies (inside, statement present, damage unsure).
+test(what_if_damage_was_unsure_refers_the_matter) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, damage_suffered, unsure, needs_legal_review(open_textured(damage_suffered, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered-unsure, infringement_of_the_regulation_occurred-true, damage_resulted_from_the_infringement-true])])).
+
+test(what_if_the_role_was_processor_names_the_processor_key) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, party_role, processor, indeterminate([processor_breached_obligations_directed_to_processors])).
+
+test(what_if_a_crisp_key_was_unsure_is_an_input_problem) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, involved_in_the_processing, unsure, input_problems([wrong_type(involved_in_the_processing)])).
+
+test(what_if_keeping_the_statement_false_is_not_exempt, fail) :-
+    gdpr_compensation_and_liability_profile_for(controller_liable, Profile),
+    gdpr_compensation_and_liability_what_if(Profile, not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)), exempt_from_liability).
+
+:- end_module(test_queries).

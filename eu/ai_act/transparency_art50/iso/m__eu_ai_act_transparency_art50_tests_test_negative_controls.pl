@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_transparency_art50_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_transparency_art50_transparency_art50, [transparency_art50_status_values/1]).
+:- use_module(m__eu_ai_act_transparency_art50_fixtures, [transparency_art50_assess/2]).
+
+verdict_of(Subject, Result) :-
+    transparency_art50_assess(Subject, transparency_art50_verdict(Result, _)).
+
+status_table_atom(Result) :-
+    transparency_art50_status_values(StatusValues),
+    member(Result, StatusValues).
+
+test(every_result_atom_used_here_is_in_the_status_table) :-
+    maplist(status_table_atom, [duty_applies, limited_disclosure_applies, duty_does_not_apply, not_applicable_on_date, not_an_ai_system, in_transitional_period, compliant, not_compliant]).
+test(the_first_day_of_application_has_the_duty) :-
+    verdict_of(interaction_first_day_of_application, duty_applies).
+test(the_day_before_is_not_applicable_on_date) :-
+    verdict_of(interaction_before_application_day, not_applicable_on_date).
+test(the_last_transitional_day_is_in_the_window) :-
+    verdict_of(marking_legacy_last_transitional_day, in_transitional_period).
+test(the_first_binding_day_has_the_duty) :-
+    verdict_of(marking_legacy_first_binding_day, duty_applies).
+test(a_system_placed_later_has_the_duty_in_the_window) :-
+    verdict_of(marking_new_system_last_transitional_day, duty_applies).
+test(a_non_obvious_interaction_has_the_duty) :-
+    verdict_of(conversational_assistant_duty_applies, duty_applies).
+test(an_obvious_interaction_is_duty_does_not_apply) :-
+    verdict_of(conversational_assistant_obvious, duty_does_not_apply).
+test(an_authorised_police_system_is_excepted) :-
+    verdict_of(police_system_exception, duty_does_not_apply).
+test(a_public_reporting_portal_has_the_duty) :-
+    verdict_of(police_reporting_portal, duty_applies).
+test(a_system_outside_the_definition_is_not_an_ai_system) :-
+    verdict_of(rule_based_assistant_outside_definition, not_an_ai_system).
+test(an_absent_ai_system_judgement_is_asked_for) :-
+    verdict_of(assistant_system_status_unknown, indeterminate([ai_system])).
+test(assistive_editing_takes_the_marking_duty_out) :-
+    verdict_of(marking_assistive_editing, duty_does_not_apply).
+test(personal_use_takes_the_deployer_duty_out) :-
+    verdict_of(emotion_recognition_personal_use, duty_does_not_apply).
+test(professional_use_has_the_duty) :-
+    verdict_of(emotion_recognition_duty_applies, duty_applies).
+test(an_artistic_deep_fake_has_the_limited_duty) :-
+    verdict_of(deep_fake_artistic_work, limited_disclosure_applies).
+test(a_plain_deep_fake_has_the_full_duty) :-
+    verdict_of(deep_fake_duty_applies, duty_applies).
+test(edited_text_with_editorial_responsibility_is_excepted) :-
+    verdict_of(public_interest_text_edited_with_responsibility, duty_does_not_apply).
+test(reviewed_text_without_responsibility_has_the_duty) :-
+    verdict_of(public_interest_text_reviewed_without_responsibility, duty_applies).
+test(information_given_on_time_is_compliant) :-
+    verdict_of(assistant_informed_on_time, compliant).
+test(information_not_given_is_not_compliant) :-
+    verdict_of(assistant_information_not_given, not_compliant).
+test(timely_emotion_information_is_compliant) :-
+    verdict_of(emotion_recognition_informed_on_time, compliant).
+test(clearly_disclosed_text_is_compliant) :-
+    verdict_of(public_interest_text_disclosed_clearly, compliant).
+test(an_appropriate_artistic_disclosure_is_compliant) :-
+    verdict_of(deep_fake_artistic_disclosure_appropriate, compliant).
+test(a_hampering_artistic_disclosure_is_not_compliant_atom) :-
+    verdict_of(deep_fake_artistic_disclosure_hampering, not_compliant).
+test(marked_outputs_are_compliant) :-
+    verdict_of(marking_outputs_marked, compliant).
+test(the_window_is_passed_through_by_the_compliance_query) :-
+    verdict_of(marking_compliance_in_transition, in_transitional_period).
+test(an_unsure_judgement_that_does_not_matter_gives_the_answer) :-
+    verdict_of(unsure_judgement_not_deciding, duty_does_not_apply).
+test(a_missing_fact_that_matters_is_named) :-
+    verdict_of(unsure_judgement_missing_fact, indeterminate([authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences])).
+test(a_turning_judgement_with_complete_facts_is_referred) :-
+    verdict_of(deep_fake_artistic_judgement_unsure, needs_legal_review(_, _)).
+test(an_unsure_judgement_outside_the_query_keys_is_not_read) :-
+    verdict_of(unsure_judgement_outside_query, duty_applies).
+test(an_unknown_key_is_an_input_problem) :-
+    verdict_of(input_unknown_key, input_problems([unknown_key(colour)])).
+test(an_empty_profile_names_the_first_key) :-
+    verdict_of(empty_profile_first_key, indeterminate([intended_to_interact_directly_with_natural_persons])).
+test(a_duplicate_key_is_only_a_duplicate) :-
+    verdict_of(input_duplicate_key, input_problems([duplicate_key(ai_system)])).
+test(an_unsure_crisp_key_is_a_wrong_type) :-
+    verdict_of(input_crisp_key_unsure, input_problems([wrong_type(required_information_given)])).
+
+test(the_day_before_has_no_duty, fail) :-
+    verdict_of(interaction_before_application_day, duty_applies).
+test(the_first_binding_day_is_not_in_the_window, fail) :-
+    verdict_of(marking_legacy_first_binding_day, in_transitional_period).
+test(a_system_placed_later_is_not_in_the_window, fail) :-
+    verdict_of(marking_new_system_last_transitional_day, in_transitional_period).
+test(an_obvious_interaction_has_no_duty, fail) :-
+    verdict_of(conversational_assistant_obvious, duty_applies).
+test(a_public_reporting_portal_is_not_excepted, fail) :-
+    verdict_of(police_reporting_portal, duty_does_not_apply).
+test(an_ai_system_is_not_not_an_ai_system, fail) :-
+    verdict_of(conversational_assistant_duty_applies, not_an_ai_system).
+test(a_given_ai_system_judgement_is_not_asked_for, fail) :-
+    verdict_of(conversational_assistant_duty_applies, indeterminate(_)).
+test(a_generating_system_is_not_taken_out, fail) :-
+    verdict_of(marking_new_system_last_transitional_day, duty_does_not_apply).
+test(professional_use_is_not_taken_out, fail) :-
+    verdict_of(emotion_recognition_duty_applies, duty_does_not_apply).
+test(a_plain_deep_fake_has_no_limited_duty, fail) :-
+    verdict_of(deep_fake_duty_applies, limited_disclosure_applies).
+test(reviewed_text_without_responsibility_is_not_excepted, fail) :-
+    verdict_of(public_interest_text_reviewed_without_responsibility, duty_does_not_apply).
+test(information_not_given_is_not_compliant_but_not_compliant_atom, fail) :-
+    verdict_of(assistant_information_not_given, compliant).
+test(late_emotion_information_is_not_compliant, fail) :-
+    verdict_of(emotion_recognition_informed_late, compliant).
+test(unclearly_disclosed_text_is_not_compliant, fail) :-
+    verdict_of(public_interest_text_disclosed_unclearly, compliant).
+test(a_hampering_artistic_disclosure_is_not_compliant, fail) :-
+    verdict_of(deep_fake_artistic_disclosure_hampering, compliant).
+test(unmarked_outputs_are_not_compliant, fail) :-
+    verdict_of(marking_outputs_unmarked, compliant).
+test(after_the_window_unmarked_outputs_are_not_in_it, fail) :-
+    verdict_of(marking_outputs_unmarked, in_transitional_period).
+test(an_unsure_judgement_that_does_not_matter_is_not_referred, fail) :-
+    verdict_of(unsure_judgement_not_deciding, needs_legal_review(_, _)).
+test(a_missing_fact_that_matters_is_not_referred, fail) :-
+    verdict_of(unsure_judgement_missing_fact, needs_legal_review(_, _)).
+test(a_settled_judgement_is_not_referred, fail) :-
+    verdict_of(deep_fake_artistic_work, needs_legal_review(_, _)).
+test(an_unsure_judgement_outside_the_query_keys_is_not_referred, fail) :-
+    verdict_of(unsure_judgement_outside_query, needs_legal_review(_, _)).
+test(an_empty_profile_has_no_input_problem, fail) :-
+    verdict_of(empty_profile_first_key, input_problems(_)).
+test(a_duplicate_key_is_never_also_a_wrong_type, fail) :-
+    verdict_of(input_duplicate_key, input_problems([duplicate_key(ai_system), wrong_type(ai_system)])).
+test(an_unsure_crisp_key_is_not_read_as_a_judgement, fail) :-
+    verdict_of(input_crisp_key_unsure, indeterminate(_)).
+
+cp_test_names([every_result_atom_used_here_is_in_the_status_table, the_first_day_of_application_has_the_duty, the_day_before_is_not_applicable_on_date, the_last_transitional_day_is_in_the_window, the_first_binding_day_has_the_duty, a_system_placed_later_has_the_duty_in_the_window, a_non_obvious_interaction_has_the_duty, an_obvious_interaction_is_duty_does_not_apply, an_authorised_police_system_is_excepted, a_public_reporting_portal_has_the_duty, a_system_outside_the_definition_is_not_an_ai_system, an_absent_ai_system_judgement_is_asked_for, assistive_editing_takes_the_marking_duty_out, personal_use_takes_the_deployer_duty_out, professional_use_has_the_duty, an_artistic_deep_fake_has_the_limited_duty, a_plain_deep_fake_has_the_full_duty, edited_text_with_editorial_responsibility_is_excepted, reviewed_text_without_responsibility_has_the_duty, information_given_on_time_is_compliant, information_not_given_is_not_compliant, timely_emotion_information_is_compliant, clearly_disclosed_text_is_compliant, an_appropriate_artistic_disclosure_is_compliant, a_hampering_artistic_disclosure_is_not_compliant_atom, marked_outputs_are_compliant, the_window_is_passed_through_by_the_compliance_query, an_unsure_judgement_that_does_not_matter_gives_the_answer, a_missing_fact_that_matters_is_named, a_turning_judgement_with_complete_facts_is_referred, an_unsure_judgement_outside_the_query_keys_is_not_read, an_unknown_key_is_an_input_problem, an_empty_profile_names_the_first_key, a_duplicate_key_is_only_a_duplicate, an_unsure_crisp_key_is_a_wrong_type]).
+cp_test_fail_names([the_day_before_has_no_duty, the_first_binding_day_is_not_in_the_window, a_system_placed_later_is_not_in_the_window, an_obvious_interaction_has_no_duty, a_public_reporting_portal_is_not_excepted, an_ai_system_is_not_not_an_ai_system, a_given_ai_system_judgement_is_not_asked_for, a_generating_system_is_not_taken_out, professional_use_is_not_taken_out, a_plain_deep_fake_has_no_limited_duty, reviewed_text_without_responsibility_is_not_excepted, information_not_given_is_not_compliant_but_not_compliant_atom, late_emotion_information_is_not_compliant, unclearly_disclosed_text_is_not_compliant, a_hampering_artistic_disclosure_is_not_compliant, unmarked_outputs_are_not_compliant, after_the_window_unmarked_outputs_are_not_in_it, an_unsure_judgement_that_does_not_matter_is_not_referred, a_missing_fact_that_matters_is_not_referred, a_settled_judgement_is_not_referred, an_unsure_judgement_outside_the_query_keys_is_not_referred, an_empty_profile_has_no_input_problem, a_duplicate_key_is_never_also_a_wrong_type, an_unsure_crisp_key_is_not_read_as_a_judgement]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

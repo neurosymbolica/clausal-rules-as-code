@@ -1,0 +1,172 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_special_categories.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
+% 02016R0679-20160504, Art 9(1)-(4) and Art 10.
+%
+% Declared query types and where each is served (manifest query_interface):
+%   #3  status_determination: processing_permitted_status/2
+%       (processing_permitted.clausal) gives the STATUS of
+%       special_category_verdict/4.
+%   #13 compliance_check: processing_permitted/2 answers whether the
+%       proposed processing is allowed under Art 9 and Art 10 (eligible),
+%       barred (ineligible), or not yet decidable (the compounds).
+%   #7  justification: processing_permitted_checklist/2 gives one
+%       item(RequirementId, Outcome, cite(Key)) per evaluated requirement.
+%   #16 what-if: gdpr_special_categories_what_if/4 (here) re-evaluates the
+%       STATUS with one key hypothetically set. The profile is an attribute
+%       list, not a dict, so the kit's override_key/4 (a dict primitive)
+%       does not apply; the override below is attribute-list plumbing.
+%
+% This file also holds:
+%   gdpr_special_categories_profile_keys/1: the 45 contract keys;
+%   gdpr_special_categories_input_problems/2: re-exported from the kernel;
+%   the RESULT CONSTRUCTORS the order names (input_problems/1 ..
+%   document/2): shape predicates that hold for a well-formed result term.
+%   They are exported so the manifest can list them; they are never called
+%   as queries and decide nothing statutory.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_special_categories_profile_keys/1,
+    gdpr_special_categories_input_problems/2,
+    gdpr_special_categories_what_if/4,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    special_category_verdict/4,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
+]).
+
+:- use_module(eu/data_protection/gdpr_special_categories/kernel, [gdpr_special_categories_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_special_categories/processing_permitted, [processing_permitted/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract
+gdpr_special_categories_profile_keys([accordance_with_article_89_1, appropriate_safeguards, authorising_law_proportionate_and_respects_essence, biometric_data_present, biometric_used_for_unique_identification, comprehensive_register_of_criminal_convictions, concerns_health, concerns_sex_life_or_sexual_orientation, consent_purposes_specified, consent_satisfies_definition, criminal_data_authorising_law_exists, criminal_data_law_safeguards_appropriate, criminal_offence_data_present, data_not_disclosed_outside_body_without_consent, data_subject_incapable_of_giving_consent, employment_law_or_collective_agreement_authorises, employment_social_security_or_social_protection_field, exception_claimed, explicit_consent_given, genetic_data_present, health_care_law_basis_exists, manifestly_made_public_by_data_subject, member_state_further_conditions_exist, not_for_profit_body_with_specified_aim, processed_under_professional_secrecy, processing_in_course_of_legitimate_activities, processing_necessary, processing_relates_solely_to_members_or_regular_contacts, processing_under_official_authority_control, prohibition_lifting_barred_by_law, public_health_law_basis_exists, public_health_public_interest, purpose_is_archiving_research_or_statistics, purpose_is_health_or_social_care, purpose_is_legal_claims_or_judicial_capacity, pursuant_to_contract_with_health_professional, research_archiving_statistics_law_basis_exists, reveals_political_opinions, reveals_racial_or_ethnic_origin, reveals_religious_or_philosophical_beliefs, reveals_trade_union_membership, substantial_public_interest, substantial_public_interest_law_exists, suitable_and_specific_measures, vital_interest_at_stake]).
+
+% ---- #16 what-if ------------------------------------------------------
+% The STATUS after setting OverriddenKey to NewValue: every occurrence of the
+% key is dropped and the one new attribute is put first. Profile plumbing
+% only (no statutory decision), so it carries no marker; the decision is
+% the one processing_permitted/2 makes on the hypothesis.
+gdpr_special_categories_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    processing_permitted(Hypothesis, NewStatus).
+
+override_attribute(Profile, Key, Value, [attribute(Key, Value)|Rest]) :-
+    without_key(Profile, Key, Rest).
+
+without_key([], _, []).
+without_key([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Rest]) :-
+    ElementKey \== Key,
+    without_key(Elements, Key, Rest).
+without_key([attribute(ElementKey, _)|Elements], Key, Rest) :-
+    ElementKey == Key,
+    without_key(Elements, Key, Rest).
+without_key([Element|Elements], Key, [Element|Rest]) :-
+    Element \= attribute(_, _),
+    without_key(Elements, Key, Rest).
+
+% ---- result constructors (shape predicates, never queries) -------------
+input_problems(Problems) :-
+    is_list(Problems).
+
+unknown_key(Key) :-
+    ground(Key).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+special_category_verdict(Status, Bases, Conditions, Citations) :-
+    nonvar(Status),
+    is_list(Bases),
+    is_list(Conditions),
+    is_list(Citations).
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    nonvar(Reason),
+    is_list(Context).
+
+open_textured(Input, cite(CitationKey)) :-
+    atom(Input),
+    atom(CitationKey).
+
+cross_reference_unresolved(cite(CitationKey), cite(TargetKey)) :-
+    atom(CitationKey),
+    atom(TargetKey).
+
+resolution(cite(TargetKey), Status) :-
+    atom(TargetKey),
+    member(Status, [not_attempted, attested_not_modelled]).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(Clause, Citations) :-
+    nonvar(Clause),
+    is_list(Citations).
+
+outside_fact(Key, Attested) :-
+    atom(Key),
+    nonvar(Attested).
+
+attested(Value, attestation(_, _, _, _)) :-
+    member(Value, [true, false]).
+
+attestation(AttestedBy, AttestedAt, Reason, Evidence) :-
+    ground(AttestedBy),
+    ground(AttestedAt),
+    ground(Reason),
+    ground(Evidence).
+
+url(Address, RetrievedAt) :-
+    ground(Address),
+    ground(RetrievedAt).
+
+document(UploadIdentifier, ContentDigest) :-
+    ground(UploadIdentifier),
+    ground(ContentDigest).
+
+% ---- tests ----------------------------------------------------------------
+test(what_if_a_claim_names_its_missing_condition) :-
+    findall(Status, gdpr_special_categories_what_if([attribute(concerns_health, true), attribute(criminal_offence_data_present, false)], exception_claimed, art9_2_e, Status), Statuses),
+    Statuses == [indeterminate([manifestly_made_public_by_data_subject])].
+
+test(what_if_replaces_an_existing_key) :-
+    gdpr_special_categories_what_if([attribute(concerns_health, false), attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_political_opinions, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false), attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(concerns_sex_life_or_sexual_orientation, false), attribute(criminal_offence_data_present, false)], concerns_health, true, ineligible).
+
+test(what_if_replaced_key_is_not_still_eligible, fail) :-
+    gdpr_special_categories_what_if([attribute(concerns_health, false), attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_political_opinions, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false), attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(concerns_sex_life_or_sexual_orientation, false), attribute(criminal_offence_data_present, false)], concerns_health, true, eligible).
+
+test(profile_keys_are_the_45_contract_keys) :-
+    gdpr_special_categories_profile_keys(Keys),
+    length(Keys, 45).
+
+test(resolution_status_is_closed) :-
+    resolution(cite(eu_reg_2016_679_art_9_4), attested_not_modelled).
+
+test(resolution_status_rejects_another_atom, fail) :-
+    resolution(cite(eu_reg_2016_679_art_9_4), fetched).
+
+:- end_module(queries).

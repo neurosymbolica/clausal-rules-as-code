@@ -1,0 +1,62 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_gpai_models___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_gpai_models_kernel, [gpai_models_input_problems/2]).
+:- use_module(m__eu_ai_act_gpai_models_citations, [citation/2, implements/1]).
+:- use_module(m__eu_ai_act_gpai_models_gpai_models, [acceptable_use_policies/0, adversarial_testing_and_model_adaptation_measures/0, architecture_and_number_of_parameters/0, compliance_required_by_2_august_2027/0, computational_resources_used_for_training/0, date_of_release_and_methods_of_distribution/0, decide_gpai_models/2, design_specifications_of_the_model_and_training_process/0, detailed_information_on_training_testing_and_validation_data/0, documentation_elements/3, evaluation_strategies_and_results/0, general_purpose_ai_model_with_systemic_risk/0, general_purpose_ai_model_without_systemic_risk/0, gpai_models_checklist/2, gpai_models_decision_resolvable/1, gpai_models_status/2, gpai_models_status_values/1, information_on_training_testing_and_validation_data/0, intended_tasks_and_type_and_nature_of_ai_systems_for_integration/0, interaction_with_hardware_or_software_outside_the_model/0, known_or_estimated_energy_consumption/0, licence/0, modality_and_format_of_inputs_and_outputs/0, modality_format_and_maximum_size_of_inputs_and_outputs/0, no_notification_duty/0, not_a_general_purpose_ai_model/0, not_applicable_on_date/0, notification_after_the_time_limit/0, notification_within_the_time_limit/0, obligation_applies/0, obligation_does_not_apply/0, provider_obligation_status/5, system_architecture/0, systemic_risk_classification_status/4, systemic_risk_notification_status/5, technical_means_required_for_integration/0, versions_of_relevant_software/0]).
+:- use_module(m__eu_ai_act_gpai_models_queries, [date/3, duplicate_key/1, gpai_models_profile_keys/1, gpai_models_what_if/4, indeterminate/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, open_textured/2, provenance/2, unknown_key/1, wrong_type/1]).
+:- use_module(m__eu_ai_act_gpai_models_fixtures, [gpai_models_assess/2, gpai_models_profile_for/2, gpai_models_subject/1]).
+
+root_export(acceptable_use_policies).
+root_export(additional_technical_documentation_for_models_with_systemic_risk).
+root_export(adversarial_testing_and_model_adaptation_measures).
+root_export(architecture_and_number_of_parameters).
+root_export(authorised_representative).
+root_export(commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks).
+root_export(compliance_required_by_2_august_2027).
+root_export(computational_resources_used_for_training).
+root_export(cooperation_with_authorities).
+root_export(copyright_policy).
+root_export(cumulative_training_computation_in_floating_point_operations).
+root_export(cybersecurity_protection).
+root_export(date_of_release_and_methods_of_distribution).
+root_export(design_specifications_of_the_model_and_training_process).
+root_export(designated_by_a_commission_decision_as_a_model_with_systemic_risk).
+root_export(detailed_information_on_training_testing_and_validation_data).
+root_export(evaluation_strategies_and_results).
+root_export(general_purpose_ai_model).
+root_export(general_purpose_ai_model_with_systemic_risk).
+root_export(general_purpose_ai_model_without_systemic_risk).
+root_export(high_impact_capabilities).
+root_export(information_for_downstream_providers).
+root_export(information_on_training_testing_and_validation_data).
+root_export(intended_tasks_and_type_and_nature_of_ai_systems_for_integration).
+root_export(interaction_with_hardware_or_software_outside_the_model).
+root_export(known_or_estimated_energy_consumption).
+root_export(licence).
+root_export(modality_and_format_of_inputs_and_outputs).
+root_export(modality_format_and_maximum_size_of_inputs_and_outputs).
+root_export(model_evaluation).
+root_export(no_notification_duty).
+root_export(not_a_general_purpose_ai_model).
+root_export(not_applicable_on_date).
+root_export(notification_after_the_time_limit).
+root_export(notification_within_the_time_limit).
+root_export(obligation_applies).
+root_export(obligation_does_not_apply).
+root_export(parameters_weights_architecture_and_usage_information_made_publicly_available).
+root_export(placed_on_the_market_before_2_august_2025).
+root_export(provider_established_in_a_third_country).
+root_export(released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution).
+root_export(serious_incident_reporting).
+root_export(system_architecture).
+root_export(systemic_risk_assessment_and_mitigation).
+root_export(technical_documentation).
+root_export(technical_means_required_for_integration).
+root_export(training_content_summary).
+root_export(unsure).
+root_export(used_for_research_development_or_prototyping_before_being_placed_on_the_market).
+root_export(versions_of_relevant_software).

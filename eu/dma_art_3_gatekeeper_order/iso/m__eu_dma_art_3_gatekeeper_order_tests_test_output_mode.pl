@@ -1,0 +1,101 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dma_art_3_gatekeeper_order_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dma_art_3_gatekeeper_order_dma_art_3_gatekeeper_order, [decide_dma_art_3_gatekeeper_order/2, dma_art_3_gatekeeper_order_status/2, impact_threshold_status/3, gateway_threshold_status/3, entrenchment_threshold_status/3, presumption_status/3, designation_requirements_status/4, gatekeeper_status/4]).
+:- use_module(m__eu_dma_art_3_gatekeeper_order_fixtures, [dma_art_3_gatekeeper_order_subject/1, dma_art_3_gatekeeper_order_profile_for/2]).
+
+expected_status(all_thresholds_at_boundary, requirements_presumed_met).
+expected_status(member_states_two, requirements_not_met).
+expected_status(turnover_at_threshold, requirements_presumed_met).
+expected_status(turnover_one_euro_below, requirements_not_met).
+expected_status(market_capitalisation_at_threshold, requirements_presumed_met).
+expected_status(market_capitalisation_one_euro_below, requirements_not_met).
+expected_status(end_users_one_below, requirements_not_met).
+expected_status(business_users_one_below, requirements_not_met).
+expected_status(end_users_third_year_one_below, requirements_not_met).
+expected_status(business_users_third_year_one_below, requirements_not_met).
+expected_status(presumed_arguments_unstated, indeterminate([rebuttal_arguments_presented])).
+expected_status(presumed_rebuttal_accepted, requirements_not_met).
+expected_status(presumed_rebuttal_rejected, requirements_presumed_met).
+expected_status(presumed_rebuttal_conclusion_not_shown, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_3_5), cite(commission_rebuttal_conclusion)), [resolution(cite(commission_rebuttal_conclusion), not_attempted), inputs_relied_on([rebuttal_accepted_by_commission - absent])])).
+expected_status(below_thresholds_all_judgements_true, requirements_met).
+expected_status(below_thresholds_one_judgement_false, requirements_not_met).
+expected_status(below_thresholds_judgement_unsure, needs_legal_review(open_textured(core_platform_service_is_important_gateway, cite(eu_reg_2022_1925_art_3_1_b)), [inputs_relied_on([significant_impact_on_internal_market - true, core_platform_service_is_important_gateway - unsure, entrenched_and_durable_position - true])])).
+expected_status(below_thresholds_judgement_absent, indeterminate([core_platform_service_is_important_gateway])).
+expected_status(designated_attested_true, requirements_presumed_met).
+expected_status(designated_attested_false, requirements_presumed_met).
+expected_status(malformed_float_turnover, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)])).
+
+subject_statuses(Subject, Statuses) :-
+    dma_art_3_gatekeeper_order_profile_for(Subject, Profile),
+    findall(Status, dma_art_3_gatekeeper_order_status(Profile, Status), Statuses).
+
+test(every_subject_reads_out_exactly_its_expected_status) :-
+    findall(Subject - Statuses, (expected_status(Subject, _), subject_statuses(Subject, Statuses)), Observed),
+    findall(Subject - [Status], expected_status(Subject, Status), Expected),
+    Observed == Expected.
+test(the_expected_table_covers_every_subject) :-
+    findall(Subject, dma_art_3_gatekeeper_order_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, expected_status(Subject, _), TableSubjects),
+    sort(TableSubjects, TableSet),
+    TableSet == SubjectSet.
+test(turnover_boundary_pair_reads_out_opposite_impact_results) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_at_threshold, AtProfile),
+    dma_art_3_gatekeeper_order_profile_for(turnover_one_euro_below, BelowProfile),
+    findall(Result, impact_threshold_status(AtProfile, Result, _), AtAnswers),
+    findall(Result, impact_threshold_status(BelowProfile, Result, _), BelowAnswers),
+    AtAnswers == [impact_threshold_met],
+    BelowAnswers == [impact_threshold_not_met].
+test(market_boundary_pair_reads_out_opposite_impact_results) :-
+    dma_art_3_gatekeeper_order_profile_for(market_capitalisation_at_threshold, AtProfile),
+    dma_art_3_gatekeeper_order_profile_for(market_capitalisation_one_euro_below, BelowProfile),
+    findall(Result, impact_threshold_status(AtProfile, Result, _), AtAnswers),
+    findall(Result, impact_threshold_status(BelowProfile, Result, _), BelowAnswers),
+    AtAnswers == [impact_threshold_met],
+    BelowAnswers == [impact_threshold_not_met].
+test(gateway_boundary_pair_reads_out_opposite_results) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, AtProfile),
+    dma_art_3_gatekeeper_order_profile_for(business_users_one_below, BelowProfile),
+    findall(Result - Citations, gateway_threshold_status(AtProfile, Result, Citations), AtAnswers),
+    findall(Result - Citations, gateway_threshold_status(BelowProfile, Result, Citations), BelowAnswers),
+    AtAnswers == [gateway_threshold_met - [cite(eu_reg_2022_1925_art_3_2_b)]],
+    BelowAnswers == [gateway_threshold_not_met - [cite(eu_reg_2022_1925_art_3_2_b)]].
+test(third_year_end_users_below_fail_entrenchment_but_not_gateway) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_third_year_one_below, Profile),
+    findall(Result, gateway_threshold_status(Profile, Result, _), GatewayAnswers),
+    findall(Result, entrenchment_threshold_status(Profile, Result, _), EntrenchmentAnswers),
+    GatewayAnswers == [gateway_threshold_met],
+    EntrenchmentAnswers == [entrenchment_threshold_not_met].
+test(not_presumed_cites_only_the_failing_point) :-
+    dma_art_3_gatekeeper_order_profile_for(member_states_two, Profile),
+    findall(Result - Citations, presumption_status(Profile, Result, Citations), Answers),
+    Answers == [gatekeeper_not_presumed - [cite(eu_reg_2022_1925_art_3_2_a)]].
+test(a_final_verdict_carries_citations) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_one_euro_below, Profile),
+    findall(Verdict, decide_dma_art_3_gatekeeper_order(Profile, Verdict), Verdicts),
+    Verdicts == [dma_art_3_gatekeeper_order_verdict(requirements_not_met, [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2)])].
+test(accepted_rebuttal_reads_out_its_basis_and_citations) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_accepted, Profile),
+    findall(Result - Basis - Citations, designation_requirements_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [requirements_not_met - [outside_fact(rebuttal_accepted_by_commission, attested(true, attestation(european_commission, at_2026_09_06, rebuttal_conclusion, none)))] - [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2), cite(eu_reg_2022_1925_art_3_5)]].
+test(designation_reads_out_its_basis) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_true, Profile),
+    findall(Result - Basis - Citations, gatekeeper_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [designated_gatekeeper - [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(true, attestation(european_commission, at_2026_09_06, designation_decision, none)))] - [cite(eu_reg_2022_1925_art_3_9)]].
+test(a_not_final_verdict_carries_no_citation) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_judgement_absent, Profile),
+    findall(Verdict, decide_dma_art_3_gatekeeper_order(Profile, Verdict), Verdicts),
+    Verdicts == [dma_art_3_gatekeeper_order_verdict(indeterminate([core_platform_service_is_important_gateway]), [])].
+
+cp_test_names([every_subject_reads_out_exactly_its_expected_status, the_expected_table_covers_every_subject, turnover_boundary_pair_reads_out_opposite_impact_results, market_boundary_pair_reads_out_opposite_impact_results, gateway_boundary_pair_reads_out_opposite_results, third_year_end_users_below_fail_entrenchment_but_not_gateway, not_presumed_cites_only_the_failing_point, a_final_verdict_carries_citations, accepted_rebuttal_reads_out_its_basis_and_citations, designation_reads_out_its_basis, a_not_final_verdict_carries_no_citation]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

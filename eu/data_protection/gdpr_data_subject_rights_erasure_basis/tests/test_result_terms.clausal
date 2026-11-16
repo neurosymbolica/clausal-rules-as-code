@@ -1,0 +1,85 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_result_terms.clausal -- the result constructors the order pins,
+% built, destructured and tied to the real decision.
+% =====================================================================
+:- module(test_result_terms, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/request_basis, [request_basis_status/2, request_basis/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/fixtures, [gdpr_data_subject_rights_erasure_basis_profile_for/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure_basis/kernel, [gdpr_data_subject_rights_erasure_basis_input_problems/2]).
+
+test(input_problems_wraps_an_unknown_key) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(no_such_key, true)], Problems),
+    Problems == [unknown_key(no_such_key)],
+    Comply = input_problems(Problems),
+    Comply = input_problems([unknown_key(Key)]),
+    Key == no_such_key.
+
+test(input_problems_gives_basis_none) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(unknown_key_present, Profile),
+    request_basis(Profile, none).
+
+test(a_duplicate_key_is_named) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(request_type, erasure), attribute(request_type, erasure)], Problems),
+    Problems == [duplicate_key(request_type)].
+
+test(a_wrong_type_is_named) :-
+    gdpr_data_subject_rights_erasure_basis_input_problems([attribute(consent_withdrawn, unsure)], Problems),
+    Problems == [wrong_type(consent_withdrawn)].
+
+test(indeterminate_names_the_missing_keys) :-
+    Comply = indeterminate([request_type]),
+    Comply = indeterminate(Keys),
+    Keys == [request_type].
+
+test(missing_keys_give_basis_none) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(request_type_only, Profile),
+    request_basis(Profile, none).
+
+test(needs_legal_review_carries_reason_and_context) :-
+    Pairs = [request_type-erasure, data_no_longer_necessary_for_purposes-unsure],
+    Comply = needs_legal_review(open_textured(data_no_longer_necessary_for_purposes, cite(eu_reg_2016_679_art_17_1_a)), [inputs_relied_on(Pairs), provenance(art17_1_a, [cite(eu_reg_2016_679_art_17_1_a)])]),
+    Comply = needs_legal_review(Reason, Context),
+    Reason = open_textured(Input, cite(Key)),
+    Input == data_no_longer_necessary_for_purposes,
+    Key == eu_reg_2016_679_art_17_1_a,
+    Context = [inputs_relied_on(RelianceList), provenance(Clause, Citations)],
+    RelianceList == Pairs,
+    Clause == art17_1_a,
+    Citations == [cite(eu_reg_2016_679_art_17_1_a)].
+
+test(an_unsure_judgement_gives_basis_none) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(necessity_unsure, Profile),
+    request_basis(Profile, none).
+
+test(an_attested_outside_fact_with_url_evidence_engages_e) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Base),
+    Fact = attested(true, attestation(host, date(2026, 11, 9), statute_checked, url('https://eur-lex.europa.eu/eli/reg/2016/679/oj', date(2026, 11, 9)))),
+    Fact = attested(Value, attestation(_By, _At, _Reason, url(_Address, _RetrievedAt))),
+    Value == true,
+    replace_attribute(Base, erasure_required_by_union_or_member_state_law, Fact, Profile),
+    request_basis(Profile, art17_1_e).
+
+test(an_attested_outside_fact_with_document_evidence_engages_e) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Base),
+    Fact = attested(true, attestation(host, date(2026, 11, 9), court_order, document(upload_one, sha256_digest))),
+    Fact = attested(_Value, attestation(_By, _At, _Reason, document(Upload, Digest))),
+    Upload == upload_one,
+    Digest == sha256_digest,
+    replace_attribute(Base, erasure_required_by_union_or_member_state_law, Fact, Profile),
+    request_basis(Profile, art17_1_e).
+
+test(an_attested_false_fact_does_not_engage_e, fail) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Profile),
+    request_basis(Profile, art17_1_e).
+
+test(the_status_projection_of_the_control_is_none) :-
+    gdpr_data_subject_rights_erasure_basis_profile_for(no_ground_engaged, Profile),
+    request_basis_status(Profile, none).
+
+replace_attribute([attribute(Key, _)|Attributes], Key, Value, [attribute(Key, Value)|Attributes]).
+replace_attribute([attribute(OtherKey, OtherValue)|Attributes], Key, Value, [attribute(OtherKey, OtherValue)|NewAttributes]) :-
+    dif(OtherKey, Key),
+    replace_attribute(Attributes, Key, Value, NewAttributes).
+
+:- end_module(test_result_terms).

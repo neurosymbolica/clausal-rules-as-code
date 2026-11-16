@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_transparency_art50_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists, [msort/2]).
+:- use_module(m__eu_ai_act_transparency_art50_transparency_art50, [transparency_duty_status/5, transparency_compliance/5]).
+:- use_module(m__eu_ai_act_transparency_art50_fixtures, [transparency_art50_subject/1, transparency_art50_profile_for/2, transparency_art50_assess/2]).
+
+registered_subjects(Subjects) :-
+    findall(Subject, transparency_art50_subject(Subject), Subjects).
+
+expected_result(interaction_before_application_day, not_applicable_on_date).
+expected_result(interaction_first_day_of_application, duty_applies).
+expected_result(conversational_assistant_duty_applies, duty_applies).
+expected_result(conversational_assistant_obvious, duty_does_not_apply).
+expected_result(police_system_exception, duty_does_not_apply).
+expected_result(police_reporting_portal, duty_applies).
+expected_result(rule_based_assistant_outside_definition, not_an_ai_system).
+expected_result(assistant_system_status_unknown, indeterminate([ai_system])).
+expected_result(assistant_informed_on_time, compliant).
+expected_result(assistant_information_not_given, not_compliant).
+expected_result(marking_legacy_last_transitional_day, in_transitional_period).
+expected_result(marking_legacy_first_binding_day, duty_applies).
+expected_result(marking_new_system_last_transitional_day, duty_applies).
+expected_result(marking_assistive_editing, duty_does_not_apply).
+expected_result(marking_placement_unknown_in_window, indeterminate([placed_on_the_market_before_2_august_2026])).
+expected_result(marking_outputs_marked, compliant).
+expected_result(marking_outputs_unmarked, not_compliant).
+expected_result(marking_compliance_in_transition, in_transitional_period).
+expected_result(emotion_recognition_duty_applies, duty_applies).
+expected_result(emotion_recognition_personal_use, duty_does_not_apply).
+expected_result(emotion_recognition_informed_on_time, compliant).
+expected_result(emotion_recognition_informed_late, not_compliant).
+expected_result(deep_fake_duty_applies, duty_applies).
+expected_result(deep_fake_artistic_work, limited_disclosure_applies).
+expected_result(deep_fake_artistic_disclosure_appropriate, compliant).
+expected_result(deep_fake_artistic_disclosure_hampering, not_compliant).
+expected_result(deep_fake_artistic_judgement_unsure, needs_legal_review(open_textured(part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work, cite(eu_reg_2024_1689_art_50_4)), [inputs_relied_on([generates_or_manipulates_deep_fake_image_audio_or_video_content - true, ai_system - true, part_of_an_evidently_artistic_creative_satirical_fictional_or_analogous_work - unsure])])).
+expected_result(public_interest_text_duty_applies, duty_applies).
+expected_result(public_interest_text_edited_with_responsibility, duty_does_not_apply).
+expected_result(public_interest_text_reviewed_without_responsibility, duty_applies).
+expected_result(public_interest_text_disclosed_clearly, compliant).
+expected_result(public_interest_text_disclosed_unclearly, not_compliant).
+expected_result(unsure_judgement_not_deciding, duty_does_not_apply).
+expected_result(unsure_judgement_missing_fact, indeterminate([authorised_by_law_to_detect_prevent_investigate_or_prosecute_criminal_offences])).
+expected_result(unsure_judgement_outside_query, duty_applies).
+expected_result(empty_profile_first_key, indeterminate([intended_to_interact_directly_with_natural_persons])).
+expected_result(input_unknown_key, input_problems([unknown_key(colour)])).
+expected_result(input_duplicate_key, input_problems([duplicate_key(ai_system)])).
+expected_result(input_crisp_key_unsure, input_problems([wrong_type(required_information_given)])).
+expected_result(input_unknown_duty, input_problems([wrong_type(duty)])).
+expected_result(input_impossible_date, input_problems([wrong_type(assessment_date)])).
+expected_result(input_several_problems, input_problems([wrong_type(ai_system), unknown_key(colour), wrong_type(duty)])).
+
+subject_classifies(Subject) :-
+    transparency_art50_subject(Subject),
+    transparency_art50_assess(Subject, _Verdict).
+
+subject_assesses_once(Subject) :-
+    findall(Verdict, transparency_art50_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+subject_has_expected_result(Subject) :-
+    expected_result(Subject, Expected),
+    findall(Result, transparency_art50_assess(Subject, transparency_art50_verdict(Result, _)), Results),
+    Results == [Expected].
+
+test(totality_every_subject_classifies) :-
+    registered_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_has_exactly_one_verdict) :-
+    registered_subjects(Subjects),
+    maplist(subject_assesses_once, Subjects).
+test(every_subject_gets_its_expected_result) :-
+    registered_subjects(Subjects),
+    maplist(subject_has_expected_result, Subjects).
+test(every_subject_has_one_expected_row) :-
+    registered_subjects(Subjects),
+    findall(Subject, expected_result(Subject, _), ExpectedSubjects),
+    msort(Subjects, SortedSubjects),
+    msort(ExpectedSubjects, SortedSubjects).
+test(every_answer_has_the_citation_shape_of_its_kind) :-
+    registered_subjects(Subjects),
+    maplist(subject_citation_shape, Subjects).
+test(every_duty_is_not_applicable_before_the_day_of_application) :-
+    maplist(before_application_answer, [interaction_information, machine_readable_marking, emotion_recognition_or_biometric_categorisation_information, deep_fake_disclosure, public_interest_text_disclosure]).
+test(the_compliance_query_passes_the_status_answers_through) :-
+    maplist(answers_agree, [pass_through(interaction_before_application_day, interaction_information, date(2026, 8, 1)), pass_through(conversational_assistant_obvious, interaction_information, date(2027, 1, 1)), pass_through(rule_based_assistant_outside_definition, interaction_information, date(2027, 1, 1)), pass_through(emotion_recognition_personal_use, emotion_recognition_or_biometric_categorisation_information, date(2027, 1, 1)), pass_through(public_interest_text_edited_with_responsibility, public_interest_text_disclosure, date(2027, 1, 1)), pass_through(marking_legacy_last_transitional_day, machine_readable_marking, date(2026, 12, 1))]).
+
+vocabulary_citation(cite(CitationKey)) :-
+    member(CitationKey, [eu_reg_2024_1689_art_113, eu_reg_2024_1689_art_50_1, eu_reg_2024_1689_art_50_2, eu_reg_2024_1689_art_50_3, eu_reg_2024_1689_art_50_4, eu_reg_2024_1689_art_50_5, eu_reg_2024_1689_art_111_4, eu_reg_2024_1689_art_3_1, eu_reg_2024_1689_art_3_4]).
+
+citation_shape(Result, [FirstCitation|OtherCitations]) :-
+    atom(Result),
+    maplist(vocabulary_citation, [FirstCitation|OtherCitations]),
+    sort([FirstCitation|OtherCitations], CitationSet),
+    length(CitationSet, CitationCount),
+    length([FirstCitation|OtherCitations], CitationCount).
+citation_shape(Result, []) :-
+    compound(Result).
+
+subject_citation_shape(Subject) :-
+    transparency_art50_assess(Subject, transparency_art50_verdict(Result, Citations)),
+    citation_shape(Result, Citations).
+
+before_application_answer(DutyName) :-
+    findall(Result - Citations, transparency_duty_status([attribute(ai_system, false)], DutyName, date(2026, 8, 1), Result, Citations), Answers),
+    Answers == [not_applicable_on_date - [cite(eu_reg_2024_1689_art_113)]].
+
+answers_agree(pass_through(Subject, DutyName, AssessmentDate)) :-
+    transparency_art50_profile_for(Subject, Profile),
+    findall(Result - Citations, transparency_duty_status(Profile, DutyName, AssessmentDate, Result, Citations), StatusAnswers),
+    findall(Result - Citations, transparency_compliance(Profile, DutyName, AssessmentDate, Result, Citations), ComplianceAnswers),
+    StatusAnswers = [_],
+    StatusAnswers == ComplianceAnswers.
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_exactly_one_verdict, every_subject_gets_its_expected_result, every_subject_has_one_expected_row, every_answer_has_the_citation_shape_of_its_kind, every_duty_is_not_applicable_before_the_day_of_application, the_compliance_query_passes_the_status_answers_through]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

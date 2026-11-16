@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_hof.pl
 % Generated-companion supplying the closure-taking Clausal builtins that no
 % ISO engine has: call_goal/1..8 and the list higher-order predicates

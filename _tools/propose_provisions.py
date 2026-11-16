@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """propose_provisions.py -- bracket a model that drafts unit<->clause bindings.
 
 THIS TOOL DOES NOT CALL A MODEL; IT BRACKETS ONE. `--pack` (this file, Task 1)

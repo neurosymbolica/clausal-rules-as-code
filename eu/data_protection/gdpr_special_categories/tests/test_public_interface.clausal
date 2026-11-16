@@ -1,0 +1,368 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees).
+% Each fixture subject resolves to exactly ONE verdict, the expected one;
+% near-miss controls get the opposite verdict; every checklist of a
+% well-formed profile is non-empty and every item carries cite(...).
+% Run: python -m clausal.testing eu/data_protection/gdpr_special_categories/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_special_categories, [
+    decide_special_category_processing/2,
+    processing_permitted/2,
+    permitted_bases/2,
+    special_category_scope/2,
+    special_category_outside_facts/2,
+    gdpr_special_categories_input_problems/2,
+    gdpr_special_categories_what_if/4,
+    processing_permitted_status/2,
+    processing_permitted_checklist/2,
+    processing_permitted_decision_resolvable/1,
+    processing_permitted_status_values/1,
+    gdpr_special_categories_subject/1,
+    gdpr_special_categories_profile_for/2,
+    gdpr_special_categories_assess/2,
+    provenance/2,
+    url/2,
+    document/2
+]).
+
+% ---- expected verdict of every fixture subject ---------------------------
+expected(not_special_category, special_category_verdict(eligible, [not_special_category_data], [], [cite(eu_reg_2016_679_art_10), cite(eu_reg_2016_679_art_9_1)])).
+expected(health_without_claim, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(explicit_consent, special_category_verdict(eligible, [art9_2_a], [explicit_consent, specified_purposes, consent_definition, no_legal_bar], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_a)])).
+expected(explicit_consent_barred_by_law, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(employment_law_authorised, special_category_verdict(eligible, [art9_2_b], [necessity, employment_social_security_field, authorising_law, appropriate_safeguards], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_b)])).
+expected(employment_law_attested_false, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(employment_law_absent_cross_reference, special_category_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_2_b), cite(eu_reg_2016_679_art_9_2_b)), [resolution(cite(eu_reg_2016_679_art_9_2_b), not_attempted), inputs_relied_on([exception_claimed-art9_2_b, appropriate_safeguards-true, employment_law_or_collective_agreement_authorises-absent, processing_necessary-true])]), [], [], [])).
+expected(vital_interest_incapable, special_category_verdict(eligible, [art9_2_c], [necessity, vital_interest, incapacity], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_c)])).
+expected(vital_interest_capable, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(not_for_profit_members, special_category_verdict(eligible, [art9_2_d], [not_for_profit_body, legitimate_activities, members_only, no_external_disclosure, appropriate_safeguards], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_d)])).
+expected(not_for_profit_outsiders, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(made_public, special_category_verdict(eligible, [art9_2_e], [manifestly_made_public], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_e)])).
+expected(made_public_denied, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(made_public_unsure, special_category_verdict(needs_legal_review(open_textured(manifestly_made_public_by_data_subject, cite(eu_reg_2016_679_art_9_2_e)), [inputs_relied_on([exception_claimed-art9_2_e, manifestly_made_public_by_data_subject-unsure])]), [], [], [])).
+expected(legal_claims, special_category_verdict(eligible, [art9_2_f], [necessity, legal_claims_purpose], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_f)])).
+expected(legal_claims_other_purpose, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(substantial_public_interest, special_category_verdict(eligible, [art9_2_g], [necessity, substantial_public_interest, authorising_law, proportionate_law, suitable_measures], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_g)])).
+expected(substantial_public_interest_denied, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(health_care_contract, special_category_verdict(eligible, [art9_2_h], [necessity, health_care_purpose, law_or_contract, professional_secrecy], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_h), cite(eu_reg_2016_679_art_9_3)])).
+expected(health_care_without_secrecy, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(public_health_law, special_category_verdict(eligible, [art9_2_i], [necessity, public_health_interest, authorising_law, suitable_measures], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_i)])).
+expected(public_health_law_attested_false, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(research_archiving, special_category_verdict(eligible, [art9_2_j], [necessity, archiving_research_statistics_purpose, article_89_1, authorising_law, proportionate_law, suitable_measures], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_j)])).
+expected(research_without_article_89, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(criminal_official_authority, special_category_verdict(eligible, [art10_official_authority], [official_authority], [cite(eu_reg_2016_679_art_10)])).
+expected(criminal_no_route, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_10)])).
+expected(criminal_authorised_by_law, special_category_verdict(eligible, [art10_authorised_by_law], [authorising_law, appropriate_safeguards], [cite(eu_reg_2016_679_art_10)])).
+expected(criminal_register_defeats_law, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_10)])).
+expected(further_conditions_attested_false, special_category_verdict(eligible, [art9_2_a], [explicit_consent, specified_purposes, consent_definition, no_legal_bar, no_further_conditions], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_a), cite(eu_reg_2016_679_art_9_4)])).
+expected(further_conditions_attested_true, special_category_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_4)), [resolution(cite(eu_reg_2016_679_art_9_4), attested_not_modelled), inputs_relied_on([exception_claimed-art9_2_a, concerns_health-true])]), [], [], [])).
+expected(health_unsure_further_conditions, special_category_verdict(needs_legal_review(open_textured(concerns_health, cite(eu_reg_2016_679_art_4_15)), [inputs_relied_on([exception_claimed-art9_2_a, concerns_health-unsure])]), [], [], [])).
+expected(health_false_further_conditions, special_category_verdict(eligible, [art9_2_a], [explicit_consent, specified_purposes, consent_definition, no_legal_bar], [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_a)])).
+expected(biometric_without_identification, special_category_verdict(eligible, [not_special_category_data], [], [cite(eu_reg_2016_679_art_10), cite(eu_reg_2016_679_art_9_1)])).
+expected(biometric_with_identification, special_category_verdict(ineligible, [], [], [cite(eu_reg_2016_679_art_9_1)])).
+expected(scope_unsure_referral, special_category_verdict(needs_legal_review(open_textured(concerns_sex_life_or_sexual_orientation, cite(eu_reg_2016_679_art_9_1)), [inputs_relied_on([exception_claimed-absent, concerns_health-false, concerns_sex_life_or_sexual_orientation-unsure, reveals_political_opinions-false, reveals_racial_or_ethnic_origin-false, reveals_religious_or_philosophical_beliefs-unsure, reveals_trade_union_membership-unsure])]), [], [], [])).
+expected(scope_settled_false, special_category_verdict(eligible, [not_special_category_data], [], [cite(eu_reg_2016_679_art_10), cite(eu_reg_2016_679_art_9_1)])).
+expected(criminal_scope_absent, special_category_verdict(indeterminate([criminal_offence_data_present]), [], [], [])).
+expected(duplicate_and_unknown_keys, special_category_verdict(input_problems([duplicate_key(concerns_health), unknown_key(colour)]), [], [], [])).
+expected(wrong_type_value, special_category_verdict(input_problems([wrong_type(genetic_data_present)]), [], [], [])).
+
+% ---- helpers ---------------------------------------------------------------
+resolves_to_expected(Subject) :-
+    expected(Subject, Expected),
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Verdict, decide_special_category_processing(Profile, Verdict), Verdicts),
+    Verdicts == [Expected].
+
+% (b) THE TEST WAS WRONG: the logic returns the referral the order requires;
+% == against a partially bound pattern can never hold, so match by unification
+% (exactly one solution is still required by the one-element list).
+subject_status(Subject, Status) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Found, processing_permitted(Profile, Found), Statuses),
+    Statuses = [Status].
+
+subject_permitted(Subject, Status) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    processing_permitted(Profile, Status).
+
+checklist_shape(input_problems(_), []).
+checklist_shape(eligible, [_|_]).
+checklist_shape(ineligible, [_|_]).
+checklist_shape(indeterminate(_), [_|_]).
+checklist_shape(needs_legal_review(_, _), [_|_]).
+
+subject_checklist_well_shaped(Subject) :-
+    expected(Subject, special_category_verdict(Status, _, _, _)),
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Items, processing_permitted_checklist(Profile, Items), [Items]),
+    checklist_shape(Status, Items),
+    maplist(cited_item, Items).
+
+cited_item(item(_, _, cite(Key))) :-
+    atom(Key).
+
+operative_citation(cite(eu_reg_2016_679_art_9_1)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_a)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_b)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_c)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_d)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_e)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_f)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_g)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_h)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_i)).
+operative_citation(cite(eu_reg_2016_679_art_9_2_j)).
+operative_citation(cite(eu_reg_2016_679_art_9_3)).
+operative_citation(cite(eu_reg_2016_679_art_9_4)).
+operative_citation(cite(eu_reg_2016_679_art_10)).
+
+verdict_citations_operative(Subject) :-
+    expected(Subject, special_category_verdict(_, _, _, Citations)),
+    maplist(operative_citation, Citations).
+
+% ---- whole registry -----------------------------------------------------------
+test(every_subject_has_an_expected_verdict) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    findall(Subject, expected(Subject, _), Expected),
+    msort(Subjects, Sorted),
+    msort(Expected, Sorted).
+
+test(every_subject_resolves_to_exactly_its_expected_verdict) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    maplist(resolves_to_expected, Subjects).
+
+test(every_checklist_is_well_shaped_and_cited) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    maplist(subject_checklist_well_shaped, Subjects).
+
+test(every_verdict_cites_only_operative_provisions) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    maplist(verdict_citations_operative, Subjects).
+
+test(every_subject_is_resolvable) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    maplist(subject_resolvable, Subjects).
+
+subject_resolvable(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    processing_permitted_decision_resolvable(Profile).
+
+% ---- per subject: the concrete STATUS ----------------------------------------
+test(not_special_category_is_eligible) :-
+    subject_status(not_special_category, eligible).
+test(health_without_claim_is_ineligible) :-
+    subject_status(health_without_claim, ineligible).
+test(explicit_consent_is_eligible) :-
+    subject_status(explicit_consent, eligible).
+test(explicit_consent_barred_by_law_is_ineligible) :-
+    subject_status(explicit_consent_barred_by_law, ineligible).
+test(employment_law_authorised_is_eligible) :-
+    subject_status(employment_law_authorised, eligible).
+test(employment_law_attested_false_is_ineligible) :-
+    subject_status(employment_law_attested_false, ineligible).
+test(employment_law_absent_is_referred) :-
+    subject_status(employment_law_absent_cross_reference, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_2_b), cite(eu_reg_2016_679_art_9_2_b)), _)).
+test(vital_interest_incapable_is_eligible) :-
+    subject_status(vital_interest_incapable, eligible).
+test(vital_interest_capable_is_ineligible) :-
+    subject_status(vital_interest_capable, ineligible).
+test(not_for_profit_members_is_eligible) :-
+    subject_status(not_for_profit_members, eligible).
+test(not_for_profit_outsiders_is_ineligible) :-
+    subject_status(not_for_profit_outsiders, ineligible).
+test(made_public_is_eligible) :-
+    subject_status(made_public, eligible).
+test(made_public_denied_is_ineligible) :-
+    subject_status(made_public_denied, ineligible).
+test(made_public_unsure_is_referred) :-
+    subject_status(made_public_unsure, needs_legal_review(open_textured(manifestly_made_public_by_data_subject, cite(eu_reg_2016_679_art_9_2_e)), _)).
+test(legal_claims_is_eligible) :-
+    subject_status(legal_claims, eligible).
+test(legal_claims_other_purpose_is_ineligible) :-
+    subject_status(legal_claims_other_purpose, ineligible).
+test(substantial_public_interest_is_eligible) :-
+    subject_status(substantial_public_interest, eligible).
+test(substantial_public_interest_denied_is_ineligible) :-
+    subject_status(substantial_public_interest_denied, ineligible).
+test(health_care_contract_is_eligible) :-
+    subject_status(health_care_contract, eligible).
+test(health_care_without_secrecy_is_ineligible) :-
+    subject_status(health_care_without_secrecy, ineligible).
+test(public_health_law_is_eligible) :-
+    subject_status(public_health_law, eligible).
+test(public_health_law_attested_false_is_ineligible) :-
+    subject_status(public_health_law_attested_false, ineligible).
+test(research_archiving_is_eligible) :-
+    subject_status(research_archiving, eligible).
+test(research_without_article_89_is_ineligible) :-
+    subject_status(research_without_article_89, ineligible).
+test(criminal_official_authority_is_eligible) :-
+    subject_status(criminal_official_authority, eligible).
+test(criminal_no_route_is_ineligible) :-
+    subject_status(criminal_no_route, ineligible).
+test(criminal_authorised_by_law_is_eligible) :-
+    subject_status(criminal_authorised_by_law, eligible).
+test(criminal_register_defeats_law_is_ineligible) :-
+    subject_status(criminal_register_defeats_law, ineligible).
+test(further_conditions_attested_false_is_eligible) :-
+    subject_status(further_conditions_attested_false, eligible).
+test(further_conditions_attested_true_is_referred) :-
+    subject_status(further_conditions_attested_true, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_4)), _)).
+test(health_unsure_further_conditions_is_referred) :-
+    subject_status(health_unsure_further_conditions, needs_legal_review(open_textured(concerns_health, cite(eu_reg_2016_679_art_4_15)), _)).
+test(health_false_further_conditions_is_eligible) :-
+    subject_status(health_false_further_conditions, eligible).
+test(biometric_without_identification_is_eligible) :-
+    subject_status(biometric_without_identification, eligible).
+test(biometric_with_identification_is_ineligible) :-
+    subject_status(biometric_with_identification, ineligible).
+test(scope_unsure_is_referred) :-
+    subject_status(scope_unsure_referral, needs_legal_review(open_textured(concerns_sex_life_or_sexual_orientation, cite(eu_reg_2016_679_art_9_1)), _)).
+test(scope_settled_false_is_eligible) :-
+    subject_status(scope_settled_false, eligible).
+test(criminal_scope_absent_is_indeterminate) :-
+    subject_status(criminal_scope_absent, indeterminate([criminal_offence_data_present])).
+test(duplicate_and_unknown_keys_are_input_problems) :-
+    subject_status(duplicate_and_unknown_keys, input_problems([duplicate_key(concerns_health), unknown_key(colour)])).
+test(wrong_type_value_is_an_input_problem) :-
+    subject_status(wrong_type_value, input_problems([wrong_type(genetic_data_present)])).
+
+% ---- near-miss controls do not get the positive verdict ------------------------
+test(health_without_claim_is_not_eligible, fail) :-
+    subject_permitted(health_without_claim, eligible).
+test(explicit_consent_barred_is_not_eligible, fail) :-
+    subject_permitted(explicit_consent_barred_by_law, eligible).
+test(employment_law_attested_false_is_not_eligible, fail) :-
+    subject_permitted(employment_law_attested_false, eligible).
+test(vital_interest_capable_is_not_eligible, fail) :-
+    subject_permitted(vital_interest_capable, eligible).
+test(not_for_profit_outsiders_is_not_eligible, fail) :-
+    subject_permitted(not_for_profit_outsiders, eligible).
+test(made_public_denied_is_not_eligible, fail) :-
+    subject_permitted(made_public_denied, eligible).
+test(legal_claims_other_purpose_is_not_eligible, fail) :-
+    subject_permitted(legal_claims_other_purpose, eligible).
+test(substantial_public_interest_denied_is_not_eligible, fail) :-
+    subject_permitted(substantial_public_interest_denied, eligible).
+test(health_care_without_secrecy_is_not_eligible, fail) :-
+    subject_permitted(health_care_without_secrecy, eligible).
+test(public_health_law_attested_false_is_not_eligible, fail) :-
+    subject_permitted(public_health_law_attested_false, eligible).
+test(research_without_article_89_is_not_eligible, fail) :-
+    subject_permitted(research_without_article_89, eligible).
+test(criminal_no_route_is_not_eligible, fail) :-
+    subject_permitted(criminal_no_route, eligible).
+test(criminal_register_defeats_law_is_not_eligible, fail) :-
+    subject_permitted(criminal_register_defeats_law, eligible).
+test(biometric_with_identification_is_not_eligible, fail) :-
+    subject_permitted(biometric_with_identification, eligible).
+test(positive_explicit_consent_is_not_ineligible, fail) :-
+    subject_permitted(explicit_consent, ineligible).
+test(positive_criminal_authorised_by_law_is_not_ineligible, fail) :-
+    subject_permitted(criminal_authorised_by_law, ineligible).
+test(a_referral_is_never_eligible, fail) :-
+    subject_permitted(further_conditions_attested_true, eligible).
+test(indeterminate_is_never_the_bare_atom, fail) :-
+    subject_permitted(criminal_scope_absent, indeterminate).
+
+% ---- other public relations -----------------------------------------------------
+test(status_projection_matches_the_verdict) :-
+    gdpr_special_categories_profile_for(health_care_contract, Profile),
+    processing_permitted_status(Profile, eligible).
+
+test(status_values_are_the_two_atoms) :-
+    processing_permitted_status_values([eligible, ineligible]).
+
+test(assess_wrapper_gives_the_status_and_citations) :-
+    gdpr_special_categories_assess(explicit_consent, processing_permitted_verdict(eligible, [cite(eu_reg_2016_679_art_9_1), cite(eu_reg_2016_679_art_9_2_a)])).
+
+test(permitted_bases_for_route_b_once) :-
+    gdpr_special_categories_profile_for(criminal_authorised_by_law, Profile),
+    findall(Bases, permitted_bases(Profile, Bases), Answers),
+    Answers == [[art10_authorised_by_law]].
+
+test(permitted_bases_empty_on_a_referral) :-
+    gdpr_special_categories_profile_for(made_public_unsure, Profile),
+    findall(Bases, permitted_bases(Profile, Bases), Answers),
+    Answers == [[]].
+
+test(permitted_bases_empty_on_input_problems) :-
+    gdpr_special_categories_profile_for(wrong_type_value, Profile),
+    permitted_bases(Profile, []).
+
+test(scope_lists_genetic_data) :-
+    gdpr_special_categories_profile_for(research_archiving, Profile),
+    findall(Scope, special_category_scope(Profile, Scope), Scopes),
+    Scopes == [[genetic_data]].
+
+test(scope_is_empty_without_a_category) :-
+    gdpr_special_categories_profile_for(criminal_scope_absent, Profile),
+    special_category_scope(Profile, []).
+
+test(scope_refers_the_worked_example) :-
+    gdpr_special_categories_profile_for(scope_unsure_referral, Profile),
+    special_category_scope(Profile, needs_legal_review(open_textured(concerns_sex_life_or_sexual_orientation, cite(eu_reg_2016_679_art_9_1)), [inputs_relied_on([exception_claimed-absent|_])])).
+
+test(scope_on_input_problems) :-
+    gdpr_special_categories_profile_for(duplicate_and_unknown_keys, Profile),
+    special_category_scope(Profile, input_problems([duplicate_key(concerns_health), unknown_key(colour)])).
+
+test(outside_facts_copy_the_attestation) :-
+    gdpr_special_categories_profile_for(employment_law_authorised, Profile),
+    special_category_outside_facts(Profile, [outside_fact(prohibition_lifting_barred_by_law, absent), outside_fact(employment_law_or_collective_agreement_authorises, attested(true, attestation(decision_layer, attested_at, attested_reason, none)))|Rest]),
+    length(Rest, 6).
+
+test(outside_facts_on_input_problems) :-
+    gdpr_special_categories_profile_for(wrong_type_value, Profile),
+    special_category_outside_facts(Profile, input_problems([wrong_type(genetic_data_present)])).
+
+test(input_check_passes_a_well_formed_fixture) :-
+    gdpr_special_categories_profile_for(research_archiving, Profile),
+    gdpr_special_categories_input_problems(Profile, []).
+
+test(input_check_rejects_a_non_list) :-
+    gdpr_special_categories_input_problems(colour, [wrong_type(profile)]).
+
+test(checklist_cites_article_9_3_for_secrecy) :-
+    gdpr_special_categories_profile_for(health_care_contract, Profile),
+    processing_permitted_checklist(Profile, Items),
+    member(item(professional_secrecy, met, cite(eu_reg_2016_679_art_9_3)), Items).
+
+test(checklist_names_the_failing_condition) :-
+    gdpr_special_categories_profile_for(health_care_without_secrecy, Profile),
+    processing_permitted_checklist(Profile, Items),
+    member(item(professional_secrecy, unmet(professional_secrecy), cite(eu_reg_2016_679_art_9_3)), Items).
+
+test(what_if_withdrawing_explicit_consent_flips_to_ineligible) :-
+    gdpr_special_categories_profile_for(explicit_consent, Profile),
+    findall(Status, gdpr_special_categories_what_if(Profile, explicit_consent_given, false, Status), Statuses),
+    Statuses == [ineligible].
+
+test(what_if_adding_a_route_flips_to_eligible) :-
+    gdpr_special_categories_profile_for(criminal_no_route, Profile),
+    gdpr_special_categories_what_if(Profile, processing_under_official_authority_control, true, eligible).
+
+test(what_if_withdrawn_consent_is_not_eligible, fail) :-
+    gdpr_special_categories_profile_for(explicit_consent, Profile),
+    gdpr_special_categories_what_if(Profile, explicit_consent_given, false, eligible).
+
+% ---- result constructors: provenance/2, url/2, document/2 ----------------------
+test(provenance_accepts_a_clause_and_citations) :-
+    provenance(article_9_1_scope, [cite(eu_reg_2016_679_art_9_1)]).
+test(provenance_rejects_an_unbound_clause, fail) :-
+    provenance(_, [cite(eu_reg_2016_679_art_9_1)]).
+
+test(url_accepts_an_address_and_retrieval_time) :-
+    url('https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504', retrieved_at).
+test(url_rejects_an_unbound_address, fail) :-
+    url(_, retrieved_at).
+
+test(document_accepts_an_upload_and_digest) :-
+    document(upload_identifier, content_digest).
+test(document_rejects_an_unbound_digest, fail) :-
+    document(upload_identifier, _).
+
+:- end_module(test_public_interface).

@@ -1,0 +1,182 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% required condition changed -> a different verdict), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states "no
+% solution" as `test(Name, fail) :- Goal.`; every near-miss atom also has a
+% positive test so a misspelling shows up as a failing positive test.
+% Run: python -m clausal.testing eu/dma_art_3_gatekeeper_order/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dma_art_3_gatekeeper_order/dma_art_3_gatekeeper_order, [
+    dma_art_3_gatekeeper_order_status/2,
+    dma_art_3_gatekeeper_order_status_values/1,
+    impact_threshold_status/3,
+    gateway_threshold_status/3,
+    entrenchment_threshold_status/3,
+    presumption_status/3,
+    designation_requirements_status/4,
+    gatekeeper_status/4
+]).
+:- use_module(eu/dma_art_3_gatekeeper_order/fixtures, [dma_art_3_gatekeeper_order_profile_for/2]).
+
+turnover_branch_profile(MemberStateCount, [attribute(member_states_where_core_platform_service_provided, MemberStateCount), attribute(union_turnover_eur_most_recent_financial_year, 8000000000), attribute(union_turnover_eur_second_most_recent_financial_year, 8000000000), attribute(union_turnover_eur_third_most_recent_financial_year, 8000000000)]).
+
+% ---- the verdict atoms are real ---------------------------------------
+test(the_verdict_atoms_are_the_slice_vocabulary) :-
+    dma_art_3_gatekeeper_order_status_values(StatusValues),
+    StatusValues == [requirements_presumed_met, requirements_met, requirements_not_met].
+
+% ---- impact: Member States (step 1, Q1 on the turnover branch) --------
+test(turnover_branch_with_three_member_states_is_met) :-
+    turnover_branch_profile(3, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, [cite(eu_reg_2022_1925_art_3_2_a)]).
+test(turnover_branch_with_two_member_states_is_not_met) :-
+    turnover_branch_profile(2, Profile),
+    impact_threshold_status(Profile, impact_threshold_not_met, [cite(eu_reg_2022_1925_art_3_2_a)]).
+test(turnover_branch_with_two_member_states_is_never_met, fail) :-
+    turnover_branch_profile(2, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, _).
+
+% ---- impact: turnover branch (steps 2-3) ------------------------------
+test(turnover_at_threshold_is_impact_met) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_at_threshold, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, _).
+test(turnover_one_euro_below_is_impact_not_met) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_one_euro_below, Profile),
+    impact_threshold_status(Profile, impact_threshold_not_met, _).
+test(turnover_one_euro_below_is_never_impact_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_one_euro_below, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, _).
+
+% ---- impact: market branch --------------------------------------------
+test(market_at_threshold_is_impact_met) :-
+    dma_art_3_gatekeeper_order_profile_for(market_capitalisation_at_threshold, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, _).
+test(market_one_euro_below_is_never_impact_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(market_capitalisation_one_euro_below, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, _).
+
+% ---- gateway (steps 5-6) ----------------------------------------------
+test(boundary_users_meet_the_gateway) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    gateway_threshold_status(Profile, gateway_threshold_met, _).
+test(end_users_one_below_fail_the_gateway) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_one_below, Profile),
+    gateway_threshold_status(Profile, gateway_threshold_not_met, _).
+test(end_users_one_below_never_meet_the_gateway, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_one_below, Profile),
+    gateway_threshold_status(Profile, gateway_threshold_met, _).
+test(business_users_one_below_never_meet_the_gateway, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(business_users_one_below, Profile),
+    gateway_threshold_status(Profile, gateway_threshold_met, _).
+
+% ---- entrenchment (steps 8-9) -----------------------------------------
+test(boundary_users_meet_entrenchment) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    entrenchment_threshold_status(Profile, entrenchment_threshold_met, _).
+test(third_year_business_users_below_fail_entrenchment) :-
+    dma_art_3_gatekeeper_order_profile_for(business_users_third_year_one_below, Profile),
+    entrenchment_threshold_status(Profile, entrenchment_threshold_not_met, _).
+test(third_year_business_users_below_never_meet_entrenchment, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(business_users_third_year_one_below, Profile),
+    entrenchment_threshold_status(Profile, entrenchment_threshold_met, _).
+
+% ---- presumption (steps 11, 14) ---------------------------------------
+test(boundary_profile_is_presumed) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    presumption_status(Profile, gatekeeper_presumed, _).
+% (b) THE TEST WAS WRONG: step 11 merges the not-met citations as a set-like list
+% (order not scored); the merge writes them in sorted order, so compare the sorted list.
+test(one_point_short_is_not_presumed) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_third_year_one_below, Profile),
+    presumption_status(Profile, gatekeeper_not_presumed, Citations),
+    sort(Citations, SortedCitations),
+    SortedCitations == [cite(eu_reg_2022_1925_art_3_2_b), cite(eu_reg_2022_1925_art_3_2_c)].
+test(one_point_short_is_never_presumed, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_third_year_one_below, Profile),
+    presumption_status(Profile, gatekeeper_presumed, _).
+
+% ---- requirements: steps 17 and 18 ------------------------------------
+test(arguments_not_presented_is_presumed_met) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+test(arguments_unstated_is_not_presumed_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_arguments_unstated, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+test(arguments_unstated_with_rejection_stated_is_presumed_met_without_basis) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_arguments_unstated, Base),
+    append(Base, [attribute(rebuttal_accepted_by_commission, attested(false, attestation(host, at, reason, none)))], Profile),
+    designation_requirements_status(Profile, requirements_presumed_met, [], [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2)]).
+
+% ---- requirements: steps 19 and 20 ------------------------------------
+test(rejected_rebuttal_is_presumed_met) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_rejected, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+test(accepted_rebuttal_is_not_met) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_accepted, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_not_met).
+test(accepted_rebuttal_is_never_presumed_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_accepted, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+
+% ---- requirements: step 21 --------------------------------------------
+test(conclusion_not_shown_is_referred) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_conclusion_not_shown, Profile),
+    designation_requirements_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_3_5), cite(commission_rebuttal_conclusion)), [resolution(cite(commission_rebuttal_conclusion), not_attempted), inputs_relied_on([rebuttal_accepted_by_commission-absent])]), [], []).
+test(conclusion_not_shown_is_never_presumed_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_conclusion_not_shown, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+
+% ---- requirements: steps 15 and 16 ------------------------------------
+test(accepted_rebuttal_and_false_judgement_settle_early) :-
+    designation_requirements_status([attribute(rebuttal_arguments_presented, true), attribute(rebuttal_accepted_by_commission, attested(true, attestation(host, at, reason, none))), attribute(entrenched_and_durable_position, false)], requirements_not_met, [], [cite(eu_reg_2022_1925_art_3_1)]).
+test(rejected_rebuttal_and_false_judgement_name_the_figure) :-
+    designation_requirements_status([attribute(rebuttal_arguments_presented, true), attribute(rebuttal_accepted_by_commission, attested(false, attestation(host, at, reason, none))), attribute(entrenched_and_durable_position, false)], indeterminate([market_capitalisation_eur_most_recent_financial_year]), [], []).
+test(rejected_rebuttal_and_false_judgement_never_settle, fail) :-
+    designation_requirements_status([attribute(rebuttal_arguments_presented, true), attribute(rebuttal_accepted_by_commission, attested(false, attestation(host, at, reason, none))), attribute(entrenched_and_durable_position, false)], requirements_not_met, _, _).
+
+% ---- requirements: steps 22-25 ----------------------------------------
+test(all_judgements_true_is_met) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_all_judgements_true, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_met).
+test(one_judgement_false_is_not_met) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_one_judgement_false, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_not_met).
+test(one_judgement_false_is_never_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_one_judgement_false, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_met).
+test(unsure_judgement_is_never_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_judgement_unsure, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_met).
+test(absent_judgement_is_named) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_judgement_absent, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, indeterminate([core_platform_service_is_important_gateway])).
+test(absent_judgement_is_never_met, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_judgement_absent, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_met).
+
+% ---- designation (steps 26-28) ----------------------------------------
+test(attested_designation_is_designated) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_true, Profile),
+    gatekeeper_status(Profile, designated_gatekeeper, _, [cite(eu_reg_2022_1925_art_3_9)]).
+test(attested_no_designation_is_not_designated) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_false, Profile),
+    gatekeeper_status(Profile, not_designated_gatekeeper, _, [cite(eu_reg_2022_1925_art_3_9)]).
+test(attested_no_designation_is_never_designated, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_false, Profile),
+    gatekeeper_status(Profile, designated_gatekeeper, _, _).
+test(thresholds_alone_never_designate, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    gatekeeper_status(Profile, designated_gatekeeper, _, _).
+
+% ---- input problems (step 0) ------------------------------------------
+test(a_malformed_profile_answers_input_problems) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    presumption_status(Profile, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)]), []).
+test(a_malformed_profile_is_never_presumed, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    presumption_status(Profile, gatekeeper_presumed, _).
+
+:- end_module(test_negative_controls).

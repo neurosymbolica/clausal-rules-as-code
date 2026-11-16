@@ -1,0 +1,893 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% uk_recognised_legitimate_interests.clausal -- the "uk_recognised_legitimate_interests" DETERMINATION
+% for uk/uk_recognised_legitimate_interests, self-contained top to bottom: its
+% value tables (condition citations, referral rows, the engaging bases of
+% Art 21(1)), its helper predicates, its decision routes, its checklist,
+% its verdict assembly and its per-rule tests.
+%
+% Sources (author's reading, not a lawyer's):
+%   UK GDPR Art 6(1) points (ea) and (f) and the second subparagraph,
+%   Art 6(5), Annex 1 paragraphs 1 to 8, and Art 21(1), pinned unit text of
+%   uk-eur-2016-679-revised-2026-09-30 (legislation.gov.uk 'Latest
+%   available (Revised)', fetched 2026-11-13);
+%   Regulation (EU) 2016/679 Art 6(1) point (f) and the second
+%   subparagraph, Formex consolidation 02016R0679-20160504.
+% The law is stated as it applies from 5 February 2026; no rule reads a date.
+%
+% Every public query yields exactly ONE solution: the input check first,
+% then complementary clauses over three-valued truths (true, false,
+% unknown), where unsure and absent are both unknown.
+% =====================================================================
+
+:- module(uk_recognised_legitimate_interests, [
+    decide_uk_recognised_legitimate_interests/2,
+    uk_recognised_legitimate_interests_status/2,
+    uk_recognised_legitimate_interests_checklist/2,
+    uk_recognised_legitimate_interests_decision_resolvable/1,
+    uk_recognised_legitimate_interests_status_values/1,
+    recognised_legitimate_interest/3,
+    uk_legitimate_interests/3,
+    uk_legitimate_interest_basis/3,
+    eu_legitimate_interests/3,
+    compare_uk_eu_legitimate_interest_basis/5,
+    uk_right_to_object/3,
+    public_task/0,
+    recognised_legitimate_interest/0,
+    legitimate_interests/0,
+    other_basis/0,
+    recognised_legitimate_interest_applies/0,
+    recognised_legitimate_interest_does_not_apply/0,
+    legitimate_interests_applies/0,
+    legitimate_interests_does_not_apply/0,
+    legitimate_interest_basis_available/0,
+    legitimate_interest_basis_not_available/0,
+    same/0,
+    differs/0,
+    not_comparable/0,
+    objection_right_not_engaged/0,
+    controller_must_no_longer_process/0,
+    controller_may_continue_processing/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(uk/uk_recognised_legitimate_interests/kernel, [uk_recognised_legitimate_interests_input_problems/2]).
+:- use_module(uk/uk_recognised_legitimate_interests/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- result constructors: data terms, no clauses -----------------------
+:- constructors([indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(input, citation), inputs_relied_on(pairs), provenance(source, detail), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% ---- the contract vocabulary (root exports) ----------------------------
+public_task.
+recognised_legitimate_interest.
+legitimate_interests.
+other_basis.
+recognised_legitimate_interest_applies.
+recognised_legitimate_interest_does_not_apply.
+legitimate_interests_applies.
+legitimate_interests_does_not_apply.
+legitimate_interest_basis_available.
+legitimate_interest_basis_not_available.
+same.
+differs.
+not_comparable.
+objection_right_not_engaged.
+controller_must_no_longer_process.
+controller_may_continue_processing.
+
+% ---- value tables owned by this determination --------------------------
+uk_recognised_legitimate_interests_status_values([recognised_legitimate_interest_applies, recognised_legitimate_interest_does_not_apply]).
+
+% The seventeen profile keys, in root_exports order.
+root_keys([
+    processing_by_a_public_authority_in_the_performance_of_its_tasks,
+    processing_necessary_for_a_disclosure_in_response_to_a_request,
+    request_states_need_for_article_6_1_e_processing_with_article_6_3_basis,
+    processing_necessary_for_national_security_public_security_or_defence,
+    event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004,
+    processing_necessary_for_responding_to_the_emergency,
+    processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders,
+    processing_necessary_for_safeguarding_an_individual,
+    individual_aged_under_18,
+    controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk,
+    legitimate_interest_pursued_by_the_controller_or_a_third_party,
+    processing_necessary_for_that_legitimate_interest,
+    interests_overridden_by_data_subject_interests_or_fundamental_rights,
+    basis_relied_on,
+    objection_on_grounds_relating_to_particular_situation,
+    controller_demonstrates_compelling_legitimate_grounds_that_override,
+    processing_for_establishment_exercise_or_defence_of_legal_claims
+]).
+
+% The five conditions of Annex 1, in paragraph order.
+condition_ids([disclosure_condition, security_condition, emergency_condition, crime_condition, safeguarding_condition]).
+
+% The citations of a MET condition (THE LIMBS).
+condition_citations(disclosure_condition, [cite(uk_gdpr_annex_1_para_1)]).
+condition_citations(security_condition, [cite(uk_gdpr_annex_1_para_2)]).
+condition_citations(emergency_condition, [cite(uk_gdpr_annex_1_para_3), cite(uk_gdpr_annex_1_para_4)]).
+condition_citations(crime_condition, [cite(uk_gdpr_annex_1_para_5)]).
+condition_citations(safeguarding_condition, [cite(uk_gdpr_annex_1_para_6), cite(uk_gdpr_annex_1_para_7), cite(uk_gdpr_annex_1_para_8)]).
+
+% The bases of Art 6(1) that engage the right to object of Art 21(1).
+engaging_basis(public_task, true, cite(uk_gdpr_art_21_1)).
+engaging_basis(recognised_legitimate_interest, true, cite(uk_gdpr_art_21_1)).
+engaging_basis(legitimate_interests, true, cite(uk_gdpr_art_21_1)).
+engaging_basis(other_basis, false, cite(uk_gdpr_art_21_1)).
+
+% The referral rows: family, input, citation.
+referral(recognised_referral, processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(uk_gdpr_art_6_1)).
+referral(recognised_referral, processing_necessary_for_a_disclosure_in_response_to_a_request, cite(uk_gdpr_annex_1_para_1)).
+referral(recognised_referral, processing_necessary_for_national_security_public_security_or_defence, cite(uk_gdpr_annex_1_para_2)).
+referral(recognised_referral, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, cite(uk_gdpr_annex_1_para_4)).
+referral(recognised_referral, processing_necessary_for_responding_to_the_emergency, cite(uk_gdpr_annex_1_para_3)).
+referral(recognised_referral, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, cite(uk_gdpr_annex_1_para_5)).
+referral(recognised_referral, processing_necessary_for_safeguarding_an_individual, cite(uk_gdpr_annex_1_para_6)).
+referral(recognised_referral, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, cite(uk_gdpr_annex_1_para_8)).
+referral(uk_interests_referral, processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(uk_gdpr_art_6_1)).
+referral(uk_interests_referral, legitimate_interest_pursued_by_the_controller_or_a_third_party, cite(uk_gdpr_art_6_1_f)).
+referral(uk_interests_referral, processing_necessary_for_that_legitimate_interest, cite(uk_gdpr_art_6_1_f)).
+referral(uk_interests_referral, interests_overridden_by_data_subject_interests_or_fundamental_rights, cite(uk_gdpr_art_6_1_f)).
+referral(eu_interests_referral, processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(eu_reg_2016_679_art_6_1)).
+referral(eu_interests_referral, legitimate_interest_pursued_by_the_controller_or_a_third_party, cite(eu_reg_2016_679_art_6_1_f)).
+referral(eu_interests_referral, processing_necessary_for_that_legitimate_interest, cite(eu_reg_2016_679_art_6_1_f)).
+referral(eu_interests_referral, interests_overridden_by_data_subject_interests_or_fundamental_rights, cite(eu_reg_2016_679_art_6_1_f)).
+referral(objection_referral, objection_on_grounds_relating_to_particular_situation, cite(uk_gdpr_art_21_1)).
+referral(objection_referral, controller_demonstrates_compelling_legitimate_grounds_that_override, cite(uk_gdpr_art_21_1)).
+referral(objection_referral, processing_for_establishment_exercise_or_defence_of_legal_claims, cite(uk_gdpr_art_21_1)).
+
+referral_inputs(recognised_referral, [
+    processing_by_a_public_authority_in_the_performance_of_its_tasks,
+    processing_necessary_for_a_disclosure_in_response_to_a_request,
+    request_states_need_for_article_6_1_e_processing_with_article_6_3_basis,
+    processing_necessary_for_national_security_public_security_or_defence,
+    event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004,
+    processing_necessary_for_responding_to_the_emergency,
+    processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders,
+    processing_necessary_for_safeguarding_an_individual,
+    individual_aged_under_18,
+    controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk
+]).
+referral_inputs(uk_interests_referral, [
+    processing_by_a_public_authority_in_the_performance_of_its_tasks,
+    legitimate_interest_pursued_by_the_controller_or_a_third_party,
+    processing_necessary_for_that_legitimate_interest,
+    interests_overridden_by_data_subject_interests_or_fundamental_rights
+]).
+referral_inputs(eu_interests_referral, [
+    processing_by_a_public_authority_in_the_performance_of_its_tasks,
+    legitimate_interest_pursued_by_the_controller_or_a_third_party,
+    processing_necessary_for_that_legitimate_interest,
+    interests_overridden_by_data_subject_interests_or_fundamental_rights
+]).
+referral_inputs(objection_referral, [
+    basis_relied_on,
+    objection_on_grounds_relating_to_particular_situation,
+    controller_demonstrates_compelling_legitimate_grounds_that_override,
+    processing_for_establishment_exercise_or_defence_of_legal_claims
+]).
+
+interests_keys([
+    processing_by_a_public_authority_in_the_performance_of_its_tasks,
+    legitimate_interest_pursued_by_the_controller_or_a_third_party,
+    processing_necessary_for_that_legitimate_interest,
+    interests_overridden_by_data_subject_interests_or_fundamental_rights
+]).
+
+% ---- profile plumbing ---------------------------------------------------
+% value_of(Profile, Key, Value): the value of a present key, or absent.
+value_of(Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+value_of(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+key_truth(Profile, Key, Truth) :-
+    value_of(Profile, Key, Value),
+    value_truth(Value, Truth).
+
+value_truth(true, true).
+value_truth(false, false).
+value_truth(unsure, unknown).
+value_truth(absent, unknown).
+
+truth_conjunction(false, _, false).
+truth_conjunction(true, Truth, Truth).
+truth_conjunction(unknown, false, false).
+truth_conjunction(unknown, true, unknown).
+truth_conjunction(unknown, unknown, unknown).
+
+truth_disjunction(true, _, true).
+truth_disjunction(false, Truth, Truth).
+truth_disjunction(unknown, true, true).
+truth_disjunction(unknown, false, unknown).
+truth_disjunction(unknown, unknown, unknown).
+
+truth_negation(true, false).
+truth_negation(false, true).
+truth_negation(unknown, unknown).
+
+truth_state(true, met).
+truth_state(false, fails).
+truth_state(unknown, open).
+
+% select_keys(Keys, Profile, Wanted, Selected): the Keys whose value is in Wanted, in order.
+select_keys([], _, _, []).
+select_keys([Key|Keys], Profile, Wanted, Selected) :-
+    value_of(Profile, Key, Value),
+    memberd_t(Value, Wanted, Keep),
+    select_keys(Keys, Profile, Wanted, LaterSelected),
+    keep_key(Keep, Key, LaterSelected, Selected).
+
+keep_key(true, Key, LaterSelected, [Key|LaterSelected]).
+keep_key(false, _, LaterSelected, LaterSelected).
+
+% in_root_order(Set, Ordered): the keys of Set in root_exports order.
+in_root_order(Set, Ordered) :-
+    root_keys(AllKeys),
+    order_keys(AllKeys, Set, Ordered).
+
+order_keys([], _, []).
+order_keys([Key|Keys], Set, Ordered) :-
+    memberd_t(Key, Set, Keep),
+    order_keys(Keys, Set, LaterOrdered),
+    keep_key(Keep, Key, LaterOrdered, Ordered).
+
+present_pairs([], _, []).
+present_pairs([Key|Keys], Profile, Pairs) :-
+    value_of(Profile, Key, Value),
+    present_pairs(Keys, Profile, LaterPairs),
+    add_present_pair(Value, Key, LaterPairs, Pairs).
+
+add_present_pair(absent, _, Pairs, Pairs).
+add_present_pair(Value, Key, Pairs, [Key-Value|Pairs]) :-
+    dif(Value, absent).
+
+% open_status(Needed, Unsure, Profile, Family, Result): a missing key first, else a referral.
+open_status([Key|_], _, _, _, indeterminate([Key])).
+open_status([], [Key|_], Profile, Family, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)])) :-
+    referral(Family, Key, Citation),
+    referral_inputs(Family, Inputs),
+    present_pairs(Inputs, Profile, Pairs).
+
+% ---- Annex 1: the five conditions ----------------------------------------
+condition_state(Profile, disclosure_condition, State) :-
+    implements(uk_gdpr_annex_1_para_1),
+    key_truth(Profile, processing_necessary_for_a_disclosure_in_response_to_a_request, DisclosureTruth),
+    key_truth(Profile, request_states_need_for_article_6_1_e_processing_with_article_6_3_basis, RequestTruth),
+    truth_conjunction(DisclosureTruth, RequestTruth, Truth),
+    truth_state(Truth, State).
+condition_state(Profile, security_condition, State) :-
+    implements(uk_gdpr_annex_1_para_2),
+    key_truth(Profile, processing_necessary_for_national_security_public_security_or_defence, Truth),
+    truth_state(Truth, State).
+condition_state(Profile, emergency_condition, State) :-
+    implements(uk_gdpr_annex_1_para_3),
+    emergency_truth(Profile, EmergencyTruth),
+    key_truth(Profile, processing_necessary_for_responding_to_the_emergency, RespondingTruth),
+    truth_conjunction(EmergencyTruth, RespondingTruth, Truth),
+    truth_state(Truth, State).
+condition_state(Profile, crime_condition, State) :-
+    implements(uk_gdpr_annex_1_para_5),
+    key_truth(Profile, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, Truth),
+    truth_state(Truth, State).
+condition_state(Profile, safeguarding_condition, State) :-
+    implements(uk_gdpr_annex_1_para_6),
+    key_truth(Profile, processing_necessary_for_safeguarding_an_individual, SafeguardingTruth),
+    vulnerable_truth(Profile, VulnerableTruth),
+    truth_conjunction(SafeguardingTruth, VulnerableTruth, Truth),
+    truth_state(Truth, State).
+
+% Paragraph 4: emergency in the meaning of Part 2 of the Civil Contingencies Act 2004 (caller judges).
+emergency_truth(Profile, Truth) :-
+    implements(uk_gdpr_annex_1_para_4),
+    key_truth(Profile, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, Truth).
+
+% Paragraph 7: a vulnerable individual is aged under 18, or aged 18 or over and at risk.
+vulnerable_truth(Profile, Truth) :-
+    implements(uk_gdpr_annex_1_para_7),
+    key_truth(Profile, individual_aged_under_18, UnderEighteenTruth),
+    at_risk_truth(Profile, AtRiskTruth),
+    truth_disjunction(UnderEighteenTruth, AtRiskTruth, Truth).
+
+% Paragraph 8(b): at risk, the three limbs judged together in one key.
+at_risk_truth(Profile, Truth) :-
+    implements(uk_gdpr_annex_1_para_8),
+    key_truth(Profile, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, Truth).
+
+% The keys that can still matter for an open condition.
+condition_matter_keys(Profile, disclosure_condition, Keys) :-
+    implements(uk_gdpr_annex_1_para_1),
+    select_keys([processing_necessary_for_a_disclosure_in_response_to_a_request, request_states_need_for_article_6_1_e_processing_with_article_6_3_basis], Profile, [false, unsure, absent], Keys).
+condition_matter_keys(Profile, security_condition, Keys) :-
+    implements(uk_gdpr_annex_1_para_2),
+    select_keys([processing_necessary_for_national_security_public_security_or_defence], Profile, [false, unsure, absent], Keys).
+condition_matter_keys(Profile, emergency_condition, Keys) :-
+    implements(uk_gdpr_annex_1_para_3),
+    select_keys([event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, processing_necessary_for_responding_to_the_emergency], Profile, [false, unsure, absent], Keys).
+condition_matter_keys(Profile, crime_condition, Keys) :-
+    implements(uk_gdpr_annex_1_para_5),
+    select_keys([processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders], Profile, [false, unsure, absent], Keys).
+condition_matter_keys(Profile, safeguarding_condition, Keys) :-
+    implements(uk_gdpr_annex_1_para_7),
+    select_keys([processing_necessary_for_safeguarding_an_individual], Profile, [false, unsure, absent], SafeguardingKeys),
+    value_of(Profile, individual_aged_under_18, UnderEighteenValue),
+    value_of(Profile, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, AtRiskValue),
+    memberd_t(UnderEighteenValue, [false, unsure, absent], UnderEighteenNotTrue),
+    memberd_t(AtRiskValue, [false, unsure, absent], AtRiskNotTrue),
+    vulnerability_matter(UnderEighteenNotTrue, AtRiskNotTrue, VulnerabilityKeys),
+    append(SafeguardingKeys, VulnerabilityKeys, Keys).
+
+vulnerability_matter(true, true, [individual_aged_under_18, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk]).
+vulnerability_matter(true, false, []).
+vulnerability_matter(false, _, []).
+
+states_of([], _, []).
+states_of([ConditionId|ConditionIds], Profile, [State|States]) :-
+    condition_state(Profile, ConditionId, State),
+    states_of(ConditionIds, Profile, States).
+
+% Art 6(5): a recognised legitimate interest only if a condition in Annex 1 is met.
+condition_summary(Profile, Summary) :-
+    implements(uk_gdpr_art_6_5),
+    condition_ids(ConditionIds),
+    states_of(ConditionIds, Profile, States),
+    memberd_t(met, States, AnyMet),
+    memberd_t(open, States, AnyOpen),
+    summary_of(AnyMet, AnyOpen, Summary).
+
+summary_of(true, _, some_met).
+summary_of(false, false, all_fail).
+summary_of(false, true, some_open).
+
+met_citations([], _, []).
+met_citations([ConditionId|ConditionIds], Profile, Citations) :-
+    condition_state(Profile, ConditionId, State),
+    citations_if_met(State, ConditionId, OwnCitations),
+    met_citations(ConditionIds, Profile, LaterCitations),
+    append(OwnCitations, LaterCitations, Citations).
+
+citations_if_met(met, ConditionId, Citations) :-
+    condition_citations(ConditionId, Citations).
+citations_if_met(fails, _, []).
+citations_if_met(open, _, []).
+
+open_matter_keys(Profile, Keys) :-
+    condition_ids(ConditionIds),
+    open_keys_of(ConditionIds, Profile, Keys).
+
+open_keys_of([], _, []).
+open_keys_of([ConditionId|ConditionIds], Profile, Keys) :-
+    condition_state(Profile, ConditionId, State),
+    matter_keys_if_open(State, Profile, ConditionId, OwnKeys),
+    open_keys_of(ConditionIds, Profile, LaterKeys),
+    append(OwnKeys, LaterKeys, Keys).
+
+matter_keys_if_open(met, _, _, []).
+matter_keys_if_open(fails, _, _, []).
+matter_keys_if_open(open, Profile, ConditionId, Keys) :-
+    condition_matter_keys(Profile, ConditionId, Keys).
+
+% ---- recognised legitimate interest: steps (1) to (5) --------------------
+recognised_core(Profile, recognised_legitimate_interest_does_not_apply, [cite(uk_gdpr_art_6_1)]) :-
+    implements(uk_gdpr_art_6_1),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, true).
+recognised_core(Profile, recognised_legitimate_interest_does_not_apply, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5)]) :-
+    implements(uk_gdpr_art_6_5),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    dif(AuthorityValue, true),
+    condition_summary(Profile, all_fail).
+recognised_core(Profile, recognised_legitimate_interest_applies, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5)|MetCitations]) :-
+    implements(uk_gdpr_art_6_1_ea),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    condition_summary(Profile, some_met),
+    condition_ids(ConditionIds),
+    met_citations(ConditionIds, Profile, MetCitations).
+recognised_core(Profile, Result, []) :-
+    implements(uk_gdpr_art_6_1_ea),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    condition_summary(Profile, Summary),
+    recognised_pending(AuthorityValue, Summary),
+    recognised_open_result(Profile, Summary, Result).
+
+recognised_pending(unsure, some_met).
+recognised_pending(absent, some_met).
+recognised_pending(false, some_open).
+recognised_pending(unsure, some_open).
+recognised_pending(absent, some_open).
+
+recognised_open_result(Profile, Summary, Result) :-
+    recognised_candidate_keys(Summary, Profile, ConditionKeys),
+    in_root_order([processing_by_a_public_authority_in_the_performance_of_its_tasks|ConditionKeys], Candidates),
+    select_keys(Candidates, Profile, [absent], Needed),
+    select_keys(Candidates, Profile, [unsure], Unsure),
+    open_status(Needed, Unsure, Profile, recognised_referral, Result).
+
+recognised_candidate_keys(some_met, _, []).
+recognised_candidate_keys(some_open, Profile, Keys) :-
+    open_matter_keys(Profile, Keys).
+
+% ---- legitimate interests, Art 6(1)(f): UK steps (6)-(10), EU (15)-(19) ---
+legitimate_interest_truth(Profile, Truth) :-
+    key_truth(Profile, legitimate_interest_pursued_by_the_controller_or_a_third_party, PursuedTruth),
+    key_truth(Profile, processing_necessary_for_that_legitimate_interest, NecessaryTruth),
+    key_truth(Profile, interests_overridden_by_data_subject_interests_or_fundamental_rights, OverriddenTruth),
+    truth_negation(OverriddenTruth, NotOverriddenTruth),
+    truth_conjunction(PursuedTruth, NecessaryTruth, InterestTruth),
+    truth_conjunction(InterestTruth, NotOverriddenTruth, Truth).
+
+interests_pending(unsure, true).
+interests_pending(absent, true).
+interests_pending(false, unknown).
+interests_pending(unsure, unknown).
+interests_pending(absent, unknown).
+
+interests_open_result(Profile, Family, Result) :-
+    interests_keys(Keys),
+    select_keys(Keys, Profile, [absent], Needed),
+    select_keys(Keys, Profile, [unsure], Unsure),
+    open_status(Needed, Unsure, Profile, Family, Result).
+
+uk_interests_core(Profile, legitimate_interests_does_not_apply, [cite(uk_gdpr_art_6_1)]) :-
+    implements(uk_gdpr_art_6_1),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, true).
+uk_interests_core(Profile, legitimate_interests_does_not_apply, [cite(uk_gdpr_art_6_1_f)]) :-
+    implements(uk_gdpr_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    dif(AuthorityValue, true),
+    legitimate_interest_truth(Profile, false).
+uk_interests_core(Profile, legitimate_interests_applies, [cite(uk_gdpr_art_6_1_f)]) :-
+    implements(uk_gdpr_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    legitimate_interest_truth(Profile, true).
+uk_interests_core(Profile, Result, []) :-
+    implements(uk_gdpr_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    legitimate_interest_truth(Profile, Truth),
+    interests_pending(AuthorityValue, Truth),
+    interests_open_result(Profile, uk_interests_referral, Result).
+
+eu_interests_core(Profile, legitimate_interests_does_not_apply, [cite(eu_reg_2016_679_art_6_1)]) :-
+    implements(eu_reg_2016_679_art_6_1),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, true).
+eu_interests_core(Profile, legitimate_interests_does_not_apply, [cite(eu_reg_2016_679_art_6_1_f)]) :-
+    implements(eu_reg_2016_679_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    dif(AuthorityValue, true),
+    legitimate_interest_truth(Profile, false).
+eu_interests_core(Profile, legitimate_interests_applies, [cite(eu_reg_2016_679_art_6_1_f)]) :-
+    implements(eu_reg_2016_679_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    legitimate_interest_truth(Profile, true).
+eu_interests_core(Profile, Result, []) :-
+    implements(eu_reg_2016_679_art_6_1_f),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    legitimate_interest_truth(Profile, Truth),
+    interests_pending(AuthorityValue, Truth),
+    interests_open_result(Profile, eu_interests_referral, Result).
+
+% ---- either UK basis: steps (11) to (14) ---------------------------------
+basis_core(Profile, Result, Citations) :-
+    implements(uk_gdpr_art_6_1),
+    recognised_core(Profile, RecognisedResult, RecognisedCitations),
+    uk_interests_core(Profile, InterestsResult, InterestsCitations),
+    memberd_t(RecognisedResult, [recognised_legitimate_interest_applies], RecognisedApplies),
+    memberd_t(InterestsResult, [legitimate_interests_applies], InterestsApply),
+    memberd_t(RecognisedResult, [recognised_legitimate_interest_does_not_apply], RecognisedFails),
+    memberd_t(InterestsResult, [legitimate_interests_does_not_apply], InterestsFail),
+    basis_kind(RecognisedApplies, InterestsApply, RecognisedFails, InterestsFail, Kind),
+    basis_answer(Kind, Profile, sides(RecognisedResult, RecognisedCitations, RecognisedApplies, InterestsResult, InterestsCitations, InterestsApply), Result, Citations).
+
+basis_kind(true, _, _, _, available).
+basis_kind(false, true, _, _, available).
+basis_kind(false, false, true, true, not_available).
+basis_kind(false, false, true, false, pending).
+basis_kind(false, false, false, _, pending).
+
+basis_answer(available, _, sides(_, RecognisedCitations, RecognisedApplies, _, InterestsCitations, InterestsApply), legitimate_interest_basis_available, Citations) :-
+    citations_if_applies(RecognisedApplies, RecognisedCitations, FromRecognised),
+    citations_if_applies(InterestsApply, InterestsCitations, FromInterests),
+    append(FromRecognised, FromInterests, Collected),
+    sort(Collected, Citations).
+basis_answer(not_available, _, sides(_, RecognisedCitations, _, _, InterestsCitations, _), legitimate_interest_basis_not_available, Citations) :-
+    append(RecognisedCitations, InterestsCitations, Collected),
+    sort(Collected, Citations).
+basis_answer(pending, Profile, sides(RecognisedResult, _, _, InterestsResult, _, _), Result, []) :-
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    condition_summary(Profile, Summary),
+    summary_would_apply(Summary, RecognisedWould),
+    legitimate_interest_truth(Profile, InterestsTruth),
+    truth_would_apply(InterestsTruth, InterestsWould),
+    basis_pending(AuthorityValue, RecognisedWould, InterestsWould, RecognisedResult, InterestsResult, Result).
+
+citations_if_applies(true, Citations, Citations).
+citations_if_applies(false, _, []).
+
+summary_would_apply(some_met, true).
+summary_would_apply(all_fail, false).
+summary_would_apply(some_open, false).
+
+truth_would_apply(true, true).
+truth_would_apply(false, false).
+truth_would_apply(unknown, false).
+
+% Step (12a): the basis turns on the public-authority key alone.
+basis_pending(absent, true, _, _, _, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+basis_pending(absent, false, true, _, _, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+basis_pending(unsure, true, _, RecognisedResult, _, RecognisedResult).
+basis_pending(unsure, false, true, _, InterestsResult, InterestsResult).
+basis_pending(false, _, _, RecognisedResult, InterestsResult, Result) :-
+    basis_status(RecognisedResult, InterestsResult, Result).
+basis_pending(absent, false, false, RecognisedResult, InterestsResult, Result) :-
+    basis_status(RecognisedResult, InterestsResult, Result).
+basis_pending(unsure, false, false, RecognisedResult, InterestsResult, Result) :-
+    basis_status(RecognisedResult, InterestsResult, Result).
+
+% Steps (13) and (14).
+basis_status(RecognisedResult, InterestsResult, Result) :-
+    named_missing(RecognisedResult, RecognisedMissing),
+    named_missing(InterestsResult, InterestsMissing),
+    append(RecognisedMissing, InterestsMissing, MissingSet),
+    in_root_order(MissingSet, Missing),
+    missing_or_review(Missing, RecognisedResult, InterestsResult, Result).
+
+named_missing(indeterminate(Keys), Keys).
+named_missing(needs_legal_review(_, _), []).
+named_missing(Answer, []) :-
+    atom(Answer).
+
+missing_or_review([Key|_], _, _, indeterminate([Key])).
+missing_or_review([], RecognisedResult, InterestsResult, Result) :-
+    first_review(RecognisedResult, InterestsResult, Result).
+
+first_review(needs_legal_review(Reason, Context), _, needs_legal_review(Reason, Context)).
+first_review(RecognisedResult, needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)) :-
+    atom(RecognisedResult).
+
+% ---- the comparison: steps (20) to (22) ----------------------------------
+compare_core(Profile, UkResult, EuResult, Difference, ChangedBy) :-
+    implements(uk_gdpr_art_6_1_ea),
+    basis_core(Profile, UkResult, _),
+    eu_interests_core(Profile, EuInterestsResult, _),
+    eu_basis_result(EuInterestsResult, EuResult),
+    basis_difference(UkResult, EuResult, Difference),
+    recognised_core(Profile, _, RecognisedCitations),
+    changed_by(Difference, RecognisedCitations, ChangedBy).
+
+eu_basis_result(legitimate_interests_applies, legitimate_interest_basis_available).
+eu_basis_result(legitimate_interests_does_not_apply, legitimate_interest_basis_not_available).
+eu_basis_result(Status, Status) :-
+    compound(Status).
+
+basis_difference(UkResult, EuResult, same) :-
+    atom(UkResult),
+    atom(EuResult),
+    UkResult = EuResult.
+basis_difference(UkResult, EuResult, differs) :-
+    atom(UkResult),
+    atom(EuResult),
+    dif(UkResult, EuResult).
+basis_difference(UkResult, _, not_comparable) :-
+    compound(UkResult).
+basis_difference(UkResult, EuResult, not_comparable) :-
+    atom(UkResult),
+    compound(EuResult).
+
+changed_by(differs, RecognisedCitations, RecognisedCitations).
+changed_by(same, _, []).
+changed_by(not_comparable, _, []).
+
+% ---- the right to object, Art 21(1): steps (23) to (27) ------------------
+basis_truth(absent, unknown).
+basis_truth(BasisValue, Truth) :-
+    engaging_basis(BasisValue, Truth, _).
+
+objection_engaged_truth(Profile, Truth) :-
+    implements(uk_gdpr_art_21_1),
+    value_of(Profile, basis_relied_on, BasisValue),
+    basis_truth(BasisValue, BasisTruth),
+    key_truth(Profile, objection_on_grounds_relating_to_particular_situation, ObjectionTruth),
+    truth_conjunction(BasisTruth, ObjectionTruth, Truth).
+
+objection_exception_truth(Profile, Truth) :-
+    implements(uk_gdpr_art_21_1),
+    key_truth(Profile, controller_demonstrates_compelling_legitimate_grounds_that_override, GroundsTruth),
+    key_truth(Profile, processing_for_establishment_exercise_or_defence_of_legal_claims, ClaimsTruth),
+    truth_disjunction(GroundsTruth, ClaimsTruth, Truth).
+
+objection_core(Profile, objection_right_not_engaged, [cite(uk_gdpr_art_21_1)]) :-
+    implements(uk_gdpr_art_21_1),
+    objection_engaged_truth(Profile, false).
+objection_core(Profile, controller_may_continue_processing, [cite(uk_gdpr_art_21_1)]) :-
+    implements(uk_gdpr_art_21_1),
+    objection_engaged_truth(Profile, true),
+    objection_exception_truth(Profile, true).
+objection_core(Profile, controller_must_no_longer_process, [cite(uk_gdpr_art_21_1)]) :-
+    implements(uk_gdpr_art_21_1),
+    objection_engaged_truth(Profile, true),
+    objection_exception_truth(Profile, false).
+objection_core(Profile, Result, []) :-
+    implements(uk_gdpr_art_21_1),
+    objection_engaged_truth(Profile, EngagedTruth),
+    objection_exception_truth(Profile, ExceptionTruth),
+    objection_pending(EngagedTruth, ExceptionTruth),
+    objection_open_result(Profile, Result).
+
+objection_pending(true, unknown).
+objection_pending(unknown, _).
+
+objection_open_result(Profile, Result) :-
+    value_of(Profile, controller_demonstrates_compelling_legitimate_grounds_that_override, GroundsValue),
+    value_of(Profile, processing_for_establishment_exercise_or_defence_of_legal_claims, ClaimsValue),
+    unless_true(ClaimsValue, controller_demonstrates_compelling_legitimate_grounds_that_override, GroundsKeys),
+    unless_true(GroundsValue, processing_for_establishment_exercise_or_defence_of_legal_claims, ClaimsKeys),
+    append(GroundsKeys, ClaimsKeys, ExceptionKeys),
+    select_keys([basis_relied_on, objection_on_grounds_relating_to_particular_situation|ExceptionKeys], Profile, [absent], Needed),
+    select_keys([objection_on_grounds_relating_to_particular_situation|ExceptionKeys], Profile, [unsure], Unsure),
+    open_status(Needed, Unsure, Profile, objection_referral, Result).
+
+unless_true(true, _, []).
+unless_true(OtherValue, Key, [Key]) :-
+    dif(OtherValue, true).
+
+% ---- the public queries: the input check first (step 0) ------------------
+recognised_legitimate_interest(Profile, input_problems([Problem|Problems]), []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+recognised_legitimate_interest(Profile, Result, Citations) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    recognised_core(Profile, Result, Citations).
+
+uk_legitimate_interests(Profile, input_problems([Problem|Problems]), []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+uk_legitimate_interests(Profile, Result, Citations) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    uk_interests_core(Profile, Result, Citations).
+
+uk_legitimate_interest_basis(Profile, input_problems([Problem|Problems]), []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+uk_legitimate_interest_basis(Profile, Result, Citations) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    basis_core(Profile, Result, Citations).
+
+eu_legitimate_interests(Profile, input_problems([Problem|Problems]), []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+eu_legitimate_interests(Profile, Result, Citations) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    eu_interests_core(Profile, Result, Citations).
+
+compare_uk_eu_legitimate_interest_basis(Profile, input_problems([Problem|Problems]), input_problems([Problem|Problems]), not_comparable, []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+compare_uk_eu_legitimate_interest_basis(Profile, UkResult, EuResult, Difference, ChangedBy) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    compare_core(Profile, UkResult, EuResult, Difference, ChangedBy).
+
+uk_right_to_object(Profile, input_problems([Problem|Problems]), []) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+uk_right_to_object(Profile, Result, Citations) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    objection_core(Profile, Result, Citations).
+
+% ---- verdict assembly and projection -------------------------------------
+decide_uk_recognised_legitimate_interests(Profile, uk_recognised_legitimate_interests_verdict(Status, Citations)) :-
+    recognised_legitimate_interest(Profile, Status, Citations).
+
+uk_recognised_legitimate_interests_status(Profile, Status) :-
+    decide_uk_recognised_legitimate_interests(Profile, uk_recognised_legitimate_interests_verdict(Status, _Citations)).
+
+uk_recognised_legitimate_interests_decision_resolvable(Profile) :-
+    decide_uk_recognised_legitimate_interests(Profile, uk_recognised_legitimate_interests_verdict(Status, _Citations)),
+    uk_recognised_legitimate_interests_status_values(StatusValues),
+    member(Status, StatusValues).
+
+% ---- checklist: one row for the public-authority bar, one per condition ---
+uk_recognised_legitimate_interests_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(uk_gdpr_art_6_1))]) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, [Problem|Problems]).
+uk_recognised_legitimate_interests_checklist(Profile, [AuthorityItem|ConditionItems]) :-
+    uk_recognised_legitimate_interests_input_problems(Profile, []),
+    authority_item(Profile, AuthorityItem),
+    condition_ids(ConditionIds),
+    condition_items(ConditionIds, Profile, ConditionItems).
+
+authority_item(Profile, item(public_authority_bar, Status, cite(uk_gdpr_art_6_1))) :-
+    implements(uk_gdpr_art_6_1),
+    value_of(Profile, processing_by_a_public_authority_in_the_performance_of_its_tasks, AuthorityValue),
+    authority_status(AuthorityValue, Status).
+
+authority_status(false, met).
+authority_status(true, unmet(processing_by_a_public_authority_in_the_performance_of_its_tasks)).
+authority_status(unsure, unknown([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+authority_status(absent, unknown([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+
+condition_items([], _, []).
+condition_items([ConditionId|ConditionIds], Profile, [item(ConditionId, Status, Citation)|Items]) :-
+    condition_state(Profile, ConditionId, State),
+    condition_citations(ConditionId, [Citation|_]),
+    condition_item_status(State, Profile, ConditionId, Status),
+    condition_items(ConditionIds, Profile, Items).
+
+condition_item_status(met, _, _, met).
+condition_item_status(fails, _, _, unmet(condition_not_met)).
+condition_item_status(open, Profile, ConditionId, unknown(Keys)) :-
+    condition_matter_keys(Profile, ConditionId, Keys).
+
+% ---- tests -----------------------------------------------------------------
+test_profile(security_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+test_profile(public_authority, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, true),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+test_profile(all_conditions_fail, [
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false)
+]).
+test_profile(security_unsure, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, unsure),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false)
+]).
+test_profile(authority_unsure_security_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, unsure),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+test_profile(interests_apply, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, true),
+    attribute(processing_necessary_for_that_legitimate_interest, true),
+    attribute(interests_overridden_by_data_subject_interests_or_fundamental_rights, false)
+]).
+test_profile(interests_overridden, [
+    attribute(interests_overridden_by_data_subject_interests_or_fundamental_rights, true)
+]).
+test_profile(security_met_no_interest, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, false)
+]).
+test_profile(other_basis_relied_on, [
+    attribute(basis_relied_on, other_basis)
+]).
+test_profile(objection_upheld, [
+    attribute(basis_relied_on, legitimate_interests),
+    attribute(objection_on_grounds_relating_to_particular_situation, true),
+    attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, false),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, false)
+]).
+test_profile(legal_claims, [
+    attribute(basis_relied_on, public_task),
+    attribute(objection_on_grounds_relating_to_particular_situation, true),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, true)
+]).
+test_profile(objection_exceptions_missing, [
+    attribute(basis_relied_on, recognised_legitimate_interest),
+    attribute(objection_on_grounds_relating_to_particular_situation, true)
+]).
+test_profile(objection_unsure, [
+    attribute(basis_relied_on, recognised_legitimate_interest),
+    attribute(objection_on_grounds_relating_to_particular_situation, unsure),
+    attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, false),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, false)
+]).
+test_profile(unknown_key_profile, [
+    attribute(foo, true)
+]).
+
+test(security_condition_met_applies_once) :-
+    test_profile(security_met, Profile),
+    findall(Result-Citations, recognised_legitimate_interest(Profile, Result, Citations), Answers),
+    Answers = [recognised_legitimate_interest_applies-Citations],
+    sort(Citations, Sorted),
+    sort([cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_2)], Expected),
+    Sorted == Expected.
+test(security_condition_met_is_not_does_not_apply, fail) :-
+    test_profile(security_met, Profile),
+    recognised_legitimate_interest(Profile, recognised_legitimate_interest_does_not_apply, _).
+test(public_authority_bars_recognised_interest) :-
+    test_profile(public_authority, Profile),
+    findall(Result-Citations, recognised_legitimate_interest(Profile, Result, Citations), Answers),
+    Answers == [recognised_legitimate_interest_does_not_apply-[cite(uk_gdpr_art_6_1)]].
+test(public_authority_is_not_applies, fail) :-
+    test_profile(public_authority, Profile),
+    recognised_legitimate_interest(Profile, recognised_legitimate_interest_applies, _).
+test(all_conditions_fail_without_authority_key) :-
+    test_profile(all_conditions_fail, Profile),
+    findall(Result-Citations, recognised_legitimate_interest(Profile, Result, Citations), Answers),
+    Answers == [recognised_legitimate_interest_does_not_apply-[cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5)]].
+test(empty_profile_names_the_authority_key) :-
+    findall(Result-Citations, recognised_legitimate_interest([], Result, Citations), Answers),
+    Answers == [indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])-[]].
+test(unsure_condition_goes_to_review) :-
+    test_profile(security_unsure, Profile),
+    findall(Result, recognised_legitimate_interest(Profile, Result, []), Answers),
+    Answers == [needs_legal_review(open_textured(processing_necessary_for_national_security_public_security_or_defence, cite(uk_gdpr_annex_1_para_2)), [inputs_relied_on([processing_by_a_public_authority_in_the_performance_of_its_tasks-false, processing_necessary_for_a_disclosure_in_response_to_a_request-false, processing_necessary_for_national_security_public_security_or_defence-unsure, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004-false, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders-false, processing_necessary_for_safeguarding_an_individual-false])])].
+test(uk_interests_apply) :-
+    test_profile(interests_apply, Profile),
+    findall(Result-Citations, uk_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_applies-[cite(uk_gdpr_art_6_1_f)]].
+test(uk_interests_apply_is_not_does_not_apply, fail) :-
+    test_profile(interests_apply, Profile),
+    uk_legitimate_interests(Profile, legitimate_interests_does_not_apply, _).
+test(overridden_interests_decide_without_authority_key) :-
+    test_profile(interests_overridden, Profile),
+    findall(Result-Citations, eu_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_does_not_apply-[cite(eu_reg_2016_679_art_6_1_f)]].
+test(basis_available_through_recognised_interest) :-
+    test_profile(security_met, Profile),
+    findall(Result, uk_legitimate_interest_basis(Profile, Result, _), Answers),
+    Answers == [legitimate_interest_basis_available].
+test(basis_turns_on_authority_alone) :-
+    test_profile(authority_unsure_security_met, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(uk_gdpr_art_6_1)), [inputs_relied_on([processing_by_a_public_authority_in_the_performance_of_its_tasks-unsure, processing_necessary_for_national_security_public_security_or_defence-true])])-[]].
+test(comparison_differs_through_recognised_interest) :-
+    test_profile(security_met_no_interest, Profile),
+    findall(Uk-Eu-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, Uk, Eu, Difference, ChangedBy), Answers),
+    Answers = [legitimate_interest_basis_available-legitimate_interest_basis_not_available-differs-ChangedBy],
+    sort(ChangedBy, Sorted),
+    sort([cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_2)], Expected),
+    Sorted == Expected.
+test(comparison_not_comparable_when_eu_open) :-
+    test_profile(security_met, Profile),
+    findall(Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, _, _, Difference, ChangedBy), Answers),
+    Answers == [not_comparable-[]].
+test(other_basis_does_not_engage_objection) :-
+    test_profile(other_basis_relied_on, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [objection_right_not_engaged-[cite(uk_gdpr_art_21_1)]].
+test(upheld_objection_stops_processing) :-
+    test_profile(objection_upheld, Profile),
+    findall(Result, uk_right_to_object(Profile, Result, _), Answers),
+    Answers == [controller_must_no_longer_process].
+test(upheld_objection_is_not_continue, fail) :-
+    test_profile(objection_upheld, Profile),
+    uk_right_to_object(Profile, controller_may_continue_processing, _).
+test(legal_claims_allow_continuing) :-
+    test_profile(legal_claims, Profile),
+    findall(Result, uk_right_to_object(Profile, Result, _), Answers),
+    Answers == [controller_may_continue_processing].
+test(missing_exception_named_first) :-
+    test_profile(objection_exceptions_missing, Profile),
+    findall(Result, uk_right_to_object(Profile, Result, _), Answers),
+    Answers == [indeterminate([controller_demonstrates_compelling_legitimate_grounds_that_override])].
+test(unsure_objection_goes_to_review) :-
+    test_profile(objection_unsure, Profile),
+    findall(Result, uk_right_to_object(Profile, Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(objection_on_grounds_relating_to_particular_situation, cite(uk_gdpr_art_21_1)), [inputs_relied_on([basis_relied_on-recognised_legitimate_interest, objection_on_grounds_relating_to_particular_situation-unsure, controller_demonstrates_compelling_legitimate_grounds_that_override-false, processing_for_establishment_exercise_or_defence_of_legal_claims-false])])].
+test(unknown_key_gives_input_problems) :-
+    test_profile(unknown_key_profile, Profile),
+    findall(Result-Citations, recognised_legitimate_interest(Profile, Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(foo)])-[]].
+test(unknown_key_comparison_not_comparable) :-
+    test_profile(unknown_key_profile, Profile),
+    findall(Uk-Eu-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, Uk, Eu, Difference, ChangedBy), Answers),
+    Answers == [input_problems([unknown_key(foo)])-input_problems([unknown_key(foo)])-not_comparable-[]].
+test(checklist_rows_carry_citations) :-
+    test_profile(security_met, Profile),
+    uk_recognised_legitimate_interests_checklist(Profile, Items),
+    length(Items, 6),
+    Items = [item(public_authority_bar, met, cite(uk_gdpr_art_6_1))|_],
+    member(item(security_condition, met, cite(uk_gdpr_annex_1_para_2)), Items).
+test(decision_resolvable_for_final_answer) :-
+    test_profile(security_met, Profile),
+    uk_recognised_legitimate_interests_decision_resolvable(Profile).
+test(decision_not_resolvable_for_empty_profile, fail) :-
+    uk_recognised_legitimate_interests_decision_resolvable([]).
+
+:- end_module(uk_recognised_legitimate_interests).

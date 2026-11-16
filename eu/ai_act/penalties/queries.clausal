@@ -1,0 +1,211 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/penalties.
+% A TOP-LAYER consumer: it imports the PUBLIC predicates it calls (the
+% slice facade decide_penalties/2 and the kernel's input check), nothing
+% else.
+%
+% penalties_profile_keys/1   the six profile keys, in root_exports order.
+% penalties_input_problems/2 THE INPUT CHECK, re-exported from the kernel
+%                            as the scaffold wrote it.
+% penalties_what_if/4        (#16 what-if): override one profile key and
+%                            decide the edited request again.
+%
+% The declared query types: #2 eligibility is decide_penalties/2 and
+% penalties_status/2 of the slice; #7 justification is its cited checklist
+% penalties_checklist/2 (every item carries its citations). This layer adds
+% the what-if.
+%
+% The package root also serves the RESULT VOCABULARY of the called
+% contract: the final atoms and the BASIS atoms (arity-0 facts) and the
+% result constructors (shape recognisers, never called as queries). The
+% root_exports (the six profile keys, the twenty-three enumeration atoms
+% and the judgement value unsure) are bare atoms: an export list holds only
+% name/arity entries, so they are listed under root_atoms in manifest.yaml
+% and the generated package facade serves them. None of them decides
+% anything statutory, so none carries a marker.
+%
+% A request is maximum_fine(Profile, InfringementDate) or
+% general_purpose_ai_model_maximum_fine(Profile, InfringementDate). The
+% profile is an attribute list [attribute(Key, Value), ...], not a dict, so
+% the override is written here over the attribute list (override_key/4 of
+% kit/query_combinators works on dicts). It is list plumbing and decides
+% nothing statutory, so it carries no marker. A profile that is not an
+% attribute list is left as it is, and stays rejected.
+% =====================================================================
+
+:- module(queries, [
+    penalties_profile_keys/1,
+    penalties_input_problems/2,
+    penalties_what_if/4,
+    no_union_maximum/0,
+    set_by_member_state_rules/0,
+    not_applicable_on_date/0,
+    earlier_version_applies/0,
+    no_commission_fine/0,
+    fixed_amount/0,
+    turnover_percentage/0,
+    fine_maximum/2,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/ai_act/penalties/kernel, [penalties_input_problems/2]).
+:- use_module(eu/ai_act/penalties/penalties, [decide_penalties/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+penalties_profile_keys([offender_category, infringement, offender_is_general_purpose_ai_model_provider, general_purpose_ai_model_infringement, provider_acted_intentionally_or_negligently, worldwide_annual_turnover_eur]).
+
+% ---- the result vocabulary of the called contract ---------------------
+% The final atoms of both queries and the two BASIS atoms of fine_maximum/2
+% (INTERFACE - THE ANSWER SHAPES), served by the package root.
+no_union_maximum.
+set_by_member_state_rules.
+not_applicable_on_date.
+earlier_version_applies.
+no_commission_fine.
+fixed_amount.
+turnover_percentage.
+
+% Result constructors: each holds for a term of its shape. Exported for the
+% package root, never called as queries; they decide nothing statutory.
+% fine_maximum/2 has exclusive clauses: the fixed_amount clause answers a
+% free or fixed_amount Basis, the turnover_percentage clause only a Basis
+% already bound to turnover_percentage, so every call has at most one answer.
+fine_maximum(AmountEurCents, fixed_amount) :-
+    integer(AmountEurCents),
+    AmountEurCents >= 0.
+fine_maximum(AmountEurCents, Basis) :-
+    nonvar(Basis),
+    Basis == turnover_percentage,
+    integer(AmountEurCents),
+    AmountEurCents >= 0.
+
+indeterminate([MissingKey]) :-
+    atom(MissingKey).
+
+needs_legal_review(open_textured(InputKey, cite(CitationKey)), [inputs_relied_on(Pairs)|_Provenance]) :-
+    atom(InputKey),
+    atom(CitationKey),
+    is_list(Pairs).
+
+open_textured(InputKey, cite(CitationKey)) :-
+    atom(InputKey),
+    atom(CitationKey).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(_Clause, Citations) :-
+    is_list(Citations).
+
+input_problems([_FirstProblem|_OtherProblems]).
+
+% unknown_key/1: the key as given, an atom, a number or a compound term
+% (two exclusive clauses).
+unknown_key(Key) :-
+    atomic(Key).
+unknown_key(Key) :-
+    compound(Key).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+% #16 what-if: re-evaluate the request with one key hypothetically overridden.
+% One solution for each request of the two query shapes.
+penalties_what_if(maximum_fine(Profile, InfringementDate), OverriddenKey, NewValue, Verdict) :-
+    hypothesis_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_penalties(maximum_fine(Hypothesis, InfringementDate), Verdict).
+penalties_what_if(general_purpose_ai_model_maximum_fine(Profile, InfringementDate), OverriddenKey, NewValue, Verdict) :-
+    hypothesis_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_penalties(general_purpose_ai_model_maximum_fine(Hypothesis, InfringementDate), Verdict).
+
+% hypothesis_profile(Profile, Key, Value, Hypothesis): the attribute list with
+% Key set to Value (every earlier occurrence of Key replaced by one); a profile
+% that is not an attribute list is kept as given.
+hypothesis_profile(Profile, Key, Value, Hypothesis) :-
+    penalties_input_problems(Profile, Problems),
+    hypothesis_for_problems(Problems, Profile, Key, Value, Hypothesis).
+
+hypothesis_for_problems([wrong_type(profile)], Profile, _, _, Profile).
+hypothesis_for_problems(Problems, Profile, Key, Value, Hypothesis) :-
+    dif(Problems, [wrong_type(profile)]),
+    override_attribute(Profile, Key, Value, Hypothesis).
+
+% Keys are compared by identity, so no key in the profile is ever bound.
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, _)|Elements], Key, Value, [attribute(Key, Value)|KeptElements]) :-
+    ElementKey == Key,
+    without_key(Elements, Key, KeptElements).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|OverriddenElements]) :-
+    ElementKey \== Key,
+    override_attribute(Elements, Key, Value, OverriddenElements).
+
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], Key, KeptElements) :-
+    ElementKey == Key,
+    without_key(Elements, Key, KeptElements).
+without_key([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|KeptElements]) :-
+    ElementKey \== Key,
+    without_key(Elements, Key, KeptElements).
+
+% ---- tests ----------------------------------------------------------
+test(the_profile_keys_are_the_six_contract_keys) :-
+    penalties_profile_keys(Keys),
+    length(Keys, 6).
+test(the_final_atoms_are_served) :-
+    no_union_maximum,
+    set_by_member_state_rules,
+    not_applicable_on_date,
+    earlier_version_applies,
+    no_commission_fine,
+    fixed_amount,
+    turnover_percentage.
+test(a_fine_maximum_has_its_shape) :-
+    fine_maximum(3500000000, fixed_amount).
+test(a_turnover_fine_maximum_has_its_shape) :-
+    fine_maximum(7000000000, turnover_percentage).
+test(a_fine_maximum_with_another_basis_is_not_one, fail) :-
+    fine_maximum(3500000000, percentage).
+test(a_status_compound_has_its_shape) :-
+    indeterminate([offender_category]),
+    needs_legal_review(open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)), [inputs_relied_on([provider_acted_intentionally_or_negligently-unsure])]),
+    input_problems([wrong_type(profile)]),
+    wrong_type(infringement_date),
+    duplicate_key(infringement),
+    unknown_key(colour).
+test(a_number_key_is_an_unknown_key_shape) :-
+    unknown_key(42).
+test(an_unbound_term_is_not_an_unknown_key_shape, fail) :-
+    unknown_key(_).
+test(adding_the_turnover_settles_the_maximum) :-
+    findall(Verdict, penalties_what_if(maximum_fine([attribute(offender_category, other_undertaking), attribute(infringement, prohibited_practice)], date(2026, 9, 1)), worldwide_annual_turnover_eur, 1000000000, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(union_maximum_determined, fine_maximum(7000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_3)])].
+test(replacing_the_category_gives_the_fixed_amount) :-
+    findall(Verdict, penalties_what_if(maximum_fine([attribute(offender_category, other_undertaking), attribute(infringement, prohibited_practice), attribute(worldwide_annual_turnover_eur, 1000000000)], date(2026, 9, 1)), offender_category, not_an_undertaking, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(union_maximum_determined, fine_maximum(3500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_3)])].
+test(replacing_the_category_does_not_keep_the_turnover_amount, fail) :-
+    penalties_what_if(maximum_fine([attribute(offender_category, other_undertaking), attribute(infringement, prohibited_practice), attribute(worldwide_annual_turnover_eur, 1000000000)], date(2026, 9, 1)), offender_category, not_an_undertaking, penalties_verdict(_, fine_maximum(7000000000, _), _)).
+test(overriding_a_duplicate_key_leaves_one_occurrence) :-
+    findall(Verdict, penalties_what_if(maximum_fine([attribute(offender_category, other_undertaking), attribute(infringement, prohibited_practice), attribute(infringement, other_infringement)], date(2026, 9, 1)), infringement, prohibited_practice, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(information_missing, indeterminate([worldwide_annual_turnover_eur]), [])].
+test(a_profile_that_is_not_a_list_stays_rejected) :-
+    findall(Verdict, penalties_what_if(maximum_fine(not_a_profile, date(2026, 9, 1)), offender_category, other_undertaking, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(input_rejected, input_problems([wrong_type(profile)]), [])].
+test(settling_an_unsure_judgement_settles_the_model_fine) :-
+    findall(Verdict, penalties_what_if(general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, infringed_relevant_provisions), attribute(provider_acted_intentionally_or_negligently, unsure), attribute(worldwide_annual_turnover_eur, 1000000000)], date(2026, 9, 1)), provider_acted_intentionally_or_negligently, true, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(union_maximum_determined, fine_maximum(3000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_a)])].
+test(a_false_judgement_gives_no_commission_fine) :-
+    penalties_what_if(general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(provider_acted_intentionally_or_negligently, unsure)], date(2026, 9, 1)), provider_acted_intentionally_or_negligently, false, penalties_verdict(no_union_maximum_determined, no_commission_fine, [cite(eu_reg_2024_1689_art_101_1)])).
+
+:- end_module(queries).

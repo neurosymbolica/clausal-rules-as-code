@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% One positive case and one near-miss per route; the near-miss changes one
+% required condition and flips the verdict. Each negative is paired with a
+% positive over the same case, so a misspelt atom shows up as a failing positive.
+% Run: python -m clausal.testing eu/data_protection/gdpr_child_consent_age_verdict/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/child_consent_ground, [
+    child_consent_ground_status/2,
+    child_consent_ground_status_values/1,
+    child_consent_ground/2,
+    decide_child_consent/2
+]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/queries, [gdpr_child_consent_age_verdict_what_if/4]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/fixtures, [gdpr_child_consent_age_verdict_profile_for/2]).
+
+test(the_ground_atoms_are_real_ground_atoms) :-
+    child_consent_ground_status_values(Values),
+    member(child_at_least_16, Values),
+    member(parental_consent_given, Values),
+    member(child_at_least_national_age, Values),
+    member(parental_consent_missing_below_13, Values),
+    member(parental_consent_missing_below_national_age, Values),
+    member(art8_not_engaged, Values).
+
+% route: not engaged (consent is not the basis)
+test(not_engaged_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(consent_not_the_basis, Profile),
+    child_consent_ground(Profile, art8_not_engaged).
+test(not_engaged_near_miss_consent_is_the_basis) :-
+    gdpr_child_consent_age_verdict_profile_for(consent_not_the_basis, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, processing_rests_on_consent, true, indeterminate([parental_consent_given])).
+test(not_engaged_near_miss_keeps_no_engagement_ground, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(consent_not_the_basis, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, processing_rests_on_consent, true, eligible).
+
+% route: child at least 16
+test(sixteen_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    child_consent_ground(Profile, child_at_least_16).
+test(fifteen_near_miss_needs_the_parental_answer) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 15, indeterminate([parental_consent_given])).
+test(fifteen_near_miss_is_not_eligible_on_its_own, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 15, eligible).
+
+% route: parental consent given
+test(parental_consent_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_reasonable_verification, Profile),
+    child_consent_ground(Profile, parental_consent_given).
+test(parental_consent_near_miss_withdrawn) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_reasonable_verification, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, parental_consent_given, false, ineligible).
+test(parental_consent_near_miss_is_not_eligible, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_reasonable_verification, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, parental_consent_given, false, eligible).
+
+% route: below 13 never reads the national fact
+test(below_thirteen_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_without_parental_consent, Profile),
+    child_consent_ground(Profile, parental_consent_missing_below_13).
+test(thirteen_near_miss_turns_to_national_law) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_without_parental_consent, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 13, indeterminate([member_state, member_state_selection_test, consent_date])).
+test(thirteen_near_miss_is_not_the_below_thirteen_ground, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_without_parental_consent, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 13, ineligible).
+
+% route: child at least the national age
+test(national_age_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_at_national_age, Profile),
+    child_consent_ground(Profile, child_at_least_national_age).
+test(national_age_near_miss_one_year_younger) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_at_national_age, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 13, ineligible).
+test(national_age_near_miss_child_is_not_eligible, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_at_national_age, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 13, eligible).
+
+% route: below the national age
+test(below_national_age_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(thirteen_below_national_age, Profile),
+    child_consent_ground(Profile, parental_consent_missing_below_national_age).
+test(below_national_age_near_miss_one_year_older) :-
+    gdpr_child_consent_age_verdict_profile_for(thirteen_below_national_age, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, child_age_years, 14, eligible).
+
+% route: national age of another state refers
+test(other_state_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_national_age_other_state, Profile),
+    child_consent_ground(Profile, none).
+test(other_state_near_miss_same_state) :-
+    gdpr_child_consent_age_verdict_profile_for(fourteen_national_age_other_state, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, member_state, germany, ineligible).
+
+% route: verification
+test(verification_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_reasonable_verification, Profile),
+    decide_child_consent(Profile, gdpr_child_consent_verdict(eligible, parental_consent_given, efforts_reasonable, _)).
+test(verification_near_miss_not_reasonable) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_unreasonable_verification, Profile),
+    decide_child_consent(Profile, gdpr_child_consent_verdict(eligible, parental_consent_given, efforts_not_reasonable, _)).
+test(verification_near_miss_is_not_reasonable, fail) :-
+    gdpr_child_consent_age_verdict_profile_for(twelve_with_unreasonable_verification, Profile),
+    decide_child_consent(Profile, gdpr_child_consent_verdict(_, _, efforts_reasonable, _)).
+test(verification_is_not_applicable_when_the_child_is_16) :-
+    gdpr_child_consent_age_verdict_profile_for(adult_at_sixteen, Profile),
+    decide_child_consent(Profile, gdpr_child_consent_verdict(eligible, child_at_least_16, not_applicable, _)).
+
+% route: engagement judgement unsure refers
+test(engagement_unsure_positive) :-
+    gdpr_child_consent_age_verdict_profile_for(service_judgement_unsure, Profile),
+    child_consent_ground_status(Profile, needs_legal_review(open_textured(information_society_service, _), _)).
+test(engagement_unsure_near_miss_answered_false) :-
+    gdpr_child_consent_age_verdict_profile_for(service_judgement_unsure, Profile),
+    gdpr_child_consent_age_verdict_what_if(Profile, information_society_service, false, eligible).
+
+:- end_module(test_negative_controls).

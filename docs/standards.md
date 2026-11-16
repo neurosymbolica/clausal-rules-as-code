@@ -33,11 +33,11 @@ formalizing law, two of its design choices matter in particular:
 
 More about the language and the engine: [clausal.pl](https://clausal.pl).
 
-Every domain in this preview is written in `.clausal`. Each domain folder also holds, under
+Every domain in this repository is written in `.clausal`. Each domain folder also holds, under
 `iso/`, plain ISO Prolog (`.pl`) generated from that source, and the same tests run on three
 engines with the same results: Clausal Prolog, [Scryer Prolog](https://www.scryer.pl) and
-[Trealla Prolog](https://github.com/trealla-prolog/trealla). For the eight domains that is
-1,193 tests on each engine, plus 31 for the shared procurement vocabulary. `run_tests.py` runs
+[Trealla Prolog](https://github.com/trealla-prolog/trealla). For the 72 EU domains, the Swiss domain and the UK domain that is
+14,502 tests on each engine, plus 31 for the shared procurement vocabulary. `run_tests.py` runs
 them on Clausal Prolog and `run_iso_tests.py` on either ISO engine.
 
 ## Interoperability by design

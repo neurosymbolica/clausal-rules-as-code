@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """resolve.py -- resolve a label's quoted text to the unit it names.
 
 A label's QUOTE is the machine key (see `labels.py`'s module docstring for

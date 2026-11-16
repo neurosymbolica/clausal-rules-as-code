@@ -1,0 +1,255 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_territorial_material_scope
+shape_family: classification
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_applies"
+  - "gdpr_scope_ground"
+  - "representative_requirement"
+  - "queries"
+  - "fixtures"
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_applies.clausal --
+  - "decide_gdpr_applies/2"
+  - "gdpr_applies_status/2"
+  - "gdpr_applies_checklist/2"
+  - "gdpr_applies_decision_resolvable/1"
+  - "gdpr_applies_status_values/1"
+  - "gdpr_applies/2"
+  - "scope_outside_facts/2"
+  # -- gdpr_scope_ground.clausal --
+  - "decide_gdpr_scope_ground/2"
+  - "gdpr_scope_ground_status/2"
+  - "gdpr_scope_ground_checklist/2"
+  - "gdpr_scope_ground_decision_resolvable/1"
+  - "gdpr_scope_ground_status_values/1"
+  - "gdpr_scope_ground/2"
+  # -- representative_requirement.clausal --
+  - "decide_representative_requirement/2"
+  - "representative_requirement_status/2"
+  - "representative_requirement_checklist/2"
+  - "representative_requirement_decision_resolvable/1"
+  - "representative_requirement_status_values/1"
+  - "representative_requirement/2"
+  # -- queries.clausal --
+  - "gdpr_territorial_material_scope_profile_keys/1"
+  - "gdpr_territorial_material_scope_input_problems/2"
+  - "gdpr_territorial_material_scope_what_if/4"
+  - "gdpr_territorial_material_scope_compliance_check/3"
+  - "decide_gdpr_scope/2"
+  - "gdpr_scope_verdict/4"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_territorial_material_scope_subject/1"
+  - "gdpr_territorial_material_scope_profile_for/2"
+  - "gdpr_territorial_material_scope_assess/2"
+
+# Independence classification: no external scorer yet.
+independence: no_external_scorer
+
+uses: []
+
+scope: "Whether Regulation (EU) 2016/679 applies to a processing profile (Art 2(1) material scope, Art 2(2) and 2(3) exclusions, Art 3(1)-(3) territorial limbs), which ground made it apply or took it out, and whether the controller or processor must designate a representative in the Union under Art 27(1) and (2). Out of scope, handed to sibling orders or a lawyer: lawfulness of processing (Art 6), transfers (Chapter V), what a designated representative does, the Member State of the representative (Art 27(3)), and the instrument that governs processing taken out by Art 2(2)(d) or Art 2(3)."
+
+sources:
+  - "Regulation (EU) 2016/679 (GDPR), consolidated text in force from 2016-05-04 with the 2018 corrigendum: Art 2(1), 2(2)(a)-(d), 2(3), Art 3(1), 3(2)(a)-(b), 3(3), Art 4(1), 4(2), 4(6), 4(7), 4(8), 4(17), Art 27(1), 27(2)(a)-(b)"
+
+query_interface:
+  3: "gdpr_applies_status/2"      # status determination: applies | does_not_apply | compound statuses
+  7: "gdpr_applies_checklist/2"   # justification: one item(Limb, Status, cite(Key)) row per limb
+  13: "gdpr_territorial_material_scope_compliance_check/3"   # compliance check: may the party proceed without a representative
+  16: "gdpr_territorial_material_scope_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_002
+  - 02016R0679-20160504#art_003
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_027
+  reason: 'The titles of Articles 2, 3, 4 and 27 carry no obligation: document structure.
+    Deferred so every unit of the pinned extracts is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: art_2_4_e_commerce_directive
+  units:
+  - 02016R0679-20160504#parag_002.004
+  reason: Art 2(4) keeps Directive 2000/31/EC (liability of intermediary service providers)
+    unprejudiced; it is a saving clause, not a scope condition, and the profile carries
+    no such key.
+  consequence: 'None for a caller: Art 2(4) does not change whether the Regulation
+    applies; the liability of intermediary service providers is a separate question
+    under Directive 2000/31/EC.'
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- debt: true
+  what: art_27_3_member_state_of_the_representative
+  units:
+  - 02016R0679-20160504#parag_027.003
+  reason: Art 27(3) fixes in which Member State the representative must be established.
+    The profile carries no Member State, so the order says that a representative is
+    required, not where.
+  consequence: the caller must check Art 27(3) itself.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_27_4_and_27_5_mandate_and_liability
+  units:
+  - 02016R0679-20160504#parag_027.004
+  - 02016R0679-20160504#parag_027.005
+  reason: Art 27(4) (the mandate to be addressed instead of or beside the controller)
+    and Art 27(5) (designation is without prejudice to legal action against the controller)
+    say what a designated representative does, not whether one is required.
+  consequence: 'None for whether a representative is required: what a designated representative
+    does and the continuing liability of the controller or processor under Art 27(4)
+    and (5) are for the caller to check.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: definitions_not_used_by_scope
+  units:
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: Art 4(3), (4), (5), (9)-(15), (18)-(21) and (24)-(26) define terms (restriction,
+    profiling, pseudonymisation, recipient, third party, consent, breach, genetic,
+    biometric and health data, enterprise, group of undertakings, binding corporate
+    rules, supervisory authority, objection, information society service, international
+    organisation) that no scope limb reads. Profiling and monitoring under Art 3(2)(b)
+    are related, but the profile asks only the judgement monitoring_behaviour_of_data_subjects_in_union.
+  consequence: 'None for a caller: no scope limb turns on these definitions.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: main_establishment_and_cross_border_processing
+  units:
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  reason: Art 4(16) (main establishment), (22) (supervisory authority concerned) and
+    (23) (cross-border processing) serve the one-stop-shop and lead-authority rules,
+    not the scope question. An establishment in the Union under Art 3(1) need not
+    be a main establishment; the profile asks only established_in_union.
+  consequence: 'The answer does not say which supervisory authority leads: the caller
+    must check main establishment and cross-border processing under Art 4(16), (22)
+    and (23) itself.'
+  declaration: not_an_exception
+  open: formalisable as a definition shared by the data-protection orders; to be formalised
+    in a later change to the orders, not in this order's rules; the deferral stands
+    for this run.
+- debt: true
+  what: definitions_read_by_the_profile_keys_for_reasoning_only
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_17
+  reason: Art 4(1) (personal data), (2) (processing), (6) (filing system), (7) (controller),
+    (8) (processor) and (17) (representative) are the definitions behind the profile
+    keys personal_data_processed, personal_data_in_filing_system and party_role. They
+    are cited for reasoning only and never enter a result's citations; the caller
+    states each key, so the order applies none of the definitions itself.
+  consequence: 'The order does not test identifiability, filing-system structure,
+    or the controller or processor role: the caller states personal_data_processed,
+    personal_data_in_filing_system and party_role, and does not get a check that a
+    representative was designated (Art 4(17)).'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: recitals_on_scope
+  instrument: Regulation (EU) 2016/679 recitals on household activity, establishment,
+    targeting, monitoring and public international law
+  cites:
+  - 32016R0679#rct_18
+  - 32016R0679#rct_22
+  - 32016R0679#rct_23
+  - 32016R0679#rct_24
+  - 32016R0679#rct_25
+  reason: Not pinned here. The judgements and the establishment flag are the user's;
+    no recital is relied on.
+  consequence: The order gives no test for establishment, targeting or monitoring
+    beyond the pinned operative text.
+- what: special_categories_and_criminal_data
+  instrument: Regulation (EU) 2016/679 Arts 9(1) and 10
+  cites:
+  - 02016R0679-20160504#parag_009.001
+  - 02016R0679-20160504#art_010
+  reason: Art 27(2)(a) refers to them; they are not pinned here. The judgement special_or_criminal_data_on_large_scale
+    carries the reference without applying either article.
+  consequence: The order does not decide whether data are special-category or criminal
+    data; the caller states special_or_criminal_data_on_large_scale, using the sibling
+    order gdpr-special-categories where needed.
+- what: union_institutions_instrument_and_criminal_law_directive
+  instrument: Regulation (EC) No 45/2001 (named in Art 2(3)), its successor, and the
+    criminal-law data protection directive behind Art 2(2)(d)
+  cites:
+  - 32001R0045#art_003
+  - 32018R1725#art_002
+  - 32016L0680#art_002
+  reason: Not pinned here.
+  consequence: When Art 2(3) or Art 2(2)(d) takes the processing out, the caller must
+    find the instrument that governs it instead.
+- what: lawfulness_transfers_and_obligations
+  instrument: Regulation (EU) 2016/679 Chapters II-V and following
+  cites:
+  - 02016R0679-20160504#art_006
+  - 02016R0679-20160504#art_044
+  reason: Whether processing is lawful (Art 6), whether a transfer may take place
+    (Chapter V) and every other obligation arise only once the GDPR applies; the siblings
+    eu/data-protection/gdpr-art6-lawfulness and eu/data-protection/gdpr-chapter-v-transfers
+    own those.
+  consequence: The order says only whether the GDPR applies; a caller who gets a yes
+    still checks lawfulness, transfers and every other obligation, using the sibling
+    orders gdpr-art6-lawfulness and gdpr-chapter-v-transfers.

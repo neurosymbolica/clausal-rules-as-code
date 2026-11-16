@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/cbam/de_minimis.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served as follows:
+%   #2 eligibility   -- de_minimis_exemption/3 and decide_de_minimis/2 in
+%                       the de_minimis slice (the verdict with its cited
+%                       list), reached through the package facade;
+%   #7 justification -- de_minimis_checklist/2 in the de_minimis slice:
+%                       every item carries cite(Key), met items included;
+%                       an unsure date basis that decides is handed to the
+%                       user as needs_legal_review(open_textured(...), ...)
+%                       and never settled by an invented crisp test.
+% This layer adds:
+%   de_minimis_what_if/4        (#16 what-if): override one key of the
+%                               attribute-list profile, then re-evaluate the
+%                               exemption status;
+%   de_minimis_profile_keys/1:  the five profile keys, in contract order;
+%   de_minimis_input_problems/2: the input check of the kernel, re-exported
+%                               unchanged ([] = no problem);
+%   the result atoms (as 0-arity facts) and the result constructors the
+%   order names, so the facade serves each of them.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override
+% is written here over attribute(Key, Value) items (kit override_key/4 is
+% typed on a dict). Nothing here decides a statutory condition, so no
+% clause carries an implements/1 marker.
+% =====================================================================
+
+:- module(queries, [
+    de_minimis_profile_keys/1,
+    de_minimis_input_problems/2,
+    de_minimis_what_if/4,
+    de_minimis_exemption_applies/0,
+    de_minimis_exemption_does_not_apply/0,
+    outside_de_minimis_exemption/0,
+    counted_toward_threshold/0,
+    not_goods_of_this_regulation/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/cbam/de_minimis/kernel, [de_minimis_input_problems/2]).
+:- use_module(eu/cbam/de_minimis/de_minimis, [de_minimis_status/2]).
+
+% The keys of the order's typed input contract, in its order.
+de_minimis_profile_keys([single_mass_based_threshold_tonnes, year_date_basis, net_mass_kg_by_acceptance_date, net_mass_kg_by_release_date, goods_kind]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+de_minimis_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    de_minimis_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, NewProfile): the first item of
+% Key takes Value and every later item of Key is dropped; an absent Key is
+% added at the end. Complementary clauses: one answer per profile.
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, _)|Elements], Key, Value, [attribute(Key, Value)|Remaining]) :-
+    ElementKey == Key,
+    remove_attribute(Elements, Key, Remaining).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Overridden]) :-
+    ElementKey \== Key,
+    override_attribute(Elements, Key, Value, Overridden).
+
+remove_attribute([], _, []).
+remove_attribute([attribute(ElementKey, _)|Elements], Key, Remaining) :-
+    ElementKey == Key,
+    remove_attribute(Elements, Key, Remaining).
+remove_attribute([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== Key,
+    remove_attribute(Elements, Key, Remaining).
+
+% ---- result atoms (served by the facade; never called as queries) -----
+de_minimis_exemption_applies.
+de_minimis_exemption_does_not_apply.
+outside_de_minimis_exemption.
+counted_toward_threshold.
+not_goods_of_this_regulation.
+
+% ---- result constructors (shape checks; never called as queries) ------
+indeterminate([MissingKey]) :-
+    atom(MissingKey).
+% The one referral this order produces, ground in the head.
+needs_legal_review(open_textured(year_date_basis, cite(eu_reg_2023_956_art_2a_1)), [inputs_relied_on([year_date_basis-unsure])]).
+open_textured(InputKey, cite(CitationKey)) :-
+    atom(InputKey),
+    atom(CitationKey).
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+provenance(_Clause, Citations) :-
+    is_list(Citations).
+input_problems([_FirstProblem|_OtherProblems]).
+% An unknown key is any ground key outside the contract (an atom, a
+% number or a compound term, as given): the input check names only
+% ground keys.
+unknown_key(GivenKey) :-
+    ground(GivenKey).
+% A wrong type is named for a contract key, or for the profile itself.
+wrong_type(GivenKey) :-
+    atom(GivenKey).
+duplicate_key(GivenKey) :-
+    atom(GivenKey).
+
+:- end_module(queries).

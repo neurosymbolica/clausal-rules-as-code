@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_provider_side_duties_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists, [msort/2]).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2024_1689_art_3_1, [label - 'Regulation (EU) 2024/1689 Art 3, point (1), definition of AI system', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_1']).
+citation(eu_reg_2024_1689_art_3_3, [label - 'Regulation (EU) 2024/1689 Art 3, point (3), definition of provider', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_3']).
+citation(eu_reg_2024_1689_art_3_4, [label - 'Regulation (EU) 2024/1689 Art 3, point (4), definition of deployer', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_4']).
+citation(eu_reg_2024_1689_art_3_5, [label - 'Regulation (EU) 2024/1689 Art 3, point (5), definition of authorised representative', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_5']).
+citation(eu_reg_2024_1689_art_3_6, [label - 'Regulation (EU) 2024/1689 Art 3, point (6), definition of importer', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_6']).
+citation(eu_reg_2024_1689_art_3_7, [label - 'Regulation (EU) 2024/1689 Art 3, point (7), definition of distributor', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_7']).
+citation(eu_reg_2024_1689_art_3_8, [label - 'Regulation (EU) 2024/1689 Art 3, point (8), definition of operator', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_003_8']).
+citation(eu_reg_2024_1689_art_4_1, [label - 'Regulation (EU) 2024/1689 Art 4(1), AI literacy measures of providers and deployers', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_004.001']).
+citation(eu_reg_2024_1689_art_16_a, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (a), compliance with the requirements of Section 2', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_a']).
+citation(eu_reg_2024_1689_art_16_b, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (b), name and contact address of the provider', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_b']).
+citation(eu_reg_2024_1689_art_16_c, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (c), quality management system', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_c']).
+citation(eu_reg_2024_1689_art_16_d, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (d), keeping the documentation of Article 18', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_d']).
+citation(eu_reg_2024_1689_art_16_e, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (e), keeping the logs when under their control', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_e']).
+citation(eu_reg_2024_1689_art_16_f, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (f), conformity assessment procedure', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_f']).
+citation(eu_reg_2024_1689_art_16_g, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (g), EU declaration of conformity', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_g']).
+citation(eu_reg_2024_1689_art_16_h, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (h), CE marking', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_h']).
+citation(eu_reg_2024_1689_art_16_i, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (i), registration obligations of Article 49(1)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_i']).
+citation(eu_reg_2024_1689_art_16_j, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (j), corrective actions and information of Article 20', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_j']).
+citation(eu_reg_2024_1689_art_16_k, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (k), demonstration of conformity upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_k']).
+citation(eu_reg_2024_1689_art_16_l, [label - 'Regulation (EU) 2024/1689 Art 16, lead words and point (l), accessibility requirements', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_016_l']).
+citation(eu_reg_2024_1689_art_18_1, [label - 'Regulation (EU) 2024/1689 Art 18(1), documentation kept for 10 years', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_018.001']).
+citation(eu_reg_2024_1689_art_18_1_a, [label - 'Regulation (EU) 2024/1689 Art 18(1), point (a), technical documentation', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_018.001_a']).
+citation(eu_reg_2024_1689_art_18_1_b, [label - 'Regulation (EU) 2024/1689 Art 18(1), point (b), quality management system documentation', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_018.001_b']).
+citation(eu_reg_2024_1689_art_18_1_c, [label - 'Regulation (EU) 2024/1689 Art 18(1), point (c), changes approved by notified bodies', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_018.001_c']).
+citation(eu_reg_2024_1689_art_18_1_d, [label - 'Regulation (EU) 2024/1689 Art 18(1), point (d), decisions and documents of notified bodies', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_018.001_d']).
+citation(eu_reg_2024_1689_art_18_1_e, [label - 'Regulation (EU) 2024/1689 Art 18(1), point (e), EU declaration of conformity', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_018.001_e']).
+citation(eu_reg_2024_1689_art_19_1, [label - 'Regulation (EU) 2024/1689 Art 19(1), logs kept for at least six months', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_019.001']).
+citation(eu_reg_2024_1689_art_20_1, [label - 'Regulation (EU) 2024/1689 Art 20(1), corrective actions and duty of information', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_020.001']).
+citation(eu_reg_2024_1689_art_20_2, [label - 'Regulation (EU) 2024/1689 Art 20(2), investigation and information on a risk within the meaning of Article 79(1)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_020.002']).
+citation(eu_reg_2024_1689_art_21_1, [label - 'Regulation (EU) 2024/1689 Art 21(1), information and documentation upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_021.001']).
+citation(eu_reg_2024_1689_art_21_2, [label - 'Regulation (EU) 2024/1689 Art 21(2), access to the logs upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_021.002']).
+citation(eu_reg_2024_1689_art_22_1, [label - 'Regulation (EU) 2024/1689 Art 22(1), appointment of an authorised representative by providers established in third countries', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_022.001']).
+citation(eu_reg_2024_1689_art_22_2, [label - 'Regulation (EU) 2024/1689 Art 22(2), enabling the authorised representative', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_022.002']).
+citation(eu_reg_2024_1689_art_22_3, [label - 'Regulation (EU) 2024/1689 Art 22(3), tasks of the mandate and copy of the mandate upon request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_022.003']).
+citation(eu_reg_2024_1689_art_22_3_a, [label - 'Regulation (EU) 2024/1689 Art 22(3), point (a), verification of the declaration, documentation and conformity assessment', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_022.003_a']).
+citation(eu_reg_2024_1689_art_22_3_b, [label - 'Regulation (EU) 2024/1689 Art 22(3), point (b), keeping the provider contact details and documents for 10 years', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_022.003_b']).
+citation(eu_reg_2024_1689_art_22_3_c, [label - 'Regulation (EU) 2024/1689 Art 22(3), point (c), information upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_022.003_c']).
+citation(eu_reg_2024_1689_art_22_3_d, [label - 'Regulation (EU) 2024/1689 Art 22(3), point (d), cooperation with competent authorities upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_022.003_d']).
+citation(eu_reg_2024_1689_art_22_3_e, [label - 'Regulation (EU) 2024/1689 Art 22(3), point (e), registration obligations of the authorised representative', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_022.003_e']).
+citation(eu_reg_2024_1689_art_22_4, [label - 'Regulation (EU) 2024/1689 Art 22(4), termination of the mandate', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_022.004']).
+citation(eu_reg_2024_1689_art_23_1, [label - 'Regulation (EU) 2024/1689 Art 23(1), verification by importers before placing on the market', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.001']).
+citation(eu_reg_2024_1689_art_23_1_a, [label - 'Regulation (EU) 2024/1689 Art 23(1), point (a), conformity assessment carried out by the provider', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_023.001_a']).
+citation(eu_reg_2024_1689_art_23_1_b, [label - 'Regulation (EU) 2024/1689 Art 23(1), point (b), technical documentation drawn up by the provider', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_023.001_b']).
+citation(eu_reg_2024_1689_art_23_1_c, [label - 'Regulation (EU) 2024/1689 Art 23(1), point (c), CE marking, declaration and instructions for use', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_023.001_c']).
+citation(eu_reg_2024_1689_art_23_1_d, [label - 'Regulation (EU) 2024/1689 Art 23(1), point (d), authorised representative appointed under Article 22(1)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_023.001_d']).
+citation(eu_reg_2024_1689_art_23_2, [label - 'Regulation (EU) 2024/1689 Art 23(2), withholding a non-conforming system and information on a risk', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.002']).
+citation(eu_reg_2024_1689_art_23_3, [label - 'Regulation (EU) 2024/1689 Art 23(3), name and contact address of the importer', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.003']).
+citation(eu_reg_2024_1689_art_23_4, [label - 'Regulation (EU) 2024/1689 Art 23(4), storage and transport conditions of the importer', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.004']).
+citation(eu_reg_2024_1689_art_23_5, [label - 'Regulation (EU) 2024/1689 Art 23(5), copies kept by the importer for 10 years', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.005']).
+citation(eu_reg_2024_1689_art_23_6, [label - 'Regulation (EU) 2024/1689 Art 23(6), information and documentation upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.006']).
+citation(eu_reg_2024_1689_art_23_7, [label - 'Regulation (EU) 2024/1689 Art 23(7), cooperation of the importer with the competent authorities', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_023.007']).
+citation(eu_reg_2024_1689_art_24_1, [label - 'Regulation (EU) 2024/1689 Art 24(1), verification by distributors before making available', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.001']).
+citation(eu_reg_2024_1689_art_24_2, [label - 'Regulation (EU) 2024/1689 Art 24(2), withholding a non-conforming system and information on a risk', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.002']).
+citation(eu_reg_2024_1689_art_24_3, [label - 'Regulation (EU) 2024/1689 Art 24(3), storage and transport conditions of the distributor', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.003']).
+citation(eu_reg_2024_1689_art_24_4, [label - 'Regulation (EU) 2024/1689 Art 24(4), corrective actions of the distributor and information on a risk', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.004']).
+citation(eu_reg_2024_1689_art_24_5, [label - 'Regulation (EU) 2024/1689 Art 24(5), information and documentation upon a reasoned request', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.005']).
+citation(eu_reg_2024_1689_art_24_6, [label - 'Regulation (EU) 2024/1689 Art 24(6), cooperation of the distributor with the competent authorities', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_024.006']).
+citation(eu_reg_2024_1689_art_111_1, [label - 'Regulation (EU) 2024/1689 Art 111(1), components of the large-scale IT systems of Annex X, compliance by 31 December 2030', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_111.001']).
+citation(eu_reg_2024_1689_art_111_2, [label - 'Regulation (EU) 2024/1689 Art 111(2), high-risk AI systems already placed, significant changes in design and public authorities by 2 August 2030', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#parag_111.002']).
+citation(eu_reg_2024_1689_art_113_a, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (a), Chapters I and II apply from 2 February 2025', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_113_a']).
+citation(eu_reg_2024_1689_art_113_c, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c), application of Chapter III, Sections 1, 2 and 3', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_113_c']).
+citation(eu_reg_2024_1689_art_113_c_i, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c)(i), 2 December 2027 for Article 6(2) and Annex III', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_113_c_i']).
+citation(eu_reg_2024_1689_art_113_c_ii, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c)(ii), 2 August 2028 for Article 6(1) and Annex I', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727#point_113_c_ii']).
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2024_1689_art_4_1).
+test(a_meaning_only_key_is_recorded) :-
+    implements(eu_reg_2024_1689_art_3_8).
+test(each_key_is_recorded_once) :-
+    findall(Key, citation(Key, _), Keys),
+    msort(Keys, SortedKeys),
+    sort(Keys, UniqueKeys),
+    SortedKeys == UniqueKeys.
+
+test(a_shortened_key_is_not_implemented, fail) :-
+    implements(eu_reg_2024_1689_art_4).

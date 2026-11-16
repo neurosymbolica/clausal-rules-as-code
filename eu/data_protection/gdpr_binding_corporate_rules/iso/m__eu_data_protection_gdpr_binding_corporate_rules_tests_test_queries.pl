@@ -1,0 +1,102 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_binding_corporate_rules_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_binding_corporate_rules_queries, [gdpr_binding_corporate_rules_profile_keys/1, gdpr_binding_corporate_rules_what_if/4, checklist_item/3, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_data_protection_gdpr_binding_corporate_rules_gdpr_binding_corporate_rules, [binding_corporate_rules_definition/3, binding_corporate_rules_content/3, binding_corporate_rules_content_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_binding_corporate_rules_fixtures, [gdpr_binding_corporate_rules_profile_for/2]).
+
+complete_citations([cite(eu_reg_2016_679_art_47_2), cite(eu_reg_2016_679_art_47_2_a), cite(eu_reg_2016_679_art_47_2_b), cite(eu_reg_2016_679_art_47_2_c), cite(eu_reg_2016_679_art_47_2_d), cite(eu_reg_2016_679_art_47_2_e), cite(eu_reg_2016_679_art_47_2_f), cite(eu_reg_2016_679_art_47_2_g), cite(eu_reg_2016_679_art_47_2_h), cite(eu_reg_2016_679_art_47_2_i), cite(eu_reg_2016_679_art_47_2_j), cite(eu_reg_2016_679_art_47_2_k), cite(eu_reg_2016_679_art_47_2_l), cite(eu_reg_2016_679_art_47_2_m), cite(eu_reg_2016_679_art_47_2_n)]).
+
+what_if_verdicts(Subject, Key, Value, Verdicts) :-
+    gdpr_binding_corporate_rules_profile_for(Subject, Profile),
+    findall(Verdict, gdpr_binding_corporate_rules_what_if(Profile, Key, Value, Verdict), Verdicts).
+
+recognised_item(checklist_item(Key, Citation, State)) :-
+    checklist_item(Key, Citation, State).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_binding_corporate_rules_profile_keys(ProfileKeys),
+    ProfileKeys == [policies_are_personal_data_protection_policies, policies_adhered_to_by_adhering_party, adhering_party_is_controller_or_processor, adhering_party_established_on_territory_of_member_state, policies_cover_transfers_to_third_countries, recipients_are_controllers_or_processors, transfers_within_group_of_undertakings_or_group_of_enterprises, rules_specify_group_structure_and_contact_details, rules_specify_data_transfers, rules_specify_legally_binding_nature, rules_specify_application_of_general_data_protection_principles, rules_specify_data_subject_rights_and_means_to_exercise_them, rules_specify_acceptance_of_liability_for_members_outside_union, rules_specify_how_information_is_provided_to_data_subjects, rules_specify_tasks_of_compliance_monitoring_persons, rules_specify_complaint_procedures, rules_specify_compliance_verification_mechanisms, rules_specify_change_reporting_and_recording_mechanisms, rules_specify_cooperation_mechanism_with_supervisory_authority, rules_specify_reporting_of_third_country_legal_requirements, rules_specify_appropriate_data_protection_training].
+test(status_determination_classifies_the_policies) :-
+    gdpr_binding_corporate_rules_profile_for(definition_keys_only, Profile),
+    findall(Result, binding_corporate_rules_definition(Profile, Result, _), Results),
+    Results == [binding_corporate_rules].
+test(compliance_check_reports_complete_content) :-
+    gdpr_binding_corporate_rules_profile_for(content_keys_only, Profile),
+    findall(Result, binding_corporate_rules_content(Profile, Result, _), Results),
+    Results == [content_complete].
+test(justification_carries_a_cite_per_point) :-
+    gdpr_binding_corporate_rules_profile_for(principles_point_covered_in_part, Profile),
+    binding_corporate_rules_content_checklist(Profile, Items),
+    length(Items, 14),
+    maplist(recognised_item, Items).
+test(what_if_a_false_element_flips_binding_to_not_binding) :-
+    what_if_verdicts(all_elements_and_points_hold, policies_cover_transfers_to_third_countries, false, Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(not_binding_corporate_rules, [cite(eu_reg_2016_679_art_4_20)])].
+test(what_if_settling_the_recipient_role_gives_binding) :-
+    what_if_verdicts(recipient_role_unsure, recipients_are_controllers_or_processors, true, Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(binding_corporate_rules, [cite(eu_reg_2016_679_art_4_20)])].
+test(what_if_settling_training_gives_complete_content) :-
+    what_if_verdicts(training_appropriateness_unsure, rules_specify_appropriate_data_protection_training, true, Verdicts),
+    complete_citations(Citations),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(content_complete, Citations)].
+test(what_if_unsure_training_is_referred) :-
+    what_if_verdicts(all_elements_and_points_hold, rules_specify_appropriate_data_protection_training, unsure, Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(needs_legal_review(open_textured(rules_specify_appropriate_data_protection_training, cite(eu_reg_2016_679_art_47_2_n)), [inputs_relied_on([rules_specify_appropriate_data_protection_training - unsure])]), [])].
+test(what_if_a_point_key_routes_to_the_content) :-
+    what_if_verdicts(definition_keys_only, rules_specify_data_transfers, true, Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(indeterminate([rules_specify_group_structure_and_contact_details]), [])].
+test(what_if_an_attested_value_is_wrong_type) :-
+    findall(Verdict, gdpr_binding_corporate_rules_what_if([], rules_specify_complaint_procedures, attested(true), Verdict), Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(input_problems([wrong_type(rules_specify_complaint_procedures)]), [])].
+test(what_if_an_unknown_key_is_an_input_problem) :-
+    findall(Verdict, gdpr_binding_corporate_rules_what_if([], colour, red, Verdict), Verdicts),
+    Verdicts == [gdpr_binding_corporate_rules_verdict(input_problems([unknown_key(colour)]), [])].
+test(every_slice_checklist_item_is_recognised) :-
+    gdpr_binding_corporate_rules_profile_for(first_absent_point_named_while_training_unsure, Profile),
+    binding_corporate_rules_content_checklist(Profile, Items),
+    maplist(recognised_item, Items).
+test(a_slice_referral_is_recognised) :-
+    gdpr_binding_corporate_rules_profile_for(two_judgements_unsure, Profile),
+    binding_corporate_rules_definition(Profile, needs_legal_review(Reason, Context), []),
+    needs_legal_review(Reason, Context).
+test(an_open_textured_reason_needs_a_referral_row) :-
+    open_textured(transfers_within_group_of_undertakings_or_group_of_enterprises, cite(eu_reg_2016_679_art_4_20)).
+test(an_indeterminate_names_one_contract_key) :-
+    indeterminate([rules_specify_legally_binding_nature]).
+test(inputs_relied_on_holds_judgement_pairs) :-
+    inputs_relied_on([adhering_party_is_controller_or_processor - true, recipients_are_controllers_or_processors - unsure]).
+test(slice_input_problems_are_recognised) :-
+    gdpr_binding_corporate_rules_profile_for(input_mixed_problems, Profile),
+    binding_corporate_rules_definition(Profile, input_problems(Problems), []),
+    input_problems(Problems).
+test(problem_constructors_recognise_their_keys) :-
+    unknown_key(colour),
+    wrong_type(profile),
+    wrong_type(rules_specify_data_transfers),
+    duplicate_key(rules_specify_complaint_procedures).
+
+test(a_checklist_item_with_an_unknown_state_is_not_recognised, fail) :-
+    checklist_item(rules_specify_data_transfers, cite(eu_reg_2016_679_art_47_2_b), satisfied).
+test(a_crisp_key_is_never_open_textured, fail) :-
+    open_textured(policies_are_personal_data_protection_policies, _).
+test(an_indeterminate_naming_two_keys_is_not_recognised, fail) :-
+    indeterminate([rules_specify_legally_binding_nature, rules_specify_data_transfers]).
+test(a_crisp_key_is_never_a_pair, fail) :-
+    inputs_relied_on([policies_adhered_to_by_adhering_party - true]).
+test(an_empty_problem_list_is_not_input_problems, fail) :-
+    input_problems([]).
+test(an_outside_key_is_never_a_duplicate_key, fail) :-
+    duplicate_key(colour).
+
+cp_test_names([profile_keys_are_the_contract_keys, status_determination_classifies_the_policies, compliance_check_reports_complete_content, justification_carries_a_cite_per_point, what_if_a_false_element_flips_binding_to_not_binding, what_if_settling_the_recipient_role_gives_binding, what_if_settling_training_gives_complete_content, what_if_unsure_training_is_referred, what_if_a_point_key_routes_to_the_content, what_if_an_attested_value_is_wrong_type, what_if_an_unknown_key_is_an_input_problem, every_slice_checklist_item_is_recognised, a_slice_referral_is_recognised, an_open_textured_reason_needs_a_referral_row, an_indeterminate_names_one_contract_key, inputs_relied_on_holds_judgement_pairs, slice_input_problems_are_recognised, problem_constructors_recognise_their_keys]).
+cp_test_fail_names([a_checklist_item_with_an_unknown_state_is_not_recognised, a_crisp_key_is_never_open_textured, an_indeterminate_naming_two_keys_is_not_recognised, a_crisp_key_is_never_a_pair, an_empty_problem_list_is_not_input_problems, an_outside_key_is_never_a_duplicate_key]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,88 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the whole verdict read out, as the full
+% answer list, for every fixture route (each yields exactly one verdict).
+% Run: python -m clausal.testing eu/data_protection/gdpr_impact_assessment_prior_consultation/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/queries, [
+    decide_prior_consultation/2,
+    prior_consultation_duty/2,
+    impact_assessment_outside_facts/2
+]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/fixtures, [
+    gdpr_impact_assessment_prior_consultation_subject/1,
+    gdpr_impact_assessment_prior_consultation_profile_for/2
+]).
+
+subject_verdicts(Subject, Verdicts) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(Subject, Profile),
+    findall(Verdict, decide_prior_consultation(Profile, Verdict), Verdicts).
+
+subject_status(Subject, Status) :-
+    gdpr_impact_assessment_prior_consultation_subject(Subject),
+    gdpr_impact_assessment_prior_consultation_profile_for(Subject, Profile),
+    prior_consultation_duty(Profile, Status).
+
+test(no_measures_is_required_under_article_36_1) :-
+    subject_verdicts(residual_high_risk_no_measures, Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_1_residual_high_risk], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true])], [cite(eu_reg_2016_679_art_36_1)])].
+test(measures_below_high_is_not_required) :-
+    subject_verdicts(measures_bring_risk_below_high, Verdicts),
+    Verdicts == [prior_consultation_verdict(not_required, [art36_1_condition_not_met], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true, measures_reduce_residual_risk_below_high-true])], [cite(eu_reg_2016_679_art_36_1)])].
+test(insufficient_measures_are_required_under_article_36_1) :-
+    subject_verdicts(residual_high_risk_measures_insufficient, Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_1_residual_high_risk], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true, measures_reduce_residual_risk_below_high-false])], [cite(eu_reg_2016_679_art_36_1)])].
+test(no_high_risk_indicated_is_not_required) :-
+    subject_verdicts(no_high_risk_indicated, Verdicts),
+    Verdicts == [prior_consultation_verdict(not_required, [art36_1_condition_not_met], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-false])], [cite(eu_reg_2016_679_art_36_1)])].
+test(member_state_authorisation_is_required_under_article_36_5) :-
+    subject_verdicts(member_state_prior_authorisation, Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_5_member_state_prior_authorisation], [outside_fact(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none))), inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-false])], [cite(eu_reg_2016_679_art_36_5)])].
+test(member_state_law_without_authorisation_is_not_required) :-
+    subject_verdicts(member_state_law_does_not_require_authorisation, Verdicts),
+    Verdicts == [prior_consultation_verdict(not_required, [art36_1_condition_not_met], [outside_fact(member_state_requires_prior_authorisation, attested(false, attestation(by, at, reason, none))), inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-false])], [cite(eu_reg_2016_679_art_36_1)])].
+test(both_ways_give_the_article_36_1_basis) :-
+    subject_verdicts(both_ways_met, Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_1_residual_high_risk], [outside_fact(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none))), inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true])], [cite(eu_reg_2016_679_art_36_1)])].
+test(no_assessment_refers_not_governed_here) :-
+    subject_verdicts(no_assessment_public_interest_unmet, Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_36_1)]), [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true])]), [], [], [])].
+test(no_assessment_with_member_state_authorisation_is_required) :-
+    subject_verdicts(no_assessment_member_state_authorisation, Verdicts),
+    Verdicts == [prior_consultation_verdict(required, [art36_5_member_state_prior_authorisation], [outside_fact(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none))), inputs_relied_on([])], [cite(eu_reg_2016_679_art_36_5)])].
+test(an_absent_member_state_fact_is_a_cross_reference) :-
+    subject_verdicts(no_assessment_member_state_fact_absent, Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_36_5), cite(member_state_law_requiring_prior_consultation_and_authorisation)), [resolution(cite(member_state_law_requiring_prior_consultation_and_authorisation), not_attempted), inputs_relied_on([member_state_requires_prior_authorisation-absent])]), [], [], [])].
+test(reading_13_is_not_required) :-
+    subject_verdicts(assessment_status_absent_no_way_open, Verdicts),
+    Verdicts == [prior_consultation_verdict(not_required, [art36_1_condition_not_met], [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-false])], [cite(eu_reg_2016_679_art_36_1)])].
+test(an_open_way_names_the_absent_assessment_status) :-
+    subject_verdicts(assessment_status_absent_way_open, Verdicts),
+    Verdicts == [prior_consultation_verdict(indeterminate([impact_assessment_carried_out]), [], [], [])].
+test(every_missing_key_is_named) :-
+    subject_verdicts(two_keys_missing, Verdicts),
+    Verdicts == [prior_consultation_verdict(indeterminate([measures_reduce_residual_risk_below_high, mitigating_measures_taken]), [], [], [])].
+test(an_unsure_residual_risk_is_open_textured) :-
+    subject_verdicts(residual_risk_unsure, Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(open_textured(measures_reduce_residual_risk_below_high, cite(eu_reg_2016_679_art_36_1)), [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-true, measures_reduce_residual_risk_below_high-unsure])]), [], [], [])].
+test(an_unsure_high_risk_is_open_textured) :-
+    subject_verdicts(high_risk_unsure, Verdicts),
+    Verdicts == [prior_consultation_verdict(needs_legal_review(open_textured(assessment_indicates_high_risk_absent_mitigation, cite(eu_reg_2016_679_art_36_1)), [inputs_relied_on([assessment_indicates_high_risk_absent_mitigation-unsure])]), [], [], [])].
+test(a_problem_profile_gives_its_problems) :-
+    subject_verdicts(duplicate_and_unknown_keys, Verdicts),
+    Verdicts == [prior_consultation_verdict(input_problems([duplicate_key(impact_assessment_carried_out), wrong_type(mitigating_measures_taken), unknown_key(stray_flag)]), [], [], [])].
+test(unread_keys_leave_the_verdict_unchanged) :-
+    subject_verdicts(criteria_and_item_keys_ignored, Verdicts),
+    subject_verdicts(residual_high_risk_no_measures, BaselineVerdicts),
+    Verdicts == BaselineVerdicts.
+test(the_outside_facts_are_read_out_as_given) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(member_state_prior_authorisation, Profile),
+    findall(OutsideFacts, impact_assessment_outside_facts(Profile, OutsideFacts), Answers),
+    Answers == [[outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(member_state_requires_assessment_despite_general_one, absent), outside_fact(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none))), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent)]].
+test(the_statuses_enumerate_both_final_atoms) :-
+    findall(Status, subject_status(_, Status), Statuses),
+    member(required, Statuses),
+    member(not_required, Statuses).
+
+:- end_module(test_output_mode).

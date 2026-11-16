@@ -1,0 +1,52 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
+% result term builds and destructures, the verdict atoms are distinct and a
+% real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/kernel, [gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/citations, [citation/2, implements/1]).
+
+test(the_verdict_term_builds_and_destructures) :-
+    Verdict = gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], [eu_reg_2016_679_art_20_1]),
+    Verdict = gdpr_data_subject_request_verdict(Comply, Basis, Exception, Conditions, Citations),
+    Comply == must_comply,
+    Basis == art20_1,
+    Exception == none,
+    Conditions == [],
+    Citations == [eu_reg_2016_679_art_20_1].
+
+test(the_comply_atoms_are_distinct) :-
+    dif(must_comply, need_not_comply).
+
+test(the_exception_atoms_are_distinct) :-
+    dif(art20_3_public_task, art20_4_rights_of_others).
+
+test(equal_comply_atoms_are_not_distinct, fail) :-
+    dif(must_comply, must_comply).
+
+test(a_compound_status_is_not_a_bare_atom) :-
+    Status = suspended(art12_6_identity_not_confirmed),
+    Status = suspended(Reason),
+    Reason == art12_6_identity_not_confirmed.
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_20_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2016_679_art_22_1).
+
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_reg_2016_679_art_99_9).
+
+test(the_empty_profile_has_no_input_problem) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems([], []).
+
+test(an_unknown_key_is_an_input_problem) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems([attribute(no_such_key, true)], [unknown_key(no_such_key)]).
+
+:- end_module(test_load).

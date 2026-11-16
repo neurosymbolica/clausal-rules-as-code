@@ -1,0 +1,296 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/labour/daily_rest
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "daily_rest"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- keep
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The root exports (result atoms, profile key atoms,
+# enumeration atoms, shift kinds, unsure) are served as name/0 facts.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- daily_rest.clausal --
+  - "decide_daily_rest/6"
+  - "daily_rest_status/7"
+  - "shortest_daily_rest_minutes/6"
+  - "first_window_without_daily_rest/6"
+  - "daily_rest_checklist/6"
+  - "daily_rest_decision_resolvable/5"
+  - "daily_rest_status_values/1"
+  - "daily_rest_threshold/1"
+  # -- queries.clausal --
+  - "daily_rest_profile_keys/1"
+  - "daily_rest_input_problems/2"
+  - "daily_rest_what_if/4"
+  - "daily_rest_given/0"
+  - "daily_rest_not_given/0"
+  - "daily_rest_not_applied_to_worker/0"
+  - "daily_rest_derogation_applies/0"
+  - "no_work_start_in_period/0"
+  - "no_window_without_daily_rest/0"
+  - "date_time/5"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "on_call_on_site_counts_as_working_time/0"
+  - "on_call_standby_counts_as_working_time/0"
+  - "worker_category/0"
+  - "derogation_from_article_3/0"
+  - "other_worker/0"
+  - "mobile_worker/0"
+  - "seagoing_fishing_vessel_worker/0"
+  - "no_derogation/0"
+  - "derogation_under_article_17_1/0"
+  - "derogation_under_article_17_3/0"
+  - "derogation_under_article_17_4/0"
+  - "derogation_under_article_18/0"
+  - "work/0"
+  - "on_call_on_site/0"
+  - "on_call_standby/0"
+  - "paid_annual_leave/0"
+  - "sick_leave/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "daily_rest_subject/1"
+  - "daily_rest_profile_for/2"
+  - "daily_rest_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/deadline_lib), no shared domain package.
+uses: []
+
+scope: "Whether one worker's rota, over one period of whole days, gives the daily rest
+  that Article 3 of Directive 2003/88/EC requires the Member States to ensure: at least
+  11 consecutive hours (660 minutes) of rest in every 24-hour period that begins when
+  the worker starts counted work inside the period, or at the start of the period when
+  the worker is at work then; working time and rest told apart by Article 2(1) and 2(2),
+  with the caller judging whether on-call time on site or on standby is working time.
+  Decided here: the status (given, not given, Article 3 not applied to a mobile worker
+  under Article 20(1) with 2(7) or to a seagoing fishing vessel worker under Article
+  21(1), or a caller-stated derogation under Article 17(1), 17(3), 17(4) or Article 18);
+  the shortest longest unbroken rest in minutes; the start of the first window without
+  the daily rest. Out of scope: whether the worker is within Article 1 or under Article
+  14; the conditions of any derogation and its compensatory rest; the adequate rest of
+  mobile and fishing vessel workers; weekly rest, breaks and night work; national rules
+  on daily rest; amendments after the original act. Unsure on-call judgements go to a
+  lawyer."
+
+sources:
+  - "Directive 2003/88/EC of the European Parliament and of the Council of 4 November
+    2003 concerning certain aspects of the organisation of working time, OJ L 299,
+    18.11.2003, p. 9 (CELEX 32003L0088), the original act: Art 2(1), 2(2), 2(7); Art 3;
+    Art 17(1), 17(3), 17(4); Art 18, first and second subparagraphs; Art 20(1), first
+    subparagraph; Art 21(1), first subparagraph. Quoted for the readings and deferred:
+    Art 1(3), Art 14, Art 17(2), Art 17(4)(a) and (b), Art 18 third subparagraph, the
+    second subparagraphs of Art 20(1) and Art 21(1)."
+
+query_interface:
+  2: "daily_rest_status/7"                # eligibility/status verdict with cited checklist (daily_rest_checklist/6)
+  23: "shortest_daily_rest_minutes/6"     # calculation: exact integer minutes of the shortest daily rest
+  6: "daily_rest_threshold/1"             # threshold: the 660-minute boundary at which a window turns short
+  16: "daily_rest_what_if/4"              # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_units
+  units:
+  - 32003L0088#art_001
+  - 32003L0088#art_002
+  - 32003L0088#art_004
+  - 32003L0088#art_005
+  - 32003L0088#art_014
+  - 32003L0088#art_017
+  - 32003L0088#art_018
+  - 32003L0088#art_020
+  - 32003L0088#art_021
+  reason: Each article unit holds the article's number and heading (and lead text
+    where there is one); the operative text this order reads sits in the paragraph,
+    point and subparagraph units below them (the article unit of Art 3 is cited with
+    its one subparagraph). Deferred so every unit of the pinned extract is accounted
+    for.
+  consequence: 'None for a caller: the cited units carry the rules.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: scope_of_the_directive
+  units:
+  - 32003L0088#parag_001.001
+  - 32003L0088#parag_001.002
+  - 32003L0088#point_001.002_a
+  - 32003L0088#point_001.002_b
+  - 32003L0088#parag_001.003
+  - 32003L0088#subpara_001.003_1
+  - 32003L0088#parag_001.004
+  - 32003L0088#subpara_014_1
+  reason: Art 1 states the purpose and scope (all sectors within the meaning of Directive
+    89/391/EEC; not seafarers) and Art 14 leaves room for more specific Community
+    rules for certain occupations. The order does not decide whether a worker is within
+    the Directive; it assumes so (reading (10), Q15).
+  consequence: A caller whose worker is outside Art 1 (a seafarer, for example) or
+    under a more specific rule of Art 14 must not rely on the answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as an input fact on scope in a later change to the orders; the
+    deferral stands for this run.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32003L0088#parag_002.003
+  - 32003L0088#parag_002.004
+  - 32003L0088#point_002.004_a
+  - 32003L0088#point_002.004_b
+  - 32003L0088#point_002.004_b_i
+  - 32003L0088#point_002.004_b_ii
+  - 32003L0088#parag_002.005
+  - 32003L0088#parag_002.006
+  - 32003L0088#parag_002.008
+  - 32003L0088#parag_002.009
+  reason: Art 2(3) to (6), (8) and (9) define night time, night worker, shift work,
+    shift worker, offshore work and adequate rest. This order reads Art 2(1), Art
+    2(2) and Art 2(7) only; the others belong to the night-work, weekly-rest and other
+    orders of the plan.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  debt: true
+  open: to be read by later orders on breaks, weekly rest and night work.
+- what: breaks_and_weekly_rest
+  units:
+  - 32003L0088#subpara_004_1
+  - 32003L0088#subpara_005_1
+  - 32003L0088#subpara_005_2
+  reason: Art 4 (breaks) and Art 5 (weekly rest) are pinned with Art 3 but are other
+    duties; Art 5 refers to the 11 hours of Art 3 but this order does not check weekly
+    rest.
+  consequence: The answers say nothing about breaks or weekly rest.
+  declaration: not_an_exception
+  debt: true
+  open: to be read by later orders on breaks and weekly rest.
+- what: conditions_of_the_derogations
+  units:
+  - 32003L0088#point_017.001_a
+  - 32003L0088#point_017.001_b
+  - 32003L0088#point_017.001_c
+  - 32003L0088#parag_017.002
+  - 32003L0088#point_017.003_a
+  - 32003L0088#point_017.003_b
+  - 32003L0088#point_017.003_c
+  - 32003L0088#point_017.003_c_i
+  - 32003L0088#point_017.003_c_ii
+  - 32003L0088#point_017.003_c_iii
+  - 32003L0088#point_017.003_c_iv
+  - 32003L0088#point_017.003_c_v
+  - 32003L0088#point_017.003_c_vi
+  - 32003L0088#point_017.003_c_vii
+  - 32003L0088#point_017.003_c_viii
+  - 32003L0088#point_017.003_d
+  - 32003L0088#point_017.003_d_i
+  - 32003L0088#point_017.003_d_ii
+  - 32003L0088#point_017.003_d_iii
+  - 32003L0088#point_017.003_e
+  - 32003L0088#point_017.003_e_i
+  - 32003L0088#point_017.003_e_ii
+  - 32003L0088#point_017.003_e_iii
+  - 32003L0088#point_017.003_f
+  - 32003L0088#point_017.003_g
+  - 32003L0088#point_017.004_a
+  - 32003L0088#point_017.004_b
+  - 32003L0088#subpara_018_3
+  - 32003L0088#subpara_018_4
+  - 32003L0088#point_018_a
+  - 32003L0088#point_018_b
+  reason: The points of Art 17(1), 17(3) and 17(4) list the activities and cases a
+    derogation may cover; Art 17(2) and the third subparagraph of Art 18 require equivalent
+    compensatory rest or appropriate protection; the fourth subparagraph of Art 18
+    lets the Member States lay down rules for applying it. Whether a derogation exists
+    and meets them is a matter of national law and of the agreements; the caller states
+    the derogation (reading (8), Q10).
+  consequence: daily_rest_derogation_applies never says that the conditions were met
+    or that compensatory rest was given.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: derogations_that_do_not_touch_article_3
+  units:
+  - 32003L0088#parag_017.005
+  - 32003L0088#subpara_017.005_1
+  - 32003L0088#subpara_017.005_2
+  - 32003L0088#subpara_017.005_3
+  - 32003L0088#subpara_017.005_4
+  - 32003L0088#subpara_017.005_5
+  - 32003L0088#point_017.005_a
+  - 32003L0088#point_017.005_b
+  - 32003L0088#subpara_017.005_6
+  reason: Art 17(5) lets the Member States derogate from Art 6 and Art 16(b) for doctors
+    in training, by national measures; it does not touch Art 3.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: adequate_rest_of_mobile_and_fishing_vessel_workers
+  units:
+  - 32003L0088#subpara_020.001_1
+  - 32003L0088#subpara_021.001_1
+  - 32003L0088#parag_021.002
+  - 32003L0088#point_021.002_a
+  - 32003L0088#point_021.002_b
+  - 32003L0088#subpara_021.002_1
+  - 32003L0088#parag_021.003
+  - 32003L0088#point_021.003_a
+  - 32003L0088#point_021.003_a_i
+  - 32003L0088#point_021.003_a_ii
+  - 32003L0088#subpara_021.003_1
+  - 32003L0088#point_021.003_b
+  - 32003L0088#point_021.003_b_i
+  - 32003L0088#point_021.003_b_ii
+  - 32003L0088#parag_021.004
+  - 32003L0088#parag_021.005
+  - 32003L0088#point_021.005_a
+  - 32003L0088#point_021.005_b
+  - 32003L0088#parag_021.006
+  - 32003L0088#parag_021.007
+  reason: The second subparagraphs of Art 20(1) and Art 21(1) and Art 21(2) to (7)
+    ask the Member States to ensure adequate rest, and limits on hours of work or
+    rest, for mobile workers and workers on board seagoing fishing vessels, by national
+    measures. This order only says that Art 3 does not apply to them (reading (7),
+    Q9).
+  consequence: daily_rest_not_applied_to_worker never says that the worker had adequate
+    rest or that the limits of Art 21 were kept.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: offshore_reference_period
+  units:
+  - 32003L0088#parag_020.002
+  reason: Art 20(2) lets the Member States extend the reference period of Art 16(b)
+    to 12 months for workers who mainly perform offshore work. It is a Member State
+    option for another article and does not touch Art 3.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: review_of_offshore_provisions
+  units:
+  - 32003L0088#parag_020.003
+  reason: Art 20(3) asks the Commission to review the provisions on offshore workers
+    by 1 August 2005. It binds an institution and does not touch Art 3.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional

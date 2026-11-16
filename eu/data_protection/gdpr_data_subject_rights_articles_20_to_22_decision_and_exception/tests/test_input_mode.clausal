@@ -1,0 +1,59 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/queries, [request_decision/2, request_exception/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/request_exception, [request_exception_status/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/fixtures, [gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_public_task, Profile),
+    request_exception_status(Profile, art20_3_public_task).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_public_task, Profile),
+    request_exception_status(Profile, art20_4_rights_of_others).
+
+test(decision_bound_must_comply) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
+    request_decision(Profile, must_comply).
+
+test(decision_bound_wrong_is_rejected, fail) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
+    request_decision(Profile, need_not_comply).
+
+test(decision_bound_need_not_comply) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_not_automated, Profile),
+    request_decision(Profile, need_not_comply).
+
+test(decision_bound_suspended) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_identity_unconfirmed, Profile),
+    request_decision(Profile, suspended(art12_6_identity_not_confirmed)).
+
+test(decision_bound_indeterminate) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(no_request_type, Profile),
+    request_decision(Profile, indeterminate([request_type])).
+
+test(decision_bound_unknown_key) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(unknown_key_problem, Profile),
+    request_decision(Profile, input_problems([unknown_key(not_a_contract_key)])).
+
+test(decision_bound_wrong_type) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(wrong_type_problem, Profile),
+    request_decision(Profile, input_problems([wrong_type(extension_claimed)])).
+
+test(decision_bound_duplicate_key) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(duplicate_key_problem, Profile),
+    request_decision(Profile, input_problems([duplicate_key(processing_carried_out_by_automated_means)])).
+
+test(exception_bound_none_for_input_problems) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(duplicate_key_problem, Profile),
+    request_exception(Profile, none).
+
+test(exception_bound_none_for_suspension) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_identity_unconfirmed, Profile),
+    request_exception(Profile, none).
+
+:- end_module(test_input_mode).

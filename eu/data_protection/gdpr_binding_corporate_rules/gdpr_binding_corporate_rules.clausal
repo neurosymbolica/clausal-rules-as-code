@@ -1,0 +1,309 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_binding_corporate_rules.clausal -- the "gdpr_binding_corporate_rules" DETERMINATION for eu/data_protection/gdpr_binding_corporate_rules,
+% self-contained top to bottom: its statutory VALUE facts (the elements of
+% the Art 4(20) definition and the points of Art 47(2), each row carrying a
+% ready-made cite(Key) term), its helpers, its per-rule tests, its checklist
+% and its verdict assembly.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
+% 02016R0679-20160504: Art 4(20) (definition of binding corporate rules) and
+% Art 47(2), opening words and points (a) to (n) (the content binding
+% corporate rules shall specify at least). a reading, not a lawyer's.
+% The approval under Art 47(1) is NOT decided here; a content_complete answer
+% is not an approval, and binding_corporate_rules does not mean a transfer is
+% permitted.
+%
+% Public queries (the order's called contract):
+%   binding_corporate_rules_definition(Profile, Result, Citations)   Art 4(20)
+%   binding_corporate_rules_content(Profile, Result, Citations)      Art 47(2)
+%   binding_corporate_rules_content_checklist(Profile, Items)        Art 47(2)(a)-(n)
+% The input check gdpr_binding_corporate_rules_input_problems/2 lives in the
+% kernel and is imported here.
+%
+% Each query yields exactly ONE solution: every step is complementary
+% clauses, the ground verdict in the head. Precedence (THE LIMBS): input
+% problems; a false element or point; the first absent key;
+% the first unsure judgement (needs_legal_review); the final answer.
+% =====================================================================
+
+:- module(gdpr_binding_corporate_rules, [
+    binding_corporate_rules_definition/3,
+    binding_corporate_rules_content/3,
+    binding_corporate_rules_content_checklist/2,
+    decide_gdpr_binding_corporate_rules/2,
+    gdpr_binding_corporate_rules_status/2,
+    gdpr_binding_corporate_rules_checklist/2,
+    gdpr_binding_corporate_rules_decision_resolvable/1,
+    gdpr_binding_corporate_rules_status_values/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_binding_corporate_rules/kernel, [gdpr_binding_corporate_rules_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_binding_corporate_rules/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Art 4(20) read as seven elements (reading 1), in root_exports order.
+definition_element(policies_are_personal_data_protection_policies, cite(eu_reg_2016_679_art_4_20)).
+definition_element(policies_adhered_to_by_adhering_party, cite(eu_reg_2016_679_art_4_20)).
+definition_element(adhering_party_is_controller_or_processor, cite(eu_reg_2016_679_art_4_20)).
+definition_element(adhering_party_established_on_territory_of_member_state, cite(eu_reg_2016_679_art_4_20)).
+definition_element(policies_cover_transfers_to_third_countries, cite(eu_reg_2016_679_art_4_20)).
+definition_element(recipients_are_controllers_or_processors, cite(eu_reg_2016_679_art_4_20)).
+definition_element(transfers_within_group_of_undertakings_or_group_of_enterprises, cite(eu_reg_2016_679_art_4_20)).
+
+% The three open-textured elements of Art 4(20), judged by the caller
+% (INTERFACE - THE JUDGEMENTS), in root_exports order.
+definition_judgement(adhering_party_is_controller_or_processor).
+definition_judgement(recipients_are_controllers_or_processors).
+definition_judgement(transfers_within_group_of_undertakings_or_group_of_enterprises).
+
+% Art 47(2): one row per point, (a) to (n), in order (reading 8).
+content_point(rules_specify_group_structure_and_contact_details, cite(eu_reg_2016_679_art_47_2_a)).
+content_point(rules_specify_data_transfers, cite(eu_reg_2016_679_art_47_2_b)).
+content_point(rules_specify_legally_binding_nature, cite(eu_reg_2016_679_art_47_2_c)).
+content_point(rules_specify_application_of_general_data_protection_principles, cite(eu_reg_2016_679_art_47_2_d)).
+content_point(rules_specify_data_subject_rights_and_means_to_exercise_them, cite(eu_reg_2016_679_art_47_2_e)).
+content_point(rules_specify_acceptance_of_liability_for_members_outside_union, cite(eu_reg_2016_679_art_47_2_f)).
+content_point(rules_specify_how_information_is_provided_to_data_subjects, cite(eu_reg_2016_679_art_47_2_g)).
+content_point(rules_specify_tasks_of_compliance_monitoring_persons, cite(eu_reg_2016_679_art_47_2_h)).
+content_point(rules_specify_complaint_procedures, cite(eu_reg_2016_679_art_47_2_i)).
+content_point(rules_specify_compliance_verification_mechanisms, cite(eu_reg_2016_679_art_47_2_j)).
+content_point(rules_specify_change_reporting_and_recording_mechanisms, cite(eu_reg_2016_679_art_47_2_k)).
+content_point(rules_specify_cooperation_mechanism_with_supervisory_authority, cite(eu_reg_2016_679_art_47_2_l)).
+content_point(rules_specify_reporting_of_third_country_legal_requirements, cite(eu_reg_2016_679_art_47_2_m)).
+content_point(rules_specify_appropriate_data_protection_training, cite(eu_reg_2016_679_art_47_2_n)).
+
+% The verdict vocabulary of the facade (the final answers of the definition).
+gdpr_binding_corporate_rules_status_values([binding_corporate_rules, not_binding_corporate_rules]).
+
+% ---- profile plumbing (decides nothing statutory) ---------------------
+definition_keys(Keys) :-
+    findall(Key, definition_element(Key, _), Keys).
+
+content_point_keys(Keys) :-
+    findall(Key, content_point(Key, _), Keys).
+
+judgement_keys(Keys) :-
+    findall(Key, definition_judgement(Key), Keys).
+
+% key_state(Profile, Key, State): absent, or the value given (true, false,
+% unsure). Read by presence first, then by value. Called only on a profile
+% the input check found well-formed, so a present key occurs once.
+key_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(Profile, Key, Value) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+key_states(Profile, Keys, States) :-
+    maplist(key_state(Profile), Keys, States).
+
+% first_state_key(Keys, States, Target, Result): found(Key) for the first key
+% whose state is Target, none when no key has it.
+first_state_key([], [], _, none).
+first_state_key([Key|_], [State|_], Target, found(Key)) :-
+    State == Target.
+first_state_key([_|Keys], [State|States], Target, Result) :-
+    State \== Target,
+    first_state_key(Keys, States, Target, Result).
+
+% THE PAIRS RULE: the judgement keys read, present, in root_exports order.
+judgement_pairs(Profile, Pairs) :-
+    judgement_keys(Keys),
+    maplist(judgement_pair(Profile), Keys, Pairs).
+
+judgement_pair(Profile, Key, Key-Value) :-
+    profile_get(Profile, Key, Value).
+
+% ---- (A) binding_corporate_rules_definition: Art 4(20) ----------------
+binding_corporate_rules_definition(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, [Problem|Problems]).
+binding_corporate_rules_definition(Profile, Result, Citations) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, []),
+    definition_keys(Keys),
+    key_states(Profile, Keys, States),
+    definition_answer(Profile, Keys, States, Result, Citations).
+
+% Step 1: an element present and false decides first.
+definition_answer(_, _, States, not_binding_corporate_rules, [cite(eu_reg_2016_679_art_4_20)]) :-
+    implements(eu_reg_2016_679_art_4_20),
+    memberd_t(false, States, true).
+% Step 2: none false, the first absent element is named.
+definition_answer(_, Keys, States, indeterminate([Key]), []) :-
+    implements(eu_reg_2016_679_art_4_20),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, found(Key)).
+% Step 3: all present, none false, the first unsure judgement is referred.
+definition_answer(Profile, Keys, States, needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_4_20)), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2016_679_art_4_20),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, none),
+    first_state_key(Keys, States, unsure, found(Key)),
+    judgement_pairs(Profile, Pairs).
+% Step 4: all seven elements hold.
+definition_answer(_, Keys, States, binding_corporate_rules, [cite(eu_reg_2016_679_art_4_20)]) :-
+    implements(eu_reg_2016_679_art_4_20),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, none),
+    first_state_key(Keys, States, unsure, none).
+
+% ---- (B) binding_corporate_rules_content: Art 47(2) -------------------
+binding_corporate_rules_content(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, [Problem|Problems]).
+binding_corporate_rules_content(Profile, Result, Citations) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, []),
+    content_point_keys(Keys),
+    key_states(Profile, Keys, States),
+    content_answer(Keys, States, Result, Citations).
+
+% Step 1: a point present and false (in whole or in part not specified).
+content_answer(_, States, content_incomplete, [cite(eu_reg_2016_679_art_47_2)]) :-
+    implements(eu_reg_2016_679_art_47_2),
+    memberd_t(false, States, true).
+% Step 2: no point false, the first absent point is named.
+content_answer(Keys, States, indeterminate([Key]), []) :-
+    implements(eu_reg_2016_679_art_47_2),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, found(Key)).
+% Step 3: every point present, none false, the training judgement unsure.
+content_answer(Keys, States, needs_legal_review(open_textured(rules_specify_appropriate_data_protection_training, cite(eu_reg_2016_679_art_47_2_n)), [inputs_relied_on([rules_specify_appropriate_data_protection_training-unsure])]), []) :-
+    implements(eu_reg_2016_679_art_47_2_n),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, none),
+    first_state_key(Keys, States, unsure, found(rules_specify_appropriate_data_protection_training)).
+% Step 4: the rules specify all fourteen points.
+content_answer(Keys, States, content_complete, [cite(eu_reg_2016_679_art_47_2), cite(eu_reg_2016_679_art_47_2_a), cite(eu_reg_2016_679_art_47_2_b), cite(eu_reg_2016_679_art_47_2_c), cite(eu_reg_2016_679_art_47_2_d), cite(eu_reg_2016_679_art_47_2_e), cite(eu_reg_2016_679_art_47_2_f), cite(eu_reg_2016_679_art_47_2_g), cite(eu_reg_2016_679_art_47_2_h), cite(eu_reg_2016_679_art_47_2_i), cite(eu_reg_2016_679_art_47_2_j), cite(eu_reg_2016_679_art_47_2_k), cite(eu_reg_2016_679_art_47_2_l), cite(eu_reg_2016_679_art_47_2_m), cite(eu_reg_2016_679_art_47_2_n)]) :-
+    implements(eu_reg_2016_679_art_47_2),
+    memberd_t(false, States, false),
+    first_state_key(Keys, States, absent, none),
+    first_state_key(Keys, States, unsure, none).
+
+% ---- (C) binding_corporate_rules_content_checklist: Art 47(2)(a)-(n) ---
+binding_corporate_rules_content_checklist(Profile, input_problems([Problem|Problems])) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, [Problem|Problems]).
+binding_corporate_rules_content_checklist(Profile, Items) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, []),
+    findall(Key-Citation, content_point(Key, Citation), Points),
+    maplist(content_checklist_item(Profile), Points, Items).
+
+content_checklist_item(Profile, Key-Citation, checklist_item(Key, Citation, State)) :-
+    implements(eu_reg_2016_679_art_47_2),
+    key_state(Profile, Key, KeyState),
+    point_state(KeyState, State).
+
+point_state(true, met).
+point_state(false, unmet).
+point_state(absent, open_by_absence).
+point_state(unsure, open_by_judgement).
+
+% ---- facade: verdict, status projection, checklist --------------------
+% The verdict wraps binding_corporate_rules_definition/3 (kernel record).
+decide_gdpr_binding_corporate_rules(Profile, gdpr_binding_corporate_rules_verdict(Status, Citations)) :-
+    binding_corporate_rules_definition(Profile, Status, Citations).
+
+gdpr_binding_corporate_rules_status(Profile, Status) :-
+    decide_gdpr_binding_corporate_rules(Profile, gdpr_binding_corporate_rules_verdict(Status, _Citations)).
+
+% One row per element of Art 4(20), each with its cite(...) provenance.
+gdpr_binding_corporate_rules_checklist(Profile, [item(profile, input_problems([Problem|Problems]), cite(eu_reg_2016_679_art_4_20))]) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, [Problem|Problems]).
+gdpr_binding_corporate_rules_checklist(Profile, Items) :-
+    gdpr_binding_corporate_rules_input_problems(Profile, []),
+    findall(Key-Citation, definition_element(Key, Citation), Elements),
+    maplist(definition_checklist_item(Profile), Elements, Items).
+
+definition_checklist_item(Profile, Key-Citation, item(Key, Status, Citation)) :-
+    implements(eu_reg_2016_679_art_4_20),
+    key_state(Profile, Key, KeyState),
+    element_status(KeyState, Key, Status).
+
+element_status(true, _, met).
+element_status(false, Key, unmet(Key)).
+element_status(absent, Key, unknown([Key])).
+element_status(unsure, Key, unknown([Key])).
+
+gdpr_binding_corporate_rules_decision_resolvable(Profile) :-
+    decide_gdpr_binding_corporate_rules(Profile, _Verdict).
+
+% ---- test helpers (no statutory content) ------------------------------
+definition_profile_with(Key, Value, Profile) :-
+    findall(attribute(Element, ElementValue), (definition_element(Element, _), element_value(Element, Key, Value, ElementValue)), Profile).
+
+content_profile_with(Key, Value, Profile) :-
+    findall(attribute(Point, PointValue), (content_point(Point, _), element_value(Point, Key, Value, PointValue)), Profile).
+
+content_profile_without(Key, Profile) :-
+    findall(attribute(Point, true), (content_point(Point, _), dif(Point, Key)), Profile).
+
+element_value(Key, Key, Value, Value).
+element_value(Element, Key, _, true) :-
+    dif(Element, Key).
+
+% ---- tests -------------------------------------------------------------
+test(all_seven_elements_hold_once) :-
+    definition_profile_with(policies_are_personal_data_protection_policies, true, Profile),
+    findall(Result-Citations, binding_corporate_rules_definition(Profile, Result, Citations), Answers),
+    Answers == [binding_corporate_rules-[cite(eu_reg_2016_679_art_4_20)]].
+test(all_seven_elements_hold_is_not_not_binding, fail) :-
+    definition_profile_with(policies_are_personal_data_protection_policies, true, Profile),
+    binding_corporate_rules_definition(Profile, not_binding_corporate_rules, _).
+test(a_false_element_decides_before_absent_keys) :-
+    findall(Result, binding_corporate_rules_definition([attribute(adhering_party_is_controller_or_processor, false)], Result, _), Results),
+    Results == [not_binding_corporate_rules].
+test(an_empty_profile_names_the_first_element) :-
+    findall(Result-Citations, binding_corporate_rules_definition([], Result, Citations), Answers),
+    Answers == [indeterminate([policies_are_personal_data_protection_policies])-[]].
+test(an_absent_key_is_named_before_an_unsure_judgement) :-
+    binding_corporate_rules_definition([attribute(recipients_are_controllers_or_processors, unsure)], Result, []),
+    Result == indeterminate([policies_are_personal_data_protection_policies]).
+test(an_unsure_recipient_role_goes_to_a_lawyer) :-
+    definition_profile_with(recipients_are_controllers_or_processors, unsure, Profile),
+    findall(Result-Citations, binding_corporate_rules_definition(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(recipients_are_controllers_or_processors, cite(eu_reg_2016_679_art_4_20)), [inputs_relied_on([adhering_party_is_controller_or_processor-true, recipients_are_controllers_or_processors-unsure, transfers_within_group_of_undertakings_or_group_of_enterprises-true])])-[]].
+test(a_content_key_does_not_change_the_definition) :-
+    definition_profile_with(policies_are_personal_data_protection_policies, true, Profile),
+    binding_corporate_rules_definition([attribute(rules_specify_complaint_procedures, false)|Profile], binding_corporate_rules, _).
+test(all_fourteen_points_give_complete_content_once) :-
+    content_profile_with(rules_specify_data_transfers, true, Profile),
+    findall(Result-Citations, binding_corporate_rules_content(Profile, Result, Citations), Answers),
+    Answers = [content_complete-Citations],
+    length(Citations, 15).
+test(a_false_point_gives_incomplete_content) :-
+    content_profile_with(rules_specify_complaint_procedures, false, Profile),
+    findall(Result-Citations, binding_corporate_rules_content(Profile, Result, Citations), Answers),
+    Answers == [content_incomplete-[cite(eu_reg_2016_679_art_47_2)]].
+test(a_false_point_is_not_complete, fail) :-
+    content_profile_with(rules_specify_complaint_procedures, false, Profile),
+    binding_corporate_rules_content(Profile, content_complete, _).
+test(an_absent_point_is_named) :-
+    content_profile_without(rules_specify_legally_binding_nature, Profile),
+    binding_corporate_rules_content(Profile, indeterminate([rules_specify_legally_binding_nature]), []).
+test(unsure_training_goes_to_a_lawyer) :-
+    content_profile_with(rules_specify_appropriate_data_protection_training, unsure, Profile),
+    findall(Result, binding_corporate_rules_content(Profile, Result, []), Results),
+    Results == [needs_legal_review(open_textured(rules_specify_appropriate_data_protection_training, cite(eu_reg_2016_679_art_47_2_n)), [inputs_relied_on([rules_specify_appropriate_data_protection_training-unsure])])].
+test(the_checklist_lists_fourteen_points_when_empty) :-
+    findall(Items, binding_corporate_rules_content_checklist([], Items), [Items]),
+    length(Items, 14),
+    Items = [checklist_item(rules_specify_group_structure_and_contact_details, cite(eu_reg_2016_679_art_47_2_a), open_by_absence)|_].
+% (b) THE TEST WAS WRONG: its fixture repeated rules_specify_complaint_procedures, a duplicate_key input problem by the order; each state is now checked on a well-formed profile.
+test(the_checklist_shows_each_state) :-
+    content_profile_with(rules_specify_appropriate_data_protection_training, unsure, Profile),
+    binding_corporate_rules_content_checklist(Profile, Items),
+    member(checklist_item(rules_specify_appropriate_data_protection_training, cite(eu_reg_2016_679_art_47_2_n), open_by_judgement), Items),
+    content_profile_with(rules_specify_complaint_procedures, false, FalseProfile),
+    binding_corporate_rules_content_checklist(FalseProfile, FalseItems),
+    member(checklist_item(rules_specify_complaint_procedures, cite(eu_reg_2016_679_art_47_2_i), unmet), FalseItems).
+test(an_unknown_key_is_an_input_problem) :-
+    binding_corporate_rules_definition([attribute(unexpected_key, true)], input_problems([unknown_key(unexpected_key)]), []),
+    binding_corporate_rules_content([attribute(unexpected_key, true)], input_problems([unknown_key(unexpected_key)]), []),
+    binding_corporate_rules_content_checklist([attribute(unexpected_key, true)], input_problems([unknown_key(unexpected_key)])).
+test(an_input_problem_gets_no_final_answer, fail) :-
+    binding_corporate_rules_definition([attribute(unexpected_key, true)], binding_corporate_rules, _).
+test(the_facade_wraps_the_definition) :-
+    definition_profile_with(policies_adhered_to_by_adhering_party, false, Profile),
+    gdpr_binding_corporate_rules_status(Profile, not_binding_corporate_rules).
+
+:- end_module(gdpr_binding_corporate_rules).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_time_limits_time_limits, [time_limits_status_values/1, time_limits_conformity_values/1, time_limits_stage_values/1, time_limits_reduction_condition_values/1, minimum_time_limit_days/5, no_minimum_prescribed_for/3, stage_not_provided_for/3, decide_time_limits/2, time_limits_status/2, minimum_days/2, time_limits_conformity/2, observed_days_conformity/3, conformity_of_check_status/2, applicable_reduction_condition/2, candidate_time_limit/3, time_limits_checklist/2, time_limits_decision_resolvable/1, time_limits_input_problem/2, time_limits_input_acceptable/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

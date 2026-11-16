@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """units.py -- parse a pinned statute document into statutory UNITS, reading
 one of a small set of per-format PROFILEs.
 

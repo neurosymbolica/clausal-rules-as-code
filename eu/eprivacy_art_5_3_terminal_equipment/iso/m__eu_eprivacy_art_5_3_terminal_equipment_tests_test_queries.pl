@@ -1,0 +1,53 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_eprivacy_art_5_3_terminal_equipment_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_eprivacy_art_5_3_terminal_equipment_queries, [eprivacy_art_5_3_terminal_equipment_profile_keys/1, eprivacy_art_5_3_terminal_equipment_what_if/4]).
+:- use_module(m__eu_eprivacy_art_5_3_terminal_equipment_kernel, [eprivacy_art_5_3_terminal_equipment_input_problems/2]).
+:- use_module(m__eu_eprivacy_art_5_3_terminal_equipment_fixtures, [eprivacy_art_5_3_terminal_equipment_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    eprivacy_art_5_3_terminal_equipment_profile_keys(ProfileKeys),
+    ProfileKeys == [storage_or_access_in_terminal_equipment, storage_or_access_solely_for_transmission, service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service, user_consent_given, clear_and_comprehensive_information_provided].
+test(input_check_reexport_accepts_a_good_profile) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(informed_consent, Profile),
+    eprivacy_art_5_3_terminal_equipment_input_problems(Profile, Problems),
+    Problems == [].
+test(input_check_reexport_names_the_problems) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(duplicate_scope_key, Profile),
+    eprivacy_art_5_3_terminal_equipment_input_problems(Profile, Problems),
+    Problems == [duplicate_key(storage_or_access_in_terminal_equipment), unknown_key(zzz)].
+test(what_if_has_exactly_one_answer) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(all_ways_failed, Profile),
+    findall(Status, eprivacy_art_5_3_terminal_equipment_what_if(Profile, storage_or_access_solely_for_transmission, true, Status), Statuses),
+    Statuses == [permitted].
+test(what_if_information_given_permits_consent) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(consent_without_information, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, clear_and_comprehensive_information_provided, true, permitted).
+test(what_if_scope_unsure_refers_on_the_scope) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(transmission_only, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, storage_or_access_in_terminal_equipment, unsure, needs_legal_review(open_textured(storage_or_access_in_terminal_equipment, cite(eu_dir_2002_58_art_5_3_s1)), _Context)).
+test(what_if_replaces_every_occurrence_of_the_key) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(duplicate_scope_key, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, storage_or_access_in_terminal_equipment, false, input_problems([unknown_key(zzz)])).
+test(what_if_value_outside_the_type_is_an_input_problem) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(scope_only, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, user_consent_given, maybe, input_problems([wrong_type(user_consent_given)])).
+test(what_if_on_a_bad_list_keeps_the_input_problem) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(not_attribute_list, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, storage_or_access_in_terminal_equipment, true, input_problems([wrong_type(profile)])).
+
+test(what_if_information_given_is_not_still_forbidden, fail) :-
+    eprivacy_art_5_3_terminal_equipment_profile_for(consent_without_information, Profile),
+    eprivacy_art_5_3_terminal_equipment_what_if(Profile, clear_and_comprehensive_information_provided, true, not_permitted).
+
+cp_test_names([profile_keys_are_the_contract_keys, input_check_reexport_accepts_a_good_profile, input_check_reexport_names_the_problems, what_if_has_exactly_one_answer, what_if_information_given_permits_consent, what_if_scope_unsure_refers_on_the_scope, what_if_replaces_every_occurrence_of_the_key, what_if_value_outside_the_type_is_an_input_problem, what_if_on_a_bad_list_keeps_the_input_problem]).
+cp_test_fail_names([what_if_information_given_is_not_still_forbidden]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

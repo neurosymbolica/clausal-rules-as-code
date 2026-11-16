@@ -1,6 +1,7 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_dates.pl
 % Generated-companion for the `date_time` seam: 22 corpus domains
-% import predicates from
+% (`the ISO export pilot notes` §4, class C) import predicates from
 % `-import_from(date_time, [...])`, and `date_time` is a Clausal ENGINE
 % module (clausal/modules/py/datetime.py wrapping real Python
 % datetime.date), not a kit `.clausal` -- so there is nothing for the
@@ -236,7 +237,7 @@ date_between(Start, End, D) :-
 % the name from the import list WITHOUT a G1 finding.
 %
 % These two RAISE on a non-date, unlike the FAIL-on-bad-date predicates
-% above (the same rule as kit/date_guard's
+% above (ruling 2026-10-02, the same rule as kit/date_guard's
 % must_be_date/1): a guard that fails turns `\+ date_min(...)` into a silent
 % verdict. Standard order is chronological on date(Y, M, D) with integer
 % components, and only there -- hence the guard on BOTH operands BEFORE the

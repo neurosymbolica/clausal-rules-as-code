@@ -1,0 +1,142 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_consent_conditions
+shape_family: deontic
+kit_version: "0.1.0"
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_consent_conditions"
+  - "queries"
+  - "fixtures"
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_consent_conditions.clausal --
+  - "decide_gdpr_consent_conditions/2"
+  - "gdpr_consent_conditions_status/2"
+  - "gdpr_consent_conditions_checklist/2"
+  - "gdpr_consent_conditions_decision_resolvable/1"
+  - "gdpr_consent_conditions_status_values/1"
+  - "consent_conditions_status/4"
+  - "consent_declaration_effect/3"
+  - "consent_assessment_factors/2"
+  - "identification_obligation/4"
+  - "identification_information_duty/4"
+  - "identification_rights_effect/4"
+  - "not_applicable/0"
+  - "conditions_met/0"
+  - "conditions_not_met/0"
+  - "part_not_binding/0"
+  - "no_part_infringing/0"
+  - "not_obliged_to_acquire_identifying_information/0"
+  - "art11_1_not_engaged/0"
+  - "art11_2_not_engaged/0"
+  - "must_inform_data_subject/0"
+  - "need_not_inform_data_subject/0"
+  - "articles_15_to_20_apply/0"
+  - "articles_15_to_20_do_not_apply/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "factor/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- queries.clausal --
+  - "gdpr_consent_conditions_profile_keys/1"
+  - "gdpr_consent_conditions_input_problems/2"
+  - "gdpr_consent_conditions_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_consent_conditions_subject/1"
+  - "gdpr_consent_conditions_profile_for/2"
+  - "gdpr_consent_conditions_assess/2"
+
+independence: no_external_scorer
+
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 7(1) to (4) (conditions for consent on which processing is based: demonstrability, presentation of the request within a written declaration, information on and ease of withdrawal, freely-given assessment with the contract-conditionality factor) and Art 11(1) and (2) (processing which does not require identification: relief from acquiring identifying information, the duty to inform the data subject if possible, and the non-application of Arts 15 to 20 unless additional identifying information is provided). Decided: whether the stated conditions of Art 7 are met on the facts stated, the effect of an infringing part of a declaration, the reported assessment factor, and the Art 11 statuses. Open-textured limbs are outside facts stated by the caller as attested values and never decided here. Out of scope (sibling orders or a lawyer): whether a statement is a consent (Art 4(11)), whether processing rests on consent (Art 6(1)(a)), Arts 8 and 9, the content of Arts 15 to 20, and the first two sentences of Art 7(3)."
+
+sources:
+  - "Regulation (EU) 2016/679 (GDPR), consolidated English Formex text 02016R0679-20160504, Art 7(1) [parag_007.001], Art 7(2) [parag_007.002], Art 7(3) [parag_007.003], Art 7(4) [parag_007.004]"
+  - "Regulation (EU) 2016/679 (GDPR), Art 11(1) [parag_011.001], Art 11(2) [parag_011.002]"
+
+query_interface:
+  2: "consent_conditions_status/4"
+  13: "identification_obligation/4"
+  14: "identification_information_duty/4"
+  16: "gdpr_consent_conditions_what_if/4"
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_007
+  - 02016R0679-20160504#art_011
+  reason: 'The titles of Articles 7 and 11 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  partial: true
+  what: art_7_3_right_to_withdraw_and_its_effect
+  units:
+  - 02016R0679-20160504#parag_007.003
+  reason: The first two sentences of Art 7(3) (the data subject has the right to withdraw
+    consent at any time; withdrawal does not affect the lawfulness of processing based
+    on consent before the withdrawal) state a right and an effect on EARLIER processing.
+    The text gives no outcome for processing after the withdrawal, and a date comparison
+    needs a ruling on the day of the withdrawal (open question Q4). The third and
+    fourth sentences ARE formalised (the keys informed_of_withdrawal_right_before_consent
+    and withdrawal_as_easy_as_giving_consent).
+  consequence: The answers do not say whether processing on a given date was lawful
+    given a withdrawal; the caller checks Art 7(3) first two sentences.
+  declaration: answered_with_caveat
+
+excluded_set:
+- what: consent_definition
+  instrument: Regulation (EU) 2016/679 Art 4(11)
+  cites:
+  - 02016R0679-20160504#point_004_11
+  reason: Whether a statement is a consent (freely given, specific, informed and unambiguous)
+    is decided by the sibling order gdpr-common-definitions-data-and-processing; not
+    pinned here.
+  consequence: The caller establishes that there is a consent; the order decides only
+    the conditions of Art 7.
+- what: art_6_1_a_consent_basis
+  instrument: Regulation (EU) 2016/679 Art 6(1)(a)
+  cites:
+  - 02016R0679-20160504#point_006.001_a
+  reason: Whether processing rests on consent as a ground is decided by the sibling
+    order gdpr-art6-lawfulness; the crisp key processing_based_on_consent carries
+    the condition.
+  consequence: The caller states processing_based_on_consent.
+- what: children_and_special_categories
+  instrument: Regulation (EU) 2016/679 Arts 8 and 9(2)(a)
+  cites:
+  - 02016R0679-20160504#art_008
+  - 02016R0679-20160504#point_009.002_a
+  reason: The age of a child who may consent (Art 8) and explicit consent for special
+    categories (Art 9(2)(a)) are decided by sibling orders; Art 7 applies to them
+    as to any consent.
+  consequence: The caller runs the sibling orders for those questions.
+- what: data_subject_rights_articles_15_to_20
+  instrument: Regulation (EU) 2016/679 Arts 15 to 20
+  cites:
+  - 02016R0679-20160504#art_015
+  - 02016R0679-20160504#art_020
+  reason: Art 11(2) says Arts 15 to 20 do not apply in a case; what those rights require
+    is decided by the data-subject-rights sibling orders, not here.
+  consequence: identification_rights_effect reports only whether Arts 15 to 20 apply;
+    the caller runs the sibling orders for their content.

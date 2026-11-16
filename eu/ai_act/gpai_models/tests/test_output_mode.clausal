@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: results read out with the
+% result arguments unbound, every query yielding exactly one solution, with
+% exact citations; boundary pairs on each route; enumeration of the ten
+% obligations; the Annex lists in Annex order.
+% Run: python -m clausal.testing eu/ai_act/gpai_models/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/ai_act/gpai_models/gpai_models, [
+    systemic_risk_classification_status/4,
+    systemic_risk_notification_status/5,
+    provider_obligation_status/5,
+    documentation_elements/3
+]).
+:- use_module(eu/ai_act/gpai_models/fixtures, [
+    gpai_models_profile_for/2,
+    gpai_models_assess/2
+]).
+
+all_obligations([technical_documentation, information_for_downstream_providers, copyright_policy, training_content_summary, cooperation_with_authorities, authorised_representative, model_evaluation, systemic_risk_assessment_and_mitigation, serious_incident_reporting, cybersecurity_protection]).
+
+obligation_results(Profile, AssessmentDate, Results) :-
+    all_obligations(Obligations),
+    findall(Obligation-Result, (member(Obligation, Obligations), provider_obligation_status(Profile, Obligation, AssessmentDate, Result, _)), Results).
+
+pair_value(_-Value, Value).
+
+% ---- classification ---------------------------------------------------
+test(classification_above_threshold_exact_answer) :-
+    findall(Verdict, gpai_models_assess(classification_above_threshold, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(general_purpose_ai_model_with_systemic_risk, [cite(eu_reg_2024_1689_art_51_1), cite(eu_reg_2024_1689_art_51_1_a), cite(eu_reg_2024_1689_art_51_1_b), cite(eu_reg_2024_1689_art_51_2), cite(eu_reg_2024_1689_art_52_3), cite(eu_reg_2024_1689_art_52_4)])].
+test(classification_at_threshold_exact_answer) :-
+    findall(Verdict, gpai_models_assess(classification_at_threshold, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(general_purpose_ai_model_without_systemic_risk, [cite(eu_reg_2024_1689_art_51_1), cite(eu_reg_2024_1689_art_51_1_a), cite(eu_reg_2024_1689_art_51_1_b), cite(eu_reg_2024_1689_art_51_2), cite(eu_reg_2024_1689_art_52_2)])].
+test(classification_day_before_application_exact_answer) :-
+    findall(Verdict, gpai_models_assess(classification_day_before_application, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_b)])].
+test(classification_on_application_day_applies) :-
+    findall(Status, gpai_models_assess(classification_on_application_day, gpai_models_verdict(Status, _)), Statuses),
+    Statuses == [general_purpose_ai_model_with_systemic_risk].
+test(classification_research_model_exact_answer) :-
+    findall(Verdict, gpai_models_assess(classification_research_model, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(not_a_general_purpose_ai_model, [cite(eu_reg_2024_1689_art_3_63)])].
+test(classification_unsure_model_is_referred) :-
+    findall(Verdict, gpai_models_assess(classification_unsure_model, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(needs_legal_review(open_textured(general_purpose_ai_model, cite(eu_reg_2024_1689_art_3_63)), [inputs_relied_on([general_purpose_ai_model-unsure, high_impact_capabilities-false])]), [])].
+test(classification_unsure_high_impact_is_referred) :-
+    findall(Result-Citations, systemic_risk_classification_status([attribute(general_purpose_ai_model, true), attribute(used_for_research_development_or_prototyping_before_being_placed_on_the_market, false), attribute(cumulative_training_computation_in_floating_point_operations, 0), attribute(high_impact_capabilities, unsure), attribute(designated_by_a_commission_decision_as_a_model_with_systemic_risk, false), attribute(commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks, false)], date(2026, 1, 15), Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(high_impact_capabilities, cite(eu_reg_2024_1689_art_51_1_a)), [inputs_relied_on([general_purpose_ai_model-true, high_impact_capabilities-unsure])])-[]].
+test(classification_unsure_high_impact_above_threshold_settles) :-
+    findall(Result, systemic_risk_classification_status([attribute(general_purpose_ai_model, true), attribute(used_for_research_development_or_prototyping_before_being_placed_on_the_market, false), attribute(cumulative_training_computation_in_floating_point_operations, 10000000000000000000000001), attribute(high_impact_capabilities, unsure), attribute(designated_by_a_commission_decision_as_a_model_with_systemic_risk, false), attribute(commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks, false)], date(2026, 1, 15), Result, _), Results),
+    Results == [general_purpose_ai_model_with_systemic_risk].
+test(classification_missing_key_named_before_unsure_judgement) :-
+    findall(Result-Citations, systemic_risk_classification_status([attribute(general_purpose_ai_model, unsure), attribute(cumulative_training_computation_in_floating_point_operations, 0), attribute(high_impact_capabilities, false), attribute(designated_by_a_commission_decision_as_a_model_with_systemic_risk, false), attribute(commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks, false)], date(2026, 1, 15), Result, Citations), Answers),
+    Answers == [indeterminate([used_for_research_development_or_prototyping_before_being_placed_on_the_market])-[]].
+
+% ---- notification -----------------------------------------------------
+test(notification_boundary_pair_after_2_august_2025) :-
+    findall(Status, gpai_models_assess(notification_on_two_week_day, gpai_models_verdict(Status, _)), OnDay),
+    findall(Status, gpai_models_assess(notification_day_after_two_week_day, gpai_models_verdict(Status, _)), DayAfter),
+    OnDay == [notification_within_the_time_limit],
+    DayAfter == [notification_after_the_time_limit].
+test(notification_boundary_pair_for_an_early_trigger) :-
+    findall(Status, gpai_models_assess(notification_early_trigger_last_day, gpai_models_verdict(Status, _)), OnDay),
+    findall(Status, gpai_models_assess(notification_early_trigger_day_after, gpai_models_verdict(Status, _)), DayAfter),
+    OnDay == [notification_within_the_time_limit],
+    DayAfter == [notification_after_the_time_limit].
+test(notification_boundary_pair_for_a_model_already_on_the_market) :-
+    findall(Status, gpai_models_assess(notification_legacy_model_on_transition_end, gpai_models_verdict(Status, _)), OnDay),
+    findall(Status, gpai_models_assess(notification_legacy_model_day_after_transition_end, gpai_models_verdict(Status, _)), DayAfter),
+    OnDay == [notification_within_the_time_limit],
+    DayAfter == [notification_after_the_time_limit].
+test(notification_late_exact_citations) :-
+    findall(Verdict, gpai_models_assess(notification_day_after_two_week_day, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(notification_after_the_time_limit, [cite(eu_reg_2024_1689_art_52_1), cite(eu_reg_2024_1689_art_111_3), cite(eu_reg_2024_1689_art_113_b)])].
+test(notification_at_threshold_has_no_duty) :-
+    findall(Verdict, gpai_models_assess(notification_at_threshold, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(no_notification_duty, [cite(eu_reg_2024_1689_art_51_1_a), cite(eu_reg_2024_1689_art_51_2), cite(eu_reg_2024_1689_art_52_1)])].
+test(notification_judged_high_impact_is_due) :-
+    findall(Status, gpai_models_assess(notification_high_impact_judged, gpai_models_verdict(Status, _)), Statuses),
+    Statuses == [notification_within_the_time_limit].
+test(notification_does_not_read_the_research_key) :-
+    findall(Status, gpai_models_assess(notification_research_key_not_read, gpai_models_verdict(Status, _)), Statuses),
+    Statuses == [notification_within_the_time_limit].
+test(notification_not_a_model_exact_answer) :-
+    findall(Verdict, gpai_models_assess(notification_not_a_model, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(not_a_general_purpose_ai_model, [cite(eu_reg_2024_1689_art_3_63)])].
+test(notification_empty_profile_asks_for_the_model_key) :-
+    findall(Result-Citations, systemic_risk_notification_status([], date(2026, 3, 1), date(2026, 3, 10), Result, Citations), Answers),
+    Answers == [indeterminate([general_purpose_ai_model])-[]].
+
+% ---- obligations ------------------------------------------------------
+test(obligations_of_an_open_source_model_without_systemic_risk) :-
+    gpai_models_profile_for(obligation_open_source_technical_documentation, provider_obligation(Profile, _, AssessmentDate)),
+    obligation_results(Profile, AssessmentDate, Results),
+    Results == [technical_documentation-obligation_does_not_apply, information_for_downstream_providers-obligation_does_not_apply, copyright_policy-obligation_applies, training_content_summary-obligation_applies, cooperation_with_authorities-obligation_applies, authorised_representative-obligation_does_not_apply, model_evaluation-obligation_does_not_apply, systemic_risk_assessment_and_mitigation-obligation_does_not_apply, serious_incident_reporting-obligation_does_not_apply, cybersecurity_protection-obligation_does_not_apply].
+test(obligations_of_an_open_source_model_with_systemic_risk_all_apply) :-
+    gpai_models_profile_for(obligation_open_source_with_systemic_risk_technical_documentation, provider_obligation(Profile, _, AssessmentDate)),
+    obligation_results(Profile, AssessmentDate, Results),
+    length(Results, 10),
+    maplist(pair_value, Results, Statuses),
+    maplist(==(obligation_applies), Statuses).
+test(obligations_of_a_model_already_on_the_market_before_2_august_2027) :-
+    gpai_models_profile_for(obligation_legacy_day_before_transition_end, provider_obligation(Profile, _, AssessmentDate)),
+    obligation_results(Profile, AssessmentDate, Results),
+    Results == [technical_documentation-compliance_required_by_2_august_2027, information_for_downstream_providers-compliance_required_by_2_august_2027, copyright_policy-compliance_required_by_2_august_2027, training_content_summary-compliance_required_by_2_august_2027, cooperation_with_authorities-compliance_required_by_2_august_2027, authorised_representative-compliance_required_by_2_august_2027, model_evaluation-obligation_does_not_apply, systemic_risk_assessment_and_mitigation-obligation_does_not_apply, serious_incident_reporting-obligation_does_not_apply, cybersecurity_protection-obligation_does_not_apply].
+test(obligation_compliance_exact_citations) :-
+    findall(Verdict, gpai_models_assess(obligation_legacy_day_before_transition_end, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(compliance_required_by_2_august_2027, [cite(eu_reg_2024_1689_art_111_3), cite(eu_reg_2024_1689_art_53_1), cite(eu_reg_2024_1689_art_53_1_c)])].
+test(obligation_representative_not_applying_exact_citations) :-
+    findall(Verdict, gpai_models_assess(obligation_union_provider_representative, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(obligation_does_not_apply, [cite(eu_reg_2024_1689_art_54_1), cite(eu_reg_2024_1689_art_54_6)])].
+test(obligation_article_55_not_applying_exact_citations) :-
+    findall(Verdict, gpai_models_assess(obligation_cybersecurity_without_systemic_risk, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(obligation_does_not_apply, [cite(eu_reg_2024_1689_art_55_1), cite(eu_reg_2024_1689_art_55_1_d), cite(eu_reg_2024_1689_art_51_1)])].
+test(obligation_downstream_information_applying_exact_citations) :-
+    findall(Verdict, gpai_models_assess(obligation_parameters_not_public_downstream_information, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(obligation_applies, [cite(eu_reg_2024_1689_art_53_1), cite(eu_reg_2024_1689_art_53_1_b), cite(eu_reg_2024_1689_art_53_1_b_i), cite(eu_reg_2024_1689_art_53_1_b_ii)])].
+test(obligation_unsure_licence_is_referred) :-
+    findall(Verdict, gpai_models_assess(obligation_unsure_licence_technical_documentation, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(needs_legal_review(open_textured(released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution, cite(eu_reg_2024_1689_art_53_2)), [inputs_relied_on([general_purpose_ai_model-true, high_impact_capabilities-false, released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution-unsure])]), [])].
+test(obligation_missing_placed_key_is_named) :-
+    findall(Verdict, gpai_models_assess(obligation_missing_placed_key, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(indeterminate([placed_on_the_market_before_2_august_2025]), [])].
+test(obligation_missing_placed_key_does_not_matter_from_2_august_2027) :-
+    findall(Status, gpai_models_assess(obligation_missing_placed_key_after_transition, gpai_models_verdict(Status, _)), Statuses),
+    Statuses == [obligation_applies].
+
+% ---- documentation ----------------------------------------------------
+test(documentation_technical_exact_answer) :-
+    findall(Elements-Citations, documentation_elements(technical_documentation, Elements, Citations), Answers),
+    Answers == [[intended_tasks_and_type_and_nature_of_ai_systems_for_integration, acceptable_use_policies, date_of_release_and_methods_of_distribution, architecture_and_number_of_parameters, modality_and_format_of_inputs_and_outputs, licence, technical_means_required_for_integration, design_specifications_of_the_model_and_training_process, detailed_information_on_training_testing_and_validation_data, computational_resources_used_for_training, known_or_estimated_energy_consumption]-[cite(eu_reg_2024_1689_annex_xi), cite(eu_reg_2024_1689_annex_xi_section_1), cite(eu_reg_2024_1689_annex_xi_section_1_1), cite(eu_reg_2024_1689_annex_xi_section_1_1_a), cite(eu_reg_2024_1689_annex_xi_section_1_1_b), cite(eu_reg_2024_1689_annex_xi_section_1_1_c), cite(eu_reg_2024_1689_annex_xi_section_1_1_d), cite(eu_reg_2024_1689_annex_xi_section_1_1_e), cite(eu_reg_2024_1689_annex_xi_section_1_1_f), cite(eu_reg_2024_1689_annex_xi_section_1_2), cite(eu_reg_2024_1689_annex_xi_section_1_2_a), cite(eu_reg_2024_1689_annex_xi_section_1_2_b), cite(eu_reg_2024_1689_annex_xi_section_1_2_c), cite(eu_reg_2024_1689_annex_xi_section_1_2_d), cite(eu_reg_2024_1689_annex_xi_section_1_2_e)]].
+test(documentation_additional_exact_answer) :-
+    findall(Elements-Citations, documentation_elements(additional_technical_documentation_for_models_with_systemic_risk, Elements, Citations), Answers),
+    Answers == [[evaluation_strategies_and_results, adversarial_testing_and_model_adaptation_measures, system_architecture]-[cite(eu_reg_2024_1689_annex_xi), cite(eu_reg_2024_1689_annex_xi_section_2), cite(eu_reg_2024_1689_annex_xi_section_2_1), cite(eu_reg_2024_1689_annex_xi_section_2_2), cite(eu_reg_2024_1689_annex_xi_section_2_3)]].
+test(documentation_downstream_exact_answer) :-
+    findall(Elements-Citations, documentation_elements(information_for_downstream_providers, Elements, Citations), Answers),
+    Answers == [[intended_tasks_and_type_and_nature_of_ai_systems_for_integration, acceptable_use_policies, date_of_release_and_methods_of_distribution, interaction_with_hardware_or_software_outside_the_model, versions_of_relevant_software, architecture_and_number_of_parameters, modality_and_format_of_inputs_and_outputs, licence, technical_means_required_for_integration, modality_format_and_maximum_size_of_inputs_and_outputs, information_on_training_testing_and_validation_data]-[cite(eu_reg_2024_1689_annex_xii), cite(eu_reg_2024_1689_annex_xii_1), cite(eu_reg_2024_1689_annex_xii_1_a), cite(eu_reg_2024_1689_annex_xii_1_b), cite(eu_reg_2024_1689_annex_xii_1_c), cite(eu_reg_2024_1689_annex_xii_1_d), cite(eu_reg_2024_1689_annex_xii_1_e), cite(eu_reg_2024_1689_annex_xii_1_f), cite(eu_reg_2024_1689_annex_xii_1_g), cite(eu_reg_2024_1689_annex_xii_1_h), cite(eu_reg_2024_1689_annex_xii_2), cite(eu_reg_2024_1689_annex_xii_2_a), cite(eu_reg_2024_1689_annex_xii_2_b), cite(eu_reg_2024_1689_annex_xii_2_c)]].
+test(documentation_unknown_document_exact_answer) :-
+    findall(Verdict, gpai_models_assess(documentation_unknown, Verdict), Verdicts),
+    Verdicts == [gpai_models_verdict(input_problems([wrong_type(document)]), [])].
+
+:- end_module(test_output_mode).

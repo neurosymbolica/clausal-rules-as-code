@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % united_states — vendored so an exported domain's `-import_from(united_states, [usd, usd_cent])` resolves.
 %
 % EMPTY EXPORT LIST, ON PURPOSE, and following currency_vocab.pl, which the

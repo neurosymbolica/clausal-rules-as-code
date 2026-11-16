@@ -1,0 +1,92 @@
+% SPDX-License-Identifier: EUPL-1.2
+% PROPERTIES over the fixture subjects: totality, determinism, invariants.
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/queries, [
+    decide_data_subject_request/2,
+    request_basis/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_portability_and_objection/fixtures, [
+    gdpr_data_subject_rights_portability_and_objection_subject/1,
+    gdpr_data_subject_rights_portability_and_objection_profile_for/2
+]).
+
+subject_has_one_verdict(Subject) :-
+    gdpr_data_subject_rights_portability_and_objection_subject(Subject),
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    findall(Verdict, decide_data_subject_request(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+subject_has_one_basis(Subject) :-
+    gdpr_data_subject_rights_portability_and_objection_subject(Subject),
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    findall(Basis, request_basis(Profile, Basis), Bases),
+    length(Bases, 1).
+
+% a profile without input problems whose BASIS field differs from the verdict's basis
+basis_disagrees(Subject) :-
+    gdpr_data_subject_rights_portability_and_objection_subject(Subject),
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(Comply, VerdictBasis, _, _, _)),
+    Comply \= input_problems(_),
+    request_basis(Profile, Basis),
+    dif(VerdictBasis, Basis).
+
+final_without_citation(Subject) :-
+    gdpr_data_subject_rights_portability_and_objection_subject(Subject),
+    gdpr_data_subject_rights_portability_and_objection_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(must_comply, _, _, _, [])).
+
+test(totality_every_subject_has_exactly_one_verdict) :-
+    findall(Subject, gdpr_data_subject_rights_portability_and_objection_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_has_one_verdict(Subject), CountedSubjects),
+    sort(CountedSubjects, SubjectSet).
+
+test(determinism_every_subject_has_exactly_one_basis) :-
+    findall(Subject, gdpr_data_subject_rights_portability_and_objection_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_has_one_basis(Subject), CountedSubjects),
+    sort(CountedSubjects, SubjectSet).
+
+test(the_basis_field_agrees_with_the_verdict, fail) :-
+    basis_disagrees(_).
+
+test(a_must_comply_verdict_always_cites_its_right, fail) :-
+    final_without_citation(_).
+
+test(a_key_no_limb_reads_does_not_change_the_answer) :-
+    decide_data_subject_request([
+        attribute(request_type, portability),
+        attribute(personal_data_provided_by_data_subject, true),
+        attribute(processing_based_on_consent_or_contract, true),
+        attribute(processing_carried_out_by_automated_means, true),
+        attribute(consent_withdrawn, true),
+        attribute(personal_data_inaccurate, false)
+    ], Verdict),
+    Verdict == gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], [cite(eu_reg_2016_679_art_20_1)]).
+
+test(input_problems_come_before_every_other_step) :-
+    decide_data_subject_request([
+        attribute(request_type, portability),
+        attribute(personal_data_provided_by_data_subject, true),
+        attribute(processing_based_on_consent_or_contract, true),
+        attribute(processing_carried_out_by_automated_means, true),
+        attribute(no_such_key, true)
+    ], Verdict),
+    Verdict == gdpr_data_subject_request_verdict(input_problems([unknown_key(no_such_key)]), none, none, [], []).
+
+test(a_duplicate_key_is_an_input_problem) :-
+    decide_data_subject_request([
+        attribute(request_type, portability),
+        attribute(request_type, portability)
+    ], Verdict),
+    Verdict == gdpr_data_subject_request_verdict(input_problems([duplicate_key(request_type)]), none, none, [], []).
+
+test(a_crisp_key_given_unsure_is_a_wrong_type) :-
+    decide_data_subject_request([
+        attribute(request_type, portability),
+        attribute(processing_carried_out_by_automated_means, unsure)
+    ], Verdict),
+    Verdict == gdpr_data_subject_request_verdict(input_problems([wrong_type(processing_carried_out_by_automated_means)]), none, none, [], []).
+
+:- end_module(test_properties).

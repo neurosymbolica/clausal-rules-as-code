@@ -1,0 +1,100 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/state_aid/single_undertaking.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Commission Regulation (EU) 2023/2831, Art 2(2) lead-in, points (a)
+% to (d) and its closing sentence (CELEX 32023R2831, the original act as
+% published; raw sha256
+% 30093854d5d4d4b18887359983d09a9239aeaa2250a68fab09689af6260bbf35).
+%
+% Query-type coverage of this domain (manifest query_interface):
+%   #3  status_determination  single_undertaking_status/2 (the slice; the
+%                             facade verdict's Status, a settled atom or a
+%                             status compound itself)
+%   #7  justification         single_undertaking_checklist/2 (the slice; one
+%                             item per point of Art 2(2), each with cite(Key))
+%   #16 what-if               single_undertaking_what_if/4 (here): put one
+%                             attribute(Key, Value) in place of every entry
+%                             for Key, then re-decide.
+%   schema                    single_undertaking_profile_keys/1 (here)
+%   input check               single_undertaking_input_problems/2 (the kernel,
+%                             re-exported as the scaffold wrote it)
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a dict, so
+% the kit's dict-based override_key/4 does not apply: the what-if replaces the
+% key's entries itself and never creates a duplicate key. The what-if decides
+% nothing statutory (it is profile plumbing) and carries no provenance marker;
+% the decision it calls carries them.
+% =====================================================================
+
+:- module(queries, [
+    single_undertaking_profile_keys/1,
+    single_undertaking_input_problems/2,
+    single_undertaking_what_if/4
+]).
+
+:- use_module(eu/state_aid/single_undertaking/kernel, [single_undertaking_input_problems/2]).
+:- use_module(eu/state_aid/single_undertaking/single_undertaking, [single_undertaking_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+single_undertaking_profile_keys([holder_is_an_enterprise, held_is_an_enterprise, voting_rights_held, voting_rights_total, right_to_appoint_or_remove_majority_of_board, dominant_influence_by_contract_or_articles, holder_is_shareholder_or_member, controls_majority_of_voting_rights_alone_by_agreement, first_enterprise, second_enterprise, relationships, relationships_complete]).
+
+% #16 what-if: re-evaluate with one key hypothetically set to NewValue.
+single_undertaking_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    single_undertaking_status(Hypothesis, NewStatus).
+
+% overridden_profile(Profile, ProfileKey, Value, Overridden): every entry for
+% ProfileKey dropped and attribute(ProfileKey, Value) added at the end. A term
+% that is not a list (an unbound one, or an unbound tail) is passed on as it is,
+% so the input check still reports wrong_type(profile). Complementary clauses.
+overridden_profile(Profile, _, _, Profile) :-
+    var(Profile).
+overridden_profile(Profile, ProfileKey, Value, [attribute(ProfileKey, Value)]) :-
+    Profile == [].
+overridden_profile(Profile, ProfileKey, Value, Overridden) :-
+    nonvar(Profile),
+    Profile = [Element|Elements],
+    overridden_element(Element, ProfileKey, Value, Elements, Overridden).
+overridden_profile(Profile, _, _, Profile) :-
+    nonvar(Profile),
+    Profile \== [],
+    Profile \= [_|_].
+
+overridden_element(Element, ProfileKey, Value, Elements, [Element|Overridden]) :-
+    var(Element),
+    overridden_profile(Elements, ProfileKey, Value, Overridden).
+overridden_element(Element, ProfileKey, Value, Elements, Overridden) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == ProfileKey,
+    overridden_profile(Elements, ProfileKey, Value, Overridden).
+overridden_element(Element, ProfileKey, Value, Elements, [Element|Overridden]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== ProfileKey,
+    overridden_profile(Elements, ProfileKey, Value, Overridden).
+overridden_element(Element, ProfileKey, Value, Elements, [Element|Overridden]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    overridden_profile(Elements, ProfileKey, Value, Overridden).
+
+test(the_schema_has_twelve_keys) :-
+    single_undertaking_profile_keys(ProfileKeys),
+    length(ProfileKeys, 12).
+test(an_override_replaces_the_entry_without_a_duplicate) :-
+    overridden_profile([attribute(relationships_complete, false), attribute(first_enterprise, alpha)], relationships_complete, true, Overridden),
+    Overridden == [attribute(first_enterprise, alpha), attribute(relationships_complete, true)].
+test(completing_the_list_settles_the_answer) :-
+    single_undertaking_what_if([attribute(first_enterprise, alpha), attribute(second_enterprise, gamma), attribute(relationships, [relationship(alpha, beta, point_a, true)]), attribute(relationships_complete, false)], relationships_complete, true, NewStatus),
+    NewStatus == not_single_undertaking.
+test(an_incomplete_list_stays_indeterminate_without_the_override) :-
+    single_undertaking_what_if([attribute(first_enterprise, alpha), attribute(second_enterprise, gamma), attribute(relationships, [relationship(alpha, beta, point_a, true)])], relationships_complete, false, NewStatus),
+    NewStatus == indeterminate([relationships_complete]).
+test(the_what_if_has_one_answer) :-
+    findall(NewStatus, single_undertaking_what_if([attribute(first_enterprise, alpha)], second_enterprise, alpha, NewStatus), Answers),
+    Answers == [single_undertaking].
+
+:- end_module(queries).

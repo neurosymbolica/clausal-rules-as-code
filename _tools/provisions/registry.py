@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """registry.py -- read `units:` bindings out of a domain's provenance records.
 
 Two registries carry statutory provenance and both gain the SAME `units:` key:

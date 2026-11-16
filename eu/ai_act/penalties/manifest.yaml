@@ -1,0 +1,293 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/ai_act/penalties
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "penalties"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- keep in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- penalties.clausal --
+  - "maximum_fine/4"
+  - "general_purpose_ai_model_maximum_fine/4"
+  - "decide_penalties/2"
+  - "penalties_status/2"
+  - "penalties_checklist/2"
+  - "penalties_decision_resolvable/1"
+  - "penalties_status_values/1"
+  # -- queries.clausal --
+  - "penalties_profile_keys/1"
+  - "penalties_input_problems/2"
+  - "penalties_what_if/4"
+  - "no_union_maximum/0"
+  - "set_by_member_state_rules/0"
+  - "not_applicable_on_date/0"
+  - "earlier_version_applies/0"
+  - "no_commission_fine/0"
+  - "fixed_amount/0"
+  - "turnover_percentage/0"
+  - "fine_maximum/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "penalties_subject/1"
+  - "penalties_profile_for/2"
+  - "penalties_assess/2"
+
+# root_atoms: the root_exports the scorer reads as package-root attributes
+# (the six profile keys, the twenty-three enumeration atoms and the
+# judgement value unsure). Bare atoms are never in an export list; the
+# generated package facade serves them from here.
+root_atoms:
+  - "offender_category"
+  - "infringement"
+  - "offender_is_general_purpose_ai_model_provider"
+  - "general_purpose_ai_model_infringement"
+  - "provider_acted_intentionally_or_negligently"
+  - "worldwide_annual_turnover_eur"
+  - "micro_small_or_medium_sized_enterprise"
+  - "small_mid_cap_enterprise"
+  - "other_undertaking"
+  - "not_an_undertaking"
+  - "public_authority_or_body"
+  - "union_institution_body_office_or_agency"
+  - "prohibited_practice"
+  - "prohibited_practice_under_article_5_1_ba_bb_1a_or_1b"
+  - "provider_obligations_under_article_16"
+  - "authorised_representative_obligations_under_article_22"
+  - "importer_obligations_under_article_23"
+  - "distributor_obligations_under_article_24"
+  - "provider_and_operator_obligations_under_article_25_2_or_4"
+  - "deployer_obligations_under_article_26"
+  - "notified_body_requirements_and_obligations"
+  - "transparency_obligations_under_article_50"
+  - "incorrect_incomplete_or_misleading_information"
+  - "other_infringement"
+  - "infringed_relevant_provisions"
+  - "information_request_not_complied_with_or_incorrect_information"
+  - "measure_under_article_93_not_complied_with"
+  - "access_for_evaluation_under_article_92_not_given"
+  - "none_of_article_101_1"
+  - "unsure"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/deadline_lib), which are not backbone packages.
+uses: []
+
+scope: >-
+  The HIGHEST administrative fine Regulation (EU) 2024/1689 (Artificial
+  Intelligence Act), in its consolidated text valid from 27 July 2026 (as
+  amended by Regulation (EU) 2026/1744), allows for an infringement:
+  maximum_fine/4 gives the cap of Art 99(3) to (5) with the SME rule of
+  Art 99(6) and the SMC rule of Art 99(6a), the referral of public
+  authorities and bodies to Member State rules under Art 99(8), and the
+  caps of Art 100(2) and (3) for Union institutions, bodies, offices and
+  agencies; general_purpose_ai_model_maximum_fine/4 gives the cap of
+  Art 101(1) for providers of general-purpose AI models, handing the
+  Commission's finding of intent or negligence to a lawyer when the caller
+  is unsure. Both read the date of the infringement against Art 113
+  (points (a) and (b) and the general date). Out of scope: the fine for a
+  case (the factors of Art 99(7), Art 100(1) points (a) to (g) and the last
+  sentences of Art 101(1)), national penalties under Art 99(1), procedure
+  and reporting, the earlier text of the Regulation for an infringement
+  before 27 July 2026, whether an infringement occurred, and the
+  definitions of SME, SMC, undertaking and provider, which are the
+  caller's inputs.
+
+sources:
+  - "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024, consolidated version 02024R1689-20260727 (as amended by Regulation (EU) 2026/1744, valid from 27 July 2026; Formex CL2024R1689EN0010010.0001.xml, sha256 dfeac37ec03557cfe751427429c6314c11792f88bf654a381484e5c7239f7893), Art 99(3), (4) points (a) to (g) with (da), (5), (6), (6a) and (8)"
+  - "Regulation (EU) 2024/1689, same consolidated version, Art 100(1) first subparagraph, (2) and (3)"
+  - "Regulation (EU) 2024/1689, same consolidated version, Art 101(1) points (a) to (d)"
+  - "Regulation (EU) 2024/1689, same consolidated version, Art 113 first and second paragraphs and third paragraph points (a) and (b)"
+  - "Regulation (EU) 2026/1744 amending Regulation (EU) 2024/1689 (the start date of the pinned consolidated version, pin metadata only)"
+
+query_interface:
+  2: "penalties_status/2"      # eligibility/status verdict over both queries
+  7: "penalties_checklist/2"   # justification: cited checklist items
+  16: "penalties_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02024R1689-20260727#art_099
+  - 02024R1689-20260727#art_100
+  - 02024R1689-20260727#art_101
+  reason: 'The titles of Articles 99, 100 and 101 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: member_state_rules_on_penalties
+  units:
+  - 02024R1689-20260727#parag_099.001
+  - 02024R1689-20260727#parag_099.009
+  reason: Art 99(1) requires the Member States to lay down the rules on penalties
+    and other enforcement measures for any infringement, effective, proportionate
+    and dissuasive, taking account of the interests of SMEs and SMCs; Art 99(9) lets
+    the rules be applied by national courts or other bodies. The rules themselves
+    are national law; this order gives only the caps of Art 99(3) to (6a) and answers
+    no_union_maximum for an infringement outside them.
+  consequence: The answers never give a national penalty, a national cap for an infringement
+    outside Art 99(3) to (5), or the body that imposes the fine.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: notification_reporting_and_safeguards
+  units:
+  - 02024R1689-20260727#parag_099.002
+  - 02024R1689-20260727#parag_099.010
+  - 02024R1689-20260727#parag_099.011
+  - 02024R1689-20260727#parag_100.004
+  - 02024R1689-20260727#parag_100.005
+  - 02024R1689-20260727#parag_100.006
+  - 02024R1689-20260727#parag_100.007
+  - 02024R1689-20260727#parag_101.002
+  - 02024R1689-20260727#parag_101.003
+  - 02024R1689-20260727#parag_101.004
+  - 02024R1689-20260727#parag_101.005
+  - 02024R1689-20260727#parag_101.006
+  reason: Art 99(2) and (11) (the Member States notify the Commission of their rules
+    and report on fines yearly), Art 99(10) (procedural safeguards), Art 100(4) and
+    (5) (hearing and rights of defence), Art 100(6) (funds go to the Union budget;
+    the fine shall not affect the operation of the body fined), Art 100(7) (yearly
+    notice to the Commission), Art 101(2) to (6) (preliminary findings and hearing,
+    effective and dissuasive fines, information to the Board, review by the Court
+    of Justice, implementing acts) bind the authorities and govern the procedure;
+    none changes a cap.
+  consequence: 'None for the caps: the answers do not say whether a procedure was
+    followed.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: factors_for_deciding_on_a_fine
+  units:
+  - 02024R1689-20260727#parag_099.007
+  - 02024R1689-20260727#point_099.007_a
+  - 02024R1689-20260727#point_099.007_b
+  - 02024R1689-20260727#point_099.007_c
+  - 02024R1689-20260727#point_099.007_d
+  - 02024R1689-20260727#point_099.007_e
+  - 02024R1689-20260727#point_099.007_f
+  - 02024R1689-20260727#point_099.007_g
+  - 02024R1689-20260727#point_099.007_h
+  - 02024R1689-20260727#point_099.007_i
+  - 02024R1689-20260727#point_099.007_j
+  - 02024R1689-20260727#point_100.001_a
+  - 02024R1689-20260727#point_100.001_b
+  - 02024R1689-20260727#point_100.001_c
+  - 02024R1689-20260727#point_100.001_d
+  - 02024R1689-20260727#point_100.001_e
+  - 02024R1689-20260727#point_100.001_f
+  - 02024R1689-20260727#point_100.001_g
+  reason: Art 99(7) and Art 100(1) points (a) to (g) list the circumstances taken
+    into account when deciding whether to impose a fine and on its amount (gravity,
+    duration, cooperation, intent or negligence, size, budget and others). The Regulation
+    gives the factors and no weights, so this order does not compute a fine; it gives
+    only the cap.
+  consequence: The answers never say whether a fine should be imposed or what fine
+    is appropriate, only the highest fine the law allows.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: fixing_the_amount_of_a_commission_fine
+  units:
+  - 02024R1689-20260727#parag_101.001
+  partial: true
+  reason: The last sentences of Art 101(1) (in fixing the amount regard is had to
+    the nature, gravity and duration of the infringement, proportionality and appropriateness,
+    and commitments under Art 93(3) or codes of practice under Art 56) sit in the
+    same unit as the cap, which the order reads; the factors are not formalised.
+  consequence: general_purpose_ai_model_maximum_fine gives only the cap of Art 101(1),
+    never the amount the Commission should fix.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: application_dates_of_other_chapters
+  units:
+  - 02024R1689-20260727#point_113_c
+  - 02024R1689-20260727#point_113_c_i
+  - 02024R1689-20260727#point_113_c_ii
+  - 02024R1689-20260727#point_113_d
+  reason: Art 113 third paragraph point (c) (Chapter III Sections 1 to 3 from 2 December
+    2027 or 2 August 2028) and point (d) (Arts 102 to 110 from 27 July 2026) date
+    provisions outside this order; no limb reads them. Whether an obligation in the
+    list of Art 99(4) applied on DATE is part of whether there was an infringement,
+    which is the caller's input.
+  consequence: The answers do not check whether the infringed obligation itself applied
+    on DATE, except for the Art 5 prohibitions of Art 113 point (a).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: earlier_text_of_the_regulation
+  units: []
+  instrument: Regulation (EU) 2024/1689 as published in OJ L, 12.7.2024 (the text
+    in force before 27 July 2026)
+  reason: For an infringement before 27 July 2026 the text before Regulation (EU)
+    2026/1744 governs; it is not pinned, so the answer is earlier_version_applies.
+  consequence: The answers give no cap for an infringement dated before 27 July 2026.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: definitions_of_sme_smc_operator_and_provider
+  instrument: Regulation (EU) 2024/1689 Art 3 (points (3), (8), (14a), (14b), (63)),
+    Commission Recommendation 2003/361/EC and Commission Recommendation (EU) 2025/1099
+  cites:
+  - 02024R1689-20260727#art_003
+  reason: Whether the offender is an undertaking, a micro, small or medium-sized enterprise,
+    a small mid-cap enterprise, a public authority, a Union institution or a provider
+    of a general-purpose AI model is decided by the definitions and the recommendations
+    they refer to; this order takes the category as the caller's input.
+  consequence: The caller establishes the category first.
+- what: whether_an_infringement_occurred
+  instrument: Regulation (EU) 2024/1689 Arts 5, 16, 22 to 26, 31, 33, 34 and 50
+  cites:
+  - 02024R1689-20260727#art_005
+  - 02024R1689-20260727#art_016
+  - 02024R1689-20260727#art_026
+  - 02024R1689-20260727#art_050
+  reason: Whether a prohibition or an obligation was infringed is decided under the
+    article concerned (for Art 5, the order on prohibited practices); this order takes
+    the infringed provision as an input.
+  consequence: The caller establishes the infringement first.
+- what: commission_powers_over_general_purpose_ai_models
+  instrument: Regulation (EU) 2024/1689 Arts 51 to 56 and 91 to 93
+  cites:
+  - 02024R1689-20260727#art_053
+  - 02024R1689-20260727#art_091
+  - 02024R1689-20260727#art_092
+  - 02024R1689-20260727#art_093
+  reason: The duties of providers of general-purpose AI models and the Commission's
+    requests, evaluations and measures are not modelled; this order takes the act
+    of Art 101(1) as an input.
+  consequence: The caller establishes the act first.

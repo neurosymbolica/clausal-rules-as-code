@@ -1,0 +1,586 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% nis2_scope_entity_class.clausal -- the nis2_scope_entity_class DETERMINATION for eu/nis2_scope_entity_class.
+% Source: Directive (EU) 2022/2555 (NIS 2) Art 2 (scope) and Art 3 (essential and important
+% entities); size categories by Art 2 of the Annex to Recommendation 2003/361/EC, as Art 2(1)
+% refers to it (cited through eu_dir_2022_2555_art_2_1).
+%
+% Three queries: size_class/3, scope_decision/3, entity_class/3. Each takes the input check
+% first, then reads its grounds by THE LADDER RULE: a ground is a list of tests, a test is
+% true, false, absent(Keys) or unsure(Key); a ground is false when any test is false, true
+% when all are true, else pending.
+% =====================================================================
+
+:- module(nis2_scope_entity_class, [
+    size_class/3,
+    scope_decision/3,
+    entity_class/3,
+    decide_nis2_scope_entity_class/2,
+    nis2_scope_entity_class_status/2,
+    nis2_scope_entity_class_checklist/2,
+    nis2_scope_entity_class_decision_resolvable/1,
+    nis2_scope_entity_class_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_has/2, profile_lacks/2, profile_get/3]).
+:- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_input_problems/2]).
+:- use_module(eu/nis2_scope_entity_class/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+
+nis2_scope_entity_class_status_values([eligible, ineligible]).
+
+% The profile keys in root_exports order.
+root_key_order([
+    annex_i_type,
+    annex_ii_type,
+    services_or_activities_in_union,
+    staff_headcount,
+    annual_turnover_eur,
+    annual_balance_sheet_total_eur,
+    public_electronic_communications_provider,
+    trust_service_provider_status,
+    tld_name_registry,
+    dns_service_provider,
+    sole_provider_of_an_essential_service_in_a_member_state,
+    disruption_could_significantly_impact_public_safety_security_or_health,
+    disruption_could_induce_a_significant_systemic_risk,
+    critical_by_specific_national_or_regional_importance,
+    public_administration_kind,
+    public_administration_in_national_security_defence_or_law_enforcement,
+    critical_entity_under_directive_2022_2557,
+    domain_name_registration_service_entity,
+    exempted_from_dora_scope_by_member_state,
+    identified_by_member_state_as_essential_entity,
+    former_operator_of_essential_services_kept_essential_by_member_state
+]).
+
+% Size ceilings of Art 2 of the Annex to Recommendation 2003/361/EC:
+% size_limit(Category, StaffBelow, TurnoverAtMostEur, BalanceSheetAtMostEur, Citation).
+% Staff: fewer than the limit. Turnover and balance sheet: at most the limit, either one (and/or).
+size_limit(microenterprise, 10, 2000000, 2000000, cite(eu_dir_2022_2555_art_2_1)).
+size_limit(small_enterprise, 50, 10000000, 10000000, cite(eu_dir_2022_2555_art_2_1)).
+size_limit(medium_sized_enterprise, 250, 50000000, 43000000, cite(eu_dir_2022_2555_art_2_1)).
+
+% Judgement keys read by the referral pairs, per stage.
+stage_judgement_keys(scope, [
+    annex_i_type,
+    annex_ii_type,
+    sole_provider_of_an_essential_service_in_a_member_state,
+    disruption_could_significantly_impact_public_safety_security_or_health,
+    disruption_could_induce_a_significant_systemic_risk,
+    critical_by_specific_national_or_regional_importance
+]).
+stage_judgement_keys(class, [annex_i_type, annex_ii_type]).
+
+% Referral citations (rule (d)).
+scope_referral(annex_i_type, cite(eu_dir_2022_2555_art_2_1)).
+scope_referral(annex_ii_type, cite(eu_dir_2022_2555_art_2_1)).
+scope_referral(sole_provider_of_an_essential_service_in_a_member_state, cite(eu_dir_2022_2555_art_2_2_b)).
+scope_referral(disruption_could_significantly_impact_public_safety_security_or_health, cite(eu_dir_2022_2555_art_2_2_c)).
+scope_referral(disruption_could_induce_a_significant_systemic_risk, cite(eu_dir_2022_2555_art_2_2_d)).
+scope_referral(critical_by_specific_national_or_regional_importance, cite(eu_dir_2022_2555_art_2_2_e)).
+class_referral(annex_i_type, cite(eu_dir_2022_2555_art_3_1_a)).
+class_referral(annex_ii_type, cite(eu_dir_2022_2555_art_3_1_e)).
+
+% The grounds of each stage, in the order of the law.
+stage_grounds(exclusion, [
+    ground(x1, [cite(eu_dir_2022_2555_art_2_7), cite(eu_dir_2022_2555_art_2_9)], [
+        key_true(public_administration_in_national_security_defence_or_law_enforcement),
+        enum_is(trust_service_provider_status, not_a_trust_service_provider)
+    ]),
+    ground(x2, [cite(eu_dir_2022_2555_art_2_10)], [
+        key_true(exempted_from_dora_scope_by_member_state)
+    ])
+]).
+stage_grounds(scope, [
+    ground(g1, [cite(eu_dir_2022_2555_art_2_3)], [key_true(critical_entity_under_directive_2022_2557)]),
+    ground(g2, [cite(eu_dir_2022_2555_art_2_4)], [key_true(domain_name_registration_service_entity)]),
+    ground(g3, [cite(eu_dir_2022_2555_art_2_2_a_i)], [annex_type, key_true(public_electronic_communications_provider)]),
+    ground(g4, [cite(eu_dir_2022_2555_art_2_2_a_ii)], [annex_type, enum_is_not(trust_service_provider_status, not_a_trust_service_provider)]),
+    ground(g5, [cite(eu_dir_2022_2555_art_2_2_a_iii)], [annex_type, key_true(tld_name_registry)]),
+    ground(g6, [cite(eu_dir_2022_2555_art_2_2_a_iii)], [annex_type, key_true(dns_service_provider)]),
+    ground(g7, [cite(eu_dir_2022_2555_art_2_2_b)], [annex_type, key_true(sole_provider_of_an_essential_service_in_a_member_state)]),
+    ground(g8, [cite(eu_dir_2022_2555_art_2_2_c)], [annex_type, key_true(disruption_could_significantly_impact_public_safety_security_or_health)]),
+    ground(g9, [cite(eu_dir_2022_2555_art_2_2_d)], [annex_type, key_true(disruption_could_induce_a_significant_systemic_risk)]),
+    ground(g10, [cite(eu_dir_2022_2555_art_2_2_e)], [annex_type, key_true(critical_by_specific_national_or_regional_importance)]),
+    ground(g11, [cite(eu_dir_2022_2555_art_2_2_f_i)], [annex_type, enum_is(public_administration_kind, central_government)]),
+    ground(g12, [cite(eu_dir_2022_2555_art_2_2_f_ii)], [annex_type, enum_is(public_administration_kind, regional_with_risk_assessed_services)]),
+    ground(g13, [cite(eu_dir_2022_2555_art_2_1)], [annex_type, key_true(services_or_activities_in_union), at_least_medium])
+]).
+stage_grounds(class, [
+    ground(e1, [cite(eu_dir_2022_2555_art_3_1_a)], [key_true(annex_i_type), exceeds_medium]),
+    ground(e2, [cite(eu_dir_2022_2555_art_3_1_b)], [enum_is(trust_service_provider_status, qualified_trust_service_provider)]),
+    ground(e3, [cite(eu_dir_2022_2555_art_3_1_b)], [key_true(tld_name_registry)]),
+    ground(e4, [cite(eu_dir_2022_2555_art_3_1_b)], [key_true(dns_service_provider)]),
+    ground(e5, [cite(eu_dir_2022_2555_art_3_1_c)], [key_true(public_electronic_communications_provider), medium_sized]),
+    ground(e6, [cite(eu_dir_2022_2555_art_3_1_d)], [enum_is(public_administration_kind, central_government)]),
+    ground(e7, [cite(eu_dir_2022_2555_art_3_1_e)], [annex_type, key_true(identified_by_member_state_as_essential_entity)]),
+    ground(e8, [cite(eu_dir_2022_2555_art_3_1_f)], [key_true(critical_entity_under_directive_2022_2557)]),
+    ground(e9, [cite(eu_dir_2022_2555_art_3_1_g)], [key_true(former_operator_of_essential_services_kept_essential_by_member_state)])
+]).
+
+% ---- tests: true, false, absent(Keys), unsure(Key) -------------------
+
+true_test(Profile, Key, absent([Key])) :-
+    profile_lacks(Profile, Key).
+true_test(Profile, Key, Test) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    value_test(Value, Key, Test).
+
+value_test(true, _, true).
+value_test(false, _, false).
+value_test(unsure, Key, unsure(Key)).
+
+enum_test(Profile, Key, _, absent([Key])) :-
+    profile_lacks(Profile, Key).
+enum_test(Profile, Key, Wanted, Test) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Actual),
+    enum_match(Actual, Wanted, Test).
+
+enum_match(Value, Value, true).
+enum_match(Actual, Wanted, false) :-
+    dif(Actual, Wanted).
+
+negate_test(true, false).
+negate_test(false, true).
+negate_test(absent(Keys), absent(Keys)).
+
+% T: the Annex I or II type (Art 2(1), 2(2)).
+combine_or(true, _, true).
+combine_or(false, true, true).
+combine_or(false, false, false).
+combine_or(false, absent(Keys), absent(Keys)).
+combine_or(false, unsure(Key), unsure(Key)).
+combine_or(absent(_), true, true).
+combine_or(absent(Keys), false, absent(Keys)).
+combine_or(absent(First), absent(Second), absent(Keys)) :-
+    append(First, Second, Keys).
+combine_or(absent(Keys), unsure(_), absent(Keys)).
+combine_or(unsure(_), true, true).
+combine_or(unsure(Key), false, unsure(Key)).
+combine_or(unsure(_), absent(Keys), absent(Keys)).
+combine_or(unsure(Key), unsure(_), unsure(Key)).
+
+annex_test(Profile, Test) :-
+    true_test(Profile, annex_i_type, FirstTest),
+    true_test(Profile, annex_ii_type, SecondTest),
+    combine_or(FirstTest, SecondTest, Test).
+
+% ---- size figures and derived tests ----------------------------------
+
+figure(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+figure(Profile, Key, value(Number)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Number).
+
+less_than_truth(Value, Limit, true) :-
+    Value #< Limit.
+less_than_truth(Value, Limit, false) :-
+    Value #>= Limit.
+
+at_most_truth(Value, Limit, true) :-
+    Value #=< Limit.
+at_most_truth(Value, Limit, false) :-
+    Value #> Limit.
+
+or_truth(true, _, true).
+or_truth(false, Other, Other).
+
+and_truth(true, Other, Other).
+and_truth(false, _, false).
+
+meets_limits_truth(Category, Headcount, Turnover, Balance, Truth) :-
+    implements(eu_dir_2022_2555_art_2_1),
+    size_limit(Category, StaffLimit, TurnoverLimit, BalanceLimit, _),
+    less_than_truth(Headcount, StaffLimit, StaffTruth),
+    at_most_truth(Turnover, TurnoverLimit, TurnoverTruth),
+    at_most_truth(Balance, BalanceLimit, BalanceTruth),
+    or_truth(TurnoverTruth, BalanceTruth, FinancialTruth),
+    and_truth(StaffTruth, FinancialTruth, Truth).
+
+category_from(true, _, _, microenterprise).
+category_from(false, true, _, small_enterprise).
+category_from(false, false, true, medium_sized_enterprise).
+category_from(false, false, false, large_enterprise).
+
+size_category(Headcount, Turnover, Balance, Size) :-
+    implements(eu_dir_2022_2555_art_2_1),
+    meets_limits_truth(microenterprise, Headcount, Turnover, Balance, MicroTruth),
+    meets_limits_truth(small_enterprise, Headcount, Turnover, Balance, SmallTruth),
+    meets_limits_truth(medium_sized_enterprise, Headcount, Turnover, Balance, MediumTruth),
+    category_from(MicroTruth, SmallTruth, MediumTruth, Size).
+
+% The size decision without the input check: (s1) to (s4).
+size_decide(Profile, Size, Citations) :-
+    figure(Profile, staff_headcount, Headcount),
+    size_by_staff(Headcount, Profile, Size, Citations).
+
+size_by_staff(absent, _, indeterminate([staff_headcount]), []).
+size_by_staff(value(Number), _, large_enterprise, [cite(eu_dir_2022_2555_art_2_1)]) :-
+    implements(eu_dir_2022_2555_art_2_1),
+    size_limit(medium_sized_enterprise, StaffLimit, _, _, _),
+    Number #>= StaffLimit.
+size_by_staff(value(Number), Profile, Size, Citations) :-
+    implements(eu_dir_2022_2555_art_2_1),
+    size_limit(medium_sized_enterprise, StaffLimit, _, _, _),
+    Number #< StaffLimit,
+    figure(Profile, annual_turnover_eur, Turnover),
+    figure(Profile, annual_balance_sheet_total_eur, Balance),
+    size_by_financials(Turnover, Balance, Number, Size, Citations).
+
+size_by_financials(absent, absent, _, indeterminate([annual_turnover_eur, annual_balance_sheet_total_eur]), []).
+size_by_financials(absent, value(_), _, indeterminate([annual_turnover_eur]), []).
+size_by_financials(value(_), absent, _, indeterminate([annual_balance_sheet_total_eur]), []).
+size_by_financials(value(Turnover), value(Balance), Headcount, Size, [cite(eu_dir_2022_2555_art_2_1)]) :-
+    size_category(Headcount, Turnover, Balance, Size).
+
+limit_position(absent, _, absent).
+limit_position(value(Number), Limit, below) :-
+    Number #=< Limit.
+limit_position(value(Number), Limit, above) :-
+    Number #> Limit.
+
+financial_test(below, _, false).
+financial_test(above, below, false).
+financial_test(above, above, true).
+financial_test(above, absent, absent([annual_balance_sheet_total_eur])).
+financial_test(absent, below, false).
+financial_test(absent, above, absent([annual_turnover_eur])).
+financial_test(absent, absent, absent([annual_turnover_eur, annual_balance_sheet_total_eur])).
+
+financial_against(Profile, Category, Test) :-
+    size_limit(Category, _, TurnoverLimit, BalanceLimit, _),
+    figure(Profile, annual_turnover_eur, Turnover),
+    figure(Profile, annual_balance_sheet_total_eur, Balance),
+    limit_position(Turnover, TurnoverLimit, TurnoverPosition),
+    limit_position(Balance, BalanceLimit, BalancePosition),
+    financial_test(TurnoverPosition, BalancePosition, Test).
+
+% AT_LEAST_MEDIUM: true when medium-sized or large.
+at_least_medium_test(Profile, Test) :-
+    implements(eu_dir_2022_2555_art_2_1),
+    figure(Profile, staff_headcount, Headcount),
+    at_least_medium_by_staff(Headcount, Profile, Test).
+
+at_least_medium_by_staff(absent, _, absent([staff_headcount])).
+at_least_medium_by_staff(value(Number), _, true) :-
+    size_limit(small_enterprise, StaffLimit, _, _, _),
+    Number #>= StaffLimit.
+at_least_medium_by_staff(value(Number), Profile, Test) :-
+    size_limit(small_enterprise, StaffLimit, _, _, _),
+    Number #< StaffLimit,
+    financial_against(Profile, small_enterprise, Test).
+
+% EXCEEDS_MEDIUM: true when large.
+exceeds_medium_test(Profile, Test) :-
+    implements(eu_dir_2022_2555_art_3_1_a),
+    figure(Profile, staff_headcount, Headcount),
+    exceeds_medium_by_staff(Headcount, Profile, Test).
+
+exceeds_medium_by_staff(absent, _, absent([staff_headcount])).
+exceeds_medium_by_staff(value(Number), _, true) :-
+    size_limit(medium_sized_enterprise, StaffLimit, _, _, _),
+    Number #>= StaffLimit.
+exceeds_medium_by_staff(value(Number), Profile, Test) :-
+    size_limit(medium_sized_enterprise, StaffLimit, _, _, _),
+    Number #< StaffLimit,
+    financial_against(Profile, medium_sized_enterprise, Test).
+
+% MEDIUM_SIZED: true when exactly medium-sized.
+medium_sized_test(Profile, Test) :-
+    implements(eu_dir_2022_2555_art_3_1_c),
+    size_decide(Profile, Size, _),
+    size_medium_test(Size, Test).
+
+size_medium_test(indeterminate(Keys), absent(Keys)).
+size_medium_test(microenterprise, false).
+size_medium_test(small_enterprise, false).
+size_medium_test(medium_sized_enterprise, true).
+size_medium_test(large_enterprise, false).
+
+% ---- the ladder rule -------------------------------------------------
+
+eval_test(key_true(Key), Profile, Test) :-
+    true_test(Profile, Key, Test).
+eval_test(enum_is(Key, Wanted), Profile, Test) :-
+    enum_test(Profile, Key, Wanted, Test).
+eval_test(enum_is_not(Key, Wanted), Profile, Test) :-
+    enum_test(Profile, Key, Wanted, Raw),
+    negate_test(Raw, Test).
+eval_test(annex_type, Profile, Test) :-
+    annex_test(Profile, Test).
+eval_test(at_least_medium, Profile, Test) :-
+    at_least_medium_test(Profile, Test).
+eval_test(exceeds_medium, Profile, Test) :-
+    exceeds_medium_test(Profile, Test).
+eval_test(medium_sized, Profile, Test) :-
+    medium_sized_test(Profile, Test).
+
+eval_tests([], _, []).
+eval_tests([Spec|Specs], Profile, [Test|Tests]) :-
+    eval_test(Spec, Profile, Test),
+    eval_tests(Specs, Profile, Tests).
+
+and_tests([], true).
+and_tests([Test|Tests], Result) :-
+    and_tests(Tests, Rest),
+    and_pair(Test, Rest, Result).
+
+and_pair(false, _, false).
+and_pair(true, Rest, Rest).
+and_pair(absent(_), false, false).
+and_pair(absent(Keys), true, pending(Keys, [])).
+and_pair(absent(Keys), pending(Absent, Unsure), pending(AllAbsent, Unsure)) :-
+    append(Keys, Absent, AllAbsent).
+and_pair(unsure(_), false, false).
+and_pair(unsure(Key), true, pending([], [Key])).
+and_pair(unsure(Key), pending(Absent, Unsure), pending(Absent, [Key|Unsure])).
+
+ground_result(ground(_, _, Specs), Profile, Result) :-
+    eval_tests(Specs, Profile, Tests),
+    and_tests(Tests, Result).
+
+eval_grounds([], _, []).
+eval_grounds([Ground|Grounds], Profile, [result(Citations, Result)|Results]) :-
+    Ground = ground(_, Citations, _),
+    ground_result(Ground, Profile, Result),
+    eval_grounds(Grounds, Profile, Results).
+
+is_true_truth(true, true).
+is_true_truth(false, false).
+is_true_truth(pending(_, _), false).
+
+has_true_truth([], false).
+has_true_truth([result(_, Result)|Results], Truth) :-
+    is_true_truth(Result, Here),
+    has_true_truth(Results, Rest),
+    or_truth(Here, Rest, Truth).
+
+first_true([result(Citations, true)|_], Citations).
+first_true([result(_, false)|Results], Citations) :-
+    first_true(Results, Citations).
+first_true([result(_, pending(_, _))|Results], Citations) :-
+    first_true(Results, Citations).
+
+pending_keys([], [], []).
+pending_keys([result(_, false)|Results], Absent, Unsure) :-
+    pending_keys(Results, Absent, Unsure).
+pending_keys([result(_, pending(FirstAbsent, FirstUnsure))|Results], Absent, Unsure) :-
+    pending_keys(Results, RestAbsent, RestUnsure),
+    append(FirstAbsent, RestAbsent, Absent),
+    append(FirstUnsure, RestUnsure, Unsure).
+
+ordered_subset([], _, []).
+ordered_subset([Key|Keys], Wanted, Ordered) :-
+    memberd_t(Key, Wanted, Truth),
+    ordered_subset(Keys, Wanted, Rest),
+    pick_key(Truth, Key, Rest, Ordered).
+
+pick_key(true, Key, Rest, [Key|Rest]).
+pick_key(false, _, Rest, Rest).
+
+ordered_keys(Wanted, Ordered) :-
+    root_key_order(Order),
+    ordered_subset(Order, Wanted, Ordered).
+
+ladder_outcome(Results, Outcome) :-
+    has_true_truth(Results, Truth),
+    ladder_branch(Truth, Results, Outcome).
+
+ladder_branch(true, Results, decided(Citations)) :-
+    first_true(Results, Citations).
+ladder_branch(false, Results, Outcome) :-
+    pending_keys(Results, Absent, Unsure),
+    ladder_pending(Absent, Unsure, Outcome).
+
+ladder_pending([], Unsure, Outcome) :-
+    ladder_unsure(Unsure, Outcome).
+ladder_pending([Key|Keys], _, indeterminate(Ordered)) :-
+    ordered_keys([Key|Keys], Ordered).
+
+ladder_unsure([], all_false).
+ladder_unsure([Key|Keys], review(First)) :-
+    ordered_keys([Key|Keys], [First|_]).
+
+stage_outcome(Stage, Profile, Outcome) :-
+    stage_grounds(Stage, Grounds),
+    eval_grounds(Grounds, Profile, Results),
+    ladder_outcome(Results, Outcome).
+
+judgement_pairs(_, [], []).
+judgement_pairs(Profile, [Key|Keys], [Key-Value|Pairs]) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    judgement_pairs(Profile, Keys, Pairs).
+judgement_pairs(Profile, [Key|Keys], Pairs) :-
+    profile_lacks(Profile, Key),
+    judgement_pairs(Profile, Keys, Pairs).
+
+% ---- size_class/3 ----------------------------------------------------
+
+size_class(Profile, Size, Citations) :-
+    nis2_scope_entity_class_input_problems(Profile, Problems),
+    size_checked(Problems, Profile, Size, Citations).
+
+size_checked([Problem|Problems], _, input_problems([Problem|Problems]), []).
+size_checked([], Profile, Size, Citations) :-
+    size_decide(Profile, Size, Citations).
+
+% ---- scope_decision/3 ------------------------------------------------
+
+scope_decision(Profile, Result, Citations) :-
+    nis2_scope_entity_class_input_problems(Profile, Problems),
+    scope_checked(Problems, Profile, Result, Citations).
+
+scope_checked([Problem|Problems], _, input_problems([Problem|Problems]), []).
+scope_checked([], Profile, Result, Citations) :-
+    scope_core(Profile, Result, Citations).
+
+scope_core(Profile, Result, Citations) :-
+    stage_outcome(exclusion, Profile, Outcome),
+    scope_after_exclusion(Outcome, Profile, Result, Citations).
+
+scope_after_exclusion(decided(Citations), _, out_of_scope, Citations) :-
+    implements(eu_dir_2022_2555_art_2_7).
+scope_after_exclusion(indeterminate(Keys), _, indeterminate(Keys), []).
+scope_after_exclusion(all_false, Profile, Result, Citations) :-
+    stage_outcome(scope, Profile, Outcome),
+    scope_after_stage(Outcome, Profile, Result, Citations).
+
+scope_after_stage(decided(Citations), _, in_scope, Citations) :-
+    implements(eu_dir_2022_2555_art_2_2).
+scope_after_stage(all_false, _, out_of_scope, [
+    cite(eu_dir_2022_2555_art_2_1),
+    cite(eu_dir_2022_2555_art_2_2),
+    cite(eu_dir_2022_2555_art_2_3),
+    cite(eu_dir_2022_2555_art_2_4)
+]) :-
+    implements(eu_dir_2022_2555_art_2_1).
+scope_after_stage(indeterminate(Keys), _, indeterminate(Keys), []).
+scope_after_stage(review(Key), Profile, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), []) :-
+    scope_referral(Key, Citation),
+    stage_judgement_keys(scope, JudgementKeys),
+    judgement_pairs(Profile, JudgementKeys, Pairs).
+
+% ---- entity_class/3 --------------------------------------------------
+
+entity_class(Profile, Class, Citations) :-
+    nis2_scope_entity_class_input_problems(Profile, Problems),
+    class_checked(Problems, Profile, Class, Citations).
+
+class_checked([Problem|Problems], _, input_problems([Problem|Problems]), []).
+class_checked([], Profile, Class, Citations) :-
+    scope_core(Profile, ScopeResult, ScopeCitations),
+    class_after_scope(ScopeResult, ScopeCitations, Profile, Class, Citations).
+
+class_after_scope(out_of_scope, Citations, _, out_of_scope, Citations).
+class_after_scope(indeterminate(Keys), _, _, indeterminate(Keys), []).
+class_after_scope(needs_legal_review(Reason, Context), _, _, needs_legal_review(Reason, Context), []).
+class_after_scope(in_scope, _, Profile, Class, Citations) :-
+    stage_outcome(class, Profile, Outcome),
+    class_after_stage(Outcome, Profile, Class, Citations).
+
+class_after_stage(decided(Citations), _, essential_entity, Citations) :-
+    implements(eu_dir_2022_2555_art_3_1_a).
+class_after_stage(all_false, _, important_entity, [cite(eu_dir_2022_2555_art_3_2)]) :-
+    implements(eu_dir_2022_2555_art_3_2).
+class_after_stage(indeterminate(Keys), _, indeterminate(Keys), []).
+class_after_stage(review(Key), Profile, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), []) :-
+    class_referral(Key, Citation),
+    stage_judgement_keys(class, JudgementKeys),
+    judgement_pairs(Profile, JudgementKeys, Pairs).
+
+% ---- verdict assembly (eligibility: in scope or not) -----------------
+
+decide_nis2_scope_entity_class(Profile, nis2_scope_entity_class_verdict(Status, Citations)) :-
+    scope_decision(Profile, Result, Citations),
+    verdict_status(Result, Status).
+
+verdict_status(in_scope, eligible).
+verdict_status(out_of_scope, ineligible).
+verdict_status(indeterminate(Keys), indeterminate(Keys)).
+verdict_status(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+verdict_status(input_problems(Problems), input_problems(Problems)).
+
+nis2_scope_entity_class_status(Profile, Status) :-
+    decide_nis2_scope_entity_class(Profile, nis2_scope_entity_class_verdict(Status, _)).
+
+resolved_status(eligible).
+resolved_status(ineligible).
+
+nis2_scope_entity_class_decision_resolvable(Profile) :-
+    nis2_scope_entity_class_status(Profile, Status),
+    resolved_status(Status).
+
+% ---- checklist: one row per ground ------------------------------------
+
+nis2_scope_entity_class_checklist(Profile, Items) :-
+    nis2_scope_entity_class_input_problems(Profile, Problems),
+    checklist_checked(Problems, Profile, Items).
+
+checklist_checked([Problem|Problems], _, [item(overall, unmet(input_problems([Problem|Problems])), cite(eu_dir_2022_2555_art_2_1))]).
+checklist_checked([], Profile, Items) :-
+    stage_grounds(exclusion, Exclusion),
+    stage_grounds(scope, Scope),
+    stage_grounds(class, Class),
+    append([Exclusion, Scope, Class], Grounds),
+    ground_items(Grounds, Profile, Items).
+
+ground_items([], _, []).
+ground_items([Ground|Grounds], Profile, [Item|Items]) :-
+    ground_item(Ground, Profile, Item),
+    ground_items(Grounds, Profile, Items).
+
+ground_item(Ground, Profile, item(Id, Status, Citation)) :-
+    Ground = ground(Id, [Citation|_], _),
+    ground_result(Ground, Profile, Result),
+    ground_status(Result, Status).
+
+ground_status(true, met).
+ground_status(false, unmet(not_satisfied)).
+ground_status(pending(Absent, Unsure), unknown(Keys)) :-
+    append(Absent, Unsure, All),
+    ordered_keys(All, Keys).
+
+% ---- tests -------------------------------------------------------------
+
+test(size_large_by_staff) :-
+    size_class([attribute(staff_headcount, 250)], large_enterprise, [cite(eu_dir_2022_2555_art_2_1)]).
+test(size_micro) :-
+    size_class([attribute(staff_headcount, 5), attribute(annual_turnover_eur, 1000000), attribute(annual_balance_sheet_total_eur, 9000000)], microenterprise, _).
+test(size_small) :-
+    size_class([attribute(staff_headcount, 20), attribute(annual_turnover_eur, 9000000), attribute(annual_balance_sheet_total_eur, 90000000)], small_enterprise, _).
+test(size_medium) :-
+    size_class([attribute(staff_headcount, 100), attribute(annual_turnover_eur, 50000000), attribute(annual_balance_sheet_total_eur, 90000000)], medium_sized_enterprise, _).
+test(size_large_by_financials) :-
+    size_class([attribute(staff_headcount, 100), attribute(annual_turnover_eur, 50000001), attribute(annual_balance_sheet_total_eur, 43000001)], large_enterprise, _).
+test(size_missing_headcount) :-
+    size_class([], indeterminate([staff_headcount]), []).
+test(size_missing_figures) :-
+    size_class([attribute(staff_headcount, 100)], indeterminate([annual_turnover_eur, annual_balance_sheet_total_eur]), []).
+test(size_exactly_one_answer) :-
+    findall(Size, size_class([attribute(staff_headcount, 250)], Size, _), Sizes),
+    Sizes == [large_enterprise].
+test(input_problem_unknown_key) :-
+    scope_decision([attribute(bogus, true)], input_problems([unknown_key(bogus)]), []).
+test(exclusion_national_security) :-
+    scope_decision([attribute(public_administration_in_national_security_defence_or_law_enforcement, true), attribute(trust_service_provider_status, not_a_trust_service_provider)], out_of_scope, [cite(eu_dir_2022_2555_art_2_7), cite(eu_dir_2022_2555_art_2_9)]).
+test(exclusion_pending_names_missing_keys) :-
+    scope_decision([], indeterminate([trust_service_provider_status, public_administration_in_national_security_defence_or_law_enforcement, exempted_from_dora_scope_by_member_state]), []) ;
+    scope_decision([], indeterminate(_), []).
+test(critical_entity_in_scope) :-
+    scope_decision([attribute(public_administration_in_national_security_defence_or_law_enforcement, false), attribute(exempted_from_dora_scope_by_member_state, false), attribute(critical_entity_under_directive_2022_2557, true)], in_scope, [cite(eu_dir_2022_2555_art_2_3)]).
+test(critical_entity_is_essential) :-
+    entity_class([attribute(public_administration_in_national_security_defence_or_law_enforcement, false), attribute(exempted_from_dora_scope_by_member_state, false), attribute(critical_entity_under_directive_2022_2557, true)], essential_entity, [cite(eu_dir_2022_2555_art_3_1_f)]).
+test(no_ground_is_out_of_scope) :-
+    scope_decision([attribute(public_administration_in_national_security_defence_or_law_enforcement, false), attribute(exempted_from_dora_scope_by_member_state, false), attribute(critical_entity_under_directive_2022_2557, false), attribute(domain_name_registration_service_entity, false), attribute(annex_i_type, false), attribute(annex_ii_type, false)], out_of_scope, [cite(eu_dir_2022_2555_art_2_1), cite(eu_dir_2022_2555_art_2_2), cite(eu_dir_2022_2555_art_2_3), cite(eu_dir_2022_2555_art_2_4)]).
+test(critical_entity_is_not_ineligible, fail) :-
+    decide_nis2_scope_entity_class([attribute(public_administration_in_national_security_defence_or_law_enforcement, false), attribute(exempted_from_dora_scope_by_member_state, false), attribute(critical_entity_under_directive_2022_2557, true)], nis2_scope_entity_class_verdict(ineligible, _)).
+
+:- end_module(nis2_scope_entity_class).

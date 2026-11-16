@@ -1,0 +1,60 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_response_duties/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/gdpr_data_subject_rights_response_duties, [
+    gdpr_data_subject_rights_response_duties_status/2,
+    request_response_deadline/2,
+    response_duties/2,
+    recipient_notification/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/fixtures, [gdpr_data_subject_rights_response_duties_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, must_comply).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, need_not_comply).
+
+test(excessive_request_status_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_excessive, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, need_not_comply).
+
+test(missing_request_type_status_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(missing_request_type, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, indeterminate([request_type])).
+
+test(identity_suspension_status_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_identity_suspended, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, suspended(art12_6_identity_not_confirmed)).
+
+test(invalid_request_type_status_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(request_type_invalid, Profile),
+    gdpr_data_subject_rights_response_duties_status(Profile, input_problems([wrong_type(request_type)])).
+
+test(deadline_holds_with_the_date_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
+    request_response_deadline(Profile, date(2026, 11, 30)).
+
+test(the_sunday_is_not_the_deadline, fail) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
+    request_response_deadline(Profile, date(2026, 11, 29)).
+
+test(duties_hold_with_the_list_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
+    response_duties(Profile, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
+
+test(refusal_duties_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_unable_to_identify, Profile),
+    response_duties(Profile, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+
+test(recipient_duties_with_the_list_bound) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_effort_excused, Profile),
+    recipient_notification(Profile, [recipient_notification_excused(cite(eu_reg_2016_679_art_19))]).
+
+:- end_module(test_input_mode).

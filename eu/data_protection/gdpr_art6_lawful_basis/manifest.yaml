@@ -1,0 +1,312 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_art6_lawful_basis
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_art6_lawful_basis"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_art6_lawful_basis_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_art6_lawful_basis.clausal --
+  - "lawful_basis_status/4"
+  - "purpose_compatibility/4"
+  - "decide_gdpr_art6_lawful_basis/2"
+  - "gdpr_art6_lawful_basis_status/2"
+  - "gdpr_art6_lawful_basis_checklist/2"
+  - "gdpr_art6_lawful_basis_decision_resolvable/1"
+  - "gdpr_art6_lawful_basis_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_art6_lawful_basis_profile_keys/1"
+  - "gdpr_art6_lawful_basis_input_problems/2"
+  - "gdpr_art6_lawful_basis_what_if/4"
+  - "eligible/0"
+  - "ineligible/0"
+  - "purpose_compatible/0"
+  - "purpose_not_compatible/0"
+  - "compatibility_test_not_engaged/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "flagged/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_art6_lawful_basis_subject/1"
+  - "gdpr_art6_lawful_basis_profile_for/2"
+  - "gdpr_art6_lawful_basis_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. formalize_lib is the kit, not a backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no
+  date argument. ONE question: whether a processing, described by one profile,
+  has a lawful basis under Art 6(1) and which of points (a) to (f) holds
+  (lawful_basis_status/4), with Art 6(3) first sentence read as two attested
+  outside facts for points (c) and (e) and the last subparagraph of Art 6(1)
+  barring point (f) for public authorities in their tasks; and the Art 6(4)
+  compatibility test for processing for a new purpose (purpose_compatibility/4).
+  'Necessary', the balance of point (f) and compatibility are judgements the
+  caller states (true, false or unsure); unsure goes to a lawyer. Point (a) rests
+  on the host's attested statement of the consent package (Art 7 decided by the
+  order gdpr-consent-conditions). Out of scope: compliance with the Regulation as
+  a whole, Art 5(1)(a), Art 9 (special categories only flagged), Art 10, Arts 12
+  to 14; Art 6(2), the rest of Art 6(3), Art 6(4)(a) to (e), Art 4(11) and Art 8
+  are deferred.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504: Art 6(1) first words, points (a) to (f) and last subparagraph"
+  - "Regulation (EU) 2016/679, Art 6(3) first sentence and points (a) and (b) (read only as the outside facts legal_obligation_laid_down_by_law and public_interest_task_laid_down_by_law)"
+  - "Regulation (EU) 2016/679, Art 6(4) first words (compatibility of processing for another purpose)"
+  - "Regulation (EU) 2016/679, Art 9(1) (outside fact special_category, flagged only)"
+
+query_interface:
+  2: "lawful_basis_status/4"                  # eligibility: eligible / ineligible / not-final status
+  3: "purpose_compatibility/4"                # status determination: the Art 6(4) classification
+  7: "gdpr_art6_lawful_basis_checklist/2"     # justification: one cited item per way of Art 6(1)
+  16: "gdpr_art6_lawful_basis_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_006
+  - 02016R0679-20160504#art_007
+  - 02016R0679-20160504#art_008
+  - 02016R0679-20160504#art_009
+  reason: 'The titles of Articles 4, 6, 7, 8 and 9 (with the lead-in ''For the purposes
+    of this Regulation:'' of Art 4) carry no rule: document structure. Deferred so
+    every unit of the pinned extract is accounted for.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: art_4_other_definitions
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: 'Art 4 is pinned whole because the smallest document element that contains
+    Art 4(11) is the article. The other points define terms (personal data, processing,
+    controller, third party, ...) that no step reads: the profile states the facts
+    in those terms already.'
+  consequence: Whether the data are personal data, and who is the controller or a
+    third party, are not tested; the caller establishes them before relying on an
+    answer.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as definitions shared by the data-protection orders; the deferral
+    stands for this run.
+- what: art_4_11_consent_definition
+  units:
+  - 02016R0679-20160504#point_004_11
+  reason: The definition of consent (freely given, specific, informed and unambiguous
+    indication of the data subject's wishes) is carried by the attested statement
+    consent_given_and_conditions_met; this order does not test it (reading (3), Q8).
+  consequence: An eligible answer on point (a) rests on the host's statement that
+    there is a consent; the order does not check that it is one.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a definitions order; the deferral stands for this run.
+- what: art_6_2_member_state_specific_provisions
+  units:
+  - 02016R0679-20160504#parag_006.002
+  reason: 'Art 6(2) lets Member States maintain or introduce more specific provisions
+    for points (c) and (e): national law, not pinned.'
+  consequence: No answer reads a Member State's specific provisions.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: art_6_3_rest_of_paragraph
+  units:
+  - 02016R0679-20160504#parag_006.003
+  partial: true
+  debt: true
+  reason: Only the first sentence of Art 6(3) (the basis of points (c) and (e) shall
+    be laid down by Union law or by Member State law to which the controller is subject)
+    is read, as the outside facts legal_obligation_laid_down_by_law and public_interest_task_laid_down_by_law
+    (reading (5)). The other sentences (the purpose determined in the legal basis
+    or necessary for the task; the specific provisions the legal basis may contain;
+    the law meeting an objective of public interest and being proportionate to the
+    legitimate aim pursued) are not checked (Q2).
+  consequence: An eligible answer on point (c) or (e) does not say that the law meets
+    the other requirements of Art 6(3).
+  declaration: answered_with_caveat
+  open: formalisable as further outside facts; the deferral stands for this run.
+- what: art_6_3_a_b_which_law
+  units:
+  - 02016R0679-20160504#point_006.003_a
+  - 02016R0679-20160504#point_006.003_b
+  debt: true
+  reason: Art 6(3)(a) (Union law) and (b) (Member State law to which the controller
+    is subject) are the two laws the outside facts of reading (5) name together; the
+    order does not ask which of them lays the basis down.
+  consequence: No answer says whether the basis is laid down by Union law or by Member
+    State law.
+  declaration: answered_with_caveat
+  open: formalisable as a split of the two outside facts; the deferral stands for
+    this run.
+- what: art_6_4_factors
+  units:
+  - 02016R0679-20160504#point_006.004_a
+  - 02016R0679-20160504#point_006.004_b
+  - 02016R0679-20160504#point_006.004_c
+  - 02016R0679-20160504#point_006.004_d
+  - 02016R0679-20160504#point_006.004_e
+  debt: true
+  reason: The five factors of Art 6(4)(a) to (e) are what the caller takes into account
+    when it states the judgement compatible_purpose; they are not formalised and change
+    no answer (reading (10), Q14).
+  consequence: purpose_compatibility/4 does not check how the caller weighed the factors.
+  declaration: answered_with_caveat
+  open: formalisable as non-binding items reported beside the answer; the deferral
+    stands for this run.
+- what: art_7_conditions_for_consent
+  units:
+  - 02016R0679-20160504#parag_007.001
+  - 02016R0679-20160504#parag_007.002
+  - 02016R0679-20160504#parag_007.003
+  - 02016R0679-20160504#parag_007.004
+  reason: The conditions for consent of Art 7 are decided by the order gdpr-consent-conditions;
+    this order does not recompute them and reads only the host's attested statement
+    consent_given_and_conditions_met (reading (3)).
+  consequence: The caller runs the consent package and the host attests its answer.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-consent-conditions
+- what: art_8_child_consent_information_society_services
+  units:
+  - 02016R0679-20160504#parag_008.001
+  - 02016R0679-20160504#parag_008.002
+  - 02016R0679-20160504#parag_008.003
+  debt: true
+  reason: 'Art 8 sets the conditions of a child''s consent in relation to information
+    society services offered directly to a child (an age of 16, or a lower age not
+    below 13 set by Member State law; consent given or authorised by the holder of
+    parental responsibility; reasonable efforts to verify; no effect on contract law).
+    It is pinned only so that it can be deferred: the order does not decide the age
+    of a data subject and does not check Art 8 (Q9, Q10).'
+  consequence: An eligible answer on point (a) does not check Art 8; where the processing
+    concerns information society services offered directly to a child, the caller
+    checks Art 8 before relying on it.
+  declaration: answered_with_caveat
+  open: formalisable with the consent package; the deferral stands for this run.
+- what: art_9_special_categories
+  units:
+  - 02016R0679-20160504#parag_009.001
+  - 02016R0679-20160504#parag_009.002
+  - 02016R0679-20160504#point_009.002_a
+  - 02016R0679-20160504#point_009.002_b
+  - 02016R0679-20160504#point_009.002_c
+  - 02016R0679-20160504#point_009.002_d
+  - 02016R0679-20160504#point_009.002_e
+  - 02016R0679-20160504#point_009.002_f
+  - 02016R0679-20160504#point_009.002_g
+  - 02016R0679-20160504#point_009.002_h
+  - 02016R0679-20160504#point_009.002_i
+  - 02016R0679-20160504#point_009.002_j
+  - 02016R0679-20160504#parag_009.003
+  - 02016R0679-20160504#parag_009.004
+  debt: true
+  reason: 'Art 9 (the prohibition of processing of special categories of personal
+    data and its exceptions) is pinned only so that it can be deferred: the order
+    does not decide it; the outside fact special_category is only flagged on an eligible
+    answer (reading (8), Q11).'
+  consequence: An eligible answer does not say that the processing of special categories
+    is permitted; the caller checks Art 9 separately.
+  declaration: answered_with_caveat
+  open: formalisable in a special-categories order; the deferral stands for this run.
+
+excluded_set:
+- what: principle_of_lawfulness_fairness_transparency
+  instrument: Regulation (EU) 2016/679 Art 5(1)(a)
+  cites:
+  - 02016R0679-20160504#point_005.001_a
+  reason: The verdict is about Art 6 lawfulness only; the principle that personal
+    data shall be processed lawfully, fairly and in a transparent manner is not pinned
+    and not answered.
+  consequence: An eligible answer does not say that the processing is fair or transparent.
+- what: criminal_convictions_and_offences_data
+  instrument: Regulation (EU) 2016/679 Art 10
+  cites:
+  - 02016R0679-20160504#art_010
+  reason: Processing of personal data relating to criminal convictions and offences
+    is outside the verdict; not pinned.
+  consequence: An eligible answer does not say that Art 10 is met.
+- what: transparency_and_information_duties
+  instrument: Regulation (EU) 2016/679 Arts 12 to 14
+  cites:
+  - 02016R0679-20160504#art_012
+  - 02016R0679-20160504#art_013
+  - 02016R0679-20160504#art_014
+  reason: The transparency and information duties are outside the verdict; not pinned.
+  consequence: An eligible answer does not say that the data subject was informed.
+- what: restrictions_of_article_23_1
+  instrument: Regulation (EU) 2016/679 Art 23(1)
+  cites:
+  - 02016R0679-20160504#parag_023.001
+  reason: Art 6(4) names a Union or Member State law which constitutes a necessary
+    and proportionate measure to safeguard the objectives referred to in Art 23(1);
+    Art 23(1) is not pinned, and the crisp key new_purpose_processing carries the
+    condition.
+  consequence: The caller decides whether the processing is based on such a law when
+    it states new_purpose_processing.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Contract tests for render_provisions — the report a human actually reads.
 
 The properties under test are what makes the report REVIEWABLE, not how it

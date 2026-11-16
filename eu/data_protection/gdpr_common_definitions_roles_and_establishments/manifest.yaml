@@ -1,0 +1,175 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_common_definitions_roles_and_establishments
+shape_family: classification
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_common_definitions_roles_and_establishments"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export).
+public_interface:
+  # -- kernel.clausal / queries.clausal (input check) --
+  - "gdpr_common_definitions_roles_and_establishments_input_problems/2"
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_common_definitions_roles_and_establishments.clausal: the definition relations --
+  - "party_is_controller/2"
+  - "party_is_processor/2"
+  - "genetic_data/2"
+  - "biometric_data/2"
+  - "data_concerning_health/2"
+  - "main_establishment/2"
+  - "enterprise/2"
+  - "group_of_undertakings/2"
+  - "supervisory_authority_concerned/2"
+  - "cross_border_processing/2"
+  - "relevant_and_reasoned_objection/2"
+  - "roles_and_establishments_outside_facts/2"
+  # -- facade of the determination slice --
+  - "decide_gdpr_common_definitions_roles_and_establishments/2"
+  - "gdpr_common_definitions_roles_and_establishments_status/2"
+  - "gdpr_common_definitions_roles_and_establishments_checklist/2"
+  - "gdpr_common_definitions_roles_and_establishments_decision_resolvable/1"
+  - "gdpr_common_definitions_roles_and_establishments_status_values/1"
+  # -- result constructors --
+  - "definition_answer/3"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- queries.clausal --
+  - "gdpr_common_definitions_roles_and_establishments_profile_keys/1"
+  - "gdpr_common_definitions_roles_and_establishments_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_common_definitions_roles_and_establishments_subject/1"
+  - "gdpr_common_definitions_roles_and_establishments_profile_for/2"
+  - "gdpr_common_definitions_roles_and_establishments_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: no shared backbone package is imported.
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 4 definitions of the roles, the special data kinds, the establishments and the authority notions: points 4(7) controller, 4(8) processor, 4(13) genetic data, 4(14) biometric data, 4(15) data concerning health, 4(16) main establishment, 4(18) enterprise, 4(19) group of undertakings, 4(22) supervisory authority concerned, 4(23) cross-border processing and 4(24) relevant and reasoned objection. Personal data (4(1)) is carried as one judgement key. Decided here: whether each defined term is met on a profile of facts, so that every data-protection order reads it the same way. Out of scope: any obligation that applies, which supervisory authority leads, and points 4(17), 4(20), 4(21) (deferred) and the other Art 4 points (sibling order gdpr-common-definitions-data-and-processing)."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (GDPR), consolidated text 02016R0679-20160504, Art 4(1), (7), (8), (13)-(16), (18), (19), (22)-(24)"
+
+query_interface:
+  3: "gdpr_common_definitions_roles_and_establishments_status/2"      # status_determination: the headline status
+  7: "gdpr_common_definitions_roles_and_establishments_checklist/2"   # justification: checklist items carry cite(...) provenance
+  16: "gdpr_common_definitions_roles_and_establishments_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: art_4_17_representative
+  units:
+  - 02016R0679-20160504#point_004_17
+  reason: The operative content of 4(17) is a designation in writing pursuant to Article
+    27, which is not pinned here; without it a relation would only restate who the
+    caller says was designated. The sibling order gdpr-territorial-material-scope
+    pins Article 27 and reads 4(17).
+  consequence: The order does not say whether a person is a representative; the caller
+    checks the designation under Article 27, for example with gdpr-territorial-material-scope.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  open: formalisable once Article 27 is pinned here or a sibling relation may be called;
+    the deferral stands for this run (open question Q13).
+- what: art_4_20_binding_corporate_rules
+  units:
+  - 02016R0679-20160504#point_004_20
+  reason: Binding corporate rules serve the transfer rules of Chapter V, not pinned
+    here, and no relation of this order reads them. They are formalisable from crisp
+    facts (policies adhered to, the adhering party established on the territory of
+    a Member State, transfers to a third country) and group_of_undertakings or a group
+    of enterprises engaged in a joint economic activity, a term the pins do not define.
+  consequence: The order does not say whether policies are binding corporate rules;
+    the caller checks 4(20) itself, for example with gdpr-chapter-v-transfers.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run (open question Q13).
+- what: art_4_21_supervisory_authority
+  units:
+  - 02016R0679-20160504#point_004_21
+  reason: Whether a body is a supervisory authority turns on its establishment by
+    a Member State pursuant to Article 51 and on its independence, neither pinned
+    here; it is a fact about which bodies Member States set up, not a structure in
+    the text. 4(22) takes the authority asked about to be one (reading (8)).
+  consequence: The order does not say whether a body is a supervisory authority; the
+    caller establishes it.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+  open: formalisable as an outside fact; the deferral stands for this run (open question
+    Q13).
+- what: points_disposed_of_in_gdpr_common_definitions_data_and_processing
+  units:
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  reason: formalized in gdpr-common-definitions-data-and-processing, the other half
+    of the Art 4 definitions; one disposition per point across the two orders. Point
+    (1) is NOT listed here, because this order formalizes it as the one judgement
+    key data_are_personal_data
+  consequence: This order gives no answer for these points; the caller uses gdpr-common-definitions-data-and-processing.
+- what: article_heading_and_chapeau
+  units:
+  - 02016R0679-20160504#art_004
+  declaration: not_an_exception
+  not_formalized_because: structural
+  reason: the title and chapeau of Art 4 are document structure, not a rule
+  consequence: None; every point is disposed of in one of the two definition orders.
+- what: lettered_parts_decided_in_their_parent_points
+  units:
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  declaration: not_an_exception
+  not_formalized_because: structural
+  reason: the lettered parts of 4(16), 4(22) and 4(23) have no relation of their own;
+    each is decided inside the relation of its parent point (main_establishment, supervisory_authority_concerned,
+    cross_border_processing), whose unit is the one formalized, and is named by its
+    lettered citation key
+  consequence: None for an answer; the parent relation decides each lettered part
+    and cites it by its lettered key.
+
+excluded_set:
+- what: articles_referred_to_by_deferred_definitions
+  instrument: Regulation (EU) 2016/679 Arts 27 and 51
+  cites:
+  - 02016R0679-20160504#art_027
+  - 02016R0679-20160504#art_051
+  reason: Named by 4(17) and 4(21), which are deferred; not pinned here.
+  consequence: See the deferred rows for 4(17) and 4(21).

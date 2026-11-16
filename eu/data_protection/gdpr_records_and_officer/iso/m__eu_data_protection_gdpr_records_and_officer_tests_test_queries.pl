@@ -1,0 +1,80 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_records_and_officer_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_queries, [gdpr_records_and_officer_profile_keys/1, gdpr_records_and_officer_what_if/4, gdpr_records_and_officer_exemption_verdict/2, gdpr_records_and_officer_compliance_verdict/3, gdpr_records_and_officer_obligations/2]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_kernel, [gdpr_records_and_officer_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_records_and_officer_fixtures, [gdpr_records_and_officer_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_records_and_officer_profile_keys(ProfileKeys),
+    ProfileKeys == [acts_as_controller, acts_as_processor, controller_erasure_time_limits_possible, controller_record_has_article_49_safeguards_documentation, controller_record_has_categories_of_data_subjects_and_personal_data, controller_record_has_categories_of_recipients, controller_record_has_contact_details, controller_record_has_erasure_time_limits, controller_record_has_purposes, controller_record_has_security_measures_description, controller_record_has_transfer_details, controller_security_measures_description_possible, controller_transfers_rely_on_article_49_1_second_subparagraph, controller_transfers_to_third_countries, is_public_authority_or_body, monitoring_is_core_activity, monitoring_is_large_scale, officer_free_of_instructions_and_penalty, officer_involved_properly_and_in_time, officer_other_tasks_result_in_conflict_of_interests, officer_reports_to_highest_management_level, officer_supported_with_resources_and_access, officer_tasks_include_acting_as_contact_point, officer_tasks_include_advising_on_impact_assessment, officer_tasks_include_cooperating_with_supervisory_authority, officer_tasks_include_informing_and_advising, officer_tasks_include_monitoring_compliance, persons_employed, processing_includes_criminal_offence_data, processing_includes_special_categories, processing_is_by_court_in_judicial_capacity, processing_is_occasional, processing_likely_to_result_in_risk, processing_requires_regular_and_systematic_monitoring, processor_record_has_article_49_safeguards_documentation, processor_record_has_categories_of_processing, processor_record_has_contact_details, processor_record_has_security_measures_description, processor_record_has_transfer_details, processor_security_measures_description_possible, processor_transfers_rely_on_article_49_1_second_subparagraph, processor_transfers_to_third_countries, special_category_processing_is_core_activity, special_category_processing_is_large_scale, union_or_member_state_law_requires_data_protection_officer].
+test(profile_keys_number_forty_five) :-
+    gdpr_records_and_officer_profile_keys(ProfileKeys),
+    length(ProfileKeys, 45).
+test(the_reexported_input_check_answers) :-
+    gdpr_records_and_officer_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+test(what_if_lowering_the_headcount_exempts) :-
+    gdpr_records_and_officer_profile_for(controller_at_ceiling_250, Profile),
+    findall(Status, gdpr_records_and_officer_what_if(Profile, persons_employed, 249, Status), Statuses),
+    Statuses == [record_not_required].
+test(what_if_settling_the_judgement_resolves_the_referral) :-
+    gdpr_records_and_officer_profile_for(unsure_occasional_controller, Profile),
+    findall(Status, gdpr_records_and_officer_what_if(Profile, processing_is_occasional, false, Status), Statuses),
+    Statuses == [record_required].
+test(what_if_adding_the_absent_headcount_decides) :-
+    gdpr_records_and_officer_profile_for(headcount_absent_controller, Profile),
+    findall(Status, gdpr_records_and_officer_what_if(Profile, persons_employed, 40, Status), Statuses),
+    Statuses == [record_not_required].
+test(exemption_is_ineligible_for_both_records) :-
+    gdpr_records_and_officer_profile_for(both_roles_large_entity, Profile),
+    findall(Verdict, gdpr_records_and_officer_exemption_verdict(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_exemption(ineligible, [cite(eu_reg_2016_679_art_30_1), cite(eu_reg_2016_679_art_30_2)])].
+test(exemption_is_eligible_at_249) :-
+    gdpr_records_and_officer_profile_for(small_controller_exempt_at_249, Profile),
+    gdpr_records_and_officer_exemption_verdict(Profile, gdpr_records_and_officer_exemption(eligible, [cite(eu_reg_2016_679_art_30_5)])).
+test(exemption_passes_an_indeterminate_through) :-
+    gdpr_records_and_officer_profile_for(headcount_absent_controller, Profile),
+    findall(Verdict, gdpr_records_and_officer_exemption_verdict(Profile, Verdict), Verdicts),
+    Verdicts == [indeterminate([persons_employed])].
+test(operating_without_an_officer_is_prohibited_for_a_public_authority) :-
+    gdpr_records_and_officer_profile_for(public_authority_controller, Profile),
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_data_protection_officer, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(prohibited, [cite(eu_reg_2016_679_art_37_1_a)])].
+test(operating_without_an_officer_is_permitted_when_none_is_required) :-
+    gdpr_records_and_officer_profile_for(court_in_judicial_capacity_controller, Profile),
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_data_protection_officer, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(permitted, [cite(eu_reg_2016_679_art_37_4)])].
+test(operating_without_a_controller_record_is_permitted_when_exempt) :-
+    gdpr_records_and_officer_profile_for(small_controller_exempt_at_249, Profile),
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_controller_record, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(permitted, [cite(eu_reg_2016_679_art_30_5)])].
+test(operating_without_a_processor_record_is_prohibited_for_both_roles) :-
+    gdpr_records_and_officer_profile_for(both_roles_large_entity, Profile),
+    findall(Verdict, gdpr_records_and_officer_compliance_verdict(Profile, operate_without_processor_record, Verdict), Verdicts),
+    Verdicts == [gdpr_records_and_officer_compliance(prohibited, [cite(eu_reg_2016_679_art_30_2)])].
+test(compliance_passes_a_referral_through) :-
+    gdpr_records_and_officer_profile_for(neither_role_entity, Profile),
+    gdpr_records_and_officer_compliance_verdict(Profile, operate_without_controller_record, needs_legal_review(not_governed_here(_Citations), _Context)).
+test(obligations_surface_the_record_and_the_designation) :-
+    gdpr_records_and_officer_profile_for(public_authority_controller, Profile),
+    findall(Obligations, gdpr_records_and_officer_obligations(Profile, Obligations), Answers),
+    Answers == [gdpr_records_and_officer_obligations([keep_controller_record(cite(eu_reg_2016_679_art_30_1))], [designate_data_protection_officer(cite(eu_reg_2016_679_art_37_1_a))])].
+test(obligations_pass_input_problems_through) :-
+    gdpr_records_and_officer_profile_for(duplicate_headcount_malformed, Profile),
+    gdpr_records_and_officer_obligations(Profile, gdpr_records_and_officer_obligations(input_problems([duplicate_key(persons_employed)]), input_problems([duplicate_key(persons_employed)]))).
+
+test(compliance_has_no_verdict_for_an_unknown_action, fail) :-
+    gdpr_records_and_officer_profile_for(public_authority_controller, Profile),
+    gdpr_records_and_officer_compliance_verdict(Profile, delete_the_record, _Verdict).
+
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_number_forty_five, the_reexported_input_check_answers, what_if_lowering_the_headcount_exempts, what_if_settling_the_judgement_resolves_the_referral, what_if_adding_the_absent_headcount_decides, exemption_is_ineligible_for_both_records, exemption_is_eligible_at_249, exemption_passes_an_indeterminate_through, operating_without_an_officer_is_prohibited_for_a_public_authority, operating_without_an_officer_is_permitted_when_none_is_required, operating_without_a_controller_record_is_permitted_when_exempt, operating_without_a_processor_record_is_prohibited_for_both_roles, compliance_passes_a_referral_through, obligations_surface_the_record_and_the_designation, obligations_pass_input_problems_through]).
+cp_test_fail_names([compliance_has_no_verdict_for_an_unknown_action]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

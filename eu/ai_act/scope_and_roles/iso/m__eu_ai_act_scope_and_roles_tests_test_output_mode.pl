@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_scope_and_roles_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists, [msort/2]).
+:- use_module(m__eu_ai_act_scope_and_roles_scope_and_roles, [decide_scope_and_roles/2, regulation_scope_status/4, defined_role_status/5, value_chain_provider_status/4]).
+:- use_module(m__eu_ai_act_scope_and_roles_fixtures, [scope_and_roles_subject/1, scope_and_roles_profile_for/2, scope_and_roles_assess/2]).
+
+citation_group(none, []).
+citation_group(article_113_a, [cite(eu_reg_2024_1689_art_113_a)]).
+citation_group(provider_points, [cite(eu_reg_2024_1689_art_2_1_a), cite(eu_reg_2024_1689_art_2_1_c)]).
+citation_group(deployer_points, [cite(eu_reg_2024_1689_art_2_1_b), cite(eu_reg_2024_1689_art_2_1_c)]).
+citation_group(representative_points, [cite(eu_reg_2024_1689_art_2_1_f)]).
+citation_group(section_b, [cite(eu_reg_2024_1689_art_2_2), cite(eu_reg_2024_1689_art_2_1_a), cite(eu_reg_2024_1689_art_2_1_c)]).
+citation_group(out_of_scope, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_2_1), cite(eu_reg_2024_1689_art_2_3), cite(eu_reg_2024_1689_art_2_4), cite(eu_reg_2024_1689_art_2_6), cite(eu_reg_2024_1689_art_2_8), cite(eu_reg_2024_1689_art_2_10), cite(eu_reg_2024_1689_art_2_12)]).
+citation_group(provider_role, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_3)]).
+citation_group(distributor_role, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_7), cite(eu_reg_2024_1689_art_3_3), cite(eu_reg_2024_1689_art_3_6)]).
+citation_group(operator_role, [cite(eu_reg_2024_1689_art_3_1), cite(eu_reg_2024_1689_art_3_8), cite(eu_reg_2024_1689_art_3_3), cite(eu_reg_2024_1689_art_3_4), cite(eu_reg_2024_1689_art_3_5), cite(eu_reg_2024_1689_art_3_6), cite(eu_reg_2024_1689_art_3_7)]).
+citation_group(value_chain, [cite(eu_reg_2024_1689_art_25_1), cite(eu_reg_2024_1689_art_25_1_a), cite(eu_reg_2024_1689_art_25_1_b), cite(eu_reg_2024_1689_art_25_1_c), cite(eu_reg_2024_1689_art_25_3), cite(eu_reg_2024_1689_art_25_3_a), cite(eu_reg_2024_1689_art_25_3_b)]).
+citation_group(every_route, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]).
+citation_group(annex_i_route, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
+citation_group(paragraph_2, [cite(eu_reg_2024_1689_art_25_2)]).
+citation_group(cooperation, [cite(eu_reg_2024_1689_art_25_2), cite(eu_reg_2024_1689_art_25_2_a), cite(eu_reg_2024_1689_art_25_2_b), cite(eu_reg_2024_1689_art_25_2_c)]).
+citation_group(paragraph_4, [cite(eu_reg_2024_1689_art_25_4)]).
+
+referral_result(needs_legal_review(open_textured(ai_system, cite(eu_reg_2024_1689_art_3_1)), [inputs_relied_on([ai_system - unsure, exclusively_for_military_defence_or_national_security_purposes - false, adequate_safeguards_for_fundamental_rights_and_freedoms - false, specifically_developed_and_put_into_service_for_the_sole_purpose_of_scientific_research_and_development - false, use_in_a_personal_non_professional_activity - false, places_the_system_on_the_union_market - true, puts_the_system_into_service_in_the_union - false, output_used_in_the_union - true])])).
+
+expected_verdict(eu_provider_placing_on_market, regulation_applies, provider_points).
+expected_verdict(eu_provider_not_placing_on_market, out_of_scope, out_of_scope).
+expected_verdict(third_country_provider_output_in_union, regulation_applies, provider_points).
+expected_verdict(third_country_provider_output_outside_union, out_of_scope, out_of_scope).
+expected_verdict(professional_deployer_in_union, regulation_applies, deployer_points).
+expected_verdict(personal_use_deployer, out_of_scope, out_of_scope).
+expected_verdict(military_system_excluded, out_of_scope, out_of_scope).
+expected_verdict(open_source_not_high_risk_excluded, out_of_scope, out_of_scope).
+expected_verdict(open_source_high_risk_in_scope, regulation_applies, provider_points).
+expected_verdict(section_b_high_risk_listed_provisions, only_listed_provisions_apply, section_b).
+expected_verdict(authorised_representative_of_third_country_provider, regulation_applies, representative_points).
+expected_verdict(authorised_representative_of_union_provider, out_of_scope, out_of_scope).
+expected_verdict(pre_market_testing_excluded, out_of_scope, out_of_scope).
+expected_verdict(real_world_testing_in_scope, regulation_applies, provider_points).
+expected_verdict(third_country_authority_with_safeguards, out_of_scope, out_of_scope).
+expected_verdict(third_country_authority_without_safeguards, regulation_applies, provider_points).
+expected_verdict(date_before_application, not_applicable_on_date, article_113_a).
+expected_verdict(date_in_earlier_text_window, earlier_text_not_formalised, article_113_a).
+expected_verdict(date_last_day_of_earlier_text, earlier_text_not_formalised, article_113_a).
+expected_verdict(date_first_day_of_pinned_text, regulation_applies, provider_points).
+expected_verdict(missing_actor_role_indeterminate, indeterminate([actor_role]), none).
+expected_verdict(unsure_ai_system_referral, Referral, none) :-
+    referral_result(Referral).
+expected_verdict(malformed_judgement_input_problem, input_problems([wrong_type(ai_system)]), none).
+expected_verdict(provider_role_holds, role_holds, provider_role).
+expected_verdict(developer_without_placing_not_provider, role_does_not_hold, provider_role).
+expected_verdict(plain_distributor_role_holds, role_holds, distributor_role).
+expected_verdict(distributor_that_is_importer, role_does_not_hold, distributor_role).
+expected_verdict(product_manufacturer_is_operator, role_holds, operator_role).
+expected_verdict(no_role_is_not_operator, role_does_not_hold, operator_role).
+expected_verdict(rebranding_distributor_considered_provider, considered_provider, value_chain).
+expected_verdict(distributor_without_change_not_provider, not_considered_provider, value_chain).
+expected_verdict(annex_iii_before_article_25_applies, not_applicable_on_date, every_route).
+expected_verdict(annex_iii_on_article_25_day, considered_provider, value_chain).
+expected_verdict(annex_i_in_window_not_applicable, not_applicable_on_date, annex_i_route).
+expected_verdict(annex_i_on_application_day, considered_provider, value_chain).
+expected_verdict(initial_provider_clearly_specified, paragraph_2_not_applied, paragraph_2).
+expected_verdict(initial_provider_must_cooperate, no_longer_provider_must_cooperate, cooperation).
+expected_verdict(initial_provider_unaffected_case, initial_provider_unaffected, paragraph_2).
+expected_verdict(open_source_supplier_no_agreement, no_written_agreement_duty, paragraph_4).
+expected_verdict(general_purpose_model_supplier_agreement_required, written_agreement_required, paragraph_4).
+
+expected_subject(Subject) :-
+    expected_verdict(Subject, _Status, _Group).
+
+subject_matches(Subject) :-
+    expected_verdict(Subject, Status, Group),
+    citation_group(Group, Raw),
+    sort(Raw, Expected),
+    findall(Verdict, scope_and_roles_assess(Subject, Verdict), Verdicts),
+    Verdicts == [scope_and_roles_verdict(Status, Expected)].
+
+test(the_expected_table_covers_every_subject) :-
+    findall(Subject, scope_and_roles_subject(Subject), Subjects),
+    msort(Subjects, SortedSubjects),
+    findall(Subject, expected_subject(Subject), Expected),
+    msort(Expected, SortedExpected),
+    SortedSubjects == SortedExpected.
+test(every_subject_gets_exactly_its_expected_verdict) :-
+    findall(Subject, expected_subject(Subject), Subjects),
+    maplist(subject_matches, Subjects).
+test(the_facade_verdict_carries_the_citations) :-
+    scope_and_roles_profile_for(eu_provider_placing_on_market, Profile),
+    findall(Verdict, decide_scope_and_roles(case(Profile, date(2026, 8, 1)), Verdict), Verdicts),
+    Verdicts == [scope_and_roles_verdict(regulation_applies, [cite(eu_reg_2024_1689_art_2_1_a), cite(eu_reg_2024_1689_art_2_1_c)])].
+test(out_of_scope_citations_are_the_same_for_every_ground) :-
+    scope_and_roles_profile_for(military_system_excluded, MilitaryProfile),
+    scope_and_roles_profile_for(personal_use_deployer, DeployerProfile),
+    regulation_scope_status(MilitaryProfile, date(2026, 8, 1), out_of_scope, MilitaryCitations),
+    regulation_scope_status(DeployerProfile, date(2026, 8, 1), out_of_scope, DeployerCitations),
+    MilitaryCitations == DeployerCitations.
+test(every_defined_role_answers_once) :-
+    scope_and_roles_profile_for(product_manufacturer_is_operator, Profile),
+    findall(Role - Result, (member(Role, [provider, deployer, authorised_representative, importer, distributor, operator]), defined_role_status(Profile, Role, date(2026, 8, 1), Result, _)), Answers),
+    Answers == [provider - role_does_not_hold, deployer - role_does_not_hold, authorised_representative - role_does_not_hold, importer - role_does_not_hold, distributor - role_does_not_hold, operator - role_holds].
+test(the_annex_i_safety_component_waits_until_august_2028) :-
+    scope_and_roles_profile_for(rebranding_distributor_considered_provider, Base),
+    Profile = [attribute(product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component, true)|Rest],
+    exclude_safety_key(Base, Rest),
+    findall(Result - Citations, value_chain_provider_status(Profile, date(2028, 1, 1), Result, Citations), Answers),
+    Answers == [not_applicable_on_date - [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+exclude_safety_key([], []).
+exclude_safety_key([attribute(Key, Value)|Rest], Out) :-
+    Key == product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component,
+    exclude_safety_key(Rest, Out),
+    atom(Value).
+exclude_safety_key([attribute(Key, Value)|Rest], [attribute(Key, Value)|Out]) :-
+    Key \== product_manufacturer_of_a_product_under_section_a_of_annex_i_with_the_system_as_safety_component,
+    exclude_safety_key(Rest, Out).
+
+cp_test_names([the_expected_table_covers_every_subject, every_subject_gets_exactly_its_expected_verdict, the_facade_verdict_carries_the_citations, out_of_scope_citations_are_the_same_for_every_ground, every_defined_role_answers_once, the_annex_i_safety_component_waits_until_august_2028]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

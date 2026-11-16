@@ -1,0 +1,79 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_information_sharing_voluntary_notification.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive), Art 29(1), (2), (4) and
+% Art 30(1), the original OJ text, OJ L 333, 27.12.2022 (CELEX 32022L2555).
+%
+% Declared query types of this order:
+%   #2 eligibility   -- decide_nis2_information_sharing_voluntary_notification/2 and
+%                       nis2_information_sharing_voluntary_notification_status/2 (slice):
+%                       eligible | ineligible | eligibility_undetermined, from Art 30(1)
+%   #7 justification -- nis2_information_sharing_voluntary_notification_checklist/2 (slice),
+%                       every item carries cite(...)
+% The three called queries of the order (voluntary_notification_possible/3,
+% information_exchange_permitted/3, arrangement_notification_duty/3) live in the
+% slice and are re-exported by the package facade.
+% This layer adds:
+%   nis2_information_sharing_voluntary_notification_what_if/4 (#16 what-if): override one
+%       key of the attribute-list profile, then re-evaluate the facade status
+%   nis2_information_sharing_voluntary_notification_profile_keys/1: the profile key schema
+%   nis2_information_sharing_voluntary_notification_input_problems/2: THE INPUT CHECK,
+%       re-exported from the kernel as the scaffold wrote it ([] = none)
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a dict, so
+% the kit's dict override_key/4 does not apply; the override is written over the
+% list: every attribute(Key, _) is dropped and attribute(Key, NewValue) is added
+% once. It decides nothing statutory (profile plumbing), so it carries no
+% provenance marker. The open-textured judgements stay with the user: a what-if
+% sets a judgement only to the value the caller names.
+% =====================================================================
+
+:- module(queries, [
+    nis2_information_sharing_voluntary_notification_profile_keys/1,
+    nis2_information_sharing_voluntary_notification_input_problems/2,
+    nis2_information_sharing_voluntary_notification_what_if/4
+]).
+
+:- use_module(library(reif), [if_/3]).
+:- use_module(eu/nis2_information_sharing_voluntary_notification/kernel, [nis2_information_sharing_voluntary_notification_input_problems/2]).
+:- use_module(eu/nis2_information_sharing_voluntary_notification/nis2_information_sharing_voluntary_notification, [nis2_information_sharing_voluntary_notification_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+nis2_information_sharing_voluntary_notification_profile_keys([entity_class, event_kind, arrangement_event, information_is_relevant_cybersecurity_information, sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, sharing_enhances_the_level_of_cybersecurity, arrangement_is_a_cybersecurity_information_sharing_arrangement]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+nis2_information_sharing_voluntary_notification_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_list_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    nis2_information_sharing_voluntary_notification_status(Hypothesis, NewStatus).
+
+% attribute_list_override(Elements, Key, Value, Overridden): Elements without any
+% attribute(Key, _), followed by attribute(Key, Value). One answer per list.
+attribute_list_override([], Key, Value, [attribute(Key, Value)]).
+attribute_list_override([attribute(ElementKey, ElementValue)|Elements], Key, Value, Overridden) :-
+    if_(ElementKey = Key,
+        Overridden = Rest,
+        Overridden = [attribute(ElementKey, ElementValue)|Rest]),
+    attribute_list_override(Elements, Key, Value, Rest).
+
+test(the_key_schema_has_the_seven_contract_keys) :-
+    nis2_information_sharing_voluntary_notification_profile_keys(ProfileKeys),
+    length(ProfileKeys, 7).
+test(an_override_replaces_the_key_once) :-
+    findall(Overridden, attribute_list_override([attribute(entity_class, out_of_scope), attribute(event_kind, incident)], entity_class, essential_entity, Overridden), Answers),
+    Answers == [[attribute(event_kind, incident), attribute(entity_class, essential_entity)]].
+test(an_override_drops_every_repeat_of_the_key) :-
+    findall(Overridden, attribute_list_override([attribute(entity_class, out_of_scope), attribute(entity_class, important_entity)], entity_class, essential_entity, Overridden), Answers),
+    Answers == [[attribute(entity_class, essential_entity)]].
+test(what_if_an_other_entity_were_essential) :-
+    nis2_information_sharing_voluntary_notification_what_if([attribute(entity_class, out_of_scope), attribute(event_kind, incident)], entity_class, essential_entity, eligible).
+test(what_if_the_incident_were_significant) :-
+    nis2_information_sharing_voluntary_notification_what_if([attribute(entity_class, out_of_scope), attribute(event_kind, incident)], event_kind, significant_incident, eligible).
+test(what_if_an_essential_entity_were_other_is_not_eligible, fail) :-
+    nis2_information_sharing_voluntary_notification_what_if([attribute(entity_class, essential_entity), attribute(event_kind, incident)], entity_class, out_of_scope, eligible).
+test(what_if_an_essential_entity_were_other_is_ineligible) :-
+    nis2_information_sharing_voluntary_notification_what_if([attribute(entity_class, essential_entity), attribute(event_kind, incident)], entity_class, out_of_scope, ineligible).
+
+:- end_module(queries).

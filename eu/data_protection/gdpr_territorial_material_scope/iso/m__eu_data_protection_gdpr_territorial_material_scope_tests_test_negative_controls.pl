@@ -1,0 +1,152 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_territorial_material_scope_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_gdpr_applies, [gdpr_applies/2, gdpr_applies_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_gdpr_scope_ground, [gdpr_scope_ground/2, gdpr_scope_ground_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_representative_requirement, [representative_requirement/2, representative_requirement_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_queries, [gdpr_territorial_material_scope_what_if/4, decide_gdpr_scope/2]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_fixtures, [gdpr_territorial_material_scope_profile_for/2]).
+
+test(near_miss_atoms_are_real_verdict_atoms) :-
+    gdpr_applies_status_values(Applies),
+    member(does_not_apply, Applies),
+    gdpr_scope_ground_status_values(Grounds),
+    member(art3_not_met, Grounds),
+    representative_requirement_status_values(Representatives),
+    member(exempt_art27_2_a, Representatives),
+    member(not_applicable, Representatives).
+test(art3_1_positive) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_scope_ground(Profile, art3_1).
+test(art3_1_near_miss_context_lacking_does_not_apply) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_context_lacking, Profile),
+    gdpr_applies(Profile, does_not_apply).
+test(art3_2_a_positive) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    gdpr_scope_ground(Profile, art3_2_a).
+test(art3_2_a_near_miss_no_targeting) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_no_targeting, Profile),
+    gdpr_scope_ground(Profile, art3_not_met).
+test(art3_2_b_positive) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_monitoring, Profile),
+    gdpr_scope_ground(Profile, art3_2_b).
+test(art3_2_b_near_miss_data_subjects_elsewhere) :-
+    gdpr_territorial_material_scope_what_if([attribute(personal_data_processed, true), attribute(processing_wholly_or_partly_automated, true), attribute(personal_data_in_filing_system, false), attribute(activity_outside_union_law, false), attribute(member_state_common_foreign_security_activity, false), attribute(processing_by_natural_person, false), attribute(purely_personal_or_household_activity, false), attribute(processing_by_competent_authority, false), attribute(criminal_law_enforcement_purpose, false), attribute(processing_by_union_institution, false), attribute(party_role, controller), attribute(established_in_union, false), attribute(processing_in_context_of_establishment_activities, false), attribute(data_subjects_in_union, false), attribute(offering_goods_or_services_to_data_subjects_in_union, false), attribute(monitoring_behaviour_of_data_subjects_in_union, true), attribute(member_state_law_applies_by_public_international_law, attested(false, attestation(decision_layer, fixture_time, fixture_reason, none))), attribute(public_authority_or_body, false), attribute(occasional_processing, false), attribute(special_or_criminal_data_on_large_scale, false), attribute(unlikely_to_result_in_risk, false)], monitoring_behaviour_of_data_subjects_in_union, false, does_not_apply).
+test(art3_3_positive) :-
+    gdpr_territorial_material_scope_profile_for(public_international_law_place, Profile),
+    gdpr_scope_ground(Profile, art3_3).
+test(art3_3_near_miss_processor_does_not_apply) :-
+    gdpr_territorial_material_scope_profile_for(processor_in_law_place, Profile),
+    gdpr_applies(Profile, does_not_apply).
+test(art3_3_near_miss_unattested_fact_refers) :-
+    gdpr_territorial_material_scope_profile_for(public_international_law_not_attested, Profile),
+    gdpr_applies(Profile, needs_legal_review(cross_reference_unresolved(_, _), _)).
+test(art2_1_positive_no_personal_data) :-
+    gdpr_territorial_material_scope_profile_for(no_personal_data, Profile),
+    gdpr_scope_ground(Profile, art2_1_not_met).
+test(art2_1_near_miss_manual_in_filing_system_applies) :-
+    gdpr_territorial_material_scope_profile_for(manual_in_filing_system, Profile),
+    gdpr_applies(Profile, applies).
+test(art2_1_manual_without_filing_system_is_out) :-
+    gdpr_territorial_material_scope_profile_for(manual_without_filing_system, Profile),
+    gdpr_scope_ground(Profile, art2_1_not_met).
+test(art2_2_a_positive) :-
+    gdpr_territorial_material_scope_profile_for(outside_union_law, Profile),
+    gdpr_scope_ground(Profile, art2_2_a).
+test(art2_2_b_positive) :-
+    gdpr_territorial_material_scope_profile_for(member_state_security_activity, Profile),
+    gdpr_scope_ground(Profile, art2_2_b).
+test(art2_2_c_positive) :-
+    gdpr_territorial_material_scope_profile_for(household_processing, Profile),
+    gdpr_scope_ground(Profile, art2_2_c).
+test(art2_2_c_near_miss_legal_person_applies) :-
+    gdpr_territorial_material_scope_profile_for(legal_person_household_claim, Profile),
+    gdpr_applies(Profile, applies).
+test(art2_2_d_positive) :-
+    gdpr_territorial_material_scope_profile_for(law_enforcement_authority, Profile),
+    gdpr_scope_ground(Profile, art2_2_d).
+test(art2_2_d_near_miss_other_purpose_applies) :-
+    gdpr_territorial_material_scope_profile_for(authority_other_purpose, Profile),
+    gdpr_applies(Profile, applies).
+test(art2_3_positive) :-
+    gdpr_territorial_material_scope_profile_for(union_institution, Profile),
+    gdpr_scope_ground(Profile, art2_3).
+test(a_missing_exclusion_flag_is_not_a_non_application) :-
+    gdpr_territorial_material_scope_profile_for(exclusion_flag_missing, Profile),
+    gdpr_applies(Profile, indeterminate([activity_outside_union_law])).
+test(representative_required_positive) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    representative_requirement(Profile, required).
+test(representative_not_applicable_for_art3_1_only) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    representative_requirement(Profile, not_applicable).
+test(representative_exempt_a_positive) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_occasional_exempt, Profile),
+    representative_requirement(Profile, exempt_art27_2_a).
+test(representative_large_scale_defeats_exemption_a) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_large_scale, Profile),
+    representative_requirement(Profile, required).
+test(representative_exempt_b_positive) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_public_authority, Profile),
+    representative_requirement(Profile, exempt_art27_2_b).
+test(representative_unsure_judgement_refers) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_occasional_unsure, Profile),
+    representative_requirement(Profile, needs_legal_review(open_textured(occasional_processing, cite(eu_reg_2016_679_art_27_2_a)), _)).
+test(an_unread_key_does_not_change_the_answer) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, public_authority_or_body, true, applies).
+test(an_unread_crisp_flip_keeps_the_ground) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, data_subjects_in_union, false, applies).
+test(a_wrong_type_refuses_the_verdict) :-
+    gdpr_territorial_material_scope_profile_for(wrong_type_given, Profile),
+    decide_gdpr_scope(Profile, gdpr_scope_verdict(input_problems([wrong_type(established_in_union)]), none, not_reached, [])).
+
+test(art3_1_near_miss_is_not_applies, fail) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_context_lacking, Profile),
+    gdpr_applies(Profile, applies).
+test(art3_2_a_near_miss_is_not_art3_2_a, fail) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_no_targeting, Profile),
+    gdpr_scope_ground(Profile, art3_2_a).
+test(art3_3_near_miss_processor_is_not_art3_3, fail) :-
+    gdpr_territorial_material_scope_profile_for(processor_in_law_place, Profile),
+    gdpr_scope_ground(Profile, art3_3).
+test(art3_3_near_miss_unattested_fact_is_not_applies, fail) :-
+    gdpr_territorial_material_scope_profile_for(public_international_law_not_attested, Profile),
+    gdpr_applies(Profile, applies).
+test(art2_1_near_miss_is_not_art2_1_not_met, fail) :-
+    gdpr_territorial_material_scope_profile_for(manual_in_filing_system, Profile),
+    gdpr_scope_ground(Profile, art2_1_not_met).
+test(art2_2_c_near_miss_is_not_art2_2_c, fail) :-
+    gdpr_territorial_material_scope_profile_for(legal_person_household_claim, Profile),
+    gdpr_scope_ground(Profile, art2_2_c).
+test(art2_2_d_near_miss_is_not_art2_2_d, fail) :-
+    gdpr_territorial_material_scope_profile_for(authority_other_purpose, Profile),
+    gdpr_scope_ground(Profile, art2_2_d).
+test(a_missing_exclusion_flag_is_not_does_not_apply, fail) :-
+    gdpr_territorial_material_scope_profile_for(exclusion_flag_missing, Profile),
+    gdpr_applies(Profile, does_not_apply).
+test(representative_not_required_for_art3_1_only, fail) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    representative_requirement(Profile, required).
+test(representative_large_scale_is_not_exempt, fail) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_large_scale, Profile),
+    representative_requirement(Profile, exempt_art27_2_a).
+test(representative_unsure_judgement_is_not_required, fail) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_occasional_unsure, Profile),
+    representative_requirement(Profile, required).
+test(a_wrong_type_is_not_a_scope_answer, fail) :-
+    gdpr_territorial_material_scope_profile_for(wrong_type_given, Profile),
+    gdpr_applies(Profile, applies).
+
+cp_test_names([near_miss_atoms_are_real_verdict_atoms, art3_1_positive, art3_1_near_miss_context_lacking_does_not_apply, art3_2_a_positive, art3_2_a_near_miss_no_targeting, art3_2_b_positive, art3_2_b_near_miss_data_subjects_elsewhere, art3_3_positive, art3_3_near_miss_processor_does_not_apply, art3_3_near_miss_unattested_fact_refers, art2_1_positive_no_personal_data, art2_1_near_miss_manual_in_filing_system_applies, art2_1_manual_without_filing_system_is_out, art2_2_a_positive, art2_2_b_positive, art2_2_c_positive, art2_2_c_near_miss_legal_person_applies, art2_2_d_positive, art2_2_d_near_miss_other_purpose_applies, art2_3_positive, a_missing_exclusion_flag_is_not_a_non_application, representative_required_positive, representative_not_applicable_for_art3_1_only, representative_exempt_a_positive, representative_large_scale_defeats_exemption_a, representative_exempt_b_positive, representative_unsure_judgement_refers, an_unread_key_does_not_change_the_answer, an_unread_crisp_flip_keeps_the_ground, a_wrong_type_refuses_the_verdict]).
+cp_test_fail_names([art3_1_near_miss_is_not_applies, art3_2_a_near_miss_is_not_art3_2_a, art3_3_near_miss_processor_is_not_art3_3, art3_3_near_miss_unattested_fact_is_not_applies, art2_1_near_miss_is_not_art2_1_not_met, art2_2_c_near_miss_is_not_art2_2_c, art2_2_d_near_miss_is_not_art2_2_d, a_missing_exclusion_flag_is_not_does_not_apply, representative_not_required_for_art3_1_only, representative_large_scale_is_not_exempt, representative_unsure_judgement_is_not_required, a_wrong_type_is_not_a_scope_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

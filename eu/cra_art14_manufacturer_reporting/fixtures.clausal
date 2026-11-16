@@ -1,0 +1,120 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/cra_art14_manufacturer_reporting.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Each subject drives one limb of THE LIMBS, and each
+% final route has a one-unit near-miss control (one key changed):
+%   severity (Art 14(5)):
+%     severe_by_protection_limb            A true                 (S1)
+%     severe_by_malicious_code_limb        A false, B true        (S1)
+%     not_severe_both_limbs_false          A false, B false       (S4; the
+%                                          near-miss of both severe subjects)
+%     severity_both_limbs_missing          no key                 (S2, names A)
+%     severity_protection_unsure_malicious_code_missing
+%                                          A unsure               (S2, names B)
+%     severity_protection_missing_malicious_code_false
+%                                          B false                (S2, names A)
+%     severity_protection_unsure_malicious_code_false
+%                                          A unsure, B false      (S3 on A)
+%     severity_protection_false_malicious_code_unsure
+%                                          A false, B unsure      (S3 on B)
+%   timeliness (points (a) and (b) of Art 14(2) and (4)); the hour
+%   boundaries 24/25 and 72/73 are arguments, asserted in the tests:
+%     early_warning_without_delay          EW true   (T2 on_time)
+%     early_warning_with_delay             EW false  (T2 late; near-miss)
+%     early_warning_unsure                 EW unsure (T2 referral)
+%     notification_without_delay           N true    (T2 on_time)
+%     notification_with_delay              N false   (T2 late; near-miss)
+%     notification_unsure                  N unsure  (T2 referral)
+%   input check:
+%     duplicate_protection_key             A twice                (duplicate_key)
+%     wrong_type_protection_value          A yes                  (wrong_type)
+%     unknown_extra_key                    A, B false and an extra key (unknown_key)
+%     not_an_attribute_list                [foo]                  (wrong_type(profile))
+% =====================================================================
+
+:- module(fixtures, [
+    cra_art14_manufacturer_reporting_subject/1,
+    cra_art14_manufacturer_reporting_profile_for/2,
+    cra_art14_manufacturer_reporting_assess/2
+]).
+
+:- use_module(eu/cra_art14_manufacturer_reporting/cra_art14_manufacturer_reporting, [decide_cra_art14_manufacturer_reporting/2]).
+
+% ---- Subject registry ------------------------------------------------
+cra_art14_manufacturer_reporting_subject(severe_by_protection_limb).
+cra_art14_manufacturer_reporting_subject(severe_by_malicious_code_limb).
+cra_art14_manufacturer_reporting_subject(not_severe_both_limbs_false).
+cra_art14_manufacturer_reporting_subject(severity_both_limbs_missing).
+cra_art14_manufacturer_reporting_subject(severity_protection_unsure_malicious_code_missing).
+cra_art14_manufacturer_reporting_subject(severity_protection_missing_malicious_code_false).
+cra_art14_manufacturer_reporting_subject(severity_protection_unsure_malicious_code_false).
+cra_art14_manufacturer_reporting_subject(severity_protection_false_malicious_code_unsure).
+cra_art14_manufacturer_reporting_subject(early_warning_without_delay).
+cra_art14_manufacturer_reporting_subject(early_warning_with_delay).
+cra_art14_manufacturer_reporting_subject(early_warning_unsure).
+cra_art14_manufacturer_reporting_subject(notification_without_delay).
+cra_art14_manufacturer_reporting_subject(notification_with_delay).
+cra_art14_manufacturer_reporting_subject(notification_unsure).
+cra_art14_manufacturer_reporting_subject(duplicate_protection_key).
+cra_art14_manufacturer_reporting_subject(wrong_type_protection_value).
+cra_art14_manufacturer_reporting_subject(unknown_extra_key).
+cra_art14_manufacturer_reporting_subject(not_an_attribute_list).
+
+% ---- Profiles: severity ----------------------------------------------
+cra_art14_manufacturer_reporting_profile_for(severe_by_protection_limb,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)]).
+cra_art14_manufacturer_reporting_profile_for(severe_by_malicious_code_limb,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
+     attribute(leads_to_malicious_code_in_product_or_user_systems, true)]).
+cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
+     attribute(leads_to_malicious_code_in_product_or_user_systems, false)]).
+cra_art14_manufacturer_reporting_profile_for(severity_both_limbs_missing, []).
+cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_missing,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure)]).
+cra_art14_manufacturer_reporting_profile_for(severity_protection_missing_malicious_code_false,
+    [attribute(leads_to_malicious_code_in_product_or_user_systems, false)]).
+cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_false,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure),
+     attribute(leads_to_malicious_code_in_product_or_user_systems, false)]).
+cra_art14_manufacturer_reporting_profile_for(severity_protection_false_malicious_code_unsure,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
+     attribute(leads_to_malicious_code_in_product_or_user_systems, unsure)]).
+
+% ---- Profiles: timeliness --------------------------------------------
+cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay,
+    [attribute(early_warning_without_undue_delay, true)]).
+cra_art14_manufacturer_reporting_profile_for(early_warning_with_delay,
+    [attribute(early_warning_without_undue_delay, false)]).
+cra_art14_manufacturer_reporting_profile_for(early_warning_unsure,
+    [attribute(early_warning_without_undue_delay, unsure)]).
+cra_art14_manufacturer_reporting_profile_for(notification_without_delay,
+    [attribute(notification_without_undue_delay, true)]).
+cra_art14_manufacturer_reporting_profile_for(notification_with_delay,
+    [attribute(notification_without_undue_delay, false)]).
+cra_art14_manufacturer_reporting_profile_for(notification_unsure,
+    [attribute(notification_without_undue_delay, unsure)]).
+
+% ---- Profiles: input check -------------------------------------------
+cra_art14_manufacturer_reporting_profile_for(duplicate_protection_key,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, true),
+     attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)]).
+cra_art14_manufacturer_reporting_profile_for(wrong_type_protection_value,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, yes)]).
+cra_art14_manufacturer_reporting_profile_for(unknown_extra_key,
+    [attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
+     attribute(leads_to_malicious_code_in_product_or_user_systems, false),
+     attribute(severity_score, 7)]).
+cra_art14_manufacturer_reporting_profile_for(not_an_attribute_list, [foo]).
+
+% ---- Convenience wrapper ---------------------------------------------
+cra_art14_manufacturer_reporting_assess(Subject, Result) :-
+    cra_art14_manufacturer_reporting_profile_for(Subject, Profile),
+    decide_cra_art14_manufacturer_reporting(Profile, Result).
+
+:- end_module(fixtures).

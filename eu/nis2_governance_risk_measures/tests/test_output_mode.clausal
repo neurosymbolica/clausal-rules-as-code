@@ -1,0 +1,133 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: each query read out, exactly
+% one solution, exact list shapes and order.
+% Run: python -m clausal.testing eu/nis2_governance_risk_measures/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/nis2_governance_risk_measures/nis2_governance_risk_measures, [
+    decide_nis2_governance_risk_measures/2,
+    nis2_governance_risk_measures_status/2,
+    nis2_governance_risk_measures_checklist/2,
+    management_body_duties/2,
+    risk_management_measures/2,
+    proportionality_factors/2,
+    supply_chain_considerations/2,
+    corrective_measures_duty/3
+]).
+:- use_module(eu/nis2_governance_risk_measures/fixtures, [nis2_governance_risk_measures_profile_for/2]).
+
+test(the_essential_profile_yields_exactly_one_status) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    findall(Status, nis2_governance_risk_measures_status(Profile, Status), Statuses),
+    Statuses == [duties_apply].
+
+test(the_verdict_carries_both_management_body_citations) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    decide_nis2_governance_risk_measures(
+        Profile,
+        nis2_governance_risk_measures_verdict(duties_apply, [cite(eu_dir_2022_2555_art_20_1), cite(eu_dir_2022_2555_art_20_2)])).
+
+test(management_body_duties_are_one_flat_ordered_list) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    findall(Duties, management_body_duties(Profile, Duties), Answers),
+    Answers == [[
+        duty(approve_the_cybersecurity_risk_management_measures, cite(eu_dir_2022_2555_art_20_1)),
+        duty(oversee_the_implementation_of_the_measures, cite(eu_dir_2022_2555_art_20_1)),
+        duty(can_be_held_liable_for_infringements_of_article_21, cite(eu_dir_2022_2555_art_20_1)),
+        duty(members_of_the_management_bodies_follow_training, cite(eu_dir_2022_2555_art_20_2))
+    ]].
+
+test(important_entity_has_the_same_duties_as_essential) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, EssentialProfile),
+    nis2_governance_risk_measures_profile_for(important_all_false, ImportantProfile),
+    management_body_duties(EssentialProfile, EssentialDuties),
+    management_body_duties(ImportantProfile, ImportantDuties),
+    EssentialDuties == ImportantDuties.
+
+test(measures_with_point_j_start_and_end_in_article_order) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    findall(Measures, risk_management_measures(Profile, Measures), Answers),
+    Answers = [Measures],
+    length(Measures, 12),
+    Measures = [measure(take_appropriate_and_proportionate_measures, cite(eu_dir_2022_2555_art_21_1)), measure(based_on_an_all_hazards_approach, cite(eu_dir_2022_2555_art_21_2))|_],
+    last(Measures, measure(multi_factor_or_continuous_authentication_and_secured_communications, cite(eu_dir_2022_2555_art_21_2_j))).
+
+test(measures_without_point_j_end_at_point_i) :-
+    nis2_governance_risk_measures_profile_for(important_all_false, Profile),
+    findall(Measures, risk_management_measures(Profile, Measures), Answers),
+    Answers = [Measures],
+    length(Measures, 11),
+    last(Measures, measure(human_resources_security_access_control_and_asset_management, cite(eu_dir_2022_2555_art_21_2_i))).
+
+test(factors_without_standards_are_the_six_others_in_order) :-
+    nis2_governance_risk_measures_profile_for(important_all_false, Profile),
+    findall(Factors, proportionality_factors(Profile, Factors), Answers),
+    Answers == [[
+        factor(state_of_the_art, cite(eu_dir_2022_2555_art_21_1)),
+        factor(cost_of_implementation, cite(eu_dir_2022_2555_art_21_1)),
+        factor(degree_of_exposure_to_risks, cite(eu_dir_2022_2555_art_21_1)),
+        factor(entity_size, cite(eu_dir_2022_2555_art_21_1)),
+        factor(likelihood_of_incidents, cite(eu_dir_2022_2555_art_21_1)),
+        factor(severity_of_incidents_including_societal_and_economic_impact, cite(eu_dir_2022_2555_art_21_1))
+    ]].
+
+test(factors_with_standards_put_standards_second) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    proportionality_factors(Profile, Factors),
+    length(Factors, 7),
+    Factors = [_, factor(relevant_european_and_international_standards, cite(eu_dir_2022_2555_art_21_1))|_].
+
+test(considerations_with_assessments_end_with_the_coordinated_results) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    findall(Considerations, supply_chain_considerations(Profile, Considerations), Answers),
+    Answers == [[
+        consideration(vulnerabilities_specific_to_each_direct_supplier_and_service_provider, cite(eu_dir_2022_2555_art_21_3)),
+        consideration(overall_quality_of_products_and_cybersecurity_practices_of_suppliers_and_service_providers, cite(eu_dir_2022_2555_art_21_3)),
+        consideration(results_of_the_coordinated_security_risk_assessments_of_critical_supply_chains, cite(eu_dir_2022_2555_art_21_3))
+    ]].
+
+test(considerations_without_assessments_are_two) :-
+    nis2_governance_risk_measures_profile_for(important_all_false, Profile),
+    supply_chain_considerations(Profile, Considerations),
+    length(Considerations, 2).
+
+test(corrective_measures_read_out_for_essential_true) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    findall(Result-Citations, corrective_measures_duty(Profile, Result, Citations), Answers),
+    Answers == [must_take_corrective_measures_without_undue_delay-[cite(eu_dir_2022_2555_art_21_4)]].
+
+test(corrective_measures_read_out_for_important_false) :-
+    nis2_governance_risk_measures_profile_for(important_all_false, Profile),
+    findall(Result-Citations, corrective_measures_duty(Profile, Result, Citations), Answers),
+    Answers == [no_corrective_measures_duty-[cite(eu_dir_2022_2555_art_21_4)]].
+
+test(unsure_point_j_is_one_referral_not_a_list) :-
+    nis2_governance_risk_measures_profile_for(important_point_j_unsure, Profile),
+    findall(Answer, risk_management_measures(Profile, Answer), Answers),
+    Answers = [needs_legal_review(open_textured(multi_factor_authentication_and_secured_communications_appropriate, cite(eu_dir_2022_2555_art_21_2_j)), [inputs_relied_on(Pairs)])],
+    Pairs == [multi_factor_authentication_and_secured_communications_appropriate-unsure].
+
+test(absent_entity_class_is_indeterminate_for_every_list_query) :-
+    nis2_governance_risk_measures_profile_for(entity_class_absent, Profile),
+    management_body_duties(Profile, indeterminate([entity_class])),
+    risk_management_measures(Profile, indeterminate([entity_class])),
+    proportionality_factors(Profile, indeterminate([entity_class])),
+    supply_chain_considerations(Profile, indeterminate([entity_class])).
+
+test(input_problems_are_the_answer_for_every_query) :-
+    nis2_governance_risk_measures_profile_for(essential_unknown_key, Profile),
+    management_body_duties(Profile, input_problems([unknown_key(surprise)])),
+    risk_management_measures(Profile, input_problems([unknown_key(surprise)])),
+    proportionality_factors(Profile, input_problems([unknown_key(surprise)])),
+    supply_chain_considerations(Profile, input_problems([unknown_key(surprise)])),
+    corrective_measures_duty(Profile, input_problems([unknown_key(surprise)]), []).
+
+test(checklist_has_a_cited_row_per_duty) :-
+    nis2_governance_risk_measures_profile_for(essential_all_true, Profile),
+    nis2_governance_risk_measures_checklist(Profile, Items),
+    Items = [item(approve_the_cybersecurity_risk_management_measures, met, cite(eu_dir_2022_2555_art_20_1))|_],
+    last(Items, item(members_of_the_management_bodies_follow_training, met, cite(eu_dir_2022_2555_art_20_2))),
+    length(Items, 4).
+
+:- end_module(test_output_mode).

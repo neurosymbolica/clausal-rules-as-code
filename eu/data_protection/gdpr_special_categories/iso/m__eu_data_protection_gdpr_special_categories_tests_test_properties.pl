@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_special_categories_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_special_categories_processing_permitted, [decide_processing_permitted/2, decide_special_category_processing/2, processing_permitted/2, processing_permitted_checklist/2, special_category_scope/2, special_category_outside_facts/2]).
+:- use_module(m__eu_data_protection_gdpr_special_categories_permitted_bases, [permitted_bases/2]).
+:- use_module(m__eu_data_protection_gdpr_special_categories_fixtures, [gdpr_special_categories_subject/1, gdpr_special_categories_profile_for/2]).
+:- use_module(formalize_lib, [not_member/2]).
+
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects).
+
+subject_classifies(Subject) :-
+    gdpr_special_categories_subject(Subject),
+    gdpr_special_categories_profile_for(Subject, Profile),
+    decide_processing_permitted(Profile, _Verdict).
+
+test(totality_every_subject_classifies) :-
+    all_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_answers_exactly_once) :-
+    all_subjects(Subjects),
+    maplist(exactly_one_answer_each, Subjects).
+test(every_status_is_in_the_vocabulary) :-
+    all_subjects(Subjects),
+    maplist(subject_status_in_vocabulary, Subjects).
+test(bases_agree_with_the_status) :-
+    all_subjects(Subjects),
+    maplist(subject_bases_agree, Subjects).
+test(citations_agree_with_the_status_and_name_no_definition) :-
+    all_subjects(Subjects),
+    maplist(subject_citations_agree, Subjects).
+test(every_checklist_row_is_cited) :-
+    all_subjects(Subjects),
+    maplist(subject_checklist_cited, Subjects).
+test(outside_facts_have_eight_items_or_input_problems) :-
+    all_subjects(Subjects),
+    maplist(subject_outside_facts_shape, Subjects).
+
+exactly_one_answer_each(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    findall(Verdict, decide_special_category_processing(Profile, Verdict), Verdicts),
+    length(Verdicts, 1),
+    findall(Status, processing_permitted(Profile, Status), Statuses),
+    length(Statuses, 1),
+    findall(Bases, permitted_bases(Profile, Bases), BasesAnswers),
+    length(BasesAnswers, 1),
+    findall(Scope, special_category_scope(Profile, Scope), Scopes),
+    length(Scopes, 1),
+    findall(Items, special_category_outside_facts(Profile, Items), OutsideAnswers),
+    length(OutsideAnswers, 1),
+    findall(Checklist, processing_permitted_checklist(Profile, Checklist), Checklists),
+    length(Checklists, 1).
+
+status_shape(eligible).
+status_shape(ineligible).
+status_shape(indeterminate([_|_])).
+status_shape(needs_legal_review(open_textured(_, cite(_)), [_|_])).
+status_shape(needs_legal_review(cross_reference_unresolved(cite(_), cite(_)), [resolution(cite(_), _), inputs_relied_on([exception_claimed - _|_])])).
+status_shape(input_problems([_|_])).
+
+subject_status_in_vocabulary(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    processing_permitted(Profile, Status),
+    status_shape(Status).
+
+test(a_bare_indeterminate_is_not_a_status, fail) :-
+    status_shape(indeterminate).
+test(an_ineligible_status_with_a_basis_is_caught, fail) :-
+    status_bases(ineligible, [art9_2_a]).
+test(a_definition_citation_is_caught, fail) :-
+    not_definition_citation(cite(eu_reg_2016_679_art_4_15)).
+test(a_referral_with_citations_is_caught, fail) :-
+    status_citations(needs_legal_review(reason, []), [cite(eu_reg_2016_679_art_9_1)]).
+test(an_uncited_row_is_caught, fail) :-
+    cited_item(item(article_10, met, eu_reg_2016_679_art_10)).
+test(a_short_outside_facts_list_is_caught, fail) :-
+    outside_facts_shape([outside_fact(prohibition_lifting_barred_by_law, absent)]).
+
+status_bases(eligible, [_|_]).
+status_bases(Status, []) :-
+    dif(Status, eligible).
+
+subject_bases_agree(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    decide_special_category_processing(Profile, special_category_verdict(Status, Bases, _, _)),
+    status_bases(Status, Bases),
+    permitted_bases(Profile, Bases).
+
+status_citations(eligible, [_|_]).
+status_citations(ineligible, [_|_]).
+status_citations(indeterminate(_), []).
+status_citations(needs_legal_review(_, _), []).
+status_citations(input_problems(_), []).
+
+subject_citations_agree(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    decide_special_category_processing(Profile, special_category_verdict(Status, _, _, Citations)),
+    status_citations(Status, Citations),
+    maplist(not_definition_citation, Citations).
+
+not_definition_citation(cite(CitationKey)) :-
+    not_member(CitationKey, [eu_reg_2016_679_art_4_11, eu_reg_2016_679_art_4_13, eu_reg_2016_679_art_4_14, eu_reg_2016_679_art_4_15]).
+
+cited_item(item(Identifier, _, cite(CitationKey))) :-
+    atom(Identifier),
+    atom(CitationKey).
+
+subject_checklist_cited(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    processing_permitted_checklist(Profile, Items),
+    maplist(cited_item, Items).
+
+subject_outside_facts_shape(Subject) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    special_category_outside_facts(Profile, Answer),
+    outside_facts_shape(Answer).
+
+outside_facts_shape(input_problems([_|_])).
+outside_facts_shape([First|Rest]) :-
+    length([First|Rest], 8).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_answers_exactly_once, every_status_is_in_the_vocabulary, bases_agree_with_the_status, citations_agree_with_the_status_and_name_no_definition, every_checklist_row_is_cited, outside_facts_have_eight_items_or_input_problems]).
+cp_test_fail_names([a_bare_indeterminate_is_not_a_status, an_ineligible_status_with_a_basis_is_caught, a_definition_citation_is_caught, a_referral_with_citations_is_caught, an_uncited_row_is_caught, a_short_outside_facts_list_is_caught]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

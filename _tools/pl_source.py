@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """Read Prolog (`.pl`) corpus source through the ENGINE's reader, and walk goal positions.
 
 WHY HERE, AND WHY THE ENGINE. The corpus `_tools` must not import the harness's

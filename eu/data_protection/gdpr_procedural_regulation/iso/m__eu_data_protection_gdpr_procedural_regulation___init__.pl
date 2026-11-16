@@ -1,0 +1,98 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_procedural_regulation___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_kernel, [gdpr_procedural_regulation_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_gdpr_procedural_regulation, [complaint_admissibility/3, decide_gdpr_procedural_regulation/2, draft_decision_time_limit/4, early_resolution/3, gdpr_procedural_regulation_checklist/2, gdpr_procedural_regulation_decision_resolvable/1, gdpr_procedural_regulation_status/2, gdpr_procedural_regulation_status_values/1, late_step_effect/4, prior_request_condition/3, procedural_time_limit/4, simple_cooperation_procedure/4, temporal_application/5]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_queries, [admissible/0, at_least_before/0, attestation/4, attested/2, being_informed_of_extension/0, chapter_iii_not_applicable/0, complainant_receiving_early_resolution_information/0, complaint_not_devoid_of_purpose/0, confirmation_of_competence_or_board_binding_decision/0, cross_reference_unresolved/2, date/3, document/2, draft_decision_establishing_resolution/0, draft_decision_limit/2, duplicate_key/1, early_resolution_not_available/0, early_resolution_objected/0, exactly/0, expiry_of_comment_period/0, expiry_of_draft_decision_time_limit/0, expiry_of_objection_time_limit/0, expiry_of_simple_procedure_time_limit/0, extension/3, extension_not_permitted/0, gdpr_procedural_regulation_profile_keys/1, gdpr_procedural_regulation_what_if/4, inadmissible/0, indeterminate/1, input_problems/1, inputs_relied_on/1, legality_and_validity_not_affected/0, limit/5, months/0, needs_legal_review/2, no_extension/0, not_governed_by_article_14/0, notification_of_simple_cooperation_procedure/0, open_textured/2, outside_fact/2, part_applies/0, part_does_not_apply/0, prior_request_made/0, prior_request_not_made/0, prior_request_not_required/0, receipt_of_complaint/0, receipt_of_summary_of_key_issues/0, resolution/2, resolution_established_by_receiving_authority/0, simple_procedure_available/0, simple_procedure_excluded_by_objection/0, simple_procedure_not_available/0, suspended_until_board_binding_decision/0, unknown_key/1, up_to/0, url/2, weeks/0, within/0, wrong_type/1]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_fixtures, [gdpr_procedural_regulation_assess/2, gdpr_procedural_regulation_profile_for/2, gdpr_procedural_regulation_subject/1]).
+
+root_export(absent).
+root_export(admissible).
+root_export(alleged_infringement_description_included).
+root_export(article_80_1_body).
+root_export(article_80_2_body).
+root_export(at_least_before).
+root_export(being_informed_of_extension).
+root_export(board_request_under_article_11_6_made).
+root_export(case_handled_under_article_56_2).
+root_export(chapter_iii_not_applicable).
+root_export(comment_on_summary_of_key_issues).
+root_export(complainant_objected_to_early_resolution_in_time).
+root_export(complainant_receiving_early_resolution_information).
+root_export(complaint_concerns_chapter_iii_rights).
+root_export(complaint_concerns_right_exercised_by_request).
+root_export(complaint_lodged_by).
+root_export(complaint_not_devoid_of_purpose).
+root_export(complaints_and_early_resolution).
+root_export(concerned_authority_objected_to_simple_procedure_in_time).
+root_export(confirm_competence_or_refer_to_board).
+root_export(confirmation_of_competence_or_board_binding_decision).
+root_export(controller_or_processor_identification_information_included).
+root_export(cooperation_and_files).
+root_export(data_subject).
+root_export(declare_complaint_inadmissible).
+root_export(dispute_resolution_and_urgency).
+root_export(draft_decision_establishing_resolution).
+root_export(draft_decision_time_limit_extended).
+root_export(early_resolution_not_available).
+root_export(early_resolution_objected).
+root_export(early_resolution_procedure_before).
+root_export(end_of_infringement_established_on_supporting_evidence).
+root_export(establish_early_resolution).
+root_export(exactly).
+root_export(expiry_of_comment_period).
+root_export(expiry_of_draft_decision_time_limit).
+root_export(expiry_of_objection_time_limit).
+root_export(expiry_of_simple_procedure_time_limit).
+root_export(extension_justified_by_exceptional_complexity).
+root_export(extension_not_permitted).
+root_export(inadmissible).
+root_export(inform_of_draft_decision_extension).
+root_export(inform_of_simple_procedure_extension).
+root_export(issues_addressable_without_additional_cooperation).
+root_export(lead_authority).
+root_export(lead_authority_considers_no_reasonable_doubt_as_to_scope).
+root_export(legality_and_validity_not_affected).
+root_export(lodging_person_name_and_contact_details_included).
+root_export(months).
+root_export(national_law_requires_domestic_proceedings_after_time_limit).
+root_export(no_extension).
+root_export(not_attempted).
+root_export(not_governed_by_article_14).
+root_export(notification_of_simple_cooperation_procedure).
+root_export(notify_simple_cooperation_procedure).
+root_export(object_to_draft_decision_extension).
+root_export(object_to_early_resolution).
+root_export(object_to_simple_cooperation_procedure).
+root_export(part_applies).
+root_export(part_does_not_apply).
+root_export(prior_request_made).
+root_export(prior_request_not_made).
+root_export(prior_request_not_required).
+root_export(proof_of_data_subject_mandate_included).
+root_export(proof_of_proper_constitution_included).
+root_export(provide_summary_of_key_issues).
+root_export(receipt_of_complaint).
+root_export(receipt_of_summary_of_key_issues).
+root_export(receiving_authority).
+root_export(request_made_to_controller_before_complaint).
+root_export(resolution_established_by_receiving_authority).
+root_export(respond_to_comments_on_summary_of_key_issues).
+root_export(simple_cooperation_procedure_applied).
+root_export(simple_procedure_available).
+root_export(simple_procedure_excluded_by_objection).
+root_export(simple_procedure_not_available).
+root_export(submit_draft_decision).
+root_export(submit_draft_decision_in_simple_procedure).
+root_export(submit_early_resolution_draft_decision).
+root_export(suspended_until_board_binding_decision).
+root_export(time_limit_set_by_this_regulation_or_article_65_6).
+root_export(transmit_complaint_to_presumed_lead_authority).
+root_export(unsure).
+root_export(up_to).
+root_export(weeks).
+root_export(within).

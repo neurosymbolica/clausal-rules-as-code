@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_gpai_models_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_gpai_models_kernel, [gpai_models_input_problems/2]).
+:- use_module(m__eu_ai_act_gpai_models_citations, [citation/2, implements/1]).
+
+recorded_citation(CitationKey) :-
+    citation(CitationKey, _Record).
+
+all_atoms_distinct(Atoms) :-
+    sort(Atoms, Sorted),
+    length(Atoms, Count),
+    length(Sorted, Count).
+
+single_input_check_answer(Profile, Problems) :-
+    findall(Found, gpai_models_input_problems(Profile, Found), Solutions),
+    Solutions == [Problems].
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = gpai_models_verdict(general_purpose_ai_model_with_systemic_risk, [cite(eu_reg_2024_1689_art_51_1), cite(eu_reg_2024_1689_art_51_2)]),
+    Verdict = gpai_models_verdict(Status, Citations),
+    Status == general_purpose_ai_model_with_systemic_risk,
+    Citations == [cite(eu_reg_2024_1689_art_51_1), cite(eu_reg_2024_1689_art_51_2)].
+test(the_indeterminate_status_holds_one_bare_key) :-
+    Result = indeterminate([general_purpose_ai_model]),
+    Result = indeterminate([MissingKey]),
+    MissingKey == general_purpose_ai_model.
+test(the_referral_status_destructures) :-
+    Result = needs_legal_review(open_textured(high_impact_capabilities, cite(eu_reg_2024_1689_art_51_1_a)), [inputs_relied_on([general_purpose_ai_model - true, high_impact_capabilities - unsure])]),
+    Result = needs_legal_review(open_textured(Judgement, cite(CitationKey)), [inputs_relied_on(Relied)]),
+    Judgement == high_impact_capabilities,
+    CitationKey == eu_reg_2024_1689_art_51_1_a,
+    Relied == [general_purpose_ai_model - true, high_impact_capabilities - unsure],
+    recorded_citation(CitationKey).
+test(the_input_problems_status_destructures) :-
+    Result = input_problems([wrong_type(assessment_date)]),
+    Result = input_problems(Problems),
+    Problems == [wrong_type(assessment_date)].
+test(a_date_term_destructures) :-
+    Day = date(2025, 8, 2),
+    Day = date(Year, Month, DayOfMonth),
+    Year == 2025,
+    Month == 8,
+    DayOfMonth == 2.
+test(the_verdict_atoms_are_distinct) :-
+    dif(general_purpose_ai_model_with_systemic_risk, general_purpose_ai_model_without_systemic_risk),
+    dif(obligation_applies, compliance_required_by_2_august_2027),
+    dif(notification_within_the_time_limit, notification_after_the_time_limit).
+test(the_classification_atoms_are_distinct) :-
+    all_atoms_distinct([not_applicable_on_date, not_a_general_purpose_ai_model, general_purpose_ai_model_with_systemic_risk, general_purpose_ai_model_without_systemic_risk]).
+test(the_notification_atoms_are_distinct) :-
+    all_atoms_distinct([not_a_general_purpose_ai_model, no_notification_duty, notification_after_the_time_limit, notification_within_the_time_limit]).
+test(the_obligation_status_atoms_are_distinct) :-
+    all_atoms_distinct([not_applicable_on_date, not_a_general_purpose_ai_model, obligation_does_not_apply, compliance_required_by_2_august_2027, obligation_applies]).
+test(the_ten_obligation_atoms_are_distinct) :-
+    all_atoms_distinct([technical_documentation, information_for_downstream_providers, copyright_policy, training_content_summary, cooperation_with_authorities, authorised_representative, model_evaluation, systemic_risk_assessment_and_mitigation, serious_incident_reporting, cybersecurity_protection]).
+test(the_eighteen_element_atoms_are_distinct) :-
+    all_atoms_distinct([intended_tasks_and_type_and_nature_of_ai_systems_for_integration, acceptable_use_policies, date_of_release_and_methods_of_distribution, architecture_and_number_of_parameters, modality_and_format_of_inputs_and_outputs, licence, technical_means_required_for_integration, design_specifications_of_the_model_and_training_process, detailed_information_on_training_testing_and_validation_data, computational_resources_used_for_training, known_or_estimated_energy_consumption, evaluation_strategies_and_results, adversarial_testing_and_model_adaptation_measures, system_architecture, interaction_with_hardware_or_software_outside_the_model, versions_of_relevant_software, modality_format_and_maximum_size_of_inputs_and_outputs, information_on_training_testing_and_validation_data]).
+test(the_threshold_citation_is_recorded) :-
+    citation(eu_reg_2024_1689_art_51_2, Record),
+    Record = [label - _Label, ref - _Reference].
+test(every_returnable_status_citation_is_recorded) :-
+    maplist(recorded_citation, [eu_reg_2024_1689_art_113_b, eu_reg_2024_1689_art_3_63, eu_reg_2024_1689_art_51_1, eu_reg_2024_1689_art_51_1_a, eu_reg_2024_1689_art_51_1_b, eu_reg_2024_1689_art_51_2, eu_reg_2024_1689_art_52_1, eu_reg_2024_1689_art_52_2, eu_reg_2024_1689_art_52_3, eu_reg_2024_1689_art_52_4, eu_reg_2024_1689_art_111_3, eu_reg_2024_1689_art_53_1, eu_reg_2024_1689_art_53_1_a, eu_reg_2024_1689_art_53_1_b, eu_reg_2024_1689_art_53_1_b_i, eu_reg_2024_1689_art_53_1_b_ii, eu_reg_2024_1689_art_53_1_c, eu_reg_2024_1689_art_53_1_d, eu_reg_2024_1689_art_53_2, eu_reg_2024_1689_art_53_3, eu_reg_2024_1689_art_54_1, eu_reg_2024_1689_art_54_2, eu_reg_2024_1689_art_54_6, eu_reg_2024_1689_art_55_1, eu_reg_2024_1689_art_55_1_a, eu_reg_2024_1689_art_55_1_b, eu_reg_2024_1689_art_55_1_c, eu_reg_2024_1689_art_55_1_d]).
+test(every_returnable_annex_citation_is_recorded) :-
+    maplist(recorded_citation, [eu_reg_2024_1689_annex_xi, eu_reg_2024_1689_annex_xi_section_1, eu_reg_2024_1689_annex_xi_section_1_1, eu_reg_2024_1689_annex_xi_section_1_1_a, eu_reg_2024_1689_annex_xi_section_1_1_b, eu_reg_2024_1689_annex_xi_section_1_1_c, eu_reg_2024_1689_annex_xi_section_1_1_d, eu_reg_2024_1689_annex_xi_section_1_1_e, eu_reg_2024_1689_annex_xi_section_1_1_f, eu_reg_2024_1689_annex_xi_section_1_2, eu_reg_2024_1689_annex_xi_section_1_2_a, eu_reg_2024_1689_annex_xi_section_1_2_b, eu_reg_2024_1689_annex_xi_section_1_2_c, eu_reg_2024_1689_annex_xi_section_1_2_d, eu_reg_2024_1689_annex_xi_section_1_2_e, eu_reg_2024_1689_annex_xi_section_2, eu_reg_2024_1689_annex_xi_section_2_1, eu_reg_2024_1689_annex_xi_section_2_2, eu_reg_2024_1689_annex_xi_section_2_3, eu_reg_2024_1689_annex_xii, eu_reg_2024_1689_annex_xii_1, eu_reg_2024_1689_annex_xii_1_a, eu_reg_2024_1689_annex_xii_1_b, eu_reg_2024_1689_annex_xii_1_c, eu_reg_2024_1689_annex_xii_1_d, eu_reg_2024_1689_annex_xii_1_e, eu_reg_2024_1689_annex_xii_1_f, eu_reg_2024_1689_annex_xii_1_g, eu_reg_2024_1689_annex_xii_1_h, eu_reg_2024_1689_annex_xii_2, eu_reg_2024_1689_annex_xii_2_a, eu_reg_2024_1689_annex_xii_2_b, eu_reg_2024_1689_annex_xii_2_c]).
+test(the_marker_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2024_1689_art_51_2).
+test(an_empty_profile_has_no_problem) :-
+    single_input_check_answer([], []).
+test(a_well_formed_profile_has_no_problem) :-
+    single_input_check_answer([attribute(general_purpose_ai_model, true), attribute(used_for_research_development_or_prototyping_before_being_placed_on_the_market, false), attribute(cumulative_training_computation_in_floating_point_operations, 10000000000000000000000001), attribute(high_impact_capabilities, unsure), attribute(designated_by_a_commission_decision_as_a_model_with_systemic_risk, false), attribute(commission_accepted_the_providers_arguments_that_the_model_presents_no_systemic_risks, false), attribute(released_under_a_free_and_open_source_licence_allowing_access_usage_modification_and_distribution, false), attribute(parameters_weights_architecture_and_usage_information_made_publicly_available, true), attribute(provider_established_in_a_third_country, true), attribute(placed_on_the_market_before_2_august_2025, false)], []).
+test(an_unsure_crisp_key_is_a_wrong_type) :-
+    single_input_check_answer([attribute(placed_on_the_market_before_2_august_2025, unsure)], [wrong_type(placed_on_the_market_before_2_august_2025)]).
+test(a_negative_computation_is_a_wrong_type) :-
+    single_input_check_answer([attribute(cumulative_training_computation_in_floating_point_operations, -1)], [wrong_type(cumulative_training_computation_in_floating_point_operations)]).
+test(a_float_computation_is_a_wrong_type) :-
+    single_input_check_answer([attribute(cumulative_training_computation_in_floating_point_operations, 1.0e+25)], [wrong_type(cumulative_training_computation_in_floating_point_operations)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    single_input_check_answer([attribute(general_purpose_ai_model, true), attribute(general_purpose_ai_model, maybe)], [duplicate_key(general_purpose_ai_model)]).
+test(key_problems_come_before_unknown_keys) :-
+    single_input_check_answer([attribute(colour, blue), attribute(high_impact_capabilities, maybe), attribute(colour, red)], [wrong_type(high_impact_capabilities), unknown_key(colour)]).
+test(a_term_that_is_not_a_list_is_a_wrong_profile) :-
+    single_input_check_answer(profile, [wrong_type(profile)]).
+test(a_list_with_a_foreign_element_is_a_wrong_profile) :-
+    single_input_check_answer([attribute(general_purpose_ai_model, true), general_purpose_ai_model], [wrong_type(profile)]).
+test(a_good_profile_is_reported_clean) :-
+    gpai_models_input_problems([attribute(general_purpose_ai_model, true)], []).
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_todo_primary_source).
+test(the_placeholder_citation_is_gone, fail) :-
+    citation(eu_todo_primary_source, _Record).
+test(a_good_profile_is_not_reported_as_wrong, fail) :-
+    gpai_models_input_problems([attribute(general_purpose_ai_model, true)], [wrong_type(general_purpose_ai_model)]).
+
+cp_test_names([the_verdict_term_carries_status_and_citations, the_indeterminate_status_holds_one_bare_key, the_referral_status_destructures, the_input_problems_status_destructures, a_date_term_destructures, the_verdict_atoms_are_distinct, the_classification_atoms_are_distinct, the_notification_atoms_are_distinct, the_obligation_status_atoms_are_distinct, the_ten_obligation_atoms_are_distinct, the_eighteen_element_atoms_are_distinct, the_threshold_citation_is_recorded, every_returnable_status_citation_is_recorded, every_returnable_annex_citation_is_recorded, the_marker_succeeds_for_a_recorded_key, an_empty_profile_has_no_problem, a_well_formed_profile_has_no_problem, an_unsure_crisp_key_is_a_wrong_type, a_negative_computation_is_a_wrong_type, a_float_computation_is_a_wrong_type, a_repeated_key_is_a_duplicate_only, key_problems_come_before_unknown_keys, a_term_that_is_not_a_list_is_a_wrong_profile, a_list_with_a_foreign_element_is_a_wrong_profile, a_good_profile_is_reported_clean]).
+cp_test_fail_names([the_marker_fails_for_an_unrecorded_key, the_placeholder_citation_is_gone, a_good_profile_is_not_reported_as_wrong]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

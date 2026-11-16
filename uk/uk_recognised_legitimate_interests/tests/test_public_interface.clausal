@@ -1,0 +1,343 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Every fixture subject resolves to its EXPECTED status, exactly once; the
+% near-miss controls get another status; the checklist is non-empty and
+% every item carries cite(...) provenance.
+% Run: python -m clausal.testing uk/uk_recognised_legitimate_interests/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(uk/uk_recognised_legitimate_interests, [
+    decide_uk_recognised_legitimate_interests/2,
+    uk_recognised_legitimate_interests_status/2,
+    uk_recognised_legitimate_interests_checklist/2,
+    uk_recognised_legitimate_interests_decision_resolvable/1,
+    uk_recognised_legitimate_interests_status_values/1,
+    uk_recognised_legitimate_interests_subject/1,
+    uk_recognised_legitimate_interests_profile_for/2,
+    uk_recognised_legitimate_interests_assess/2,
+    recognised_legitimate_interest/3,
+    uk_legitimate_interests/3,
+    uk_legitimate_interest_basis/3,
+    eu_legitimate_interests/3,
+    compare_uk_eu_legitimate_interest_basis/5,
+    uk_right_to_object/3,
+    uk_recognised_legitimate_interests_input_problems/2,
+    legitimate_interests/0
+]).
+
+% ---- expected headline status (recognised_legitimate_interest/3) per subject ----
+expected_status(public_authority_bar, recognised_legitimate_interest_does_not_apply).
+expected_status(security_condition_met, recognised_legitimate_interest_applies).
+expected_status(authority_unsure_condition_met, needs_legal_review(open_textured(processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(uk_gdpr_art_6_1)), [inputs_relied_on([processing_by_a_public_authority_in_the_performance_of_its_tasks-unsure, processing_necessary_for_national_security_public_security_or_defence-true])])).
+expected_status(authority_absent_condition_met, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(disclosure_condition_met, recognised_legitimate_interest_applies).
+expected_status(disclosure_request_silent, recognised_legitimate_interest_does_not_apply).
+expected_status(emergency_condition_met, recognised_legitimate_interest_applies).
+expected_status(emergency_response_missing, indeterminate([processing_necessary_for_responding_to_the_emergency])).
+expected_status(crime_condition_met, recognised_legitimate_interest_applies).
+expected_status(all_conditions_fail, recognised_legitimate_interest_does_not_apply).
+expected_status(safeguarding_child, recognised_legitimate_interest_applies).
+expected_status(safeguarding_adult_at_risk, recognised_legitimate_interest_applies).
+expected_status(safeguarding_adult_unsure_risk, needs_legal_review(open_textured(controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, cite(uk_gdpr_annex_1_para_8)), [inputs_relied_on([processing_by_a_public_authority_in_the_performance_of_its_tasks-false, processing_necessary_for_a_disclosure_in_response_to_a_request-false, processing_necessary_for_national_security_public_security_or_defence-false, event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004-false, processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders-false, processing_necessary_for_safeguarding_an_individual-true, individual_aged_under_18-false, controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk-unsure])])).
+expected_status(safeguarding_adult_not_at_risk, recognised_legitimate_interest_does_not_apply).
+expected_status(interests_apply, indeterminate([processing_necessary_for_a_disclosure_in_response_to_a_request])).
+expected_status(interests_overridden, indeterminate([processing_necessary_for_a_disclosure_in_response_to_a_request])).
+expected_status(uk_differs_from_eu, recognised_legitimate_interest_applies).
+expected_status(uk_same_as_eu, recognised_legitimate_interest_does_not_apply).
+expected_status(objection_not_engaged, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(objection_must_stop, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(objection_legal_claims, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(objection_exceptions_missing, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(objection_unsure, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(duplicate_and_unknown_keys, input_problems([duplicate_key(individual_aged_under_18), unknown_key(foo)])).
+expected_status(crisp_key_wrong_type, input_problems([wrong_type(individual_aged_under_18)])).
+expected_status(crisp_key_control, indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])).
+expected_status(not_an_attribute_list, input_problems([wrong_type(profile)])).
+
+same_citations(Found, Expected) :-
+    sort(Found, SortedFound),
+    sort(Expected, SortedExpected),
+    SortedFound == SortedExpected.
+
+subject_profile(Subject, Profile) :-
+    uk_recognised_legitimate_interests_profile_for(Subject, Profile).
+
+% ---- every subject: its expected status, exactly once ----------------
+test(every_subject_has_an_expected_status) :-
+    findall(Subject, uk_recognised_legitimate_interests_subject(Subject), Subjects),
+    findall(Subject, expected_status(Subject, _), ExpectedSubjects),
+    Subjects == ExpectedSubjects.
+test(every_subject_resolves_to_its_expected_status_exactly_once) :-
+    findall(Subject-Status, expected_status(Subject, Status), Expected),
+    findall(Subject-Found,
+            ( member(Subject-_, Expected),
+              uk_recognised_legitimate_interests_assess(Subject, uk_recognised_legitimate_interests_verdict(Found, _)) ),
+            Answers),
+    Answers == Expected.
+test(status_projection_matches_the_verdict) :-
+    subject_profile(crime_condition_met, Profile),
+    findall(Status, uk_recognised_legitimate_interests_status(Profile, Status), Statuses),
+    Statuses == [recognised_legitimate_interest_applies].
+
+% ---- recognised legitimate interest: routes and near misses ----------
+test(public_authority_bar_cites_article_6_1) :-
+    subject_profile(public_authority_bar, Profile),
+    findall(Result-Citations, recognised_legitimate_interest(Profile, Result, Citations), Answers),
+    Answers == [recognised_legitimate_interest_does_not_apply-[cite(uk_gdpr_art_6_1)]].
+test(public_authority_bar_is_not_applies, fail) :-
+    subject_profile(public_authority_bar, Profile),
+    recognised_legitimate_interest(Profile, recognised_legitimate_interest_applies, _).
+test(security_condition_cites_paragraph_2) :-
+    decide_uk_recognised_legitimate_interests(
+        [attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+         attribute(processing_necessary_for_national_security_public_security_or_defence, true)],
+        uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_2)]).
+test(disclosure_condition_cites_paragraph_1) :-
+    uk_recognised_legitimate_interests_assess(disclosure_condition_met, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_1)]).
+test(disclosure_request_silent_is_not_applies, fail) :-
+    uk_recognised_legitimate_interests_assess(disclosure_request_silent, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, _)).
+test(disclosure_request_silent_cites_article_6_5) :-
+    uk_recognised_legitimate_interests_assess(disclosure_request_silent, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_does_not_apply, Citations)),
+    Citations == [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5)].
+test(emergency_condition_cites_paragraphs_3_and_4) :-
+    uk_recognised_legitimate_interests_assess(emergency_condition_met, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_3), cite(uk_gdpr_annex_1_para_4)]).
+test(emergency_response_missing_is_not_applies, fail) :-
+    uk_recognised_legitimate_interests_assess(emergency_response_missing, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, _)).
+test(crime_condition_cites_paragraph_5) :-
+    uk_recognised_legitimate_interests_assess(crime_condition_met, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_5)]).
+test(all_conditions_fail_without_the_authority_key) :-
+    uk_recognised_legitimate_interests_assess(all_conditions_fail, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_does_not_apply, Citations)),
+    Citations == [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5)].
+test(all_conditions_fail_is_not_applies, fail) :-
+    uk_recognised_legitimate_interests_assess(all_conditions_fail, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, _)).
+test(safeguarding_child_cites_paragraphs_6_to_8) :-
+    uk_recognised_legitimate_interests_assess(safeguarding_child, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_6), cite(uk_gdpr_annex_1_para_7), cite(uk_gdpr_annex_1_para_8)]).
+test(safeguarding_adult_at_risk_cites_paragraphs_6_to_8) :-
+    uk_recognised_legitimate_interests_assess(safeguarding_adult_at_risk, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, Citations)),
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_6), cite(uk_gdpr_annex_1_para_7), cite(uk_gdpr_annex_1_para_8)]).
+test(safeguarding_adult_unsure_risk_has_no_citations) :-
+    subject_profile(safeguarding_adult_unsure_risk, Profile),
+    recognised_legitimate_interest(Profile, needs_legal_review(_, _), Citations),
+    Citations == [].
+test(safeguarding_adult_not_at_risk_is_not_applies, fail) :-
+    uk_recognised_legitimate_interests_assess(safeguarding_adult_not_at_risk, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, _)).
+test(authority_unsure_is_not_applies, fail) :-
+    uk_recognised_legitimate_interests_assess(authority_unsure_condition_met, uk_recognised_legitimate_interests_verdict(recognised_legitimate_interest_applies, _)).
+
+% ---- legitimate interests, UK and EU ---------------------------------
+test(uk_interests_apply) :-
+    subject_profile(interests_apply, Profile),
+    findall(Result-Citations, uk_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_applies-[cite(uk_gdpr_art_6_1_f)]].
+test(eu_interests_apply) :-
+    subject_profile(interests_apply, Profile),
+    findall(Result-Citations, eu_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_applies-[cite(eu_reg_2016_679_art_6_1_f)]].
+test(uk_interests_overridden) :-
+    subject_profile(interests_overridden, Profile),
+    findall(Result-Citations, uk_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_does_not_apply-[cite(uk_gdpr_art_6_1_f)]].
+test(eu_interests_overridden) :-
+    subject_profile(interests_overridden, Profile),
+    findall(Result-Citations, eu_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_does_not_apply-[cite(eu_reg_2016_679_art_6_1_f)]].
+test(uk_interests_overridden_is_not_applies, fail) :-
+    subject_profile(interests_overridden, Profile),
+    uk_legitimate_interests(Profile, legitimate_interests_applies, _).
+test(public_authority_bars_uk_interests) :-
+    subject_profile(public_authority_bar, Profile),
+    findall(Result-Citations, uk_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_does_not_apply-[cite(uk_gdpr_art_6_1)]].
+test(public_authority_bars_eu_interests) :-
+    subject_profile(public_authority_bar, Profile),
+    findall(Result-Citations, eu_legitimate_interests(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interests_does_not_apply-[cite(eu_reg_2016_679_art_6_1)]].
+
+% ---- either UK basis ---------------------------------------------------
+test(basis_available_through_recognised_interest) :-
+    subject_profile(security_condition_met, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers = [legitimate_interest_basis_available-Citations],
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_2)]).
+test(basis_available_through_interests) :-
+    subject_profile(interests_apply, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interest_basis_available-[cite(uk_gdpr_art_6_1_f)]].
+test(basis_not_available_when_both_fail) :-
+    subject_profile(uk_same_as_eu, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers = [legitimate_interest_basis_not_available-Citations],
+    same_citations(Citations, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_art_6_1_f)]).
+test(basis_not_available_for_public_authority) :-
+    subject_profile(public_authority_bar, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [legitimate_interest_basis_not_available-[cite(uk_gdpr_art_6_1)]].
+test(basis_turns_on_the_authority_judgement_alone) :-
+    subject_profile(authority_unsure_condition_met, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(processing_by_a_public_authority_in_the_performance_of_its_tasks, cite(uk_gdpr_art_6_1)), [inputs_relied_on([processing_by_a_public_authority_in_the_performance_of_its_tasks-unsure, processing_necessary_for_national_security_public_security_or_defence-true])])-[]].
+test(basis_names_the_absent_authority_key) :-
+    subject_profile(authority_absent_condition_met, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([processing_by_a_public_authority_in_the_performance_of_its_tasks])-[]].
+test(basis_names_the_first_missing_condition_key) :-
+    subject_profile(interests_overridden, Profile),
+    findall(Result-Citations, uk_legitimate_interest_basis(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([processing_necessary_for_a_disclosure_in_response_to_a_request])-[]].
+
+% ---- comparison (query type #5) ---------------------------------------
+test(comparison_differs_through_recognised_interest) :-
+    subject_profile(uk_differs_from_eu, Profile),
+    findall(UkResult-EuResult-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, UkResult, EuResult, Difference, ChangedBy), Answers),
+    Answers = [legitimate_interest_basis_available-legitimate_interest_basis_not_available-differs-ChangedBy],
+    same_citations(ChangedBy, [cite(uk_gdpr_art_6_1_ea), cite(uk_gdpr_art_6_5), cite(uk_gdpr_annex_1_para_5)]).
+test(comparison_near_miss_is_same) :-
+    subject_profile(uk_same_as_eu, Profile),
+    findall(UkResult-EuResult-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, UkResult, EuResult, Difference, ChangedBy), Answers),
+    Answers == [legitimate_interest_basis_not_available-legitimate_interest_basis_not_available-same-[]].
+test(comparison_near_miss_does_not_differ, fail) :-
+    subject_profile(uk_same_as_eu, Profile),
+    compare_uk_eu_legitimate_interest_basis(Profile, _, _, differs, _).
+test(comparison_same_through_interests) :-
+    subject_profile(interests_apply, Profile),
+    findall(UkResult-EuResult-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, UkResult, EuResult, Difference, ChangedBy), Answers),
+    Answers == [legitimate_interest_basis_available-legitimate_interest_basis_available-same-[]].
+test(comparison_not_comparable_when_sides_are_open) :-
+    subject_profile(authority_unsure_condition_met, Profile),
+    findall(EuResult-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, _, EuResult, Difference, ChangedBy), Answers),
+    Answers == [indeterminate([legitimate_interest_pursued_by_the_controller_or_a_third_party])-not_comparable-[]].
+test(comparison_with_input_problems) :-
+    subject_profile(not_an_attribute_list, Profile),
+    findall(UkResult-EuResult-Difference-ChangedBy, compare_uk_eu_legitimate_interest_basis(Profile, UkResult, EuResult, Difference, ChangedBy), Answers),
+    Answers == [input_problems([wrong_type(profile)])-input_problems([wrong_type(profile)])-not_comparable-[]].
+
+% ---- right to object ----------------------------------------------------
+test(objection_not_engaged_on_another_basis) :-
+    subject_profile(objection_not_engaged, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [objection_right_not_engaged-[cite(uk_gdpr_art_21_1)]].
+test(objection_must_stop) :-
+    subject_profile(objection_must_stop, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [controller_must_no_longer_process-[cite(uk_gdpr_art_21_1)]].
+test(objection_must_stop_is_not_continue, fail) :-
+    subject_profile(objection_must_stop, Profile),
+    uk_right_to_object(Profile, controller_may_continue_processing, _).
+test(objection_legal_claims_allow_continuing) :-
+    subject_profile(objection_legal_claims, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [controller_may_continue_processing-[cite(uk_gdpr_art_21_1)]].
+test(objection_legal_claims_is_not_stop, fail) :-
+    subject_profile(objection_legal_claims, Profile),
+    uk_right_to_object(Profile, controller_must_no_longer_process, _).
+test(objection_names_the_first_missing_exception) :-
+    subject_profile(objection_exceptions_missing, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([controller_demonstrates_compelling_legitimate_grounds_that_override])-[]].
+test(objection_unsure_goes_to_review) :-
+    subject_profile(objection_unsure, Profile),
+    findall(Result-Citations, uk_right_to_object(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(objection_on_grounds_relating_to_particular_situation, cite(uk_gdpr_art_21_1)), [inputs_relied_on([basis_relied_on-recognised_legitimate_interest, objection_on_grounds_relating_to_particular_situation-unsure, controller_demonstrates_compelling_legitimate_grounds_that_override-false, processing_for_establishment_exercise_or_defence_of_legal_claims-false])])-[]].
+
+% ---- the basis atom legitimate_interests (point (f)) ----------------------
+test(legitimate_interests_is_an_exported_basis_atom) :-
+    legitimate_interests.
+test(objection_on_legitimate_interests_basis_must_stop) :-
+    legitimate_interests,
+    findall(Result-Citations,
+            uk_right_to_object(
+                [attribute(basis_relied_on, legitimate_interests),
+                 attribute(objection_on_grounds_relating_to_particular_situation, true),
+                 attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, false),
+                 attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, false)],
+                Result,
+                Citations),
+            Answers),
+    Answers == [controller_must_no_longer_process-[cite(uk_gdpr_art_21_1)]].
+test(objection_on_legitimate_interests_basis_may_continue) :-
+    legitimate_interests,
+    findall(Result-Citations,
+            uk_right_to_object(
+                [attribute(basis_relied_on, legitimate_interests),
+                 attribute(objection_on_grounds_relating_to_particular_situation, true),
+                 attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, true)],
+                Result,
+                Citations),
+            Answers),
+    Answers == [controller_may_continue_processing-[cite(uk_gdpr_art_21_1)]].
+
+% ---- the provenance constructor: a data term ------------------------------
+test(provenance_term_builds_and_destructures) :-
+    Term = provenance(uk_gdpr_art_6_1, pinned_unit_text),
+    Term = provenance(Source, Detail),
+    Source == uk_gdpr_art_6_1,
+    Detail == pinned_unit_text.
+
+% ---- input check --------------------------------------------------------
+test(input_check_duplicate_and_unknown) :-
+    subject_profile(duplicate_and_unknown_keys, Profile),
+    findall(Problems, uk_recognised_legitimate_interests_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(individual_aged_under_18), unknown_key(foo)]].
+test(input_check_wrong_type) :-
+    subject_profile(crisp_key_wrong_type, Profile),
+    findall(Problems, uk_recognised_legitimate_interests_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(individual_aged_under_18)]].
+test(input_check_control_is_well_formed) :-
+    subject_profile(crisp_key_control, Profile),
+    findall(Problems, uk_recognised_legitimate_interests_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+test(input_check_not_a_list) :-
+    findall(Problems, uk_recognised_legitimate_interests_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(input_problems_reach_every_query) :-
+    subject_profile(crisp_key_wrong_type, Profile),
+    recognised_legitimate_interest(Profile, input_problems([wrong_type(individual_aged_under_18)]), []),
+    uk_legitimate_interests(Profile, input_problems([wrong_type(individual_aged_under_18)]), []),
+    uk_legitimate_interest_basis(Profile, input_problems([wrong_type(individual_aged_under_18)]), []),
+    eu_legitimate_interests(Profile, input_problems([wrong_type(individual_aged_under_18)]), []),
+    uk_right_to_object(Profile, input_problems([wrong_type(individual_aged_under_18)]), []).
+
+% ---- justification (query type #7): the checklist ------------------------
+test(every_subject_has_a_non_empty_checklist) :-
+    findall(Subject, uk_recognised_legitimate_interests_subject(Subject), Subjects),
+    findall(Subject,
+            ( member(Subject, Subjects),
+              subject_profile(Subject, Profile),
+              uk_recognised_legitimate_interests_checklist(Profile, [_|_]) ),
+            Checked),
+    Checked == Subjects.
+test(every_checklist_item_carries_a_citation) :-
+    subject_profile(safeguarding_adult_unsure_risk, Profile),
+    uk_recognised_legitimate_interests_checklist(Profile, Items),
+    length(Items, 6),
+    findall(Item, (member(Item, Items), Item = item(_, _, cite(_))), CitedItems),
+    CitedItems == Items.
+test(checklist_marks_the_met_condition) :-
+    subject_profile(security_condition_met, Profile),
+    uk_recognised_legitimate_interests_checklist(Profile, Items),
+    Items = [item(public_authority_bar, met, cite(uk_gdpr_art_6_1))|_],
+    member(item(security_condition, met, cite(uk_gdpr_annex_1_para_2)), Items).
+test(checklist_marks_the_bar_unmet_for_a_public_authority) :-
+    subject_profile(public_authority_bar, Profile),
+    uk_recognised_legitimate_interests_checklist(Profile, [item(public_authority_bar, unmet(_), cite(uk_gdpr_art_6_1))|_]).
+
+% ---- resolvable and status values -----------------------------------------
+test(final_status_is_a_status_value) :-
+    uk_recognised_legitimate_interests_assess(crime_condition_met, uk_recognised_legitimate_interests_verdict(Status, _)),
+    uk_recognised_legitimate_interests_status_values(StatusValues),
+    member(Status, StatusValues).
+test(decision_resolvable_for_a_final_answer) :-
+    subject_profile(security_condition_met, Profile),
+    uk_recognised_legitimate_interests_decision_resolvable(Profile).
+test(decision_not_resolvable_for_the_near_miss, fail) :-
+    subject_profile(authority_absent_condition_met, Profile),
+    uk_recognised_legitimate_interests_decision_resolvable(Profile).
+
+:- end_module(test_public_interface).

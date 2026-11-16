@@ -1,0 +1,93 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), plus input tolerance
+% (malformed, unbound and partial profiles).
+% Run: python -m clausal.testing eu/dma_art_3_gatekeeper_order/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/dma_art_3_gatekeeper_order/dma_art_3_gatekeeper_order, [
+    dma_art_3_gatekeeper_order_status/2,
+    impact_threshold_status/3,
+    gateway_threshold_status/3,
+    entrenchment_threshold_status/3,
+    presumption_status/3,
+    designation_requirements_status/4,
+    gatekeeper_status/4
+]).
+:- use_module(eu/dma_art_3_gatekeeper_order/fixtures, [dma_art_3_gatekeeper_order_profile_for/2]).
+:- use_module(eu/dma_art_3_gatekeeper_order/queries, [dma_art_3_gatekeeper_order_input_problems/2, dma_art_3_gatekeeper_order_eligibility/3]).
+
+test(boundary_profile_is_presumed_met_with_the_status_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+
+test(boundary_profile_rejects_the_wrong_bound_status, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_not_met).
+
+test(all_six_answers_hold_bound_on_the_boundary_profile) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    impact_threshold_status(Profile, impact_threshold_met, [cite(eu_reg_2022_1925_art_3_2_a)]),
+    gateway_threshold_status(Profile, gateway_threshold_met, [cite(eu_reg_2022_1925_art_3_2_b)]),
+    entrenchment_threshold_status(Profile, entrenchment_threshold_met, [cite(eu_reg_2022_1925_art_3_2_c), cite(eu_reg_2022_1925_art_3_2_b)]),
+    presumption_status(Profile, gatekeeper_presumed, [cite(eu_reg_2022_1925_art_3_2_a), cite(eu_reg_2022_1925_art_3_2_b), cite(eu_reg_2022_1925_art_3_2_c)]),
+    designation_requirements_status(Profile, requirements_presumed_met, [], [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2)]),
+    gatekeeper_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_3_9), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent])]), [], []).
+
+test(accepted_rebuttal_is_not_met_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_accepted, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_not_met).
+
+test(rejected_rebuttal_is_presumed_met_with_its_basis_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_rejected, Profile),
+    designation_requirements_status(Profile, requirements_presumed_met, [outside_fact(rebuttal_accepted_by_commission, attested(false, attestation(european_commission, at_2026_09_06, rebuttal_conclusion, none)))], [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2), cite(eu_reg_2022_1925_art_3_5)]).
+
+test(unstated_arguments_name_the_key_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_arguments_unstated, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, indeterminate([rebuttal_arguments_presented])).
+
+test(all_judgements_true_below_thresholds_is_met_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_all_judgements_true, Profile),
+    designation_requirements_status(Profile, requirements_met, [], [cite(eu_reg_2022_1925_art_3_1_a), cite(eu_reg_2022_1925_art_3_1_b), cite(eu_reg_2022_1925_art_3_1_c)]).
+
+test(designation_attested_false_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_false, Profile),
+    gatekeeper_status(Profile, not_designated_gatekeeper, [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(false, attestation(european_commission, at_2026_09_06, designation_decision, none)))], [cite(eu_reg_2022_1925_art_3_9)]).
+
+test(a_float_figure_is_reported_bound) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    dma_art_3_gatekeeper_order_input_problems(Profile, [wrong_type(union_turnover_eur_most_recent_financial_year)]),
+    dma_art_3_gatekeeper_order_status(Profile, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)])),
+    dma_art_3_gatekeeper_order_eligibility(Profile, undetermined, _Checklist).
+
+test(a_float_figure_gets_no_final_status, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    dma_art_3_gatekeeper_order_status(Profile, requirements_presumed_met).
+
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems(_Unbound, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems([attribute(member_states_where_core_platform_service_provided, 3)|_Tail], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_value_is_wrong_type) :-
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems([attribute(member_states_where_core_platform_service_provided, _Value)], Problems), Answers),
+    Answers == [[wrong_type(member_states_where_core_platform_service_provided)]].
+
+test(a_negative_figure_is_wrong_type) :-
+    impact_threshold_status([attribute(member_states_where_core_platform_service_provided, -1)], input_problems([wrong_type(member_states_where_core_platform_service_provided)]), []).
+
+test(an_unsure_crisp_key_is_wrong_type) :-
+    designation_requirements_status([attribute(rebuttal_arguments_presented, unsure)], input_problems([wrong_type(rebuttal_arguments_presented)]), [], []).
+
+test(a_plain_boolean_outside_fact_is_wrong_type) :-
+    gatekeeper_status([attribute(designated_as_gatekeeper_for_core_platform_service, true)], input_problems([wrong_type(designated_as_gatekeeper_for_core_platform_service)]), [], []).
+
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems([attribute(colour, red), attribute(entrenched_and_durable_position, maybe), attribute(member_states_where_core_platform_service_provided, 2), attribute(member_states_where_core_platform_service_provided, 2)], Problems), Answers),
+    Answers == [[duplicate_key(member_states_where_core_platform_service_provided), wrong_type(entrenched_and_durable_position), unknown_key(colour)]].
+
+:- end_module(test_input_mode).

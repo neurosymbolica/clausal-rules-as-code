@@ -1,0 +1,73 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_nis2_jurisdiction_registration_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_nis2_jurisdiction_registration_nis2_jurisdiction_registration, [nis2_jurisdiction_registration_status/2, jurisdiction_basis/3, main_establishment_rule/3, registry_submission_items/2, entity_list_submission_items/2, change_notification_limits/2]).
+:- use_module(m__eu_nis2_jurisdiction_registration_kernel, [nis2_jurisdiction_registration_input_problems/2]).
+:- use_module(m__eu_nis2_jurisdiction_registration_fixtures, [nis2_jurisdiction_registration_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    nis2_jurisdiction_registration_profile_for(general_entity_established, Profile),
+    nis2_jurisdiction_registration_status(Profile, eligible).
+test(no_rule_status_bound) :-
+    nis2_jurisdiction_registration_profile_for(provider_non_union_no_services, Profile),
+    nis2_jurisdiction_registration_status(Profile, ineligible).
+test(basis_bound_with_citation) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_establishment, [cite(eu_dir_2022_2555_art_26_1)]).
+test(main_establishment_bound) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, true)], state_where_cybersecurity_risk_management_decisions_are_taken, [cite(eu_dir_2022_2555_art_26_2)]).
+test(registry_empty_list_bound) :-
+    registry_submission_items([attribute(entity_category, public_administration_entity)], []).
+test(entity_list_bound) :-
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, true), attribute(member_states_list_applicable, true)], [item(entity_name, cite(eu_dir_2022_2555_art_3_4_a)), item(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, cite(eu_dir_2022_2555_art_3_4_b)), item(sector_and_subsector, cite(eu_dir_2022_2555_art_3_4_c)), item(member_states_where_services_in_scope_are_provided, cite(eu_dir_2022_2555_art_3_4_d))]).
+test(limits_bound_for_provider) :-
+    change_notification_limits([attribute(entity_category, main_establishment_provider)], [limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)), limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))]).
+test(well_formed_profile_has_no_problem) :-
+    nis2_jurisdiction_registration_input_problems([attribute(entity_category, general_entity), attribute(established_in_union, true)], []).
+test(empty_profile_has_no_problem) :-
+    nis2_jurisdiction_registration_input_problems([], []).
+test(duplicate_key_is_named_once) :-
+    nis2_jurisdiction_registration_input_problems([attribute(established_in_union, true), attribute(established_in_union, false)], [duplicate_key(established_in_union)]).
+test(crisp_key_rejects_unsure) :-
+    nis2_jurisdiction_registration_input_problems([attribute(established_in_union, unsure)], [wrong_type(established_in_union)]).
+test(judgement_key_accepts_unsure) :-
+    nis2_jurisdiction_registration_input_problems([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)], []).
+test(category_outside_enumeration_is_wrong_type) :-
+    nis2_jurisdiction_registration_input_problems([attribute(entity_category, bogus)], [wrong_type(entity_category)]).
+test(wrong_type_comes_before_unknown_key) :-
+    nis2_jurisdiction_registration_input_problems([attribute(zzz, true), attribute(entity_category, bogus)], [wrong_type(entity_category), unknown_key(zzz)]).
+test(unknown_key_named_once) :-
+    nis2_jurisdiction_registration_input_problems([attribute(zzz, true), attribute(zzz, false)], [unknown_key(zzz)]).
+test(non_list_profile) :-
+    nis2_jurisdiction_registration_input_problems(foo, [wrong_type(profile)]).
+test(list_with_a_non_attribute_element) :-
+    nis2_jurisdiction_registration_input_problems([attribute(entity_category, general_entity), foo], [wrong_type(profile)]).
+test(basis_reports_input_problems_with_no_citations) :-
+    jurisdiction_basis([attribute(zzz, true)], input_problems([unknown_key(zzz)]), []).
+test(main_establishment_reports_input_problems) :-
+    main_establishment_rule([attribute(zzz, true)], input_problems([unknown_key(zzz)]), []).
+test(registry_reports_input_problems) :-
+    registry_submission_items([attribute(established_in_union, unsure)], input_problems([wrong_type(established_in_union)])).
+test(entity_list_reports_input_problems) :-
+    entity_list_submission_items([attribute(zzz, true)], input_problems([unknown_key(zzz)])).
+test(limits_report_input_problems) :-
+    change_notification_limits([attribute(zzz, true)], input_problems([unknown_key(zzz)])).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    nis2_jurisdiction_registration_profile_for(general_entity_established, Profile),
+    nis2_jurisdiction_registration_status(Profile, ineligible).
+test(basis_bound_to_another_basis_is_rejected, fail) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_main_establishment, _).
+test(main_establishment_wrong_bound_is_rejected, fail) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, true)], state_where_cybersecurity_operations_are_carried_out, _).
+
+cp_test_names([status_holds_with_the_verdict_bound, no_rule_status_bound, basis_bound_with_citation, main_establishment_bound, registry_empty_list_bound, entity_list_bound, limits_bound_for_provider, well_formed_profile_has_no_problem, empty_profile_has_no_problem, duplicate_key_is_named_once, crisp_key_rejects_unsure, judgement_key_accepts_unsure, category_outside_enumeration_is_wrong_type, wrong_type_comes_before_unknown_key, unknown_key_named_once, non_list_profile, list_with_a_non_attribute_element, basis_reports_input_problems_with_no_citations, main_establishment_reports_input_problems, registry_reports_input_problems, entity_list_reports_input_problems, limits_report_input_problems]).
+cp_test_fail_names([the_wrong_bound_status_is_rejected, basis_bound_to_another_basis_is_rejected, main_establishment_wrong_bound_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

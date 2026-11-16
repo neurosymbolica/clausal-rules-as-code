@@ -1,0 +1,157 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_automated_decision/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_automated_decision, [
+    decide_data_subject_request/2,
+    request_basis/2,
+    decide_request_basis/2,
+    request_basis_status/2,
+    request_basis_checklist/2,
+    request_basis_decision_resolvable/1,
+    request_basis_status_values/1,
+    gdpr_data_subject_rights_automated_decision_input_problems/2,
+    gdpr_data_subject_rights_automated_decision_what_if/4,
+    gdpr_data_subject_rights_automated_decision_subject/1,
+    gdpr_data_subject_rights_automated_decision_profile_for/2,
+    gdpr_data_subject_rights_automated_decision_assess/2
+]).
+
+verdicts_of(Subject, Verdicts) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(Subject, Profile),
+    findall(Verdict, decide_data_subject_request(Profile, Verdict), Verdicts).
+
+test(the_baseline_must_comply) :-
+    verdicts_of(baseline_must_comply, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(not_solely_automated_is_not_engaged) :-
+    verdicts_of(not_solely_automated, [gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(contract_exception_relieves_with_safeguards) :-
+    verdicts_of(contract_exception, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_a, [human_intervention, express_point_of_view, contest_decision], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_3)])]).
+
+test(contract_near_miss_must_comply) :-
+    verdicts_of(contract_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(law_authorised_exception_has_no_conditions) :-
+    verdicts_of(law_authorised_exception, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_b, [], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_b)])]).
+
+test(law_authorised_near_miss_must_comply) :-
+    verdicts_of(law_authorised_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(explicit_consent_exception_relieves_with_safeguards) :-
+    verdicts_of(explicit_consent_exception, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_c, [human_intervention, express_point_of_view, contest_decision], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_c), cite(eu_reg_2016_679_art_22_3)])]).
+
+test(explicit_consent_near_miss_must_comply) :-
+    verdicts_of(explicit_consent_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(special_categories_bar_blocks_the_contract_exception) :-
+    verdicts_of(special_categories_bar_blocks_contract, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(special_categories_safeguards_allow_the_contract_exception) :-
+    verdicts_of(special_categories_safeguards_allow_contract, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_a, [human_intervention, express_point_of_view, contest_decision], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_3)])]).
+
+test(special_categories_safeguards_missing_is_indeterminate) :-
+    verdicts_of(special_categories_safeguards_missing, [gdpr_data_subject_request_verdict(indeterminate([special_category_condition_and_safeguards_met_for_decision]), none, none, [], [])]).
+
+test(manifestly_excessive_allows_a_fee) :-
+    verdicts_of(manifestly_excessive_fee, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_22_1)])]).
+
+test(manifestly_excessive_near_miss_must_comply) :-
+    verdicts_of(manifestly_excessive_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(unable_to_identify_relieves) :-
+    verdicts_of(unable_to_identify, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art12_2_unable_to_identify, [], [cite(eu_reg_2016_679_art_12_2), cite(eu_reg_2016_679_art_22_1)])]).
+
+test(unable_to_identify_near_miss_must_comply) :-
+    verdicts_of(unable_to_identify_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(legislative_restriction_relieves) :-
+    verdicts_of(legislative_restriction, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art23_legislative_restriction, [], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_23_1)])]).
+
+test(legislative_restriction_near_miss_must_comply) :-
+    verdicts_of(legislative_restriction_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(unconfirmed_identity_suspends) :-
+    verdicts_of(identity_suspended, [gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])]).
+
+test(confirmed_identity_near_miss_must_comply) :-
+    verdicts_of(identity_confirmed_near_miss, [gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(missing_identity_confirmation_is_indeterminate) :-
+    verdicts_of(identity_confirmation_missing, [gdpr_data_subject_request_verdict(indeterminate([identity_confirmed]), none, none, [], [])]).
+
+test(unsure_solely_judgement_is_referred) :-
+    verdicts_of(solely_unsure_referral, [gdpr_data_subject_request_verdict(needs_legal_review(open_textured(decision_based_solely_on_automated_processing, cite(eu_reg_2016_679_art_22_1)), [inputs_relied_on([request_type-automated_decision, decision_based_solely_on_automated_processing-unsure, decision_produces_legal_or_similarly_significant_effects-true])]), none, none, [], [])]).
+
+test(unsure_manifestly_judgement_is_referred) :-
+    verdicts_of(manifestly_unsure_referral, [gdpr_data_subject_request_verdict(needs_legal_review(open_textured(request_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)), [inputs_relied_on([request_type-automated_decision, request_manifestly_unfounded_or_excessive-unsure])]), none, none, [], [])]).
+
+test(missing_solely_key_is_indeterminate) :-
+    verdicts_of(solely_missing_indeterminate, [gdpr_data_subject_request_verdict(indeterminate([decision_based_solely_on_automated_processing]), none, none, [], [])]).
+
+test(missing_request_type_is_indeterminate) :-
+    verdicts_of(request_type_missing, [gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])]).
+
+test(unknown_key_is_an_input_problem) :-
+    verdicts_of(unknown_key_input_problem, [gdpr_data_subject_request_verdict(input_problems([unknown_key(bogus_key)]), none, none, [], [])]).
+
+test(wrong_type_is_an_input_problem) :-
+    verdicts_of(wrong_type_input_problem, [gdpr_data_subject_request_verdict(input_problems([wrong_type(decision_based_solely_on_automated_processing)]), none, none, [], [])]).
+
+test(the_first_exception_in_order_is_named) :-
+    verdicts_of(exception_order_contract_first, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_a, [human_intervention, express_point_of_view, contest_decision], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_3)])]).
+
+test(an_unengaged_right_beats_every_exception) :-
+    verdicts_of(not_engaged_beats_exception, [gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_22_1)])]).
+
+test(a_settled_exception_beats_the_suspension) :-
+    verdicts_of(exception_beats_suspension, [gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_c, [human_intervention, express_point_of_view, contest_decision], [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_c), cite(eu_reg_2016_679_art_22_3)])]).
+
+test(request_basis_projection_is_art22_1_when_engaged) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(contract_exception, Profile),
+    findall(Basis, request_basis(Profile, Basis), [art22_1]).
+
+test(request_basis_projection_is_none_when_suspended) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(identity_suspended, Profile),
+    findall(Basis, request_basis(Profile, Basis), [none]).
+
+test(the_input_check_names_an_unknown_key) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(unknown_key_input_problem, Profile),
+    gdpr_data_subject_rights_automated_decision_input_problems(Profile, [unknown_key(bogus_key)]).
+
+test(the_input_check_passes_a_good_profile) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    gdpr_data_subject_rights_automated_decision_input_problems(Profile, []).
+
+test(the_baseline_status_is_art22_1) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    request_basis_status(Profile, art22_1).
+
+test(what_if_not_solely_automated_removes_the_basis) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    gdpr_data_subject_rights_automated_decision_what_if(Profile, decision_based_solely_on_automated_processing, false, none).
+
+test(the_assessment_wrapper_resolves) :-
+    gdpr_data_subject_rights_automated_decision_subject(Subject),
+    gdpr_data_subject_rights_automated_decision_assess(Subject, request_basis_verdict(Basis, _Citations)),
+    request_basis_status_values(Values),
+    member(Basis, Values).
+
+test(checklist_is_non_empty_and_cites_each_item) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(baseline_must_comply, Profile),
+    request_basis_decision_resolvable(Profile),
+    request_basis_checklist(Profile, [_FirstItem|_OtherItems]),
+    request_basis_checklist(Profile, Items),
+    member(item(engagement, met, cite(eu_reg_2016_679_art_22_1)), Items),
+    member(item(art22_2_a, unmet, cite(eu_reg_2016_679_art_22_2_a)), Items).
+
+test(the_checklist_shows_the_exception_that_applies) :-
+    gdpr_data_subject_rights_automated_decision_profile_for(contract_exception, Profile),
+    request_basis_checklist(Profile, Items),
+    member(item(art22_2_a, met, cite(eu_reg_2016_679_art_22_2_a)), Items).
+
+:- end_module(test_public_interface).

@@ -1,0 +1,423 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/small_items.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act), consolidated
+% text 02024R1689-20260727 (as amended by Regulation (EU) 2026/1744). This layer
+% decides no statutory condition: every answer comes from the slice.
+%
+% Query types served (all through the slice small_items.clausal):
+%   #3  status_determination: the six queries and small_items_status/2
+%       (re-exported by the package facade);
+%   #13 compliance_check: is the proposed processing, testing or reliance
+%       allowed: decide_small_items/2, whose verdict carries the RESULT atom of
+%       the matching query (for example real_world_testing_permitted or
+%       real_world_testing_not_permitted) with its citations;
+%   #7  justification: small_items_checklist/2 in the slice, one
+%       item(Requirement, Status, cite(Key)) per condition;
+%   #16 what-if: small_items_what_if/4 below.
+%
+% small_items_what_if(Request, Key, Value, Status): Request is the facade term
+%   small_items_request(Query, Profile, AssessmentDate); attribute(Key, Value)
+%   replaces every attribute of Key in the attribute-list Profile (or is added
+%   when Key is absent) and the query is asked again. The kit override_key/4
+%   works on dicts, and this order types the profile as an attribute list, so
+%   the replacement is local list plumbing (noted for the kit in the working notes (not published)).
+% small_items_profile_keys/1: the sixty-three profile keys, contract order.
+% small_items_input_problems/2: THE INPUT CHECK, re-exported from the kernel.
+%
+% ROOT EXPORTS (the order's export requirement): the sixty-three profile key
+% atoms, the seventeen enumeration atoms, the judgement value unsure and the
+% result atoms of the six queries are served here as facts, so the package
+% root exposes each of them by name. The result constructors are served as
+% guarded well-formedness checks: each holds exactly for a term of the shape
+% the called contract gives it. They decide nothing: they are the vocabulary
+% of the called contract.
+% =====================================================================
+
+:- module(queries, [
+    small_items_profile_keys/1,
+    small_items_input_problems/2,
+    small_items_what_if/4,
+    bias_processing_capacity/0,
+    strictly_necessary_for_bias_detection_and_correction_under_article_10_2_f_and_g/0,
+    strictly_necessary_for_bias_detection_and_correction_of_biases_affecting_health_safety_or_fundamental_rights/0,
+    appropriate_safeguards_for_fundamental_rights_and_freedoms/0,
+    bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data/0,
+    technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures/0,
+    measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation/0,
+    data_not_transmitted_transferred_or_otherwise_accessed_by_other_parties/0,
+    data_deleted_once_bias_corrected_or_retention_period_ended/0,
+    records_of_processing_include_the_reasons_for_the_processing/0,
+    sandbox_processing_of_data_collected_for_other_purposes_solely_for_developing_training_and_testing/0,
+    developed_for_safeguarding_substantial_public_interest/0,
+    public_interest_area/0,
+    data_necessary_for_chapter_iii_section_2_requirements_and_non_personal_data_not_effective/0,
+    effective_monitoring_and_response_mechanisms/0,
+    functionally_separate_isolated_and_protected_environment_under_provider_control/0,
+    data_shared_only_as_article_59_allows/0,
+    processing_leads_to_no_measures_or_decisions_affecting_data_subjects_or_their_rights/0,
+    appropriate_technical_and_organisational_measures/0,
+    data_deleted_at_end_of_participation_or_retention_period/0,
+    processing_logs_kept_for_the_duration_of_participation/0,
+    description_of_process_and_rationale_kept_in_technical_documentation/0,
+    project_summary_published_on_competent_authority_website/0,
+    for_law_enforcement_purposes_under_law_enforcement_authority_control/0,
+    based_on_specific_union_or_national_law/0,
+    testing_route/0,
+    member_state_has_adopted_a_real_world_testing_framework/0,
+    testing_plan_drawn_up_and_submitted_to_the_market_surveillance_authority/0,
+    approval_status/0,
+    national_law_provides_for_tacit_approval/0,
+    testing_registered_as_article_60_4_c_requires/0,
+    established_in_the_union_or_legal_representative_established_in_the_union/0,
+    third_country_transfers_only_with_appropriate_and_applicable_safeguards/0,
+    testing_duration/0,
+    extension_notified_in_advance_with_explanation/0,
+    testing_no_longer_than_necessary_to_achieve_its_objectives/0,
+    vulnerable_subjects_appropriately_protected/0,
+    testing_in_cooperation_with_deployers/0,
+    deployers_informed_instructed_and_agreement_concluded/0,
+    informed_consent_given_in_accordance_with_article_61/0,
+    law_enforcement_testing_where_seeking_consent_would_prevent_the_test/0,
+    no_negative_effect_on_subjects_and_data_deleted_after_the_test/0,
+    effectively_overseen_by_suitably_qualified_persons/0,
+    outputs_can_be_effectively_reversed_and_disregarded/0,
+    consent_freely_given/0,
+    consent_obtained_before_participation/0,
+    information_concise_clear_relevant_and_understandable/0,
+    informed_of_nature_objectives_and_possible_inconvenience/0,
+    informed_of_conditions_and_expected_duration/0,
+    informed_of_rights_and_guarantees_including_refusal_and_withdrawal/0,
+    informed_of_arrangements_for_reversal_or_disregarding/0,
+    informed_of_identification_number_and_contact_details/0,
+    consent_dated_and_documented/0,
+    copy_given_to_the_subject_or_legal_representative/0,
+    is_an_sme_including_a_start_up/0,
+    has_partner_or_linked_enterprises/0,
+    affected_person_subject_to_a_deployer_decision_based_on_the_system_output/0,
+    system_is_a_high_risk_ai_system_listed_in_annex_iii/0,
+    system_listed_under_point_2_of_annex_iii/0,
+    decision_produces_legal_effects_or_similarly_significantly_affects_the_person/0,
+    person_considers_an_adverse_impact_on_health_safety_or_fundamental_rights/0,
+    union_or_national_law_provides_an_exception_or_restriction/0,
+    right_otherwise_provided_for_under_union_law/0,
+    provider_of_a_high_risk_system/0,
+    other_provider_or_deployer/0,
+    public_safety_and_public_health/0,
+    environment/0,
+    energy_sustainability/0,
+    transport_and_critical_infrastructure/0,
+    public_administration_and_public_services/0,
+    none_of_the_listed_areas/0,
+    annex_iii/0,
+    annex_i_section_a/0,
+    annex_i_section_b/0,
+    approved/0,
+    no_answer_within_30_days/0,
+    not_approved/0,
+    up_to_six_months/0,
+    extended_up_to_twelve_months/0,
+    longer/0,
+    unsure/0,
+    not_applicable_on_date/0,
+    bias_processing_not_permitted/0,
+    bias_processing_permitted/0,
+    sandbox_processing_not_permitted/0,
+    sandbox_processing_permitted/0,
+    testing_not_provided_for_by_the_member_state/0,
+    subject_to_the_member_state_framework/0,
+    real_world_testing_not_permitted/0,
+    real_world_testing_permitted/0,
+    consent_does_not_meet_article_61/0,
+    consent_meets_article_61/0,
+    no_simplified_compliance/0,
+    may_comply_in_a_simplified_manner/0,
+    no_right_to_explanation_under_article_86/0,
+    right_to_explanation_under_article_86/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/ai_act/small_items/kernel, [small_items_input_problems/2, small_items_assessment_date_t/2]).
+:- use_module(eu/ai_act/small_items/small_items, [small_items_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+small_items_profile_keys([bias_processing_capacity, strictly_necessary_for_bias_detection_and_correction_under_article_10_2_f_and_g, strictly_necessary_for_bias_detection_and_correction_of_biases_affecting_health_safety_or_fundamental_rights, appropriate_safeguards_for_fundamental_rights_and_freedoms, bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data, technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures, measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation, data_not_transmitted_transferred_or_otherwise_accessed_by_other_parties, data_deleted_once_bias_corrected_or_retention_period_ended, records_of_processing_include_the_reasons_for_the_processing, sandbox_processing_of_data_collected_for_other_purposes_solely_for_developing_training_and_testing, developed_for_safeguarding_substantial_public_interest, public_interest_area, data_necessary_for_chapter_iii_section_2_requirements_and_non_personal_data_not_effective, effective_monitoring_and_response_mechanisms, functionally_separate_isolated_and_protected_environment_under_provider_control, data_shared_only_as_article_59_allows, processing_leads_to_no_measures_or_decisions_affecting_data_subjects_or_their_rights, appropriate_technical_and_organisational_measures, data_deleted_at_end_of_participation_or_retention_period, processing_logs_kept_for_the_duration_of_participation, description_of_process_and_rationale_kept_in_technical_documentation, project_summary_published_on_competent_authority_website, for_law_enforcement_purposes_under_law_enforcement_authority_control, based_on_specific_union_or_national_law, testing_route, member_state_has_adopted_a_real_world_testing_framework, testing_plan_drawn_up_and_submitted_to_the_market_surveillance_authority, approval_status, national_law_provides_for_tacit_approval, testing_registered_as_article_60_4_c_requires, established_in_the_union_or_legal_representative_established_in_the_union, third_country_transfers_only_with_appropriate_and_applicable_safeguards, testing_duration, extension_notified_in_advance_with_explanation, testing_no_longer_than_necessary_to_achieve_its_objectives, vulnerable_subjects_appropriately_protected, testing_in_cooperation_with_deployers, deployers_informed_instructed_and_agreement_concluded, informed_consent_given_in_accordance_with_article_61, law_enforcement_testing_where_seeking_consent_would_prevent_the_test, no_negative_effect_on_subjects_and_data_deleted_after_the_test, effectively_overseen_by_suitably_qualified_persons, outputs_can_be_effectively_reversed_and_disregarded, consent_freely_given, consent_obtained_before_participation, information_concise_clear_relevant_and_understandable, informed_of_nature_objectives_and_possible_inconvenience, informed_of_conditions_and_expected_duration, informed_of_rights_and_guarantees_including_refusal_and_withdrawal, informed_of_arrangements_for_reversal_or_disregarding, informed_of_identification_number_and_contact_details, consent_dated_and_documented, copy_given_to_the_subject_or_legal_representative, is_an_sme_including_a_start_up, has_partner_or_linked_enterprises, affected_person_subject_to_a_deployer_decision_based_on_the_system_output, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_listed_under_point_2_of_annex_iii, decision_produces_legal_effects_or_similarly_significantly_affects_the_person, person_considers_an_adverse_impact_on_health_safety_or_fundamental_rights, union_or_national_law_provides_an_exception_or_restriction, right_otherwise_provided_for_under_union_law]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+small_items_what_if(small_items_request(Query, Profile, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    proper_list_t(Profile, IsProperList),
+    hypothetical_profile(IsProperList, Profile, OverriddenKey, NewValue, Hypothesis),
+    small_items_status(small_items_request(Query, Hypothesis, AssessmentDate), NewStatus).
+
+% A term that is not a proper list is passed on unchanged: the query then
+% answers input_problems([wrong_type(profile)]) for it.
+hypothetical_profile(false, Profile, _, _, Profile).
+hypothetical_profile(true, Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_with_key(OverriddenKey), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_with_key(Key, attribute(ElementKey, _)) :-
+    ElementKey == Key.
+
+% proper_list_t(Term, Truth): true for a proper list, false for anything else
+% (an unbound term or a partial list included): must_be/2 raises on those.
+proper_list_t(Term, Truth) :-
+    catch(proper_list_confirmed(Term, Truth), _, Truth = false).
+
+proper_list_confirmed(Term, true) :-
+    must_be(list, Term).
+
+% ---- root exports: the result constructors as well-formedness checks ----
+% Each holds exactly for a term of the shape the called contract states.
+% date(Year, Month, Day): a real calendar day (the ASSESSMENT_DATE argument).
+date(Year, Month, Day) :-
+    small_items_assessment_date_t(date(Year, Month, Day), true).
+
+% indeterminate(MissingKeys): exactly one bare key atom.
+indeterminate([Key]) :-
+    atom(Key).
+
+% needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)|Rest]):
+% Rest is the optional, unscored provenance element.
+needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)|Rest]) :-
+    atom(Key),
+    atom(Citation),
+    is_list(Pairs),
+    is_list(Rest).
+
+% open_textured(Key, cite(Citation)): the referred judgement key and the
+% citation of its referral row.
+open_textured(Key, cite(Citation)) :-
+    atom(Key),
+    atom(Citation).
+
+% inputs_relied_on(Pairs): a flat list of Key-Value pairs, each key an atom.
+inputs_relied_on(Pairs) :-
+    is_list(Pairs),
+    maplist(key_value_pair, Pairs).
+
+key_value_pair(Key-_Value) :-
+    atom(Key).
+
+% provenance(Clause, Citations): the deciding clause and a list of citations.
+provenance(Clause, Citations) :-
+    atom(Clause),
+    is_list(Citations).
+
+% input_problems(Problems): a non-empty flat list of problem terms.
+input_problems([Problem|Problems]) :-
+    nonvar(Problem),
+    is_list(Problems).
+
+% unknown_key(Key): a key outside the sixty-three of the contract.
+unknown_key(Key) :-
+    small_items_input_problems([attribute(Key, true)], [unknown_key(Found)]),
+    Found == Key.
+
+% wrong_type(Key): a contract key, the profile itself or the assessment date.
+wrong_type(Key) :-
+    atom(Key),
+    small_items_profile_keys(ProfileKeys),
+    memberd_t(Key, [profile, assessment_date|ProfileKeys], true).
+
+% duplicate_key(Key): a contract key.
+duplicate_key(Key) :-
+    atom(Key),
+    small_items_profile_keys(ProfileKeys),
+    memberd_t(Key, ProfileKeys, true).
+
+% ---- root exports: the sixty-three profile key atoms ------------------
+bias_processing_capacity.
+strictly_necessary_for_bias_detection_and_correction_under_article_10_2_f_and_g.
+strictly_necessary_for_bias_detection_and_correction_of_biases_affecting_health_safety_or_fundamental_rights.
+appropriate_safeguards_for_fundamental_rights_and_freedoms.
+bias_detection_cannot_be_effectively_fulfilled_by_processing_other_data.
+technical_limitations_on_reuse_and_state_of_the_art_security_and_privacy_preserving_measures.
+measures_securing_and_protecting_the_data_with_strict_access_controls_and_documentation.
+data_not_transmitted_transferred_or_otherwise_accessed_by_other_parties.
+data_deleted_once_bias_corrected_or_retention_period_ended.
+records_of_processing_include_the_reasons_for_the_processing.
+sandbox_processing_of_data_collected_for_other_purposes_solely_for_developing_training_and_testing.
+developed_for_safeguarding_substantial_public_interest.
+public_interest_area.
+data_necessary_for_chapter_iii_section_2_requirements_and_non_personal_data_not_effective.
+effective_monitoring_and_response_mechanisms.
+functionally_separate_isolated_and_protected_environment_under_provider_control.
+data_shared_only_as_article_59_allows.
+processing_leads_to_no_measures_or_decisions_affecting_data_subjects_or_their_rights.
+appropriate_technical_and_organisational_measures.
+data_deleted_at_end_of_participation_or_retention_period.
+processing_logs_kept_for_the_duration_of_participation.
+description_of_process_and_rationale_kept_in_technical_documentation.
+project_summary_published_on_competent_authority_website.
+for_law_enforcement_purposes_under_law_enforcement_authority_control.
+based_on_specific_union_or_national_law.
+testing_route.
+member_state_has_adopted_a_real_world_testing_framework.
+testing_plan_drawn_up_and_submitted_to_the_market_surveillance_authority.
+approval_status.
+national_law_provides_for_tacit_approval.
+testing_registered_as_article_60_4_c_requires.
+established_in_the_union_or_legal_representative_established_in_the_union.
+third_country_transfers_only_with_appropriate_and_applicable_safeguards.
+testing_duration.
+extension_notified_in_advance_with_explanation.
+testing_no_longer_than_necessary_to_achieve_its_objectives.
+vulnerable_subjects_appropriately_protected.
+testing_in_cooperation_with_deployers.
+deployers_informed_instructed_and_agreement_concluded.
+informed_consent_given_in_accordance_with_article_61.
+law_enforcement_testing_where_seeking_consent_would_prevent_the_test.
+no_negative_effect_on_subjects_and_data_deleted_after_the_test.
+effectively_overseen_by_suitably_qualified_persons.
+outputs_can_be_effectively_reversed_and_disregarded.
+consent_freely_given.
+consent_obtained_before_participation.
+information_concise_clear_relevant_and_understandable.
+informed_of_nature_objectives_and_possible_inconvenience.
+informed_of_conditions_and_expected_duration.
+informed_of_rights_and_guarantees_including_refusal_and_withdrawal.
+informed_of_arrangements_for_reversal_or_disregarding.
+informed_of_identification_number_and_contact_details.
+consent_dated_and_documented.
+copy_given_to_the_subject_or_legal_representative.
+is_an_sme_including_a_start_up.
+has_partner_or_linked_enterprises.
+affected_person_subject_to_a_deployer_decision_based_on_the_system_output.
+system_is_a_high_risk_ai_system_listed_in_annex_iii.
+system_listed_under_point_2_of_annex_iii.
+decision_produces_legal_effects_or_similarly_significantly_affects_the_person.
+person_considers_an_adverse_impact_on_health_safety_or_fundamental_rights.
+union_or_national_law_provides_an_exception_or_restriction.
+right_otherwise_provided_for_under_union_law.
+
+% ---- root exports: the seventeen enumeration atoms and unsure ----------
+provider_of_a_high_risk_system.
+other_provider_or_deployer.
+public_safety_and_public_health.
+environment.
+energy_sustainability.
+transport_and_critical_infrastructure.
+public_administration_and_public_services.
+none_of_the_listed_areas.
+annex_iii.
+annex_i_section_a.
+annex_i_section_b.
+approved.
+no_answer_within_30_days.
+not_approved.
+up_to_six_months.
+extended_up_to_twelve_months.
+longer.
+unsure.
+
+% ---- root exports: the result atoms of the six queries ---------------
+not_applicable_on_date.
+bias_processing_not_permitted.
+bias_processing_permitted.
+sandbox_processing_not_permitted.
+sandbox_processing_permitted.
+testing_not_provided_for_by_the_member_state.
+subject_to_the_member_state_framework.
+real_world_testing_not_permitted.
+real_world_testing_permitted.
+consent_does_not_meet_article_61.
+consent_meets_article_61.
+no_simplified_compliance.
+may_comply_in_a_simplified_manner.
+no_right_to_explanation_under_article_86.
+right_to_explanation_under_article_86.
+
+test(profile_keys_are_the_sixty_three_contract_keys) :-
+    small_items_profile_keys(ProfileKeys),
+    length(ProfileKeys, 63).
+test(every_profile_key_is_served_at_the_root) :-
+    small_items_profile_keys(ProfileKeys),
+    maplist(call, ProfileKeys).
+test(every_enumeration_atom_and_unsure_is_served_at_the_root) :-
+    maplist(call, [provider_of_a_high_risk_system, other_provider_or_deployer, public_safety_and_public_health, environment, energy_sustainability, transport_and_critical_infrastructure, public_administration_and_public_services, none_of_the_listed_areas, annex_iii, annex_i_section_a, annex_i_section_b, approved, no_answer_within_30_days, not_approved, up_to_six_months, extended_up_to_twelve_months, longer, unsure]).
+test(what_if_partner_enterprises_removes_the_simplification) :-
+    small_items_what_if(small_items_request(sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true), attribute(has_partner_or_linked_enterprises, false)], date(2026, 8, 2)), has_partner_or_linked_enterprises, true, Status),
+    Status == no_simplified_compliance.
+test(what_if_adds_an_absent_key) :-
+    small_items_what_if(small_items_request(sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true)], date(2026, 8, 2)), has_partner_or_linked_enterprises, false, Status),
+    Status == may_comply_in_a_simplified_manner.
+test(what_if_answers_exactly_once) :-
+    findall(Status, small_items_what_if(small_items_request(sme_simplified_compliance, [attribute(is_an_sme_including_a_start_up, true)], date(2026, 8, 2)), has_partner_or_linked_enterprises, false, Status), Statuses),
+    length(Statuses, 1).
+test(what_if_on_an_unbound_profile_is_an_input_problem) :-
+    small_items_what_if(small_items_request(sme_simplified_compliance, _, date(2026, 8, 2)), has_partner_or_linked_enterprises, false, Status),
+    Status == input_problems([wrong_type(profile)]).
+test(input_check_is_re_exported) :-
+    small_items_input_problems([attribute(unlisted_key, true)], Problems),
+    Problems == [unknown_key(unlisted_key)].
+
+% ---- the result constructors: ground calls, each paired with a refusal ----
+test(date_constructor_holds_for_a_real_day) :-
+    findall(found, date(2026, 8, 2), Answers),
+    Answers == [found].
+test(date_constructor_refuses_an_impossible_day, fail) :-
+    date(2026, 2, 30).
+test(indeterminate_constructor_holds_for_one_bare_key) :-
+    findall(found, indeterminate([testing_route]), Answers),
+    Answers == [found].
+test(indeterminate_constructor_refuses_two_keys, fail) :-
+    indeterminate([testing_route, approval_status]).
+test(needs_legal_review_constructor_holds_for_a_referral) :-
+    findall(found, needs_legal_review(open_textured(consent_freely_given, cite(eu_reg_2024_1689_art_61_1)), [inputs_relied_on([consent_freely_given-unsure])]), Answers),
+    Answers == [found].
+test(needs_legal_review_constructor_refuses_a_bare_citation, fail) :-
+    needs_legal_review(open_textured(consent_freely_given, eu_reg_2024_1689_art_61_1), [inputs_relied_on([])]).
+test(open_textured_constructor_holds_for_a_key_and_citation) :-
+    findall(found, open_textured(consent_freely_given, cite(eu_reg_2024_1689_art_61_1)), Answers),
+    Answers == [found].
+test(open_textured_constructor_refuses_a_bare_citation, fail) :-
+    open_textured(consent_freely_given, eu_reg_2024_1689_art_61_1).
+test(inputs_relied_on_constructor_holds_for_pairs) :-
+    findall(found, inputs_relied_on([consent_freely_given-unsure]), Answers),
+    Answers == [found].
+test(inputs_relied_on_constructor_refuses_a_non_pair, fail) :-
+    inputs_relied_on([consent_freely_given]).
+test(provenance_constructor_holds_for_a_clause_and_citations) :-
+    findall(found, provenance(informed_consent, [cite(eu_reg_2024_1689_art_61_1)]), Answers),
+    Answers == [found].
+test(provenance_constructor_refuses_a_non_list, fail) :-
+    provenance(informed_consent, cite(eu_reg_2024_1689_art_61_1)).
+test(input_problems_constructor_holds_for_a_problem_list) :-
+    findall(found, input_problems([unknown_key(unlisted_key), wrong_type(assessment_date)]), Answers),
+    Answers == [found].
+test(input_problems_constructor_refuses_an_empty_list, fail) :-
+    input_problems([]).
+test(unknown_key_constructor_holds_for_a_key_outside_the_contract) :-
+    findall(found, unknown_key(unlisted_key), Answers),
+    Answers == [found].
+test(unknown_key_constructor_refuses_a_contract_key, fail) :-
+    unknown_key(testing_route).
+test(wrong_type_constructor_holds_for_a_contract_key) :-
+    findall(found, wrong_type(testing_route), Answers),
+    Answers == [found].
+test(wrong_type_constructor_holds_for_the_assessment_date) :-
+    findall(found, wrong_type(assessment_date), Answers),
+    Answers == [found].
+test(wrong_type_constructor_refuses_an_unlisted_key, fail) :-
+    wrong_type(unlisted_key).
+test(duplicate_key_constructor_holds_for_a_contract_key) :-
+    findall(found, duplicate_key(is_an_sme_including_a_start_up), Answers),
+    Answers == [found].
+test(duplicate_key_constructor_refuses_an_unlisted_key, fail) :-
+    duplicate_key(unlisted_key).
+
+:- end_module(queries).

@@ -1,0 +1,51 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_nis2_implementing_regulation_significant_incidents___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_kernel, [duplicate_key/1, indeterminate/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, nis2_implementing_regulation_significant_incidents_input_problems/2, not_significant/0, open_textured/2, provenance/2, significant/0, unknown_key/1, wrong_type/1]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_citations, [citation/2, implements/1]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_nis2_implementing_regulation_significant_incidents, [decide_nis2_implementing_regulation_significant_incidents/2, nis2_implementing_regulation_significant_incidents_checklist/2, nis2_implementing_regulation_significant_incidents_decision_resolvable/1, nis2_implementing_regulation_significant_incidents_status/2, nis2_implementing_regulation_significant_incidents_status_values/1, significant_incident_criteria/3]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_queries, [annual_turnover_preceding_financial_year_euro_cents/0, average_response_time_above_ten_seconds_seconds/0, cloud_computing_service_provider/0, complete_unavailability_seconds/0, complete_unavailability_users/0, considerable_damage_to_natural_person_health/0, content_delivery_network_provider/0, data_centre_service_provider/0, data_compromise_suspectedly_malicious/0, data_compromise_users/0, data_compromised/0, death_of_natural_person/0, direct_financial_loss_euro_cents/0, dns_service_provider/0, incorrect_data_only_by_misconfiguration/0, incorrect_domain_names/0, limited_availability_seconds/0, limited_availability_users/0, managed_domain_names/0, managed_security_service_provider/0, managed_service_provider/0, nis2_implementing_regulation_significant_incidents_profile_keys/1, nis2_implementing_regulation_significant_incidents_what_if/4, online_marketplace_provider/0, online_search_engine_provider/0, physical_access_compromised/0, recurring_collective_direct_financial_loss_euro_cents/0, recurring_incidents_within_six_months/0, relevant_entity_type/0, same_apparent_root_cause/0, scheduled_interruption_or_maintenance/0, service_users_in_union/0, social_networking_services_platform_provider/0, suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption/0, tld_name_registry/0, trade_secret_exfiltration/0, trust_service_provider/0, unsure/0, weekly_unavailability_seconds/0]).
+:- use_module(m__eu_nis2_implementing_regulation_significant_incidents_fixtures, [nis2_implementing_regulation_significant_incidents_assess/2, nis2_implementing_regulation_significant_incidents_profile_for/2, nis2_implementing_regulation_significant_incidents_subject/1]).
+
+root_export(annual_turnover_preceding_financial_year_euro_cents).
+root_export(average_response_time_above_ten_seconds_seconds).
+root_export(cloud_computing_service_provider).
+root_export(complete_unavailability_seconds).
+root_export(complete_unavailability_users).
+root_export(considerable_damage_to_natural_person_health).
+root_export(content_delivery_network_provider).
+root_export(data_centre_service_provider).
+root_export(data_compromise_suspectedly_malicious).
+root_export(data_compromise_users).
+root_export(data_compromised).
+root_export(death_of_natural_person).
+root_export(direct_financial_loss_euro_cents).
+root_export(dns_service_provider).
+root_export(incorrect_data_only_by_misconfiguration).
+root_export(incorrect_domain_names).
+root_export(limited_availability_seconds).
+root_export(limited_availability_users).
+root_export(managed_domain_names).
+root_export(managed_security_service_provider).
+root_export(managed_service_provider).
+root_export(not_significant).
+root_export(online_marketplace_provider).
+root_export(online_search_engine_provider).
+root_export(physical_access_compromised).
+root_export(recurring_collective_direct_financial_loss_euro_cents).
+root_export(recurring_incidents_within_six_months).
+root_export(relevant_entity_type).
+root_export(same_apparent_root_cause).
+root_export(scheduled_interruption_or_maintenance).
+root_export(service_users_in_union).
+root_export(significant).
+root_export(social_networking_services_platform_provider).
+root_export(suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption).
+root_export(tld_name_registry).
+root_export(trade_secret_exfiltration).
+root_export(trust_service_provider).
+root_export(unsure).
+root_export(weekly_unavailability_seconds).

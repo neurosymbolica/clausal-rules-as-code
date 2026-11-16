@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 import os, sys, textwrap
 from _tools import check_parameters as cp
 

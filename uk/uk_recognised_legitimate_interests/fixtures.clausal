@@ -1,0 +1,249 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for uk/uk_recognised_legitimate_interests.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). There are no thresholds or dates in this domain,
+% so each route's positive case is paired with a ONE-KEY near-miss
+% control (one key value changed, or one key dropped), which gets another
+% verdict:
+%   public_authority_bar          <-> security_condition_met (bar key true/false)
+%   security_condition_met        <-> authority_unsure_condition_met / authority_absent_condition_met
+%   disclosure_condition_met      <-> disclosure_request_silent (request false)
+%   emergency_condition_met       <-> emergency_response_missing (response key absent)
+%   crime_condition_met           <-> all_conditions_fail
+%   safeguarding_adult_at_risk    <-> safeguarding_adult_unsure_risk / safeguarding_adult_not_at_risk
+%   safeguarding_child            (under 18 makes the risk key unneeded)
+%   interests_apply               <-> interests_overridden (balance key true)
+%   uk_differs_from_eu            <-> uk_same_as_eu (crime key true/false)
+%   objection_must_stop           <-> objection_legal_claims / objection_not_engaged
+%   objection_exceptions_missing  <-> objection_unsure
+%   crisp_key_control             <-> crisp_key_wrong_type, duplicate_and_unknown_keys
+%   not_an_attribute_list         (the profile as a whole is malformed)
+% =====================================================================
+
+:- module(fixtures, [
+    uk_recognised_legitimate_interests_subject/1,
+    uk_recognised_legitimate_interests_profile_for/2,
+    uk_recognised_legitimate_interests_assess/2
+]).
+
+:- use_module(uk/uk_recognised_legitimate_interests/uk_recognised_legitimate_interests, [decide_uk_recognised_legitimate_interests/2]).
+
+% ---- Subject registry ------------------------------------------------
+uk_recognised_legitimate_interests_subject(public_authority_bar).
+uk_recognised_legitimate_interests_subject(security_condition_met).
+uk_recognised_legitimate_interests_subject(authority_unsure_condition_met).
+uk_recognised_legitimate_interests_subject(authority_absent_condition_met).
+uk_recognised_legitimate_interests_subject(disclosure_condition_met).
+uk_recognised_legitimate_interests_subject(disclosure_request_silent).
+uk_recognised_legitimate_interests_subject(emergency_condition_met).
+uk_recognised_legitimate_interests_subject(emergency_response_missing).
+uk_recognised_legitimate_interests_subject(crime_condition_met).
+uk_recognised_legitimate_interests_subject(all_conditions_fail).
+uk_recognised_legitimate_interests_subject(safeguarding_child).
+uk_recognised_legitimate_interests_subject(safeguarding_adult_at_risk).
+uk_recognised_legitimate_interests_subject(safeguarding_adult_unsure_risk).
+uk_recognised_legitimate_interests_subject(safeguarding_adult_not_at_risk).
+uk_recognised_legitimate_interests_subject(interests_apply).
+uk_recognised_legitimate_interests_subject(interests_overridden).
+uk_recognised_legitimate_interests_subject(uk_differs_from_eu).
+uk_recognised_legitimate_interests_subject(uk_same_as_eu).
+uk_recognised_legitimate_interests_subject(objection_not_engaged).
+uk_recognised_legitimate_interests_subject(objection_must_stop).
+uk_recognised_legitimate_interests_subject(objection_legal_claims).
+uk_recognised_legitimate_interests_subject(objection_exceptions_missing).
+uk_recognised_legitimate_interests_subject(objection_unsure).
+uk_recognised_legitimate_interests_subject(duplicate_and_unknown_keys).
+uk_recognised_legitimate_interests_subject(crisp_key_wrong_type).
+uk_recognised_legitimate_interests_subject(crisp_key_control).
+uk_recognised_legitimate_interests_subject(not_an_attribute_list).
+
+% ---- Profiles --------------------------------------------------------
+% Public-authority bar (UK Art 6(1) second subparagraph).
+uk_recognised_legitimate_interests_profile_for(public_authority_bar, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, true),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+% Annex 1 condition 2 met, not a public authority.
+uk_recognised_legitimate_interests_profile_for(security_condition_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+% Condition met, public-authority judgement unsure: referral on the bar.
+uk_recognised_legitimate_interests_profile_for(authority_unsure_condition_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, unsure),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+% Condition met, public-authority key absent: indeterminate on the bar.
+uk_recognised_legitimate_interests_profile_for(authority_absent_condition_met, [
+    attribute(processing_necessary_for_national_security_public_security_or_defence, true)
+]).
+% Annex 1 condition 1 met.
+uk_recognised_legitimate_interests_profile_for(disclosure_condition_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, true),
+    attribute(request_states_need_for_article_6_1_e_processing_with_article_6_3_basis, true)
+]).
+% Near miss: the request does not state the Art 6(1)(e) need; every condition fails.
+uk_recognised_legitimate_interests_profile_for(disclosure_request_silent, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, true),
+    attribute(request_states_need_for_article_6_1_e_processing_with_article_6_3_basis, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false)
+]).
+% Annex 1 condition 3 met.
+uk_recognised_legitimate_interests_profile_for(emergency_condition_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, true),
+    attribute(processing_necessary_for_responding_to_the_emergency, true)
+]).
+% Near miss: emergency but the response key is absent, every other condition fails.
+uk_recognised_legitimate_interests_profile_for(emergency_response_missing, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, true),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false)
+]).
+% Annex 1 condition 4 met.
+uk_recognised_legitimate_interests_profile_for(crime_condition_met, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, true)
+]).
+% Every condition fails; the public-authority key is not needed.
+uk_recognised_legitimate_interests_profile_for(all_conditions_fail, [
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false)
+]).
+% Annex 1 condition 5 met for a child (risk key not needed).
+uk_recognised_legitimate_interests_profile_for(safeguarding_child, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, true),
+    attribute(individual_aged_under_18, true)
+]).
+% Annex 1 condition 5 met for an adult at risk.
+uk_recognised_legitimate_interests_profile_for(safeguarding_adult_at_risk, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, true),
+    attribute(individual_aged_under_18, false),
+    attribute(controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, true)
+]).
+% Near miss: the at-risk judgement is unsure: referral.
+uk_recognised_legitimate_interests_profile_for(safeguarding_adult_unsure_risk, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, true),
+    attribute(individual_aged_under_18, false),
+    attribute(controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, unsure)
+]).
+% Near miss: the adult is not at risk: every condition fails.
+uk_recognised_legitimate_interests_profile_for(safeguarding_adult_not_at_risk, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, true),
+    attribute(individual_aged_under_18, false),
+    attribute(controller_has_reasonable_cause_to_suspect_the_individual_is_at_risk, false)
+]).
+% Art 6(1)(f), UK and EU: applies.
+uk_recognised_legitimate_interests_profile_for(interests_apply, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, true),
+    attribute(processing_necessary_for_that_legitimate_interest, true),
+    attribute(interests_overridden_by_data_subject_interests_or_fundamental_rights, false)
+]).
+% Near miss: the balance goes to the data subject (a child is weight inside it, Q5).
+uk_recognised_legitimate_interests_profile_for(interests_overridden, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, true),
+    attribute(processing_necessary_for_that_legitimate_interest, true),
+    attribute(interests_overridden_by_data_subject_interests_or_fundamental_rights, true)
+]).
+% Comparison: UK available through (ea), EU not available.
+uk_recognised_legitimate_interests_profile_for(uk_differs_from_eu, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, true),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, false)
+]).
+% Near miss: the crime condition fails too: both not available, same.
+uk_recognised_legitimate_interests_profile_for(uk_same_as_eu, [
+    attribute(processing_by_a_public_authority_in_the_performance_of_its_tasks, false),
+    attribute(processing_necessary_for_a_disclosure_in_response_to_a_request, false),
+    attribute(processing_necessary_for_national_security_public_security_or_defence, false),
+    attribute(event_is_an_emergency_within_part_2_of_the_civil_contingencies_act_2004, false),
+    attribute(processing_necessary_for_detecting_investigating_or_preventing_crime_or_apprehending_or_prosecuting_offenders, false),
+    attribute(processing_necessary_for_safeguarding_an_individual, false),
+    attribute(legitimate_interest_pursued_by_the_controller_or_a_third_party, false)
+]).
+% Art 21(1): another basis does not engage the right to object.
+uk_recognised_legitimate_interests_profile_for(objection_not_engaged, [
+    attribute(basis_relied_on, other_basis)
+]).
+% Art 21(1): engaged, no exception: the controller must stop.
+uk_recognised_legitimate_interests_profile_for(objection_must_stop, [
+    attribute(basis_relied_on, recognised_legitimate_interest),
+    attribute(objection_on_grounds_relating_to_particular_situation, true),
+    attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, false),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, false)
+]).
+% Art 21(1): legal claims exception: may continue.
+uk_recognised_legitimate_interests_profile_for(objection_legal_claims, [
+    attribute(basis_relied_on, public_task),
+    attribute(objection_on_grounds_relating_to_particular_situation, true),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, true)
+]).
+% Art 21(1): exceptions missing: the first is named.
+uk_recognised_legitimate_interests_profile_for(objection_exceptions_missing, [
+    attribute(basis_relied_on, recognised_legitimate_interest),
+    attribute(objection_on_grounds_relating_to_particular_situation, true)
+]).
+% Art 21(1): the objection judgement unsure: referral.
+uk_recognised_legitimate_interests_profile_for(objection_unsure, [
+    attribute(basis_relied_on, recognised_legitimate_interest),
+    attribute(objection_on_grounds_relating_to_particular_situation, unsure),
+    attribute(controller_demonstrates_compelling_legitimate_grounds_that_override, false),
+    attribute(processing_for_establishment_exercise_or_defence_of_legal_claims, false)
+]).
+% Input check: a contract key twice and a key outside the contract.
+uk_recognised_legitimate_interests_profile_for(duplicate_and_unknown_keys, [
+    attribute(individual_aged_under_18, true),
+    attribute(individual_aged_under_18, false),
+    attribute(foo, 1)
+]).
+% Input check: a crisp key given unsure.
+uk_recognised_legitimate_interests_profile_for(crisp_key_wrong_type, [
+    attribute(individual_aged_under_18, unsure)
+]).
+% Near miss: the crisp key given true is well-formed.
+uk_recognised_legitimate_interests_profile_for(crisp_key_control, [
+    attribute(individual_aged_under_18, true)
+]).
+% Input check: not an attribute list at all.
+uk_recognised_legitimate_interests_profile_for(not_an_attribute_list, not_a_list).
+
+% ---- Convenience wrapper ---------------------------------------------
+uk_recognised_legitimate_interests_assess(Subject, Result) :-
+    uk_recognised_legitimate_interests_profile_for(Subject, Profile),
+    decide_uk_recognised_legitimate_interests(Profile, Result).
+
+:- end_module(fixtures).

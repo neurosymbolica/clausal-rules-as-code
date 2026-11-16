@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_constructor_atoms.clausal -- the enumeration atoms and the provenance
+% constructor the order pins, exercised through the package facade.
+% Run: python -m clausal.testing eu/nis2_scope_entity_class/tests/test_constructor_atoms.clausal
+% =====================================================================
+:- module(test_constructor_atoms, []).
+:- use_module(eu/nis2_scope_entity_class, [
+    nis2_scope_entity_class_status/2,
+    nis2_scope_entity_class_profile_for/2,
+    nis2_scope_entity_class_what_if/4,
+    nis2_scope_entity_class_input_problems/2,
+    entity_class/3
+]).
+
+test(qualified_trust_service_provider_is_in_scope_and_essential) :-
+    nis2_scope_entity_class_profile_for(non_qualified_trust_provider, Profile),
+    nis2_scope_entity_class_what_if(Profile, trust_service_provider_status, qualified_trust_service_provider, eligible),
+    nis2_scope_entity_class_profile_for(qualified_trust_provider, QualifiedProfile),
+    entity_class(QualifiedProfile, Class, _),
+    Class == essential_entity.
+
+test(qualified_trust_service_provider_value_is_well_typed) :-
+    nis2_scope_entity_class_input_problems([attribute(trust_service_provider_status, qualified_trust_service_provider)], Problems),
+    Problems == [].
+
+test(non_qualified_trust_service_provider_is_in_scope_and_important) :-
+    nis2_scope_entity_class_profile_for(qualified_trust_provider, Profile),
+    nis2_scope_entity_class_what_if(Profile, trust_service_provider_status, non_qualified_trust_service_provider, eligible),
+    nis2_scope_entity_class_profile_for(non_qualified_trust_provider, NonQualifiedProfile),
+    entity_class(NonQualifiedProfile, Class, _),
+    Class == important_entity.
+
+test(non_qualified_trust_service_provider_value_is_well_typed) :-
+    nis2_scope_entity_class_input_problems([attribute(trust_service_provider_status, non_qualified_trust_service_provider)], Problems),
+    Problems == [].
+
+test(a_made_up_trust_status_is_a_wrong_type) :-
+    nis2_scope_entity_class_input_problems([attribute(trust_service_provider_status, semi_qualified)], Problems),
+    Problems == [wrong_type(trust_service_provider_status)].
+
+test(regional_with_risk_assessed_services_is_in_scope_and_important) :-
+    nis2_scope_entity_class_profile_for(central_government, Profile),
+    nis2_scope_entity_class_what_if(Profile, public_administration_kind, regional_with_risk_assessed_services, eligible),
+    nis2_scope_entity_class_profile_for(regional_government, RegionalProfile),
+    entity_class(RegionalProfile, Class, _),
+    Class == important_entity.
+
+test(regional_with_risk_assessed_services_value_is_well_typed) :-
+    nis2_scope_entity_class_input_problems([attribute(public_administration_kind, regional_with_risk_assessed_services)], Problems),
+    Problems == [].
+
+test(regional_kind_is_not_ineligible, fail) :-
+    nis2_scope_entity_class_profile_for(regional_government, Profile),
+    nis2_scope_entity_class_status(Profile, ineligible).
+
+test(provenance_constructor_destructures) :-
+    Item = provenance(g1, [cite(eu_dir_2022_2555_art_2_3)]),
+    Item = provenance(Clause, Citations),
+    Clause == g1,
+    Citations == [cite(eu_dir_2022_2555_art_2_3)].
+
+test(provenance_rides_after_inputs_relied_on) :-
+    Context = [inputs_relied_on([annex_i_type-unsure]), provenance(g13, [cite(eu_dir_2022_2555_art_2_1)])],
+    Context = [inputs_relied_on(Pairs), provenance(Clause, Citations)],
+    Pairs == [annex_i_type-unsure],
+    Clause == g13,
+    Citations == [cite(eu_dir_2022_2555_art_2_1)].
+
+:- end_module(test_constructor_atoms).

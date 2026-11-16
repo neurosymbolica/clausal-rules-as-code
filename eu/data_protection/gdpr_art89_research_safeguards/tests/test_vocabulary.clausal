@@ -1,0 +1,54 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_vocabulary.clausal -- the verdict vocabulary shape checks, called
+% with ground input.
+% =====================================================================
+:- module(test_vocabulary, []).
+:- use_module(eu/data_protection/gdpr_art89_research_safeguards/queries, [
+    gdpr_art89_verdict/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+test(a_verdict_shape_holds) :-
+    gdpr_art89_verdict(in_accordance, [], [cite(eu_reg_2016_679_art_89_1)]).
+test(a_verdict_with_unmet_shape_holds) :-
+    gdpr_art89_verdict(not_in_accordance, [measures], [cite(eu_reg_2016_679_art_89_1)]).
+test(an_indeterminate_verdict_shape_holds) :-
+    gdpr_art89_verdict(indeterminate([purpose]), [], []).
+test(a_review_verdict_shape_holds) :-
+    gdpr_art89_verdict(needs_legal_review(open_textured(safeguards_appropriate, cite(eu_reg_2016_679_art_89_1)), [inputs_relied_on([safeguards_appropriate-unsure])]), [], []).
+test(an_input_problem_verdict_shape_holds) :-
+    gdpr_art89_verdict(input_problems([wrong_type(purpose)]), [], []).
+test(an_unknown_status_is_not_a_verdict, fail) :-
+    gdpr_art89_verdict(maybe, [], []).
+test(indeterminate_needs_keys) :-
+    indeterminate([purpose]).
+test(indeterminate_with_no_keys_is_rejected, fail) :-
+    indeterminate([]).
+test(needs_legal_review_shape) :-
+    needs_legal_review(open_textured(safeguards_appropriate, cite(eu_reg_2016_679_art_89_1)), [inputs_relied_on([safeguards_appropriate-unsure])]).
+test(needs_legal_review_without_reason_is_rejected, fail) :-
+    needs_legal_review(other, [inputs_relied_on([safeguards_appropriate-unsure])]).
+test(open_textured_shape) :-
+    open_textured(safeguards_appropriate, cite(eu_reg_2016_679_art_89_1)).
+test(inputs_relied_on_shape) :-
+    inputs_relied_on([safeguards_appropriate-unsure]).
+test(input_problems_shape) :-
+    input_problems([unknown_key(extra_note)]).
+test(unknown_key_shape) :-
+    unknown_key(extra_note).
+test(wrong_type_shape) :-
+    wrong_type(purpose).
+test(duplicate_key_shape) :-
+    duplicate_key(purpose).
+test(a_non_atom_key_is_rejected, fail) :-
+    duplicate_key(1).
+
+:- end_module(test_vocabulary).

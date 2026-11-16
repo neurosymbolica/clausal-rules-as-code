@@ -1,0 +1,241 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer and every query type
+% registered in manifest.yaml query_interface:
+%   #2 eligibility  weekly_rest_status/7
+%   #6 threshold    weekly_rest_threshold/2
+%   #16 what-if     weekly_rest_what_if/4
+%   #23 calculation shortest_weekly_rest_minutes/6
+% and the result constructors of the order, each called with a ground
+% input and the answer the order expects.
+% Run: python -m clausal.testing eu/labour/weekly_rest/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/labour/weekly_rest/queries, [
+    weekly_rest_profile_keys/1,
+    weekly_rest_what_if/4,
+    weekly_rest_input_problems/2,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+:- use_module(eu/labour/weekly_rest/weekly_rest, [
+    weekly_rest_threshold/2,
+    weekly_rest_status/7,
+    shortest_weekly_rest_minutes/6
+]).
+:- use_module(eu/labour/weekly_rest/fixtures, [weekly_rest_profile_for/2]).
+
+short_rota([shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 7, 13, 1), work)]).
+
+% Work from 00:00 on 2 March, leaving RestMinutes of rest before 9 March.
+rota_leaving(RestMinutes, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, FinishDay, FinishHour, FinishMinute), work)]) :-
+    WorkMinutes is 10080 - RestMinutes,
+    FinishDay is 2 + WorkMinutes // 1440,
+    FinishHour is (WorkMinutes mod 1440) // 60,
+    FinishMinute is WorkMinutes mod 60.
+
+test(profile_keys_are_the_contract_keys) :-
+    weekly_rest_profile_keys(ProfileKeys),
+    ProfileKeys == [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, weekly_rest_minimum, weekly_rest_reference_period, worker_category, derogation_from_article_5].
+
+test(the_input_check_is_served_by_the_query_layer) :-
+    weekly_rest_input_problems([attribute(audit_note, reviewed)], [unknown_key(audit_note)]).
+
+% ---- the result constructors (shape clauses, ground inputs) -------------
+test(the_date_constructor_holds_for_a_ground_day) :-
+    findall(witness, date(2026, 3, 2), Answers),
+    Answers == [witness].
+
+test(the_date_constructor_refuses_a_non_integer, fail) :-
+    date(2026, march, 2).
+
+test(the_indeterminate_constructor_holds_for_one_key) :-
+    findall(witness, indeterminate([worker_category]), Answers),
+    Answers == [witness].
+
+test(the_needs_legal_review_constructor_holds_for_a_referral) :-
+    findall(witness, needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_standby_counts_as_working_time-unsure])]), Answers),
+    Answers == [witness].
+
+test(the_open_textured_constructor_holds_for_a_key_and_citation) :-
+    findall(witness, open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), Answers),
+    Answers == [witness].
+
+test(the_inputs_relied_on_constructor_holds_for_pairs) :-
+    findall(witness, inputs_relied_on([on_call_on_site_counts_as_working_time-false, on_call_standby_counts_as_working_time-unsure]), Answers),
+    Answers == [witness].
+
+test(the_provenance_constructor_holds_for_a_clause_and_citations) :-
+    findall(witness, provenance(weekly_rest_status_step_2c, [cite(eu_dir_2003_88_art_2_1)]), Answers),
+    Answers == [witness].
+
+test(the_input_problems_constructor_holds_for_a_problem_list) :-
+    findall(witness, input_problems([wrong_type(period_end)]), Answers),
+    Answers == [witness].
+
+test(the_unknown_key_constructor_holds_for_a_key) :-
+    findall(witness, unknown_key(audit_note), Answers),
+    Answers == [witness].
+
+test(the_wrong_type_constructor_holds_for_a_key) :-
+    findall(witness, wrong_type(period_end), Answers),
+    Answers == [witness].
+
+test(the_duplicate_key_constructor_holds_for_a_key) :-
+    findall(witness, duplicate_key(worker_category), Answers),
+    Answers == [witness].
+
+% ---- the result constructors called directly with ground inputs ---------
+test(date_called_directly_with_a_ground_day) :-
+    date(2026, 3, 2).
+
+test(date_called_directly_keeps_its_arguments_ground) :-
+    Year = 2026,
+    Month = 3,
+    Day = 9,
+    date(Year, Month, Day),
+    ground(date(Year, Month, Day)),
+    Year == 2026,
+    Month == 3,
+    Day == 9.
+
+test(indeterminate_called_directly_with_one_key) :-
+    indeterminate([worker_category]).
+
+test(indeterminate_called_directly_keeps_its_key_ground) :-
+    MissingKeys = [derogation_from_article_5],
+    indeterminate(MissingKeys),
+    ground(MissingKeys),
+    MissingKeys == [derogation_from_article_5].
+
+test(needs_legal_review_called_directly_with_a_referral) :-
+    needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time-unsure])]).
+
+test(needs_legal_review_called_directly_keeps_its_arguments_ground) :-
+    Reason = open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)),
+    Context = [inputs_relied_on([on_call_standby_counts_as_working_time-unsure])],
+    needs_legal_review(Reason, Context),
+    ground(Reason-Context),
+    Reason == open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)).
+
+test(provenance_called_directly_with_a_clause_and_citations) :-
+    provenance(weekly_rest_status_step_2c, [cite(eu_dir_2003_88_art_2_1)]).
+
+test(provenance_called_directly_keeps_its_arguments_ground) :-
+    Clause = weekly_rest_status_step_2c,
+    Citations = [cite(eu_dir_2003_88_art_2_1)],
+    provenance(Clause, Citations),
+    ground(Clause-Citations),
+    Citations == [cite(eu_dir_2003_88_art_2_1)].
+
+test(input_problems_called_directly_with_a_problem_list) :-
+    input_problems([wrong_type(period_end)]).
+
+test(input_problems_called_directly_keeps_its_list_ground) :-
+    Problems = [unknown_key(audit_note), wrong_type(worker)],
+    input_problems(Problems),
+    ground(Problems),
+    Problems == [unknown_key(audit_note), wrong_type(worker)].
+
+test(unknown_key_called_directly_with_a_key) :-
+    unknown_key(audit_note).
+
+test(unknown_key_called_directly_keeps_its_key_ground) :-
+    Key = audit_note,
+    unknown_key(Key),
+    ground(Key),
+    Key == audit_note.
+
+test(duplicate_key_called_directly_with_a_key) :-
+    duplicate_key(worker_category).
+
+test(duplicate_key_called_directly_keeps_its_key_ground) :-
+    Key = weekly_rest_minimum,
+    duplicate_key(Key),
+    ground(Key),
+    Key == weekly_rest_minimum.
+
+test(wrong_type_called_directly_with_a_key) :-
+    wrong_type(period_end).
+
+test(open_textured_called_directly_with_a_key_and_citation) :-
+    open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)).
+
+test(inputs_relied_on_called_directly_with_pairs) :-
+    inputs_relied_on([on_call_standby_counts_as_working_time-unsure]).
+
+% ---- #6 threshold ---------------------------------------------------------
+test(the_threshold_is_2100_or_1440_minutes) :-
+    weekly_rest_threshold(rest_of_24_plus_11_hours, threshold(block_rest_minutes, FullMinutes, cite(eu_dir_2003_88_art_5_first_subpara))),
+    FullMinutes =:= 2100,
+    weekly_rest_threshold(reduced_rest_of_24_hours, threshold(block_rest_minutes, ReducedMinutes, cite(eu_dir_2003_88_art_5_second_subpara))),
+    ReducedMinutes =:= 1440.
+
+test(the_outcome_flips_at_the_threshold) :-
+    weekly_rest_threshold(rest_of_24_plus_11_hours, threshold(block_rest_minutes, RequiredMinutes, _)),
+    BelowMinutes is RequiredMinutes - 1,
+    rota_leaving(RequiredMinutes, AtRota),
+    rota_leaving(BelowMinutes, BelowRota),
+    Profile = [attribute(weekly_rest_minimum, rest_of_24_plus_11_hours), attribute(weekly_rest_reference_period, seven_day_period), attribute(worker_category, other_worker), attribute(derogation_from_article_5, no_derogation)],
+    weekly_rest_status(Profile, worker_one, AtRota, date(2026, 3, 2), date(2026, 3, 8), weekly_rest_given, _),
+    weekly_rest_status(Profile, worker_one, BelowRota, date(2026, 3, 2), date(2026, 3, 8), weekly_rest_not_given, _).
+
+test(the_reduced_threshold_flips_at_1440) :-
+    weekly_rest_threshold(reduced_rest_of_24_hours, threshold(block_rest_minutes, RequiredMinutes, _)),
+    BelowMinutes is RequiredMinutes - 1,
+    rota_leaving(RequiredMinutes, AtRota),
+    rota_leaving(BelowMinutes, BelowRota),
+    Profile = [attribute(weekly_rest_minimum, reduced_rest_of_24_hours), attribute(weekly_rest_reference_period, seven_day_period), attribute(worker_category, other_worker), attribute(derogation_from_article_5, no_derogation)],
+    weekly_rest_status(Profile, worker_one, AtRota, date(2026, 3, 2), date(2026, 3, 8), weekly_rest_given, _),
+    weekly_rest_status(Profile, worker_one, BelowRota, date(2026, 3, 2), date(2026, 3, 8), weekly_rest_not_given, _).
+
+% ---- #23 calculation ------------------------------------------------------
+test(the_figure_is_the_rest_the_rota_leaves) :-
+    rota_leaving(3000, Rota),
+    findall(Minutes, shortest_weekly_rest_minutes([attribute(weekly_rest_reference_period, seven_day_period)], worker_one, Rota, date(2026, 3, 2), date(2026, 3, 8), Minutes), Answers),
+    Answers == [3000].
+
+% ---- #16 what-if ----------------------------------------------------------
+test(what_if_the_worker_is_mobile) :-
+    weekly_rest_profile_for(short_rest_without_worker_category, WeeklyRestCase),
+    findall(NewStatus, weekly_rest_what_if(WeeklyRestCase, worker_category, mobile_worker, NewStatus), Statuses),
+    Statuses == [weekly_rest_not_applied_to_worker].
+
+test(what_if_the_worker_is_ordinary_asks_for_the_derogation) :-
+    weekly_rest_profile_for(short_rest_without_worker_category, WeeklyRestCase),
+    weekly_rest_what_if(WeeklyRestCase, worker_category, other_worker, indeterminate([derogation_from_article_5])).
+
+test(what_if_a_derogation_is_stated) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, WeeklyRestCase),
+    weekly_rest_what_if(WeeklyRestCase, derogation_from_article_5, derogation_under_article_18, weekly_rest_derogation_applies).
+
+test(what_if_standby_is_judged_not_working_time) :-
+    weekly_rest_profile_for(unsure_standby_needs_legal_review, WeeklyRestCase),
+    weekly_rest_what_if(WeeklyRestCase, on_call_standby_counts_as_working_time, false, weekly_rest_given).
+
+test(what_if_replaces_a_duplicated_key) :-
+    short_rota(Shifts),
+    Profile = [attribute(weekly_rest_minimum, rest_of_24_plus_11_hours), attribute(weekly_rest_reference_period, seven_day_period), attribute(worker_category, other_worker), attribute(worker_category, pilot)],
+    weekly_rest_what_if(weekly_rest_case(Profile, worker_one, Shifts, date(2026, 3, 2), date(2026, 3, 8)), worker_category, mobile_worker, weekly_rest_not_applied_to_worker).
+
+test(what_if_keeps_an_unknown_key_problem) :-
+    weekly_rest_profile_for(unknown_key_input_problems, WeeklyRestCase),
+    weekly_rest_what_if(WeeklyRestCase, worker_category, other_worker, input_problems([unknown_key(audit_note)])).
+
+test(what_if_on_a_term_that_is_not_a_profile_reports_it_once) :-
+    findall(NewStatus, weekly_rest_what_if(weekly_rest_case(not_a_profile, worker_one, [], date(2026, 3, 2), date(2026, 3, 8)), worker_category, mobile_worker, NewStatus), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+
+test(what_if_does_not_invent_a_verdict, fail) :-
+    weekly_rest_profile_for(short_rest_without_worker_category, WeeklyRestCase),
+    weekly_rest_what_if(WeeklyRestCase, worker_category, mobile_worker, weekly_rest_not_given).
+
+:- end_module(test_queries).

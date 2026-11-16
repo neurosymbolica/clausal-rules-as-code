@@ -1,0 +1,66 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism: every registered subject yields exactly one
+% headline answer and exactly one exemption answer. Invariants: input
+% problems carry no citations; an ineligible answer carries at least one.
+% Run: python -m clausal.testing eu/data_protection/gdpr_information_duties_headline_verdict/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/information_duty_verdict, [information_duty_verdict/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/information_duty_exemption, [information_duty_exemption/2]).
+:- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/fixtures, [
+    gdpr_information_duties_headline_verdict_subject/1,
+    gdpr_information_duties_headline_verdict_profile_for/2
+]).
+
+exactly_one_verdict(Subject) :-
+    gdpr_information_duties_headline_verdict_subject(Subject),
+    gdpr_information_duties_headline_verdict_profile_for(Subject, Profile),
+    findall(Verdict-Citations, information_duty_verdict(Profile, Verdict, Citations), Answers),
+    length(Answers, 1).
+
+exactly_one_exemption(Subject) :-
+    gdpr_information_duties_headline_verdict_subject(Subject),
+    gdpr_information_duties_headline_verdict_profile_for(Subject, Profile),
+    findall(Exemption, information_duty_exemption(Profile, Exemption), Answers),
+    length(Answers, 1).
+
+subject_set(SubjectSet) :-
+    findall(Subject, gdpr_information_duties_headline_verdict_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet).
+
+test(totality_and_determinism_of_the_headline) :-
+    subject_set(SubjectSet),
+    findall(Subject, exactly_one_verdict(Subject), Counted),
+    sort(Counted, SubjectSet).
+
+test(totality_and_determinism_of_the_exemption) :-
+    subject_set(SubjectSet),
+    findall(Subject, exactly_one_exemption(Subject), Counted),
+    sort(Counted, SubjectSet).
+
+test(subject_registry_has_no_duplicates) :-
+    findall(Subject, gdpr_information_duties_headline_verdict_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    length(Subjects, Count),
+    length(SubjectSet, Count).
+
+test(input_problems_carry_no_citation) :-
+    gdpr_information_duties_headline_verdict_profile_for(input_unknown_key, Profile),
+    information_duty_verdict(Profile, input_problems(_), Citations),
+    Citations == [].
+
+test(ineligible_carries_a_citation) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_one_day_late, Profile),
+    information_duty_verdict(Profile, ineligible, [_First|_Others]).
+
+test(eligible_carries_a_citation) :-
+    gdpr_information_duties_headline_verdict_profile_for(art14_secrecy_exemption, Profile),
+    information_duty_verdict(Profile, eligible, [_First|_Others]).
+
+test(a_key_no_stage_reads_does_not_change_the_answer) :-
+    gdpr_information_duties_headline_verdict_profile_for(art13_on_time, Profile),
+    information_duty_verdict([attribute(protective_measures_taken, true)|Profile], eligible, [cite(eu_reg_2016_679_art_13_1)]).
+
+:- end_module(test_properties).

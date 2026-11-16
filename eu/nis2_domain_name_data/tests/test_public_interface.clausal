@@ -1,0 +1,192 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(test_public_interface, []).
+:- use_module(library(datetime), [datetime/7]).
+:- use_module(eu/nis2_domain_name_data, [
+    decide_nis2_domain_name_data/2,
+    nis2_domain_name_data_status/2,
+    nis2_domain_name_data_checklist/2,
+    nis2_domain_name_data_decision_resolvable/1,
+    nis2_domain_name_data_status_values/1,
+    nis2_domain_name_data_subject/1,
+    nis2_domain_name_data_profile_for/2,
+    nis2_domain_name_data_assess/2,
+    provider_duties/2,
+    required_registration_data/2,
+    publication_duty/3,
+    access_duty/3,
+    access_reply_timeliness/3,
+    domain_name_registration_service_entity/0
+]).
+:- use_module(eu/nis2_domain_name_data/queries, [
+    nis2_domain_name_data_what_if/4,
+    nis2_domain_name_data_input_problems/2,
+    access_reply_deadline/2,
+    access_reply_hours_elapsed/3,
+    access_reply_outcome/4
+]).
+
+% ---- eligibility verdict per subject --------------------------------
+test(the_public_interface_resolves_on_the_first_fixture) :-
+    nis2_domain_name_data_subject(Subject),
+    nis2_domain_name_data_assess(Subject, nis2_domain_name_data_verdict(Status, _Citations)),
+    nis2_domain_name_data_status_values(StatusValues),
+    member(Status, StatusValues).
+
+test(registry_is_eligible) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_status(Profile, eligible).
+test(registrar_is_eligible) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    nis2_domain_name_data_status(Profile, eligible).
+test(other_provider_is_ineligible) :-
+    nis2_domain_name_data_profile_for(other_provider, Profile),
+    nis2_domain_name_data_status(Profile, ineligible).
+test(other_provider_is_not_eligible, fail) :-
+    nis2_domain_name_data_profile_for(other_provider, Profile),
+    nis2_domain_name_data_status(Profile, eligible).
+test(registry_is_not_ineligible, fail) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_status(Profile, ineligible).
+test(missing_provider_type_is_indeterminate) :-
+    nis2_domain_name_data_profile_for(no_provider_type, Profile),
+    nis2_domain_name_data_status(Profile, indeterminate([provider_type])).
+test(invalid_provider_type_is_input_problem) :-
+    nis2_domain_name_data_profile_for(invalid_provider_type, Profile),
+    nis2_domain_name_data_status(Profile, input_problems([wrong_type(provider_type)])).
+test(input_check_names_the_problem) :-
+    nis2_domain_name_data_profile_for(invalid_provider_type, Profile),
+    nis2_domain_name_data_input_problems(Profile, [wrong_type(provider_type)]).
+test(input_check_is_clean_for_a_good_profile) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_input_problems(Profile, []).
+test(verdict_is_single_solution) :-
+    findall(Verdict, nis2_domain_name_data_assess(registry_addressed, Verdict), Verdicts),
+    length(Verdicts, 1).
+test(verdict_carries_citation) :-
+    nis2_domain_name_data_assess(registry_addressed, nis2_domain_name_data_verdict(eligible, [cite(eu_dir_2022_2555_art_28_1)])).
+
+% ---- result constructors and vocabulary atoms -----------------------
+test(registration_service_entity_atom_holds) :-
+    domain_name_registration_service_entity.
+test(registration_service_entity_is_an_addressed_provider_type) :-
+    domain_name_registration_service_entity,
+    provider_duties([attribute(provider_type, domain_name_registration_service_entity)], Duties),
+    length(Duties, 9).
+test(registration_service_entity_status_is_eligible) :-
+    domain_name_registration_service_entity,
+    nis2_domain_name_data_status([attribute(provider_type, domain_name_registration_service_entity)], eligible).
+test(provenance_builds_and_destructures) :-
+    Item = provenance(publication_state, [cite(eu_dir_2022_2555_art_28_4)]),
+    Item = provenance(Clause, Citations),
+    Clause == publication_state,
+    Citations == [cite(eu_dir_2022_2555_art_28_4)].
+test(duplicate_key_is_named_by_the_input_check) :-
+    nis2_domain_name_data_input_problems([attribute(provider_type, other), attribute(provider_type, tld_name_registry)], [duplicate_key(provider_type)]).
+test(duplicate_key_gives_input_problems_status) :-
+    nis2_domain_name_data_status([attribute(provider_type, other), attribute(provider_type, other)], input_problems([duplicate_key(provider_type)])).
+test(a_single_key_is_not_a_duplicate, fail) :-
+    nis2_domain_name_data_input_problems([attribute(provider_type, other)], [duplicate_key(provider_type)]).
+
+% ---- justification: cited checklist ---------------------------------
+test(checklist_and_resolvable_hold_on_the_registry) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_decision_resolvable(Profile),
+    nis2_domain_name_data_checklist(Profile, [_FirstItem|_OtherItems]).
+test(checklist_item_is_met_and_cited_for_registry) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_checklist(Profile, [item(provider_addressed, met, cite(eu_dir_2022_2555_art_28_1))]).
+test(checklist_item_is_unmet_and_cited_for_other) :-
+    nis2_domain_name_data_profile_for(other_provider, Profile),
+    nis2_domain_name_data_checklist(Profile, [item(provider_addressed, unmet(not_an_addressed_provider), cite(eu_dir_2022_2555_art_28_1))]).
+
+% ---- duties and fields ----------------------------------------------
+test(registry_has_nine_duties) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    provider_duties(Profile, Duties),
+    length(Duties, 9).
+test(other_provider_has_no_duties) :-
+    nis2_domain_name_data_profile_for(other_provider, Profile),
+    provider_duties(Profile, []).
+test(registry_fields_include_email_of_point_of_contact) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    required_registration_data(Profile, Fields),
+    length(Fields, 6),
+    member(field(point_of_contact_contact_email_address, cite(eu_dir_2022_2555_art_28_2_d)), Fields).
+test(registrar_fields_are_the_five_base_fields) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    required_registration_data(Profile, Fields),
+    length(Fields, 5).
+
+% ---- publication ----------------------------------------------------
+test(non_personal_data_must_be_published) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    publication_duty(Profile, must_publish_without_undue_delay, [cite(eu_dir_2022_2555_art_28_4)]).
+test(personal_data_has_no_publication_duty) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    publication_duty(Profile, no_publication_duty, [cite(eu_dir_2022_2555_art_28_4)]).
+test(personal_data_is_not_must_publish, fail) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    publication_duty(Profile, must_publish_without_undue_delay, _).
+
+% ---- access ---------------------------------------------------------
+test(lawful_request_by_legitimate_seeker_gets_access) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    access_duty(Profile, must_provide_access, [cite(eu_dir_2022_2555_art_28_5)]).
+test(unlawful_request_gets_no_access_duty) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    access_duty(Profile, no_duty_to_provide_access, [cite(eu_dir_2022_2555_art_28_5)]).
+test(unlawful_request_is_not_must_provide, fail) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    access_duty(Profile, must_provide_access, _).
+
+% ---- 72-hour reply boundary -----------------------------------------
+test(reply_at_72_hours_is_on_time) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    access_reply_timeliness(Profile, 72, on_time).
+test(reply_at_73_hours_is_late) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    access_reply_timeliness(Profile, 73, late(hour_limit)).
+test(reply_at_73_hours_is_not_on_time, fail) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    access_reply_timeliness(Profile, 73, on_time).
+test(reply_within_limit_with_undue_delay_is_late) :-
+    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
+    access_reply_timeliness(Profile, 72, late(without_undue_delay)).
+
+% ---- deadline with native datetime ----------------------------------
+test(exactly_72_hours_elapsed) :-
+    datetime(2026, 3, 1, 10, 0, 0, Receipt),
+    datetime(2026, 3, 4, 10, 0, 0, Reply),
+    access_reply_hours_elapsed(Receipt, Reply, 72).
+test(one_second_over_rounds_up_to_73) :-
+    datetime(2026, 3, 1, 10, 0, 0, Receipt),
+    datetime(2026, 3, 4, 10, 0, 1, Reply),
+    access_reply_hours_elapsed(Receipt, Reply, 73).
+test(deadline_is_72_hours_after_receipt) :-
+    datetime(2026, 3, 1, 10, 0, 0, Receipt),
+    access_reply_deadline(Receipt, Deadline),
+    access_reply_hours_elapsed(Receipt, Deadline, 72).
+test(reply_at_the_deadline_is_on_time) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    datetime(2026, 3, 1, 10, 0, 0, Receipt),
+    datetime(2026, 3, 4, 10, 0, 0, Reply),
+    access_reply_outcome(Profile, Receipt, Reply, on_time).
+test(reply_one_second_after_the_deadline_is_late) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    datetime(2026, 3, 1, 10, 0, 0, Receipt),
+    datetime(2026, 3, 4, 10, 0, 1, Reply),
+    access_reply_outcome(Profile, Receipt, Reply, late(hour_limit)).
+
+% ---- what-if --------------------------------------------------------
+test(what_if_registry_instead_of_other_is_eligible) :-
+    nis2_domain_name_data_profile_for(other_provider, Profile),
+    nis2_domain_name_data_what_if(Profile, provider_type, tld_name_registry, eligible).
+test(what_if_other_instead_of_registry_is_ineligible) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    nis2_domain_name_data_what_if(Profile, provider_type, other, ineligible).
+test(what_if_keeps_a_single_answer) :-
+    nis2_domain_name_data_profile_for(registry_addressed, Profile),
+    findall(Status, nis2_domain_name_data_what_if(Profile, provider_type, other, Status), Statuses),
+    Statuses == [ineligible].
+
+:- end_module(test_public_interface).

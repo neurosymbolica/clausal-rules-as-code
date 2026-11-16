@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> a different verdict), proving the route is
+% LOAD-BEARING. A negative states "no solution" as
+% `test(Name, fail) :- Goal.`, and each near-miss also has a positive test
+% of the verdict it DOES get, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/data_protection/gdpr_chapter_v_transfers/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/transfer, [
+    decide_transfer/2,
+    transfer_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/transfer_basis, [
+    transfer_basis/2,
+    transfer_basis_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/fixtures, [gdpr_chapter_v_transfers_profile_for/2]).
+
+verdict_of(Subject, Verdict) :-
+    gdpr_chapter_v_transfers_profile_for(Subject, Profile),
+    decide_transfer(Profile, Verdict).
+
+basis_of(Subject, Basis) :-
+    gdpr_chapter_v_transfers_profile_for(Subject, Profile),
+    transfer_basis(Profile, Basis).
+
+% ---- the near-miss atoms are real verdict atoms --------------------------
+test(the_verdict_atoms_are_real) :-
+    transfer_status_values(StatusValues),
+    member(eligible, StatusValues),
+    member(ineligible, StatusValues).
+
+test(the_basis_atoms_are_real) :-
+    transfer_basis_status_values(BasisValues),
+    member(art45_adequacy, BasisValues),
+    member(art46_safeguards, BasisValues),
+    member(art49_derogation, BasisValues),
+    member(none, BasisValues).
+
+% ---- stage one, Art 45 -------------------------------------------------
+test(stage_one_positive) :-
+    basis_of(adequacy_attested_true, art45_adequacy).
+test(stage_one_near_miss_gets_the_missing_safeguard) :-
+    verdict_of(adequacy_attested_false_alone, indeterminate([safeguard_in_place])).
+test(stage_one_near_miss_is_not_eligible, fail) :-
+    verdict_of(adequacy_attested_false_alone, eligible).
+
+% ---- stage two, Art 46 safeguards ---------------------------------------
+test(stage_two_safeguard_positive) :-
+    verdict_of(safeguard_after_adequacy_refused, eligible).
+test(stage_two_safeguard_near_miss_gets_ineligible) :-
+    verdict_of(no_safeguard_and_no_claim, ineligible).
+test(stage_two_safeguard_near_miss_is_not_eligible, fail) :-
+    verdict_of(no_safeguard_and_no_claim, eligible).
+
+% ---- stage two, binding corporate rules (Art 46(2)(b), 47(1)) ----------
+test(binding_corporate_rules_positive) :-
+    basis_of(binding_corporate_rules_over_refused_safeguard, art46_safeguards).
+test(binding_corporate_rules_near_miss_gets_ineligible) :-
+    verdict_of(binding_corporate_rules_refused, ineligible).
+test(binding_corporate_rules_near_miss_is_not_eligible, fail) :-
+    verdict_of(binding_corporate_rules_refused, eligible).
+
+% ---- the cross reference to Art 45(3) (A2) -----------------------------
+test(cross_reference_positive) :-
+    verdict_of(refused_safeguard_without_adequacy_fact, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_45), cite(eu_reg_2016_679_art_45_3)), _)).
+test(cross_reference_near_miss_with_attested_false_is_eligible) :-
+    verdict_of(contract_derogation, eligible).
+test(cross_reference_near_miss_does_not_refer, fail) :-
+    verdict_of(contract_derogation, needs_legal_review(_, _)).
+
+% ---- point (a), Art 49(1)(a) and the Art 49(3) carve-out ---------------
+test(point_a_positive) :-
+    verdict_of(explicit_consent_derogation, eligible).
+test(point_a_near_miss_gets_ineligible) :-
+    verdict_of(explicit_consent_under_public_powers, ineligible).
+test(point_a_near_miss_is_not_eligible, fail) :-
+    verdict_of(explicit_consent_under_public_powers, eligible).
+test(point_a_absent_consent_gets_indeterminate) :-
+    verdict_of(explicit_consent_not_stated, indeterminate([explicit_consent_obtained])).
+
+% ---- point (b) ---------------------------------------------------------
+test(point_b_positive) :-
+    basis_of(contract_derogation, art49_derogation).
+test(point_b_near_miss_gets_ineligible) :-
+    verdict_of(contract_derogation_under_public_powers, ineligible).
+test(point_b_near_miss_has_no_basis, fail) :-
+    basis_of(contract_derogation_under_public_powers, art49_derogation).
+
+% ---- point (d), with Art 49(4); not defeated by public powers ----------
+test(point_d_positive_despite_public_powers) :-
+    verdict_of(public_interest_under_public_powers, eligible).
+test(point_d_near_miss_gets_ineligible) :-
+    verdict_of(public_interest_refused, ineligible).
+test(point_d_near_miss_is_not_eligible, fail) :-
+    verdict_of(public_interest_refused, eligible).
+
+% ---- point (g), with the Art 49(2) register limits ---------------------
+test(point_g_positive) :-
+    verdict_of(public_register_derogation, eligible).
+test(point_g_near_miss_gets_ineligible) :-
+    verdict_of(public_register_refused_requester, ineligible).
+test(point_g_near_miss_is_not_eligible, fail) :-
+    verdict_of(public_register_refused_requester, eligible).
+
+% ---- the second subparagraph: carve-out and subsidiarity ---------------
+test(second_subparagraph_positive) :-
+    verdict_of(second_subparagraph_derogation, eligible).
+test(second_subparagraph_near_miss_public_powers_gets_ineligible) :-
+    verdict_of(second_subparagraph_under_public_powers, ineligible).
+test(second_subparagraph_near_miss_public_powers_is_not_eligible, fail) :-
+    verdict_of(second_subparagraph_under_public_powers, eligible).
+test(second_subparagraph_near_miss_met_point_gets_ineligible) :-
+    verdict_of(second_subparagraph_after_public_interest, ineligible).
+test(second_subparagraph_near_miss_met_point_is_not_eligible, fail) :-
+    verdict_of(second_subparagraph_after_public_interest, eligible).
+
+% ---- the status rule at stage two -------------------------------------------------
+test(d180_positive_names_the_missing_key) :-
+    verdict_of(unsure_safeguard_contract_not_stated, indeterminate([contract_necessity])).
+test(d180_near_miss_refers_on_the_safeguard) :-
+    verdict_of(unsure_safeguard_contract_stated, needs_legal_review(open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)), _)).
+test(d180_near_miss_is_not_indeterminate, fail) :-
+    verdict_of(unsure_safeguard_contract_stated, indeterminate(_)).
+
+% ---- the input contract ------------------------------------------------
+test(input_contract_positive_reports_the_wrong_type) :-
+    verdict_of(safeguard_given_wrong_atom, input_problems([wrong_type(safeguard_in_place)])).
+test(input_contract_near_miss_with_true_is_eligible) :-
+    verdict_of(safeguard_without_adequacy_fact, eligible).
+test(input_contract_near_miss_has_no_problems, fail) :-
+    verdict_of(safeguard_without_adequacy_fact, input_problems(_)).
+
+:- end_module(test_negative_controls).

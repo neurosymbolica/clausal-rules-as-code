@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_state_aid_de_minimis_cumulation_queries, [de_minimis_compare_refs/4, de_minimis_gap_to_ineligible/3, de_minimis_headroom/3, de_minimis_qualifying_grants/3, de_minimis_what_if/4]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

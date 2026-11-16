@@ -1,0 +1,21 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_portability_and_objection_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2016_679_art_12_2, [label - 'Regulation (EU) 2016/679 Art 12(2) second sentence', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_012.002)', verbatim - 'the controller shall not refuse to act on the request of the data subject for exercising his or her rights under Articles 15 to 22']).
+citation(eu_reg_2016_679_art_12_5, [label - 'Regulation (EU) 2016/679 Art 12(5) manifestly unfounded or excessive requests', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_012.005)', verbatim - 'The controller shall bear the burden of demonstrating the manifestly unfounded or excessive character of the request']).
+citation(eu_reg_2016_679_art_12_6, [label - 'Regulation (EU) 2016/679 Art 12(6) reasonable doubts about identity', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_012.006)', verbatim - 'the controller may request the provision of additional information necessary to confirm the identity of the data subject']).
+citation(eu_reg_2016_679_art_20_1, [label - 'Regulation (EU) 2016/679 Art 20(1) right to data portability', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_020.001)', verbatim - 'shall have the right to receive the personal data concerning him or her']).
+citation(eu_reg_2016_679_art_20_3, [label - 'Regulation (EU) 2016/679 Art 20(3) second sentence, public task', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_020.003)', verbatim - 'That right shall not apply to processing necessary for the performance of a task carried out in the public interest or in the exercise of official authority vested in the controller']).
+citation(eu_reg_2016_679_art_20_4, [label - 'Regulation (EU) 2016/679 Art 20(4) rights and freedoms of others', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_020.004)', verbatim - 'The right referred to in paragraph 1 shall not adversely affect the rights and freedoms of others']).
+citation(eu_reg_2016_679_art_21_1, [label - 'Regulation (EU) 2016/679 Art 21(1) right to object, Art 6(1)(e) or (f) processing', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_021.001)', verbatim - 'The data subject shall have the right to object, on grounds relating to his or her particular situation, at any time to processing of personal data concerning him or her which is based on point (e) or (f) of Article 6(1)']).
+citation(eu_reg_2016_679_art_21_2, [label - 'Regulation (EU) 2016/679 Art 21(2) right to object to direct marketing', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_021.002)', verbatim - 'the data subject shall have the right to object at any time to processing of personal data concerning him or her for such marketing']).
+citation(eu_reg_2016_679_art_21_3, [label - 'Regulation (EU) 2016/679 Art 21(3) no further processing for direct marketing', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_021.003)', verbatim - 'the personal data shall no longer be processed for such purposes']).
+citation(eu_reg_2016_679_art_21_6, [label - 'Regulation (EU) 2016/679 Art 21(6) objection to research or statistical processing', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_021.006)', verbatim - 'shall have the right to object to processing of personal data concerning him or her, unless the processing is necessary for the performance of a task carried out for reasons of public interest']).
+citation(eu_reg_2016_679_art_23_1, [label - 'Regulation (EU) 2016/679 Art 23(1) opening words, legislative restriction', ref - 'https://eur-lex.europa.eu/eli/reg/2016/679/oj (02016R0679-20160504#parag_023.001)', verbatim - 'Union or Member State law to which the data controller or processor is subject may restrict by way of a legislative measure the scope of the obligations and rights provided for in Articles 12 to 22']).

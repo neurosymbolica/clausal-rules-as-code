@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and the input
+% check's tolerance of every term it is given.
+% Run: python -m clausal.testing eu/cbam/de_minimis/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/cbam/de_minimis/de_minimis, [
+    de_minimis_status/2,
+    de_minimis_exemption/3,
+    de_minimis_goods_status/3
+]).
+:- use_module(eu/cbam/de_minimis/kernel, [de_minimis_input_problems/2]).
+:- use_module(eu/cbam/de_minimis/fixtures, [de_minimis_profile_for/2]).
+
+% ---- bound verdicts ------------------------------------------------------
+test(status_holds_with_the_applies_verdict_bound) :-
+    de_minimis_profile_for(at_limit_by_acceptance, Profile),
+    de_minimis_status(Profile, de_minimis_exemption_applies).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    de_minimis_profile_for(at_limit_by_acceptance, Profile),
+    de_minimis_status(Profile, de_minimis_exemption_does_not_apply).
+
+test(status_holds_with_the_does_not_apply_verdict_bound) :-
+    de_minimis_profile_for(one_kilogram_above_by_acceptance, Profile),
+    de_minimis_status(Profile, de_minimis_exemption_does_not_apply).
+
+test(the_exemption_holds_with_result_and_citations_bound) :-
+    de_minimis_profile_for(at_limit_by_acceptance, Profile),
+    de_minimis_exemption(Profile, de_minimis_exemption_applies, [cite(eu_reg_2023_956_art_2a_1), cite(eu_reg_2023_956_annex_vii_1), cite(eu_reg_2023_956_art_3_15)]).
+
+test(the_referral_holds_with_its_compound_bound) :-
+    de_minimis_profile_for(unsure_figures_across_limit, Profile),
+    de_minimis_exemption(Profile, needs_legal_review(open_textured(year_date_basis, cite(eu_reg_2023_956_art_2a_1)), [inputs_relied_on([year_date_basis-unsure])]), []).
+
+test(the_goods_status_holds_with_the_verdict_bound) :-
+    de_minimis_profile_for(electricity_import, Profile),
+    de_minimis_goods_status(Profile, outside_de_minimis_exemption, [cite(eu_reg_2023_956_art_2a_4), cite(eu_reg_2023_956_annex_i_electricity)]).
+
+test(the_wrong_bound_goods_status_is_rejected, fail) :-
+    de_minimis_profile_for(electricity_import, Profile),
+    de_minimis_goods_status(Profile, counted_toward_threshold, _).
+
+test(a_bound_indeterminate_names_the_missing_key) :-
+    de_minimis_profile_for(goods_kind_absent, Profile),
+    de_minimis_goods_status(Profile, indeterminate([goods_kind]), []).
+
+% ---- input tolerance of the input check ---------------------------------
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, de_minimis_input_problems(_UnboundProfile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, de_minimis_input_problems([attribute(goods_kind, electricity)|_Tail], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_atom_is_not_an_attribute_list) :-
+    findall(Problems, de_minimis_input_problems(profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_pair_element_is_not_an_attribute) :-
+    findall(Problems, de_minimis_input_problems([goods_kind-electricity], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(the_empty_profile_has_no_problem) :-
+    findall(Problems, de_minimis_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_number_key_is_an_unknown_key) :-
+    findall(Problems, de_minimis_input_problems([attribute(7, electricity)], Problems), Answers),
+    Answers == [[unknown_key(7)]].
+
+test(an_unbound_value_is_a_wrong_type) :-
+    findall(Problems, de_minimis_input_problems([attribute(goods_kind, _UnboundValue)], Problems), Answers),
+    Answers == [[wrong_type(goods_kind)]].
+
+test(a_float_threshold_is_a_wrong_type) :-
+    de_minimis_profile_for(fractional_threshold, Profile),
+    findall(Problems, de_minimis_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(single_mass_based_threshold_tonnes)]].
+
+test(a_negative_figure_is_a_wrong_type) :-
+    de_minimis_profile_for(negative_figure, Profile),
+    findall(Problems, de_minimis_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(net_mass_kg_by_acceptance_date)]].
+
+test(a_repeated_key_is_a_duplicate_key_only) :-
+    de_minimis_profile_for(duplicate_threshold, Profile),
+    findall(Problems, de_minimis_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(single_mass_based_threshold_tonnes)]].
+
+test(a_repeated_key_with_a_bad_value_is_still_only_a_duplicate_key) :-
+    findall(Problems, de_minimis_input_problems([attribute(goods_kind, steel), attribute(goods_kind, electricity)], Problems), Answers),
+    Answers == [[duplicate_key(goods_kind)]].
+
+test(contract_problems_come_in_contract_order_then_unknown_keys) :-
+    findall(Problems, de_minimis_input_problems([attribute(importer_name, acme), attribute(goods_kind, steel), attribute(single_mass_based_threshold_tonnes, 1.5), attribute(importer_name, acme)], Problems), Answers),
+    Answers == [[wrong_type(single_mass_based_threshold_tonnes), wrong_type(goods_kind), unknown_key(importer_name)]].
+
+test(an_unknown_date_basis_value_is_a_wrong_type) :-
+    findall(Problems, de_minimis_input_problems([attribute(year_date_basis, entry_into_the_union)], Problems), Answers),
+    Answers == [[wrong_type(year_date_basis)]].
+
+:- end_module(test_input_mode).

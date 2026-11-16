@@ -1,0 +1,94 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_territorial_material_scope.
+% A TOP-LAYER consumer: it imports the slices' PUBLIC predicates it calls.
+%
+% decide_gdpr_scope/2 (#3 status determination): the full verdict
+%   gdpr_scope_verdict(Applies, Ground, Representative, Citations).
+% gdpr_territorial_material_scope_compliance_check/3 (#13 compliance check): may the party
+%   proceed without designating a representative in the Union (Art 27).
+% gdpr_applies_checklist/2 (#7 justification): one cite(...) row per limb (owned by gdpr_applies).
+% gdpr_territorial_material_scope_what_if/4 (#16): override one key, re-evaluate the APPLIES field.
+% gdpr_territorial_material_scope_profile_keys/1: top-level profile key schema.
+% gdpr_territorial_material_scope_input_problems/2: the problems a profile has ([] = none).
+% =====================================================================
+
+:- module(queries, [
+    gdpr_territorial_material_scope_profile_keys/1,
+    gdpr_territorial_material_scope_input_problems/2,
+    gdpr_territorial_material_scope_what_if/4,
+    gdpr_territorial_material_scope_compliance_check/3,
+    decide_gdpr_scope/2
+]).
+
+:- constructors([
+    gdpr_scope_verdict(applies, ground, representative, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, status),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(address, retrieved_at),
+    document(upload_identifier, digest)
+]).
+
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/kernel, [
+    gdpr_territorial_material_scope_input_problems/2,
+    ordered_members/3,
+    citation_order/1
+]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/gdpr_applies, [decide_gdpr_applies/2, gdpr_applies_status/2]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/gdpr_scope_ground, [decide_gdpr_scope_ground/2]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/representative_requirement, [decide_representative_requirement/2, representative_requirement_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_territorial_material_scope_profile_keys([personal_data_processed, processing_wholly_or_partly_automated, personal_data_in_filing_system, activity_outside_union_law, member_state_common_foreign_security_activity, processing_by_natural_person, purely_personal_or_household_activity, processing_by_competent_authority, criminal_law_enforcement_purpose, processing_by_union_institution, party_role, established_in_union, processing_in_context_of_establishment_activities, data_subjects_in_union, offering_goods_or_services_to_data_subjects_in_union, monitoring_behaviour_of_data_subjects_in_union, member_state_law_applies_by_public_international_law, public_authority_or_body, occasional_processing, special_or_criminal_data_on_large_scale, unlikely_to_result_in_risk]).
+
+% The package verdict: the three fields and the union of their citations, in vocabulary order.
+decide_gdpr_scope(Profile, gdpr_scope_verdict(Applies, Ground, Representative, Citations)) :-
+    decide_gdpr_applies(Profile, gdpr_applies_verdict(Applies, AppliesCitations)),
+    decide_gdpr_scope_ground(Profile, gdpr_scope_ground_verdict(Ground, _GroundCitations)),
+    decide_representative_requirement(Profile, representative_requirement_verdict(Representative, RepresentativeCitations)),
+    append(AppliesCitations, RepresentativeCitations, Collected),
+    citation_order(Order),
+    ordered_members(Order, Collected, Citations).
+
+% Compliance check: is the proposed action allowed in the current state?
+% Action proceed_without_representative: permitted when Art 27 imposes no duty (not applicable or
+% exempt), not_permitted when the duty is required, undetermined when the scope answer is open.
+gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, Result) :-
+    implements(eu_reg_2016_679_art_27_1),
+    representative_requirement_status(Profile, Status),
+    compliance_for(Status, Result).
+
+compliance_for(required, not_permitted).
+compliance_for(not_applicable, permitted).
+compliance_for(exempt_art27_2_a, permitted).
+compliance_for(exempt_art27_2_b, permitted).
+compliance_for(not_reached, undetermined).
+compliance_for(indeterminate(_), undetermined).
+compliance_for(needs_legal_review(_, _), undetermined).
+
+% what-if: re-evaluate with one key hypothetically overridden
+gdpr_territorial_material_scope_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_applies_status(Hypothesis, NewStatus).
+
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(Key, _)|Rest], Key, Value, Result) :-
+    override_attribute(Rest, Key, Value, Result).
+override_attribute([attribute(Other, Existing)|Rest], Key, Value, [attribute(Other, Existing)|Result]) :-
+    dif(Other, Key),
+    override_attribute(Rest, Key, Value, Result).
+
+:- end_module(queries).

@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_special_categories_fixtures, [gdpr_special_categories_subject/1, gdpr_special_categories_profile_for/2, gdpr_special_categories_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_special_categories_processing_permitted, [decide_processing_permitted/2]).
+
+gdpr_special_categories_subject(not_special_category).
+gdpr_special_categories_subject(health_without_claim).
+gdpr_special_categories_subject(explicit_consent).
+gdpr_special_categories_subject(explicit_consent_barred_by_law).
+gdpr_special_categories_subject(employment_law_authorised).
+gdpr_special_categories_subject(employment_law_attested_false).
+gdpr_special_categories_subject(employment_law_absent_cross_reference).
+gdpr_special_categories_subject(vital_interest_incapable).
+gdpr_special_categories_subject(vital_interest_capable).
+gdpr_special_categories_subject(not_for_profit_members).
+gdpr_special_categories_subject(not_for_profit_outsiders).
+gdpr_special_categories_subject(made_public).
+gdpr_special_categories_subject(made_public_denied).
+gdpr_special_categories_subject(made_public_unsure).
+gdpr_special_categories_subject(legal_claims).
+gdpr_special_categories_subject(legal_claims_other_purpose).
+gdpr_special_categories_subject(substantial_public_interest).
+gdpr_special_categories_subject(substantial_public_interest_denied).
+gdpr_special_categories_subject(health_care_contract).
+gdpr_special_categories_subject(health_care_without_secrecy).
+gdpr_special_categories_subject(public_health_law).
+gdpr_special_categories_subject(public_health_law_attested_false).
+gdpr_special_categories_subject(research_archiving).
+gdpr_special_categories_subject(research_without_article_89).
+gdpr_special_categories_subject(criminal_official_authority).
+gdpr_special_categories_subject(criminal_no_route).
+gdpr_special_categories_subject(criminal_authorised_by_law).
+gdpr_special_categories_subject(criminal_register_defeats_law).
+gdpr_special_categories_subject(further_conditions_attested_false).
+gdpr_special_categories_subject(further_conditions_attested_true).
+gdpr_special_categories_subject(health_unsure_further_conditions).
+gdpr_special_categories_subject(health_false_further_conditions).
+gdpr_special_categories_subject(biometric_without_identification).
+gdpr_special_categories_subject(biometric_with_identification).
+gdpr_special_categories_subject(scope_unsure_referral).
+gdpr_special_categories_subject(scope_settled_false).
+gdpr_special_categories_subject(criminal_scope_absent).
+gdpr_special_categories_subject(duplicate_and_unknown_keys).
+gdpr_special_categories_subject(wrong_type_value).
+
+attested_true(attested(true, attestation(decision_layer, attested_at, attested_reason, none))).
+
+attested_false(attested(false, attestation(decision_layer, attested_at, attested_reason, none))).
+
+no_category_attributes([attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_political_opinions, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false), attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(concerns_health, false), attribute(concerns_sex_life_or_sexual_orientation, false)]).
+
+explicit_consent_attributes([attribute(exception_claimed, art9_2_a), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(explicit_consent_given, true), attribute(consent_purposes_specified, true), attribute(consent_satisfies_definition, true)]).
+
+gdpr_special_categories_profile_for(not_special_category, Profile) :-
+    no_category_attributes(Categories),
+    append(Categories, [attribute(criminal_offence_data_present, false)], Profile).
+gdpr_special_categories_profile_for(health_without_claim, [attribute(concerns_health, true), attribute(criminal_offence_data_present, false)]).
+gdpr_special_categories_profile_for(explicit_consent, Profile) :-
+    explicit_consent_attributes(Profile).
+gdpr_special_categories_profile_for(explicit_consent_barred_by_law, [attribute(prohibition_lifting_barred_by_law, AttestedTrue)|Consent]) :-
+    attested_true(AttestedTrue),
+    explicit_consent_attributes(Consent).
+gdpr_special_categories_profile_for(employment_law_authorised, [attribute(exception_claimed, art9_2_b), attribute(reveals_trade_union_membership, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(employment_social_security_or_social_protection_field, true), attribute(employment_law_or_collective_agreement_authorises, AttestedTrue), attribute(appropriate_safeguards, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(employment_law_attested_false, [attribute(exception_claimed, art9_2_b), attribute(reveals_trade_union_membership, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(employment_social_security_or_social_protection_field, true), attribute(employment_law_or_collective_agreement_authorises, AttestedFalse), attribute(appropriate_safeguards, true)]) :-
+    attested_false(AttestedFalse).
+gdpr_special_categories_profile_for(employment_law_absent_cross_reference, [attribute(exception_claimed, art9_2_b), attribute(reveals_trade_union_membership, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(employment_social_security_or_social_protection_field, true), attribute(appropriate_safeguards, true)]).
+gdpr_special_categories_profile_for(vital_interest_incapable, [attribute(exception_claimed, art9_2_c), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(vital_interest_at_stake, true), attribute(data_subject_incapable_of_giving_consent, true)]).
+gdpr_special_categories_profile_for(vital_interest_capable, [attribute(exception_claimed, art9_2_c), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(vital_interest_at_stake, true), attribute(data_subject_incapable_of_giving_consent, false)]).
+gdpr_special_categories_profile_for(not_for_profit_members, [attribute(exception_claimed, art9_2_d), attribute(reveals_religious_or_philosophical_beliefs, true), attribute(criminal_offence_data_present, false), attribute(not_for_profit_body_with_specified_aim, true), attribute(processing_in_course_of_legitimate_activities, true), attribute(processing_relates_solely_to_members_or_regular_contacts, true), attribute(data_not_disclosed_outside_body_without_consent, true), attribute(appropriate_safeguards, true)]).
+gdpr_special_categories_profile_for(not_for_profit_outsiders, [attribute(exception_claimed, art9_2_d), attribute(reveals_religious_or_philosophical_beliefs, true), attribute(criminal_offence_data_present, false), attribute(not_for_profit_body_with_specified_aim, true), attribute(processing_in_course_of_legitimate_activities, true), attribute(processing_relates_solely_to_members_or_regular_contacts, false), attribute(data_not_disclosed_outside_body_without_consent, true), attribute(appropriate_safeguards, true)]).
+gdpr_special_categories_profile_for(made_public, [attribute(exception_claimed, art9_2_e), attribute(reveals_political_opinions, true), attribute(criminal_offence_data_present, false), attribute(manifestly_made_public_by_data_subject, true)]).
+gdpr_special_categories_profile_for(made_public_denied, [attribute(exception_claimed, art9_2_e), attribute(reveals_political_opinions, true), attribute(criminal_offence_data_present, false), attribute(manifestly_made_public_by_data_subject, false)]).
+gdpr_special_categories_profile_for(made_public_unsure, [attribute(exception_claimed, art9_2_e), attribute(reveals_political_opinions, true), attribute(criminal_offence_data_present, false), attribute(manifestly_made_public_by_data_subject, unsure)]).
+gdpr_special_categories_profile_for(legal_claims, [attribute(exception_claimed, art9_2_f), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_legal_claims_or_judicial_capacity, true)]).
+gdpr_special_categories_profile_for(legal_claims_other_purpose, [attribute(exception_claimed, art9_2_f), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_legal_claims_or_judicial_capacity, false)]).
+gdpr_special_categories_profile_for(substantial_public_interest, [attribute(exception_claimed, art9_2_g), attribute(reveals_racial_or_ethnic_origin, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(substantial_public_interest, true), attribute(substantial_public_interest_law_exists, AttestedTrue), attribute(authorising_law_proportionate_and_respects_essence, true), attribute(suitable_and_specific_measures, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(substantial_public_interest_denied, [attribute(exception_claimed, art9_2_g), attribute(reveals_racial_or_ethnic_origin, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(substantial_public_interest, false), attribute(substantial_public_interest_law_exists, AttestedTrue), attribute(authorising_law_proportionate_and_respects_essence, true), attribute(suitable_and_specific_measures, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(health_care_contract, [attribute(exception_claimed, art9_2_h), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_health_or_social_care, true), attribute(pursuant_to_contract_with_health_professional, true), attribute(processed_under_professional_secrecy, true)]).
+gdpr_special_categories_profile_for(health_care_without_secrecy, [attribute(exception_claimed, art9_2_h), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_health_or_social_care, true), attribute(pursuant_to_contract_with_health_professional, true), attribute(processed_under_professional_secrecy, false)]).
+gdpr_special_categories_profile_for(public_health_law, [attribute(exception_claimed, art9_2_i), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(public_health_public_interest, true), attribute(public_health_law_basis_exists, AttestedTrue), attribute(suitable_and_specific_measures, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(public_health_law_attested_false, [attribute(exception_claimed, art9_2_i), attribute(concerns_health, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(public_health_public_interest, true), attribute(public_health_law_basis_exists, AttestedFalse), attribute(suitable_and_specific_measures, true)]) :-
+    attested_false(AttestedFalse).
+gdpr_special_categories_profile_for(research_archiving, [attribute(exception_claimed, art9_2_j), attribute(genetic_data_present, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_archiving_research_or_statistics, true), attribute(accordance_with_article_89_1, true), attribute(research_archiving_statistics_law_basis_exists, AttestedTrue), attribute(authorising_law_proportionate_and_respects_essence, true), attribute(suitable_and_specific_measures, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(research_without_article_89, [attribute(exception_claimed, art9_2_j), attribute(genetic_data_present, true), attribute(criminal_offence_data_present, false), attribute(processing_necessary, true), attribute(purpose_is_archiving_research_or_statistics, true), attribute(accordance_with_article_89_1, false), attribute(research_archiving_statistics_law_basis_exists, AttestedTrue), attribute(authorising_law_proportionate_and_respects_essence, true), attribute(suitable_and_specific_measures, true)]) :-
+    attested_true(AttestedTrue).
+gdpr_special_categories_profile_for(criminal_official_authority, Profile) :-
+    no_category_attributes(Categories),
+    append(Categories, [attribute(criminal_offence_data_present, true), attribute(processing_under_official_authority_control, true)], Profile).
+gdpr_special_categories_profile_for(criminal_no_route, Profile) :-
+    attested_false(AttestedFalse),
+    no_category_attributes(Categories),
+    append(Categories, [attribute(criminal_offence_data_present, true), attribute(processing_under_official_authority_control, false), attribute(criminal_data_authorising_law_exists, AttestedFalse)], Profile).
+gdpr_special_categories_profile_for(criminal_authorised_by_law, Profile) :-
+    attested_true(AttestedTrue),
+    no_category_attributes(Categories),
+    append(Categories, [attribute(criminal_offence_data_present, true), attribute(processing_under_official_authority_control, false), attribute(comprehensive_register_of_criminal_convictions, false), attribute(criminal_data_authorising_law_exists, AttestedTrue), attribute(criminal_data_law_safeguards_appropriate, true)], Profile).
+gdpr_special_categories_profile_for(criminal_register_defeats_law, Profile) :-
+    attested_true(AttestedTrue),
+    no_category_attributes(Categories),
+    append(Categories, [attribute(criminal_offence_data_present, true), attribute(processing_under_official_authority_control, false), attribute(comprehensive_register_of_criminal_convictions, true), attribute(criminal_data_authorising_law_exists, AttestedTrue), attribute(criminal_data_law_safeguards_appropriate, true)], Profile).
+gdpr_special_categories_profile_for(criminal_scope_absent, Profile) :-
+    no_category_attributes(Categories),
+    append(Categories, [attribute(processing_under_official_authority_control, true)], Profile).
+gdpr_special_categories_profile_for(further_conditions_attested_false, [attribute(member_state_further_conditions_exist, AttestedFalse)|Consent]) :-
+    attested_false(AttestedFalse),
+    explicit_consent_attributes(Consent).
+gdpr_special_categories_profile_for(further_conditions_attested_true, [attribute(member_state_further_conditions_exist, AttestedTrue)|Consent]) :-
+    attested_true(AttestedTrue),
+    explicit_consent_attributes(Consent).
+gdpr_special_categories_profile_for(health_unsure_further_conditions, [attribute(exception_claimed, art9_2_a), attribute(reveals_political_opinions, true), attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(concerns_health, unsure), attribute(criminal_offence_data_present, false), attribute(explicit_consent_given, true), attribute(consent_purposes_specified, true), attribute(consent_satisfies_definition, true), attribute(member_state_further_conditions_exist, AttestedFalse)]) :-
+    attested_false(AttestedFalse).
+gdpr_special_categories_profile_for(health_false_further_conditions, [attribute(exception_claimed, art9_2_a), attribute(reveals_political_opinions, true), attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(concerns_health, false), attribute(criminal_offence_data_present, false), attribute(explicit_consent_given, true), attribute(consent_purposes_specified, true), attribute(consent_satisfies_definition, true), attribute(member_state_further_conditions_exist, AttestedFalse)]) :-
+    attested_false(AttestedFalse).
+gdpr_special_categories_profile_for(biometric_without_identification, [attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_political_opinions, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false), attribute(genetic_data_present, false), attribute(biometric_data_present, true), attribute(biometric_used_for_unique_identification, false), attribute(concerns_health, false), attribute(concerns_sex_life_or_sexual_orientation, false), attribute(criminal_offence_data_present, false)]).
+gdpr_special_categories_profile_for(biometric_with_identification, [attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_political_opinions, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false), attribute(genetic_data_present, false), attribute(biometric_data_present, true), attribute(biometric_used_for_unique_identification, true), attribute(concerns_health, false), attribute(concerns_sex_life_or_sexual_orientation, false), attribute(criminal_offence_data_present, false)]).
+gdpr_special_categories_profile_for(scope_unsure_referral, [attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(criminal_offence_data_present, false), attribute(concerns_health, false), attribute(concerns_sex_life_or_sexual_orientation, unsure), attribute(reveals_political_opinions, false), attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_religious_or_philosophical_beliefs, unsure), attribute(reveals_trade_union_membership, unsure)]).
+gdpr_special_categories_profile_for(scope_settled_false, [attribute(genetic_data_present, false), attribute(biometric_data_present, false), attribute(criminal_offence_data_present, false), attribute(concerns_health, false), attribute(concerns_sex_life_or_sexual_orientation, false), attribute(reveals_political_opinions, false), attribute(reveals_racial_or_ethnic_origin, false), attribute(reveals_religious_or_philosophical_beliefs, false), attribute(reveals_trade_union_membership, false)]).
+gdpr_special_categories_profile_for(duplicate_and_unknown_keys, [attribute(concerns_health, true), attribute(concerns_health, false), attribute(colour, red)]).
+gdpr_special_categories_profile_for(wrong_type_value, [attribute(genetic_data_present, unsure), attribute(criminal_offence_data_present, false)]).
+
+gdpr_special_categories_assess(Subject, Result) :-
+    gdpr_special_categories_profile_for(Subject, Profile),
+    decide_processing_permitted(Profile, Result).
+
+test(every_subject_has_exactly_one_profile) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    maplist(one_profile, Subjects).
+test(subjects_are_registered_once) :-
+    findall(Subject, gdpr_special_categories_subject(Subject), Subjects),
+    sort(Subjects, Unique),
+    length(Subjects, Count),
+    length(Unique, Count).
+
+one_profile(Subject) :-
+    findall(Profile, gdpr_special_categories_profile_for(Subject, Profile), Profiles),
+    length(Profiles, 1).

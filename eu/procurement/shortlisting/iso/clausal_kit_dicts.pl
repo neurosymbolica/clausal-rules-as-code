@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_kit_dicts.pl
 % The vendored kit's dict tests on the Clausal Prolog (.clausal) export path.
 % The kit reads a profile two ways: dict clauses guarded by is_dict/1, and

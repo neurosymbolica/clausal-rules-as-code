@@ -1,0 +1,25 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the slice tabulates.
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_access_rectification_restriction/request_basis, [request_basis_status_values/1]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_access_rectification_restriction/citations, [citation/2]).
+
+test(the_pinned_vocabulary_is_the_status_table) :-
+    request_basis_status_values([art15_1, art16_inaccurate_data, art16_incomplete_data, art18_1_a, art18_1_b, art18_1_c, art18_1_d, none]).
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(art15_1, art16_inaccurate_data).
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = request_basis_verdict(art15_1, []),
+    Verdict = request_basis_verdict(Status, Citations),
+    Status == art15_1,
+    Citations == [].
+
+test(a_real_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_15_1, _Record).
+
+:- end_module(test_load).

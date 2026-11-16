@@ -1,0 +1,68 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_consent_conditions_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_queries, [gdpr_consent_conditions_profile_keys/1, gdpr_consent_conditions_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_kernel, [gdpr_consent_conditions_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [consent_conditions_status/4, identification_obligation/4, identification_information_duty/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_profile_for/2]).
+
+fixture_false(attested(false, attestation(host_system, recorded_2026_11_12, fixture_statement, none))).
+
+fixture_true(attested(true, attestation(host_system, recorded_2026_11_12, fixture_statement, none))).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_consent_conditions_profile_keys(ProfileKeys),
+    ProfileKeys == [processing_based_on_consent, consent_demonstrable, consent_in_declaration_with_other_matters, request_clearly_distinguishable_and_intelligible, declaration_part_infringes_regulation, informed_of_withdrawal_right_before_consent, withdrawal_as_easy_as_giving_consent, contract_conditional_on_unneeded_consent, consent_freely_given, purposes_do_not_require_identification, able_to_demonstrate_not_in_position_to_identify, informing_data_subject_possible, additional_identifying_information_provided].
+test(profile_keys_has_thirteen) :-
+    gdpr_consent_conditions_profile_keys(ProfileKeys),
+    length(ProfileKeys, 13).
+test(what_if_unattested_demonstrable_flips_to_not_met) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    fixture_false(Statement),
+    gdpr_consent_conditions_what_if(Profile, consent_demonstrable, Statement, conditions_not_met).
+test(what_if_leaves_the_original_status_unchanged) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    fixture_true(Statement),
+    gdpr_consent_conditions_what_if(Profile, consent_demonstrable, Statement, conditions_met).
+test(what_if_scope_false_flips_to_not_applicable) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_what_if(Profile, processing_based_on_consent, false, not_applicable).
+test(what_if_adds_a_missing_key) :-
+    gdpr_consent_conditions_profile_for(consent_freely_given_not_stated, Profile),
+    fixture_true(Statement),
+    gdpr_consent_conditions_what_if(Profile, consent_freely_given, Statement, conditions_met).
+test(what_if_has_exactly_one_solution) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    findall(Status, gdpr_consent_conditions_what_if(Profile, informed_of_withdrawal_right_before_consent, false, Status), Statuses),
+    Statuses == [conditions_not_met].
+test(what_if_refusal_is_paired_with_a_good_profile) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_what_if(Profile, processing_based_on_consent, false, _).
+test(input_problems_empty_for_a_good_profile) :-
+    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
+    gdpr_consent_conditions_input_problems(Profile, []).
+test(eligibility_query_is_consent_conditions_status) :-
+    gdpr_consent_conditions_profile_for(consent_not_freely_given, Profile),
+    consent_conditions_status(Profile, conditions_not_met, _, [cite(eu_reg_2016_679_art_7_4)]).
+test(compliance_query_is_identification_obligation) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_obligation(Profile, not_obliged_to_acquire_identifying_information, _, _).
+test(obligation_surfacing_query_is_identification_information_duty) :-
+    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
+    identification_information_duty(Profile, must_inform_data_subject, _, _).
+
+test(what_if_refuses_a_profile_with_problems, fail) :-
+    gdpr_consent_conditions_profile_for(input_problem_profile, Profile),
+    gdpr_consent_conditions_what_if(Profile, processing_based_on_consent, false, _).
+
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_has_thirteen, what_if_unattested_demonstrable_flips_to_not_met, what_if_leaves_the_original_status_unchanged, what_if_scope_false_flips_to_not_applicable, what_if_adds_a_missing_key, what_if_has_exactly_one_solution, what_if_refusal_is_paired_with_a_good_profile, input_problems_empty_for_a_good_profile, eligibility_query_is_consent_conditions_status, compliance_query_is_identification_obligation, obligation_surfacing_query_is_identification_information_duty]).
+cp_test_fail_names([what_if_refuses_a_profile_with_problems]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

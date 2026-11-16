@@ -1,0 +1,364 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% child_consent_ground.clausal -- the child_consent_ground DETERMINATION for
+% eu/data_protection/gdpr_child_consent_age_verdict.
+% Source: Regulation (EU) 2016/679 Art 8(1) (age condition, national lower age),
+% Art 8(2) (verification), Art 4(25) (information society service).
+%
+% Stage chain, disjoint guards, ground verdicts in the heads:
+%   one: engagement   two: age   three: parent   four: national age
+%   five: verification (Art 8(2), a separate field that never changes STATUS)
+% Each stage predicate also yields the citations of its STATUS part and the
+% checklist step statuses, so the checklist agrees with the verdict.
+% =====================================================================
+
+:- module(child_consent_ground, [
+    decide_child_consent/2,
+    child_consent_ground/2,
+    decide_child_consent_ground/2,
+    child_consent_ground_status/2,
+    child_consent_ground_checklist/2,
+    child_consent_ground_decision_resolvable/1,
+    child_consent_ground_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/kernel, [gdpr_child_consent_age_verdict_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/citations, [implements/1]).
+
+:- constructors([
+    gdpr_child_consent_verdict(status, ground, verification, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, status),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    attested(value, attestation),
+    fetched(value, source),
+    attestation(by, at, reason, evidence),
+    source(url, retrieved_at, checksum),
+    national_digital_consent_age(member_state, age, provision),
+    url(address, retrieved_at),
+    document(upload_id, checksum)
+]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Art 8(1): the age of digital consent is 16; no Member State may go below 13.
+:- constant_value(default_age_of_digital_consent_years, 16).
+:- constant_value(lowest_national_age_of_digital_consent_years, 13).
+
+% The verdict vocabulary as a ground table.
+child_consent_ground_status_values([art8_not_engaged, child_at_least_16, parental_consent_given, child_at_least_national_age, parental_consent_missing_below_13, parental_consent_missing_below_national_age, none]).
+
+engagement_keys([processing_rests_on_consent, information_society_service, offered_directly_to_child]).
+stage_four_keys([member_state, member_state_selection_test, consent_date]).
+root_key_order([processing_rests_on_consent, information_society_service, offered_directly_to_child, child_age_years, parental_consent_given, member_state, member_state_selection_test, consent_date, member_state_digital_consent_age, verification_efforts_reasonable]).
+
+% Citation vocabulary order.
+citation_vocabulary([cite(eu_reg_2016_679_art_4_25), cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara), cite(eu_reg_2016_679_art_8_2), cite(member_state_digital_consent_age_law)]).
+
+% Referral rows: the judgement, its citation, the inputs relied on.
+referral_row(information_society_service, cite(eu_reg_2016_679_art_4_25), [processing_rests_on_consent, information_society_service, offered_directly_to_child]).
+referral_row(offered_directly_to_child, cite(eu_reg_2016_679_art_8_1), [processing_rests_on_consent, information_society_service, offered_directly_to_child]).
+referral_row(verification_efforts_reasonable, cite(eu_reg_2016_679_art_8_2), [verification_efforts_reasonable]).
+
+% The cross-reference row: national age not shown (stage four only).
+cross_reference_row(cite(eu_reg_2016_679_art_8_1_second_subpara), cite(member_state_digital_consent_age_law), [child_age_years, parental_consent_given, member_state, member_state_selection_test, consent_date]).
+
+% ---- profile reading ---------------------------------------------------
+read_key(Profile, Key, present(Value)) :-
+    profile_get(Profile, Key, Value).
+read_key(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+element_state(present(true), met).
+element_state(present(false), unmet).
+element_state(present(unsure), unsure).
+element_state(absent, absent).
+
+key_state(Profile, Key, State) :-
+    read_key(Profile, Key, Reading),
+    element_state(Reading, State).
+
+% absent_keys(Profile, Keys, Missing): the absent ones of Keys, in the order given.
+absent_keys(_, [], []).
+absent_keys(Profile, [Key|Keys], Missing) :-
+    read_key(Profile, Key, Reading),
+    absent_keys(Profile, Keys, LaterMissing),
+    add_if_absent(Reading, Key, LaterMissing, Missing).
+
+add_if_absent(absent, Key, Later, [Key|Later]).
+add_if_absent(present(_), _, Later, Later).
+
+% relied_pairs(Profile, Wanted, Pairs): the Key-Value pairs present in the profile,
+% in root key order, of the Wanted keys.
+relied_pairs(Profile, Wanted, Pairs) :-
+    root_key_order(Order),
+    pairs_over(Order, Wanted, Profile, Pairs).
+
+pairs_over([], _, _, []).
+pairs_over([Key|Keys], Wanted, Profile, Pairs) :-
+    memberd_t(Key, Wanted, IsWanted),
+    read_key(Profile, Key, Reading),
+    pairs_over(Keys, Wanted, Profile, LaterPairs),
+    add_pair(IsWanted, Reading, Key, LaterPairs, Pairs).
+
+add_pair(false, _, _, Later, Later).
+add_pair(true, absent, _, Later, Later).
+add_pair(true, present(Value), Key, Later, [Key-Value|Later]).
+
+% first_unsure(Profile, Keys, Unsure): the first of Keys whose judgement is unsure.
+first_unsure(Profile, [Key|Keys], Unsure) :-
+    read_key(Profile, Key, Reading),
+    first_unsure_step(Reading, Key, Keys, Profile, Unsure).
+
+first_unsure_step(present(unsure), Key, _, _, Key).
+first_unsure_step(present(true), _, Keys, Profile, Unsure) :-
+    first_unsure(Profile, Keys, Unsure).
+first_unsure_step(present(false), _, Keys, Profile, Unsure) :-
+    first_unsure(Profile, Keys, Unsure).
+first_unsure_step(absent, _, Keys, Profile, Unsure) :-
+    first_unsure(Profile, Keys, Unsure).
+
+same_state_t(State, State, true).
+same_state_t(State, Other, false) :-
+    dif(State, Other).
+
+% ---- stage one: engagement ---------------------------------------------
+engagement_states(Profile, [ConsentState, ServiceState, DirectState]) :-
+    implements(eu_reg_2016_679_art_8_1),
+    key_state(Profile, processing_rests_on_consent, ConsentState),
+    service_state(Profile, ServiceState),
+    key_state(Profile, offered_directly_to_child, DirectState).
+
+service_state(Profile, State) :-
+    implements(eu_reg_2016_679_art_4_25),
+    key_state(Profile, information_society_service, State).
+
+% Strong Kleene: unmet dominates, then absence, then judgement.
+engagement_result(States, Result) :-
+    implements(eu_reg_2016_679_art_8_1),
+    memberd_t(unmet, States, HasUnmet),
+    memberd_t(absent, States, HasAbsent),
+    memberd_t(unsure, States, HasUnsure),
+    engagement_by_flags(HasUnmet, HasAbsent, HasUnsure, Result).
+
+engagement_by_flags(true, _, _, not_engaged).
+engagement_by_flags(false, true, _, open_by_absence).
+engagement_by_flags(false, false, true, open_by_judgement).
+engagement_by_flags(false, false, false, engaged).
+
+child_outcome(Profile, Status, Ground, Cites, Steps) :-
+    engagement_states(Profile, States),
+    engagement_result(States, Result),
+    engaged_outcome(Result, Profile, Status, Ground, Cites, Steps).
+
+engaged_outcome(not_engaged, _, eligible, art8_not_engaged, [cite(eu_reg_2016_679_art_8_1)], [unmet(art8_not_engaged), not_reached, not_reached, not_reached]) :-
+    implements(eu_reg_2016_679_art_8_1).
+engaged_outcome(open_by_absence, Profile, indeterminate(Missing), none, [cite(eu_reg_2016_679_art_8_1)], [unknown(Missing), not_reached, not_reached, not_reached]) :-
+    implements(eu_reg_2016_679_art_8_1),
+    engagement_keys(Keys),
+    absent_keys(Profile, Keys, Missing).
+engaged_outcome(open_by_judgement, Profile, needs_legal_review(open_textured(Input, Citation), [inputs_relied_on(Pairs)]), none, [Citation], [unknown([Input]), not_reached, not_reached, not_reached]) :-
+    implements(eu_reg_2016_679_art_8_1),
+    first_unsure(Profile, [information_society_service, offered_directly_to_child], Input),
+    referral_row(Input, Citation, InputKeys),
+    relied_pairs(Profile, InputKeys, Pairs).
+engaged_outcome(engaged, Profile, Status, Ground, Cites, [met|Rest]) :-
+    implements(eu_reg_2016_679_art_8_1),
+    read_key(Profile, child_age_years, Reading),
+    age_outcome(Reading, Profile, Status, Ground, Cites, Rest).
+
+% ---- stage two: age ------------------------------------------------------
+age_outcome(absent, _, indeterminate([child_age_years]), none, [cite(eu_reg_2016_679_art_8_1)], [unknown([child_age_years]), not_reached, not_reached]) :-
+    implements(eu_reg_2016_679_art_8_1).
+age_outcome(present(Age), Profile, Status, Ground, Cites, Rest) :-
+    implements(eu_reg_2016_679_art_8_1),
+    age_class(Age, Class),
+    class_outcome(Class, Age, Profile, Status, Ground, Cites, Rest).
+
+age_class(Age, at_least_default) :-
+    implements(eu_reg_2016_679_art_8_1),
+    Age #>= constant(default_age_of_digital_consent_years).
+age_class(Age, below_default_at_least_floor) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    Age #< constant(default_age_of_digital_consent_years),
+    Age #>= constant(lowest_national_age_of_digital_consent_years).
+age_class(Age, below_floor) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    Age #< constant(lowest_national_age_of_digital_consent_years).
+
+class_outcome(at_least_default, _, _, eligible, child_at_least_16, [cite(eu_reg_2016_679_art_8_1)], [met, not_applicable, not_applicable]) :-
+    implements(eu_reg_2016_679_art_8_1).
+class_outcome(below_default_at_least_floor, Age, Profile, Status, Ground, Cites, [unmet(below_16)|Rest]) :-
+    implements(eu_reg_2016_679_art_8_1),
+    read_key(Profile, parental_consent_given, Reading),
+    parent_outcome(Reading, thirteen_to_fifteen, Age, Profile, Status, Ground, Cites, Rest).
+class_outcome(below_floor, Age, Profile, Status, Ground, Cites, [unmet(below_16)|Rest]) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    read_key(Profile, parental_consent_given, Reading),
+    parent_outcome(Reading, below_thirteen, Age, Profile, Status, Ground, Cites, Rest).
+
+% ---- stage three: parent ----------------------------------------------
+parent_outcome(absent, _, _, _, indeterminate([parental_consent_given]), none, [cite(eu_reg_2016_679_art_8_1)], [unknown([parental_consent_given]), not_reached]) :-
+    implements(eu_reg_2016_679_art_8_1).
+parent_outcome(present(true), _, _, _, eligible, parental_consent_given, [cite(eu_reg_2016_679_art_8_1)], [met, not_applicable]) :-
+    implements(eu_reg_2016_679_art_8_1).
+parent_outcome(present(false), below_thirteen, _, _, ineligible, parental_consent_missing_below_13, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)], [unmet(parental_consent_not_given), not_applicable]) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara).
+parent_outcome(present(false), thirteen_to_fifteen, Age, Profile, Status, Ground, Cites, [unmet(parental_consent_not_given), NationalStep]) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    national_outcome(Profile, Age, Status, Ground, Cites, NationalStep).
+
+% ---- stage four: national age (age 13 to 15, no parental consent) -----
+national_outcome(Profile, Age, Status, Ground, Cites, Step) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    stage_four_keys(Keys),
+    absent_keys(Profile, Keys, Missing),
+    national_by_missing(Missing, Profile, Age, Status, Ground, Cites, Step).
+
+national_by_missing([Key|Keys], _, _, indeterminate([Key|Keys]), none, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)], unknown([Key|Keys])) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara).
+national_by_missing([], Profile, Age, Status, Ground, Cites, Step) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    profile_get(Profile, member_state, MemberState),
+    read_key(Profile, member_state_digital_consent_age, Reading),
+    outside_fact_outcome(Reading, MemberState, Age, Profile, Status, Ground, Cites, Step).
+
+outside_fact_outcome(absent, _, _, Profile, Status, none, Cites, unknown([member_state_digital_consent_age])) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    cross_reference_status(Profile, Status, Cites).
+outside_fact_outcome(present(attested(national_digital_consent_age(State, NationalAge, _Provision), _Attestation)), MemberState, ChildAge, Profile, Status, Ground, Cites, Step) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    same_state_t(State, MemberState, IsSame),
+    national_age_outcome(IsSame, NationalAge, ChildAge, Profile, Status, Ground, Cites, Step).
+
+national_age_outcome(false, _, _, Profile, Status, none, Cites, unknown([member_state_digital_consent_age])) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    cross_reference_status(Profile, Status, Cites).
+national_age_outcome(true, NationalAge, ChildAge, _, eligible, child_at_least_national_age, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)], met) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    NationalAge #=< ChildAge.
+national_age_outcome(true, NationalAge, ChildAge, _, ineligible, parental_consent_missing_below_national_age, [cite(eu_reg_2016_679_art_8_1), cite(eu_reg_2016_679_art_8_1_second_subpara)], unmet(below_national_age)) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    NationalAge #> ChildAge.
+
+cross_reference_status(Profile, needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, not_attempted), inputs_relied_on(Pairs)]), [Citation, Target]) :-
+    implements(eu_reg_2016_679_art_8_1_second_subpara),
+    cross_reference_row(Citation, Target, InputKeys),
+    relied_pairs(Profile, InputKeys, Pairs).
+
+% ---- stage five: verification (Art 8(2)) -------------------------------
+verification_stage(eligible, Ground, Profile, Verification) :-
+    verification_by_ground(Ground, Profile, Verification).
+verification_stage(ineligible, _, _, not_applicable).
+verification_stage(indeterminate(_), _, _, not_reached).
+verification_stage(needs_legal_review(_, _), _, _, not_reached).
+
+verification_by_ground(art8_not_engaged, _, not_applicable).
+verification_by_ground(child_at_least_16, _, not_applicable).
+verification_by_ground(child_at_least_national_age, _, not_applicable).
+verification_by_ground(parental_consent_given, Profile, Verification) :-
+    implements(eu_reg_2016_679_art_8_2),
+    read_key(Profile, verification_efforts_reasonable, Reading),
+    verification_by_reading(Reading, Profile, Verification).
+
+verification_by_reading(present(true), _, efforts_reasonable) :-
+    implements(eu_reg_2016_679_art_8_2).
+verification_by_reading(present(false), _, efforts_not_reasonable) :-
+    implements(eu_reg_2016_679_art_8_2).
+verification_by_reading(absent, _, indeterminate([verification_efforts_reasonable])) :-
+    implements(eu_reg_2016_679_art_8_2).
+verification_by_reading(present(unsure), Profile, needs_legal_review(open_textured(verification_efforts_reasonable, Citation), [inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_8_2),
+    referral_row(verification_efforts_reasonable, Citation, InputKeys),
+    relied_pairs(Profile, InputKeys, Pairs).
+
+verification_cites(efforts_reasonable, [cite(eu_reg_2016_679_art_8_2)]).
+verification_cites(efforts_not_reasonable, [cite(eu_reg_2016_679_art_8_2)]).
+verification_cites(not_applicable, []).
+verification_cites(not_reached, []).
+verification_cites(indeterminate(_), [cite(eu_reg_2016_679_art_8_2)]).
+verification_cites(needs_legal_review(open_textured(_, Citation), _), [Citation]).
+
+verification_row(efforts_reasonable, met).
+verification_row(efforts_not_reasonable, unmet(efforts_not_reasonable)).
+verification_row(not_applicable, not_applicable).
+verification_row(not_reached, not_reached).
+verification_row(indeterminate(Keys), unknown(Keys)).
+verification_row(needs_legal_review(_, _), unknown([verification_efforts_reasonable])).
+
+% ---- citations: the union, in vocabulary order, no duplicates -----------
+ordered_citations(Wanted, Ordered) :-
+    citation_vocabulary(Vocabulary),
+    keep_wanted(Vocabulary, Wanted, Ordered).
+
+keep_wanted([], _, []).
+keep_wanted([Citation|Citations], Wanted, Ordered) :-
+    memberd_t(Citation, Wanted, IsWanted),
+    keep_wanted(Citations, Wanted, LaterCitations),
+    add_citation(IsWanted, Citation, LaterCitations, Ordered).
+
+add_citation(true, Citation, Later, [Citation|Later]).
+add_citation(false, _, Later, Later).
+
+% ---- checklist: one item per requirement, each with cite provenance ------
+checklist_rows(Engagement, Age, Parent, National, Verification, [
+    item(art8_engaged, Engagement, cite(eu_reg_2016_679_art_8_1)),
+    item(child_at_least_16, Age, cite(eu_reg_2016_679_art_8_1)),
+    item(parental_consent_given, Parent, cite(eu_reg_2016_679_art_8_1)),
+    item(child_at_least_national_age, National, cite(eu_reg_2016_679_art_8_1_second_subpara)),
+    item(verification_efforts_reasonable, Verification, cite(eu_reg_2016_679_art_8_2))
+]).
+
+% ---- assembly: the input check comes first -------------------------------
+assessment_of(Profile, Verdict, Checklist) :-
+    gdpr_child_consent_age_verdict_input_problems(Profile, Problems),
+    assessment_for_problems(Problems, Profile, Verdict, Checklist).
+
+assessment_for_problems([Problem|Problems], _, gdpr_child_consent_verdict(input_problems([Problem|Problems]), none, not_reached, []), [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2016_679_art_8_1))]).
+assessment_for_problems([], Profile, gdpr_child_consent_verdict(Status, Ground, Verification, Citations), Checklist) :-
+    child_outcome(Profile, Status, Ground, StatusCites, [Engagement, Age, Parent, National]),
+    verification_stage(Status, Ground, Profile, Verification),
+    verification_cites(Verification, VerificationCites),
+    verification_row(Verification, VerificationStatus),
+    append(StatusCites, VerificationCites, Wanted),
+    ordered_citations(Wanted, Citations),
+    checklist_rows(Engagement, Age, Parent, National, VerificationStatus, Checklist).
+
+% ---- public predicates ---------------------------------------------------
+decide_child_consent(Profile, Verdict) :-
+    assessment_of(Profile, Verdict, _Checklist).
+
+child_consent_ground(Profile, Ground) :-
+    assessment_of(Profile, gdpr_child_consent_verdict(_Status, Ground, _Verification, _Citations), _Checklist).
+
+decide_child_consent_ground(Profile, Verdict) :-
+    decide_child_consent(Profile, Verdict).
+
+child_consent_ground_status(Profile, Status) :-
+    decide_child_consent(Profile, gdpr_child_consent_verdict(Status, _Ground, _Verification, _Citations)).
+
+child_consent_ground_checklist(Profile, Checklist) :-
+    assessment_of(Profile, _Verdict, Checklist).
+
+child_consent_ground_decision_resolvable(Profile) :-
+    decide_child_consent(Profile, _Verdict).
+
+% ---- per-rule tests ------------------------------------------------------
+test(sixteen_is_eligible_by_own_consent) :-
+    decide_child_consent([attribute(processing_rests_on_consent, true), attribute(information_society_service, true), attribute(offered_directly_to_child, true), attribute(child_age_years, 16)], gdpr_child_consent_verdict(eligible, child_at_least_16, not_applicable, [cite(eu_reg_2016_679_art_8_1)])).
+test(twelve_without_parental_consent_is_ineligible) :-
+    decide_child_consent([attribute(processing_rests_on_consent, true), attribute(information_society_service, true), attribute(offered_directly_to_child, true), attribute(child_age_years, 12), attribute(parental_consent_given, false)], gdpr_child_consent_verdict(ineligible, parental_consent_missing_below_13, not_applicable, _)).
+test(a_consent_that_is_not_the_basis_does_not_engage_art_8) :-
+    child_consent_ground([attribute(processing_rests_on_consent, false)], art8_not_engaged).
+
+:- end_module(child_consent_ground).

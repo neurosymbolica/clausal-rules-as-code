@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_framework_agreements_fixtures, [framework_agreements_subject/1, framework_agreements_profile_for/2, framework_agreements_assess/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

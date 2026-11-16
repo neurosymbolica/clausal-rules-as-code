@@ -1,0 +1,244 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_art36_3_consultation_request (deontic family).
+% Source: Regulation (EU) 2016/679 (General Data Protection Regulation),
+% Article 36(3), points (a) to (f), consolidated text 02016R0679-20160504
+% (units parag_036.003 and point_036.003_a to point_036.003_f): what the
+% controller provides to the supervisory authority when it consults under
+% Article 36(1). Article 36(1) and 36(5) are read only to say which
+% consultation the key consultation_under_article_36_1 names.
+%
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This domain has ONE determination
+% slice (gdpr_art36_3_consultation_request.clausal), so no domain predicate
+% is shared and nothing of the slice lives here.
+% Exception: the scaffold writes the order's input check
+% gdpr_art36_3_consultation_request_input_problems/2 here, exported, for the
+% slice and queries.clausal to import by full path:
+%   :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
+% The input check renders no provision: it checks the PROFILE against the
+% typed input contract only, so its clauses carry no implements/1 marker.
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS (spelled exactly as the order pins them):
+%
+%   gdpr_art36_3_consultation_request_verdict(Result, Citations)
+%     the slice's facade verdict. Result is the RESULT of
+%     consultation_request_status/4; Citations its CITATIONS list.
+%
+%   consultation_request_status(Profile, Result, Basis, Citations)
+%     Result: consultation_request_complete | consultation_request_incomplete
+%       | not_governed_by_article_36_3 | a status compound (below).
+%   missing_consultation_request_items(Profile, Items, Basis, Citations)
+%     Items: a list of item atoms in the order (a) to (f), each at most once,
+%       possibly []: respective_responsibilities (a), purposes_and_means (b),
+%       measures_and_safeguards (c), data_protection_officer_contact_details (d),
+%       data_protection_impact_assessment (e), other_requested_information (f);
+%       or the atom not_governed_by_article_36_3; or a status compound.
+%   Basis: [] or [outside_fact(joint_controllers_or_processors_involved, Attested)],
+%     Attested the attested(Value, attestation(By, At, Reason, Evidence)) term
+%     exactly as supplied, copied only when item (a) reads it
+%     (respective_responsibilities_provided not true).
+%   Citations: a set-like list of cite(Key) terms:
+%     every final answer other than not_governed_by_article_36_3 gives the seven
+%       cite(eu_reg_2016_679_art_36_3), cite(eu_reg_2016_679_art_36_3_a) ... _f;
+%     not_governed_by_article_36_3 gives [cite(eu_reg_2016_679_art_36_3)];
+%     every status compound gives [].
+%
+%   Status compounds (never written as bare atoms), in precedence order:
+%     input_problems(Problems)  Problems from duplicate_key(Key),
+%                               wrong_type(Key), unknown_key(Key), or
+%                               [wrong_type(profile)] alone.
+%     indeterminate([Key])      one bare crisp key atom; an outside
+%                               fact is never named.
+%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a),
+%                                                   cite(controller_and_processor_roles_statement)),
+%                        [resolution(cite(controller_and_processor_roles_statement), not_attempted),
+%                         inputs_relied_on([joint_controllers_or_processors_involved-absent])])
+%                               THE ABSENT REFERRAL, the only referral.
+%
+%   Checklist row (facade, justification): item(ItemAtom, Status, cite(PointKey)),
+%     Status met | unmet(not_provided(ContentKey)) | unknown([Key])
+%     | unknown(referred(joint_controllers_or_processors_involved)).
+% =====================================================================
+
+:- module(kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_art36_3_consultation_request_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_art36_3_consultation_request_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [consultation_under_article_36_1, joint_controllers_or_processors_involved, respective_responsibilities_provided, purposes_and_means_provided, measures_and_safeguards_provided, data_protection_officer_designated, data_protection_officer_contact_details_provided, impact_assessment_provided, other_information_requested_by_supervisory_authority, requested_other_information_provided],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(consultation_under_article_36_1, boolean).
+key_type(joint_controllers_or_processors_involved, outside_fact).
+key_type(respective_responsibilities_provided, boolean).
+key_type(purposes_and_means_provided, boolean).
+key_type(measures_and_safeguards_provided, boolean).
+key_type(data_protection_officer_designated, boolean).
+key_type(data_protection_officer_contact_details_provided, boolean).
+key_type(impact_assessment_provided, boolean).
+key_type(other_information_requested_by_supervisory_authority, boolean).
+key_type(requested_other_information_provided, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+:- end_module(kernel).

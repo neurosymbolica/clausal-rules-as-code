@@ -1,0 +1,157 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the public submodules. Each fixture subject resolves to
+% its concrete expected verdict; near-miss controls get the opposite one.
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/queries, [
+    request_decision/2,
+    request_exception/2,
+    provenance/2,
+    attested/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/request_exception, [request_exception_checklist/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/fixtures, [
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_subject/1,
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for/2,
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess/2
+]).
+
+% expected(Subject, Comply, Exception)
+expected(portability_engaged, must_comply, none).
+expected(portability_not_automated, need_not_comply, none).
+expected(portability_public_task, need_not_comply, art20_3_public_task).
+expected(portability_public_task_denied, must_comply, none).
+expected(portability_rights_of_others, need_not_comply, art20_4_rights_of_others).
+expected(portability_rights_of_others_denied, must_comply, none).
+expected(portability_manifestly_excessive, need_not_comply, art12_5_manifestly_unfounded_or_excessive).
+expected(portability_manifestly_excessive_denied, must_comply, none).
+expected(portability_unable_to_identify, need_not_comply, art12_2_unable_to_identify).
+expected(portability_unable_to_identify_denied, must_comply, none).
+expected(portability_restricted_by_law, need_not_comply, art23_legislative_restriction).
+expected(portability_restriction_denied, must_comply, none).
+expected(portability_identity_unconfirmed, suspended(art12_6_identity_not_confirmed), none).
+expected(portability_identity_confirmed, must_comply, none).
+expected(portability_open_unsure_rights_of_others, needs_legal_review(open_textured(transmission_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_20_4)), [inputs_relied_on([request_type-portability, transmission_would_adversely_affect_rights_and_freedoms_of_others-unsure])]), none).
+expected(objection_art21_1_engaged, must_comply, none).
+expected(objection_art21_1_not_particular, need_not_comply, none).
+expected(objection_art21_1_compelling, need_not_comply, art21_1_compelling_legitimate_grounds).
+expected(objection_art21_1_compelling_denied, must_comply, none).
+expected(objection_art21_1_legal_claims, need_not_comply, art21_1_legal_claims).
+expected(objection_art21_1_unsure_particular, needs_legal_review(open_textured(objection_grounds_relate_to_particular_situation, cite(eu_reg_2016_679_art_21_1)), [inputs_relied_on([request_type-objection, objection_ground_claimed-art21_1, objection_grounds_relate_to_particular_situation-unsure])]), none).
+expected(objection_art21_2_engaged, must_comply, none).
+expected(objection_art21_2_not_marketing, need_not_comply, none).
+expected(objection_art21_2_no_balancing, must_comply, none).
+expected(objection_art21_6_engaged, must_comply, none).
+expected(objection_art21_6_public_interest, need_not_comply, art21_6_public_interest_task).
+expected(objection_art21_6_public_interest_denied, must_comply, none).
+expected(objection_art21_6_not_research, need_not_comply, none).
+expected(automated_engaged, must_comply, none).
+expected(automated_not_solely, need_not_comply, none).
+expected(automated_contract, need_not_comply, art22_2_a).
+expected(automated_contract_denied, must_comply, none).
+expected(automated_consent, need_not_comply, art22_2_c).
+expected(automated_consent_special_bar, must_comply, none).
+expected(automated_consent_special_safeguarded, need_not_comply, art22_2_c).
+expected(automated_law_authorised, need_not_comply, art22_2_b).
+expected(automated_law_not_authorised, must_comply, none).
+expected(missing_keys_automated, indeterminate([decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects]), none).
+expected(objection_missing_ground, indeterminate([objection_ground_claimed]), none).
+expected(no_request_type, indeterminate([request_type]), none).
+expected(unknown_key_problem, input_problems([unknown_key(not_a_contract_key)]), none).
+expected(wrong_type_problem, input_problems([wrong_type(extension_claimed)]), none).
+expected(duplicate_key_problem, input_problems([duplicate_key(processing_carried_out_by_automated_means)]), none).
+
+resolves_as(Subject, Comply, Exception) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(Subject, Profile),
+    request_decision(Profile, Comply),
+    request_exception(Profile, Exception).
+
+test(every_subject_resolves_to_its_expected_verdict) :-
+    findall(Subject-Comply-Exception, (expected(Subject, Comply, Exception), resolves_as(Subject, Comply, Exception)), Matched),
+    findall(Subject-Comply-Exception, expected(Subject, Comply, Exception), Everything),
+    Matched == Everything.
+
+test(every_fixture_subject_has_an_expectation) :-
+    findall(Subject, gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_subject(Subject), Subjects),
+    findall(Subject, expected(Subject, _, _), Expecteds),
+    Subjects == Expecteds,
+    length(Subjects, 43).
+
+test(each_decision_has_exactly_one_answer) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
+    findall(Comply, request_decision(Profile, Comply), Answers),
+    Answers == [must_comply].
+
+test(portability_engaged_must_comply) :-
+    resolves_as(portability_engaged, must_comply, none).
+
+test(portability_near_miss_is_not_must_comply, fail) :-
+    resolves_as(portability_not_automated, must_comply, _).
+
+test(portability_near_miss_need_not_comply) :-
+    resolves_as(portability_not_automated, need_not_comply, none).
+
+test(public_task_relieves) :-
+    resolves_as(portability_public_task, need_not_comply, art20_3_public_task).
+
+test(public_task_denied_does_not_relieve, fail) :-
+    resolves_as(portability_public_task_denied, need_not_comply, _).
+
+test(direct_marketing_objection_is_absolute) :-
+    resolves_as(objection_art21_2_no_balancing, must_comply, none).
+
+test(special_category_bar_removes_consent_exception, fail) :-
+    resolves_as(automated_consent_special_bar, need_not_comply, _).
+
+test(special_category_bar_leaves_the_duty) :-
+    resolves_as(automated_consent_special_bar, must_comply, none).
+
+test(identity_suspension_is_not_final, fail) :-
+    resolves_as(portability_identity_unconfirmed, must_comply, _).
+
+test(identity_suspension_status) :-
+    resolves_as(portability_identity_unconfirmed, suspended(art12_6_identity_not_confirmed), none).
+
+test(assess_returns_the_exception_and_its_citations) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess(portability_public_task, request_exception_verdict(art20_3_public_task, Citations)),
+    Citations == [cite(eu_reg_2016_679_art_20_1), cite(eu_reg_2016_679_art_20_3)].
+
+test(checklist_is_non_empty_and_cited) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
+    request_exception_checklist(Profile, [item(engagement, met, cite(eu_reg_2016_679_art_20_1))|_OtherItems]).
+
+test(checklist_of_an_exception_case_is_non_empty) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(automated_consent, Profile),
+    request_exception_checklist(Profile, [_FirstItem|_OtherItems]).
+
+% ---- result constructors with a check ---------------------------------
+test(provenance_accepts_a_citation_list) :-
+    provenance(engagement, [eu_reg_2016_679_art_20_1]).
+
+test(provenance_accepts_an_empty_citation_list) :-
+    provenance(suspension, []).
+
+test(provenance_rejects_a_non_list, fail) :-
+    provenance(engagement, eu_reg_2016_679_art_20_1).
+
+test(attested_true_value_is_accepted) :-
+    attested(true, attestation(host, checked, statute_reviewed, none)).
+
+test(attested_false_value_is_accepted) :-
+    attested(false, attestation(host, checked, statute_reviewed, none)).
+
+test(attested_holiday_list_is_accepted) :-
+    attested([date(2026, 12, 25)], attestation(host, checked, calendar, none)).
+
+test(attested_unbound_value_is_rejected, fail) :-
+    attested(_Value, attestation(host, checked, statute_reviewed, none)).
+
+test(attested_without_an_attestation_term_is_rejected, fail) :-
+    attested(true, not_an_attestation).
+
+test(an_attested_fact_with_document_evidence_is_accepted) :-
+    attested(true, attestation(host, checked, statute_reviewed, document(upload_0001, sha256_0123456789abcdef))).
+
+:- end_module(test_public_interface).

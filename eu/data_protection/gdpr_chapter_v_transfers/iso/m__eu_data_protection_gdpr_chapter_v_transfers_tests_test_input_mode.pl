@@ -1,0 +1,103 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_chapter_v_transfers_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_transfer, [decide_transfer/2, transfer_status/2, transfer_permitted/2, transfer_verdict/3, transfer_checklist/2, transfer_requirement/4, transfer_requirement_ids/1, transfer_outside_facts/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_transfer_basis, [transfer_basis/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_kernel, [gdpr_chapter_v_transfers_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_fixtures, [gdpr_chapter_v_transfers_profile_for/2]).
+
+test(stage_one_status_holds_with_the_verdict_bound) :-
+    gdpr_chapter_v_transfers_profile_for(adequacy_attested_true, Profile),
+    transfer_status(Profile, eligible).
+test(stage_two_basis_holds_bound) :-
+    gdpr_chapter_v_transfers_profile_for(safeguard_after_adequacy_refused, Profile),
+    transfer_basis(Profile, art46_safeguards).
+test(stage_three_verdict_and_basis_hold_bound) :-
+    gdpr_chapter_v_transfers_profile_for(contract_derogation, Profile),
+    transfer_verdict(Profile, eligible, art49_derogation).
+test(the_public_powers_carve_out_is_not_permitted_bound) :-
+    gdpr_chapter_v_transfers_profile_for(contract_derogation_under_public_powers, Profile),
+    transfer_permitted(Profile, false).
+test(an_empty_profile_is_indeterminate_bound) :-
+    decide_transfer([], indeterminate([safeguard_in_place])).
+test(the_d180_requirement_holds_bound) :-
+    gdpr_chapter_v_transfers_profile_for(unsure_safeguard_contract_not_stated, Profile),
+    transfer_requirement(Profile, art46_safeguards, indeterminate([contract_necessity]), none).
+test(the_register_checklist_holds_bound) :-
+    gdpr_chapter_v_transfers_profile_for(public_register_derogation, Profile),
+    transfer_checklist(Profile, [art49_derogation]).
+test(the_requirement_ids_hold_bound_in_cascade_order) :-
+    transfer_requirement_ids([art45_adequacy, art46_safeguards, art49_derogation]).
+test(the_requirement_ids_are_ground) :-
+    findall(RequirementIds, transfer_requirement_ids(RequirementIds), Answers),
+    Answers == [[art45_adequacy, art46_safeguards, art49_derogation]],
+    ground(Answers).
+test(an_unbound_profile_is_a_wrong_profile) :-
+    findall(Verdict, decide_transfer(_UnboundProfile, Verdict), Verdicts),
+    Verdicts == [input_problems([wrong_type(profile)])].
+test(a_partial_list_is_a_wrong_profile) :-
+    findall(Verdict, decide_transfer([attribute(safeguard_in_place, true)|_Tail], Verdict), Verdicts),
+    Verdicts == [input_problems([wrong_type(profile)])].
+test(an_unbound_element_is_a_wrong_profile) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems([_Element], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_pair_element_is_a_wrong_profile) :-
+    gdpr_chapter_v_transfers_input_problems([safeguard_in_place - true], [wrong_type(profile)]).
+test(a_number_key_is_an_unknown_key) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(an_unbound_value_is_a_wrong_type) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems([attribute(safeguard_in_place, _Value)], Problems), Answers),
+    Answers == [[wrong_type(safeguard_in_place)]].
+test(a_crisp_flag_given_unsure_is_a_wrong_type) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(explicit_consent_obtained, unsure)], [wrong_type(explicit_consent_obtained)]).
+test(a_derogation_outside_the_eight_is_a_wrong_type) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(derogation_claimed, art49_1_h)], [wrong_type(derogation_claimed)]).
+test(a_bare_atom_outside_fact_is_a_wrong_type) :-
+    gdpr_chapter_v_transfers_profile_for(binding_corporate_rules_bare_atom, Profile),
+    decide_transfer(Profile, input_problems([wrong_type(binding_corporate_rules_approved)])).
+test(an_attestation_of_three_arguments_is_a_wrong_type) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(adequacy_decision_in_force, attested(true, attestation(input_host, input_time, input_reason)))], [wrong_type(adequacy_decision_in_force)]).
+test(duplicate_keys_with_different_values_are_one_duplicate) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(safeguard_in_place, true), attribute(safeguard_in_place, yes)], [duplicate_key(safeguard_in_place)]).
+test(unknown_keys_are_named_once_in_first_occurrence_order) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(colour, blue), attribute(size, large), attribute(colour, red)], [unknown_key(colour), unknown_key(size)]).
+test(contract_keys_come_in_contract_order_before_unknown_keys) :-
+    gdpr_chapter_v_transfers_input_problems([attribute(colour, blue), attribute(explicit_consent_obtained, unsure), attribute(safeguard_in_place, yes)], [wrong_type(safeguard_in_place), wrong_type(explicit_consent_obtained), unknown_key(colour)]).
+test(the_order_of_the_attributes_does_not_matter) :-
+    gdpr_chapter_v_transfers_profile_for(explicit_consent_derogation, Profile),
+    reverse(Profile, ReversedProfile),
+    decide_transfer(ReversedProfile, eligible).
+test(outside_facts_with_input_problems_are_the_problems) :-
+    transfer_outside_facts(not_a_list, input_problems([wrong_type(profile)])).
+test(the_requirement_with_input_problems_is_none) :-
+    transfer_requirement(not_a_list, none, input_problems([wrong_type(profile)]), none).
+test(the_basis_with_input_problems_is_none) :-
+    transfer_basis(not_a_list, none).
+test(the_checklist_with_input_problems_is_empty) :-
+    transfer_checklist(not_a_list, []).
+
+test(stage_one_wrong_bound_status_is_rejected, fail) :-
+    gdpr_chapter_v_transfers_profile_for(adequacy_attested_true, Profile),
+    transfer_status(Profile, ineligible).
+test(stage_two_basis_is_not_adequacy, fail) :-
+    gdpr_chapter_v_transfers_profile_for(safeguard_after_adequacy_refused, Profile),
+    transfer_basis(Profile, art45_adequacy).
+test(the_public_powers_carve_out_is_not_permitted_true, fail) :-
+    gdpr_chapter_v_transfers_profile_for(contract_derogation_under_public_powers, Profile),
+    transfer_permitted(Profile, true).
+test(the_bare_atom_indeterminate_is_never_the_verdict, fail) :-
+    decide_transfer([], indeterminate).
+test(the_requirement_ids_in_another_order_are_rejected, fail) :-
+    transfer_requirement_ids([art49_derogation, art46_safeguards, art45_adequacy]).
+
+cp_test_names([stage_one_status_holds_with_the_verdict_bound, stage_two_basis_holds_bound, stage_three_verdict_and_basis_hold_bound, the_public_powers_carve_out_is_not_permitted_bound, an_empty_profile_is_indeterminate_bound, the_d180_requirement_holds_bound, the_register_checklist_holds_bound, the_requirement_ids_hold_bound_in_cascade_order, the_requirement_ids_are_ground, an_unbound_profile_is_a_wrong_profile, a_partial_list_is_a_wrong_profile, an_unbound_element_is_a_wrong_profile, a_pair_element_is_a_wrong_profile, a_number_key_is_an_unknown_key, an_unbound_value_is_a_wrong_type, a_crisp_flag_given_unsure_is_a_wrong_type, a_derogation_outside_the_eight_is_a_wrong_type, a_bare_atom_outside_fact_is_a_wrong_type, an_attestation_of_three_arguments_is_a_wrong_type, duplicate_keys_with_different_values_are_one_duplicate, unknown_keys_are_named_once_in_first_occurrence_order, contract_keys_come_in_contract_order_before_unknown_keys, the_order_of_the_attributes_does_not_matter, outside_facts_with_input_problems_are_the_problems, the_requirement_with_input_problems_is_none, the_basis_with_input_problems_is_none, the_checklist_with_input_problems_is_empty]).
+cp_test_fail_names([stage_one_wrong_bound_status_is_rejected, stage_two_basis_is_not_adequacy, the_public_powers_carve_out_is_not_permitted_true, the_bare_atom_indeterminate_is_never_the_verdict, the_requirement_ids_in_another_order_are_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

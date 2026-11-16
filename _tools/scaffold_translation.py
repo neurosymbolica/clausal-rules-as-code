@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """scaffold_translation.py -- scaffold a domain's per-language translation
 submodule (Part C; docs/superpowers/specs/2026-07-18-translation-population-design.md).
 

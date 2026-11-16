@@ -1,0 +1,210 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_information_duties_timing.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% contract); dates are date(Y, M, D) terms of integers.
+%
+% Every route has a positive case AND a one-day near-miss control: the
+% provision on the last day of the deadline (inclusive, timely) against the
+% day after it (late), for Art 13(1), Art 14(3)(a) (plain, leap day,
+% public-holiday shift, tie with limb (b)), (b) and (c). The reasonable-period
+% judgement, an unknown route and an input problem complete the set.
+%
+% Expected timing verdicts (information_timing_verdict/3):
+%   art13_provided_on_obtaining_day           timely  art_13_1
+%   art13_provided_day_after_obtaining        late    art_13_1
+%   art14_one_month_last_day                  timely  art_14_3_a  (deadline 2026-02-16)
+%   art14_one_month_day_after                 late    art_14_3_a
+%   art14_leap_day_last_day                   timely  art_14_3_a  (deadline 2028-02-29)
+%   art14_leap_day_day_after                  late    art_14_3_a
+%   art14_holiday_shift_last_day              timely  art_14_3_a  (deadline 2027-02-02)
+%   art14_holiday_shift_day_after             late    art_14_3_a
+%   art14_tie_with_communication_last_day     timely  art_14_3_a  (tie a = b)
+%   art14_first_communication_on_day          timely  art_14_3_b
+%   art14_first_communication_day_after       late    art_14_3_b
+%   art14_first_disclosure_on_day             timely  art_14_3_c
+%   art14_first_disclosure_day_after          late    art_14_3_c
+%   art14_reasonable_period_unsure            needs_legal_review(open_textured(...), ...)
+%   art14_reasonable_period_false             late    art_14_3_a
+%   art14_reasonable_period_absent            indeterminate([provided_within_reasonable_period])
+%   route_unknown                             indeterminate([route, obtaining, provision])
+%   crisp_flag_given_unsure                   input_problems([wrong_type(route key)])
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_information_duties_timing_subject/1,
+    gdpr_information_duties_timing_profile_for/2,
+    gdpr_information_duties_timing_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_information_duties_timing/information_timing_verdict, [decide_information_timing_verdict/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_information_duties_timing_subject(art13_provided_on_obtaining_day).
+gdpr_information_duties_timing_subject(art13_provided_day_after_obtaining).
+gdpr_information_duties_timing_subject(art14_one_month_last_day).
+gdpr_information_duties_timing_subject(art14_one_month_day_after).
+gdpr_information_duties_timing_subject(art14_leap_day_last_day).
+gdpr_information_duties_timing_subject(art14_leap_day_day_after).
+gdpr_information_duties_timing_subject(art14_holiday_shift_last_day).
+gdpr_information_duties_timing_subject(art14_holiday_shift_day_after).
+gdpr_information_duties_timing_subject(art14_tie_with_communication_last_day).
+gdpr_information_duties_timing_subject(art14_first_communication_on_day).
+gdpr_information_duties_timing_subject(art14_first_communication_day_after).
+gdpr_information_duties_timing_subject(art14_first_disclosure_on_day).
+gdpr_information_duties_timing_subject(art14_first_disclosure_day_after).
+gdpr_information_duties_timing_subject(art14_reasonable_period_unsure).
+gdpr_information_duties_timing_subject(art14_reasonable_period_false).
+gdpr_information_duties_timing_subject(art14_reasonable_period_absent).
+gdpr_information_duties_timing_subject(route_unknown).
+gdpr_information_duties_timing_subject(crisp_flag_given_unsure).
+
+% ---- Profiles --------------------------------------------------------
+% Art 13(1): the obtaining day itself, and the day after.
+gdpr_information_duties_timing_profile_for(art13_provided_on_obtaining_day,
+    [attribute(personal_data_collected_from_data_subject, true),
+     attribute(obtaining_date, date(2026, 3, 10)),
+     attribute(provision_date, date(2026, 3, 10))]).
+gdpr_information_duties_timing_profile_for(art13_provided_day_after_obtaining,
+    [attribute(personal_data_collected_from_data_subject, true),
+     attribute(obtaining_date, date(2026, 3, 10)),
+     attribute(provision_date, date(2026, 3, 11))]).
+
+% Art 14(3)(a): 2026-01-15 plus one month is Sunday 2026-02-15, so 2026-02-16.
+gdpr_information_duties_timing_profile_for(art14_one_month_last_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 16)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+gdpr_information_duties_timing_profile_for(art14_one_month_day_after,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 17)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+
+% Art 14(3)(a), leap year: 2028-01-31 gives 2028-02-29.
+gdpr_information_duties_timing_profile_for(art14_leap_day_last_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2028, 1, 31)),
+     attribute(provision_date, date(2028, 2, 29)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+gdpr_information_duties_timing_profile_for(art14_leap_day_day_after,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2028, 1, 31)),
+     attribute(provision_date, date(2028, 3, 1)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+
+% Art 14(3)(a) with Regulation 1182/71 Art 3(4): 2026-12-31 gives Sunday
+% 2027-01-31, then Monday 2027-02-01, an attested public holiday: 2027-02-02.
+gdpr_information_duties_timing_profile_for(art14_holiday_shift_last_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 12, 31)),
+     attribute(provision_date, date(2027, 2, 2)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true),
+     attribute(public_holidays, attested([date(2027, 2, 1)], attestation(host, moment, reason, none)))]).
+gdpr_information_duties_timing_profile_for(art14_holiday_shift_day_after,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 12, 31)),
+     attribute(provision_date, date(2027, 2, 3)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true),
+     attribute(public_holidays, attested([date(2027, 2, 1)], attestation(host, moment, reason, none)))]).
+
+% Tie: limb (b) falls on the limb (a) date; the tie goes to limb (a).
+gdpr_information_duties_timing_profile_for(art14_tie_with_communication_last_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 16)),
+     attribute(data_used_for_communication_with_data_subject, true),
+     attribute(first_communication_date, date(2026, 2, 16)),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+
+% Art 14(3)(b): the first communication on 2026-01-20 binds.
+gdpr_information_duties_timing_profile_for(art14_first_communication_on_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 1, 20)),
+     attribute(data_used_for_communication_with_data_subject, true),
+     attribute(first_communication_date, date(2026, 1, 20)),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+gdpr_information_duties_timing_profile_for(art14_first_communication_day_after,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 1, 21)),
+     attribute(data_used_for_communication_with_data_subject, true),
+     attribute(first_communication_date, date(2026, 1, 20)),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, true)]).
+
+% Art 14(3)(c): the first disclosure on 2026-01-30 binds.
+gdpr_information_duties_timing_profile_for(art14_first_disclosure_on_day,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 1, 30)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, true),
+     attribute(first_disclosure_date, date(2026, 1, 30)),
+     attribute(provided_within_reasonable_period, true)]).
+gdpr_information_duties_timing_profile_for(art14_first_disclosure_day_after,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 1, 31)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, true),
+     attribute(first_disclosure_date, date(2026, 1, 30)),
+     attribute(provided_within_reasonable_period, true)]).
+
+% Art 14(3)(a) reasonable period: in time by the date, the judgement decides.
+gdpr_information_duties_timing_profile_for(art14_reasonable_period_unsure,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 10)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, unsure)]).
+gdpr_information_duties_timing_profile_for(art14_reasonable_period_false,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 10)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false),
+     attribute(provided_within_reasonable_period, false)]).
+gdpr_information_duties_timing_profile_for(art14_reasonable_period_absent,
+    [attribute(personal_data_collected_from_data_subject, false),
+     attribute(obtaining_date, date(2026, 1, 15)),
+     attribute(provision_date, date(2026, 2, 10)),
+     attribute(data_used_for_communication_with_data_subject, false),
+     attribute(disclosure_to_another_recipient_envisaged, false)]).
+
+% Absence and input problems.
+gdpr_information_duties_timing_profile_for(route_unknown, []).
+gdpr_information_duties_timing_profile_for(crisp_flag_given_unsure,
+    [attribute(personal_data_collected_from_data_subject, unsure),
+     attribute(obtaining_date, date(2026, 3, 10)),
+     attribute(provision_date, date(2026, 3, 10))]).
+
+% ---- Convenience wrapper ---------------------------------------------
+% The timing verdict (F) of a subject, wrapped as
+% information_timing_verdict_verdict(Status, Citations).
+gdpr_information_duties_timing_assess(Subject, Result) :-
+    gdpr_information_duties_timing_profile_for(Subject, Profile),
+    decide_information_timing_verdict(Profile, Result).
+
+:- end_module(fixtures).

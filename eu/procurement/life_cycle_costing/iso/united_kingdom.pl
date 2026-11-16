@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % united_kingdom — vendored so an exported domain's `-import_from(united_kingdom, [sterling, penny])` resolves.
 %
 % EMPTY EXPORT LIST, ON PURPOSE. Same shape and same reason as

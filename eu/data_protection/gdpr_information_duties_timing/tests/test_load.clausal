@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads,
+% the result terms the kernel records build and destructure, the answer
+% atoms the order pins are distinct, and the real citation records
+% resolve. Self-contained: the determination slices are not referenced.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_information_duties_timing/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/kernel, [gdpr_information_duties_timing_input_problems/2, gdpr_information_duties_timing_date_order/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/citations, [citation/2, implements/1]).
+
+% ---- the answer atoms are distinct -------------------------------------
+test(the_basis_atoms_are_distinct) :-
+    dif(art13_1, art14_3_a),
+    dif(art13_1, art14_3_b),
+    dif(art13_1, art14_3_c),
+    dif(art14_3_a, art14_3_b),
+    dif(art14_3_a, art14_3_c),
+    dif(art14_3_b, art14_3_c).
+
+test(the_timing_verdict_atoms_are_distinct) :-
+    dif(timely, late).
+
+test(the_judgement_value_unsure_is_not_a_crisp_value) :-
+    dif(unsure, true),
+    dif(unsure, false).
+
+% ---- the result terms build and destructure ---------------------------
+test(the_basis_verdict_carries_status_and_citations) :-
+    Verdict = information_deadline_basis_verdict(art14_3_a, [cite(eu_reg_2016_679_art_14_3_a)]),
+    Verdict = information_deadline_basis_verdict(Status, Citations),
+    Status == art14_3_a,
+    Citations == [cite(eu_reg_2016_679_art_14_3_a)].
+
+test(the_timing_verdict_carries_status_and_citations) :-
+    Verdict = information_timing_verdict_verdict(timely, [cite(eu_reg_2016_679_art_13_1)]),
+    Verdict = information_timing_verdict_verdict(Status, Citations),
+    Status == timely,
+    Citations == [cite(eu_reg_2016_679_art_13_1)].
+
+test(a_timely_verdict_is_not_late, fail) :-
+    information_timing_verdict_verdict(timely, []) = information_timing_verdict_verdict(late, _).
+
+test(the_indeterminate_status_destructures) :-
+    Status = indeterminate([personal_data_collected_from_data_subject, obtaining_date]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys == [personal_data_collected_from_data_subject, obtaining_date].
+
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(
+        open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
+        [inputs_relied_on([provided_within_reasonable_period-unsure])]),
+    Status = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Input == provided_within_reasonable_period,
+    Key == eu_reg_2016_679_art_14_3_a,
+    Pairs == [provided_within_reasonable_period-unsure].
+
+test(the_deadline_term_destructures_element_wise) :-
+    Deadline = date(2026, 2, 16),
+    Deadline = date(Year, Month, Day),
+    Year =:= 2026,
+    Month =:= 2,
+    Day =:= 16.
+
+% ---- the real citation records resolve --------------------------------
+test(the_art_13_1_citation_resolves) :-
+    citation(eu_reg_2016_679_art_13_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(every_answer_citation_resolves) :-
+    citation(eu_reg_2016_679_art_14_3_a, _),
+    citation(eu_reg_2016_679_art_14_3_b, _),
+    citation(eu_reg_2016_679_art_14_3_c, _).
+
+test(the_period_rule_markers_resolve) :-
+    implements(eu_reg_1971_1182_art_3_1),
+    implements(eu_reg_1971_1182_art_3_2_c),
+    implements(eu_reg_1971_1182_art_3_4).
+
+test(the_placeholder_citation_is_gone, fail) :-
+    citation(eu_todo_primary_source, _).
+
+test(a_shortened_citation_does_not_resolve, fail) :-
+    implements(gdpr_art_14_3_a).
+
+% ---- the kernel's exports answer once ----------------------------------
+test(a_well_formed_profile_has_no_input_problem) :-
+    findall(Problems,
+            gdpr_information_duties_timing_input_problems(
+                [attribute(personal_data_collected_from_data_subject, true),
+                 attribute(obtaining_date, date(2026, 1, 15)),
+                 attribute(provision_date, date(2026, 1, 15))],
+                Problems),
+            Answers),
+    Answers == [[]].
+
+test(a_crisp_flag_given_unsure_is_an_input_problem) :-
+    gdpr_information_duties_timing_input_problems(
+        [attribute(data_used_for_communication_with_data_subject, unsure)],
+        [wrong_type(data_used_for_communication_with_data_subject)]).
+
+test(a_crisp_flag_given_unsure_is_not_well_formed, fail) :-
+    gdpr_information_duties_timing_input_problems(
+        [attribute(data_used_for_communication_with_data_subject, unsure)],
+        []).
+
+test(the_input_problems_status_destructures) :-
+    gdpr_information_duties_timing_input_problems(profile, Problems),
+    Status = input_problems(Problems),
+    Status = input_problems(Named),
+    Named == [wrong_type(profile)].
+
+test(the_date_order_compares_by_value) :-
+    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), before).
+
+test(the_date_order_is_not_string_order, fail) :-
+    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), after).
+
+:- end_module(test_load).

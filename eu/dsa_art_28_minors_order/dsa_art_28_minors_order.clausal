@@ -1,0 +1,517 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% dsa_art_28_minors_order.clausal -- the "dsa_art_28_minors_order" DETERMINATION for
+% eu/dsa_art_28_minors_order, self-contained top to bottom: its citation rows, its
+% decision routes for the four questions of the order, its per-rule tests, its
+% checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2022/2065 (Digital Services Act), Art 19(1), Art 19(2),
+% Art 28(1) and Art 28(2) (32022R2065, original act, OJ L 277, 27.10.2022, English
+% text only; source xhtml sha256
+% 11b119a7d45f3a10cd41714061f9d907839ef5d1634e41774490f00b95856bbf).
+%
+% The four questions (THE CALLED CONTRACT), each QUERY(Profile, Result, Basis,
+% Citations) with exactly one solution:
+%   section_3_application_status/4  Art 19: does Section 3 of Chapter III apply?
+%   art_28_1_obligation_status/4    Art 28(1) with Art 19: does the obligation apply?
+%   art_28_1_compliance_status/4    Art 28(1): are the measures compliant?
+%   art_28_2_advertising_status/4   Art 28(2) with Art 19: is presentation prohibited?
+% Every query runs the kernel's input check first (THE LIMBS step 0). Each step of
+% THE LIMBS is one clause with a disjoint guard and its RESULT in the head. Every
+% final RESULT carries its ONE fixed CITATIONS set (result_citations/2 rows) and its
+% ONE fixed BASIS set (non-empty for section_3_not_applicable only, READINGS (10)).
+% No arithmetic, no date, no rounding (READINGS (8)). Open-textured standards are
+% handed to the user as judgement keys and, when unsure, to a lawyer.
+% =====================================================================
+
+:- module(dsa_art_28_minors_order, [
+    section_3_application_status/4,
+    art_28_1_obligation_status/4,
+    art_28_1_compliance_status/4,
+    art_28_2_advertising_status/4,
+    section_3_applies/0,
+    section_3_not_applicable/0,
+    art_28_1_obligation_applies/0,
+    art_28_1_obligation_not_applicable/0,
+    art_28_1_measures_compliant/0,
+    art_28_1_measures_not_compliant/0,
+    art_28_1_measures_not_required/0,
+    art_28_2_presentation_prohibited/0,
+    art_28_2_presentation_not_prohibited/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    decide_dsa_art_28_minors_order/2,
+    dsa_art_28_minors_order_status/2,
+    dsa_art_28_minors_order_checklist/2,
+    dsa_art_28_minors_order_decision_resolvable/1,
+    dsa_art_28_minors_order_status_values/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/dsa_art_28_minors_order/kernel, [dsa_art_28_minors_order_input_problems/2]).
+:- use_module(eu/dsa_art_28_minors_order/citations, [implements/1]).
+
+% ---- result constructors (exported, data only: no clauses) -------------
+:- constructors([indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(input, citation), cross_reference_unresolved(citation, target), resolution(target, outcome), inputs_relied_on(pairs), provenance(source, detail), outside_fact(key, attested), attested(value, attestation), attestation(by, at, reason, evidence), url(address, retrieved_at), document(upload_identifier, digest), input_problems(problems), unknown_key(profile_key), wrong_type(profile_key), duplicate_key(profile_key)]).
+
+% ---- result atoms (exported, never queries) ----------------------------
+section_3_applies.
+section_3_not_applicable.
+art_28_1_obligation_applies.
+art_28_1_obligation_not_applicable.
+art_28_1_measures_compliant.
+art_28_1_measures_not_compliant.
+art_28_1_measures_not_required.
+art_28_2_presentation_prohibited.
+art_28_2_presentation_not_prohibited.
+
+% ---- statutory VALUE facts: the ONE fixed CITATIONS set of each final RESULT ----
+% READINGS (10), Q16: the full set of provisions any route to the RESULT rests on.
+result_citations(section_3_applies, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2)]).
+result_citations(section_3_not_applicable, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2)]).
+result_citations(art_28_1_obligation_applies, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]).
+result_citations(art_28_1_obligation_not_applicable, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]).
+result_citations(art_28_1_measures_compliant, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]).
+result_citations(art_28_1_measures_not_compliant, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]).
+result_citations(art_28_1_measures_not_required, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]).
+result_citations(art_28_2_presentation_prohibited, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_2)]).
+result_citations(art_28_2_presentation_not_prohibited, [cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_2)]).
+
+% The citation of each open-textured referral row (the `referrals:` block).
+open_textured_citation(platform_accessible_to_minors, cite(eu_reg_2022_2065_art_28_1)).
+open_textured_citation(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, cite(eu_reg_2022_2065_art_28_1)).
+open_textured_citation(advertisements_based_on_profiling_of_recipient, cite(eu_reg_2022_2065_art_28_2)).
+open_textured_citation(aware_with_reasonable_certainty_recipient_is_minor, cite(eu_reg_2022_2065_art_28_2)).
+
+% The citations of the facade verdict when final.
+overall_citations([cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1), cite(eu_reg_2022_2065_art_28_2)]).
+
+% The facade verdict vocabulary (used by the property tests).
+dsa_art_28_minors_order_status_values([dsa_art_28_minors_order_breached, dsa_art_28_minors_order_complied, dsa_art_28_minors_order_not_engaged]).
+
+% ---- profile plumbing --------------------------------------------------
+% key_reading(Profile, ProfileKey, Reading): absent, or the value as supplied. Called
+% only on a profile without input problems, so a contract key occurs at most once.
+key_reading(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_reading(Profile, ProfileKey, Value) :-
+    profile_get(Profile, ProfileKey, Value).
+
+% first_key_with(Wanted, ElementKeys, ElementValues, FoundKey): the first key whose
+% value is Wanted (values are ground atoms here).
+first_key_with(Wanted, [FoundKey|_], [Wanted|_], FoundKey).
+first_key_with(Wanted, [_|ElementKeys], [ElementValue|ElementValues], FoundKey) :-
+    dif(ElementValue, Wanted),
+    first_key_with(Wanted, ElementKeys, ElementValues, FoundKey).
+
+judgement_not_false(true).
+judgement_not_false(unsure).
+judgement_not_false(absent).
+
+judgement_true_or_unsure(true).
+judgement_true_or_unsure(unsure).
+
+judgement_present(true).
+judgement_present(false).
+judgement_present(unsure).
+
+% The answer of section_3_application_status as a state for the later questions.
+section_state(section_3_applies, applies).
+section_state(section_3_not_applicable, not_applicable).
+section_state(indeterminate(MissingKeys), missing(MissingKeys)).
+section_state(needs_legal_review(_, _), referral).
+
+section_state_open(applies).
+section_state_open(missing(_)).
+section_state_open(referral).
+
+% ---- referral terms ----------------------------------------------------
+% The cross-reference row of the outside fact designated_as_very_large_online_platform.
+designation_referral(Pairs, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_2065_art_19_2), cite(commission_vlop_designation_decision)), [resolution(cite(commission_vlop_designation_decision), not_attempted), inputs_relied_on(Pairs)])) :- % lint: C6 contract-fixed citation atom
+    implements(eu_reg_2022_2065_art_19_2).
+
+open_textured_referral(Input, Pairs, needs_legal_review(open_textured(Input, Citation), [inputs_relied_on(Pairs)])) :-
+    open_textured_citation(Input, Citation).
+
+% ---- input check first (THE LIMBS step 0) ------------------------------
+section_3_application_status(Profile, Result, Basis, Citations) :-
+    dsa_art_28_minors_order_input_problems(Profile, Problems),
+    section_3_answer(Problems, Profile, Result, Basis, Citations).
+
+section_3_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+section_3_answer([], Profile, Result, Basis, Citations) :-
+    section_3_decided(Profile, Result, Basis, Citations).
+
+art_28_1_obligation_status(Profile, Result, Basis, Citations) :-
+    dsa_art_28_minors_order_input_problems(Profile, Problems),
+    obligation_answer(Problems, Profile, Result, Basis, Citations).
+
+obligation_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+obligation_answer([], Profile, Result, Basis, Citations) :-
+    obligation_decided(Profile, Result, Basis, Citations).
+
+art_28_1_compliance_status(Profile, Result, Basis, Citations) :-
+    dsa_art_28_minors_order_input_problems(Profile, Problems),
+    compliance_answer(Problems, Profile, Result, Basis, Citations).
+
+compliance_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+compliance_answer([], Profile, Result, Basis, Citations) :-
+    compliance_decided(Profile, Result, Basis, Citations).
+
+art_28_2_advertising_status(Profile, Result, Basis, Citations) :-
+    dsa_art_28_minors_order_input_problems(Profile, Problems),
+    advertising_answer(Problems, Profile, Result, Basis, Citations).
+
+advertising_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+advertising_answer([], Profile, Result, Basis, Citations) :-
+    advertising_decided(Profile, Result, Basis, Citations).
+
+% ---- SECTION_3_APPLICATION_STATUS, Art 19 (steps 1-5) ------------------
+section_3_decided(Profile, Result, Basis, Citations) :-
+    key_reading(Profile, provider_qualifies_as_micro_or_small_enterprise, QualifiesReading),
+    key_reading(Profile, provider_within_12_months_after_losing_micro_or_small_status, WithinReading),
+    key_reading(Profile, designated_as_very_large_online_platform, DesignationReading),
+    exempt_state(QualifiesReading, WithinReading, ExemptState),
+    designation_state(DesignationReading, DesignationState),
+    section_3_route(ExemptState, DesignationState, Result, Basis, Citations).
+
+% exempt_state: exempt_qualified (either fact true), not_exempt (both false), or
+% missing(Key) (neither true, the first absent one named).
+exempt_state(QualifiesReading, WithinReading, ExemptState) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    memberd_t(true, [QualifiesReading, WithinReading], HasTrue),
+    exempt_after_true(HasTrue, [QualifiesReading, WithinReading], ExemptState).
+
+exempt_after_true(true, _, exempt_qualified) :-
+    implements(eu_reg_2022_2065_art_19_1).
+exempt_after_true(false, Readings, ExemptState) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    memberd_t(absent, Readings, HasAbsent),
+    exempt_after_absent(HasAbsent, Readings, ExemptState).
+
+exempt_after_absent(false, _, not_exempt) :-
+    implements(eu_reg_2022_2065_art_19_1).
+exempt_after_absent(true, Readings, missing(MissingKey)) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    first_key_with(absent, [provider_qualifies_as_micro_or_small_enterprise, provider_within_12_months_after_losing_micro_or_small_status], Readings, MissingKey).
+
+% designation_state: the attested outside fact, never decided by the order (Q13).
+designation_state(absent, absent) :-
+    implements(eu_reg_2022_2065_art_19_2).
+designation_state(attested(true, _), designated) :-
+    implements(eu_reg_2022_2065_art_19_2).
+designation_state(attested(false, Attestation), not_designated(attested(false, Attestation))) :-
+    implements(eu_reg_2022_2065_art_19_2).
+
+% Step 1: neither exempt fact holds; the designation is not read.
+section_3_route(not_exempt, _, section_3_applies, [], Citations) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    result_citations(section_3_applies, Citations).
+% Step 2: designated as a very large online platform (Art 19(2)); BASIS stays [] (Q8).
+section_3_route(exempt_qualified, designated, section_3_applies, [], Citations) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    result_citations(section_3_applies, Citations).
+section_3_route(missing(_), designated, section_3_applies, [], Citations) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    result_citations(section_3_applies, Citations).
+% Step 3: exempt-qualified and stated not to be designated.
+section_3_route(exempt_qualified, not_designated(Attested), section_3_not_applicable, [outside_fact(designated_as_very_large_online_platform, Attested)], Citations) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    result_citations(section_3_not_applicable, Citations).
+% Step 4: exempt-qualified, designation not shown: referred on.
+section_3_route(exempt_qualified, absent, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    designation_referral([designated_as_very_large_online_platform-absent], Result).
+% Step 5: the first absent exempt fact.
+section_3_route(missing(MissingKey), not_designated(_), indeterminate([MissingKey]), [], []) :-
+    implements(eu_reg_2022_2065_art_19_1).
+section_3_route(missing(MissingKey), absent, indeterminate([MissingKey]), [], []) :-
+    implements(eu_reg_2022_2065_art_19_1).
+
+% ---- ART_28_1_OBLIGATION_STATUS, Art 28(1) with Art 19 (steps 6-12) ----
+obligation_decided(Profile, Result, Basis, Citations) :-
+    key_reading(Profile, platform_accessible_to_minors, AccessibleReading),
+    section_3_decided(Profile, SectionResult, _SectionBasis, _SectionCitations),
+    section_state(SectionResult, SectionState),
+    obligation_route(AccessibleReading, SectionState, Result, Basis, Citations).
+
+% Step 6: not accessible to minors, whatever Section 3 gives.
+obligation_route(false, _, art_28_1_obligation_not_applicable, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    result_citations(art_28_1_obligation_not_applicable, Citations).
+% Step 7: Section 3 does not apply; its BASIS is not copied (Q8).
+obligation_route(AccessibleReading, not_applicable, art_28_1_obligation_not_applicable, [], Citations) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    judgement_not_false(AccessibleReading),
+    result_citations(art_28_1_obligation_not_applicable, Citations).
+% Step 8: Section 3 applies and the platform is accessible to minors.
+obligation_route(true, applies, art_28_1_obligation_applies, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    result_citations(art_28_1_obligation_applies, Citations).
+% Step 9: the accessibility judgement is absent (Q9).
+obligation_route(absent, SectionState, indeterminate([platform_accessible_to_minors]), [], []) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    section_state_open(SectionState).
+% Step 10: Section 3 lacks an enterprise fact.
+obligation_route(AccessibleReading, missing(MissingKeys), indeterminate(MissingKeys), [], []) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    judgement_true_or_unsure(AccessibleReading).
+% Step 11: Section 3 waits on the designation statement (Q7).
+obligation_route(AccessibleReading, referral, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    judgement_true_or_unsure(AccessibleReading),
+    designation_referral([platform_accessible_to_minors-AccessibleReading, designated_as_very_large_online_platform-absent], Result).
+% Step 12: Section 3 applies and accessibility is unsure.
+obligation_route(unsure, applies, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    open_textured_referral(platform_accessible_to_minors, [platform_accessible_to_minors-unsure], Result).
+
+% ---- ART_28_1_COMPLIANCE_STATUS, Art 28(1) (steps 13-19) ---------------
+compliance_decided(Profile, Result, Basis, Citations) :-
+    key_reading(Profile, platform_accessible_to_minors, AccessibleReading),
+    key_reading(Profile, measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, MeasuresReading),
+    obligation_decided(Profile, ObligationResult, _ObligationBasis, _ObligationCitations),
+    obligation_state(ObligationResult, ObligationState),
+    compliance_route(ObligationState, MeasuresReading, AccessibleReading, Result, Basis, Citations).
+
+obligation_state(art_28_1_obligation_applies, applies).
+obligation_state(art_28_1_obligation_not_applicable, not_applicable).
+obligation_state(indeterminate(MissingKeys), missing(MissingKeys)).
+obligation_state(needs_legal_review(cross_reference_unresolved(_, _), _), cross_referral).
+obligation_state(needs_legal_review(open_textured(_, _), _), open_referral).
+
+% Step 13: the obligation does not apply; the measures are not read.
+compliance_route(not_applicable, _, _, art_28_1_measures_not_required, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    result_citations(art_28_1_measures_not_required, Citations).
+% Step 14: the measures are judged appropriate and proportionate.
+compliance_route(applies, true, _, art_28_1_measures_compliant, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    result_citations(art_28_1_measures_compliant, Citations).
+% Step 15: the measures are judged not to be.
+compliance_route(applies, false, _, art_28_1_measures_not_compliant, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    result_citations(art_28_1_measures_not_compliant, Citations).
+% Step 16: the obligation question names a missing key.
+compliance_route(missing(MissingKeys), _, _, indeterminate(MissingKeys), [], []) :-
+    implements(eu_reg_2022_2065_art_28_1).
+% Step 17: the measures judgement is absent, before any referral.
+compliance_route(applies, absent, _, indeterminate([measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors]), [], []) :-
+    implements(eu_reg_2022_2065_art_28_1).
+compliance_route(cross_referral, absent, _, indeterminate([measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors]), [], []) :-
+    implements(eu_reg_2022_2065_art_28_1).
+compliance_route(open_referral, absent, _, indeterminate([measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors]), [], []) :-
+    implements(eu_reg_2022_2065_art_28_1).
+% Step 18: the obligation's referral, with the measures judgement added (Q7).
+compliance_route(cross_referral, MeasuresReading, AccessibleReading, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    judgement_present(MeasuresReading),
+    designation_referral([platform_accessible_to_minors-AccessibleReading, designated_as_very_large_online_platform-absent, measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors-MeasuresReading], Result).
+compliance_route(open_referral, MeasuresReading, _, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    judgement_present(MeasuresReading),
+    open_textured_referral(platform_accessible_to_minors, [platform_accessible_to_minors-unsure, measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors-MeasuresReading], Result).
+% Step 19: the obligation applies and the measures judgement is unsure (Q2).
+compliance_route(applies, unsure, _, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    open_textured_referral(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, [platform_accessible_to_minors-true, measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors-unsure], Result).
+
+% ---- ART_28_2_ADVERTISING_STATUS, Art 28(2) with Art 19 (steps 20-26) --
+% platform_accessible_to_minors and the measures judgement are not read (Q1).
+advertising_decided(Profile, Result, Basis, Citations) :-
+    key_reading(Profile, advertisements_presented_to_recipient_on_interface, PresentedReading),
+    key_reading(Profile, advertisements_based_on_profiling_of_recipient, ProfilingReading),
+    key_reading(Profile, aware_with_reasonable_certainty_recipient_is_minor, AwarenessReading),
+    elements_state([advertisements_presented_to_recipient_on_interface, advertisements_based_on_profiling_of_recipient, aware_with_reasonable_certainty_recipient_is_minor], [PresentedReading, ProfilingReading, AwarenessReading], ElementState),
+    section_3_decided(Profile, SectionResult, _SectionBasis, _SectionCitations),
+    section_state(SectionResult, SectionState),
+    advertising_route(ElementState, SectionState, ProfilingReading, AwarenessReading, Result, Basis, Citations).
+
+% elements_state: some_false, else first_absent(Key), else all_true, else
+% first_unsure(Key), over the three elements in root_exports order.
+elements_state(ElementKeys, ElementValues, ElementState) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    memberd_t(false, ElementValues, HasFalse),
+    elements_after_false(HasFalse, ElementKeys, ElementValues, ElementState).
+
+elements_after_false(true, _, _, some_false) :-
+    implements(eu_reg_2022_2065_art_28_2).
+elements_after_false(false, ElementKeys, ElementValues, ElementState) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    memberd_t(absent, ElementValues, HasAbsent),
+    elements_after_absent(HasAbsent, ElementKeys, ElementValues, ElementState).
+
+elements_after_absent(true, ElementKeys, ElementValues, first_absent(MissingKey)) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    first_key_with(absent, ElementKeys, ElementValues, MissingKey).
+elements_after_absent(false, ElementKeys, ElementValues, ElementState) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    memberd_t(unsure, ElementValues, HasUnsure),
+    elements_after_unsure(HasUnsure, ElementKeys, ElementValues, ElementState).
+
+elements_after_unsure(false, _, _, all_true) :-
+    implements(eu_reg_2022_2065_art_28_2).
+elements_after_unsure(true, ElementKeys, ElementValues, first_unsure(UnsureKey)) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    first_key_with(unsure, ElementKeys, ElementValues, UnsureKey).
+
+elements_not_false(first_absent(_)).
+elements_not_false(all_true).
+elements_not_false(first_unsure(_)).
+
+elements_present(all_true).
+elements_present(first_unsure(_)).
+
+% Step 20: an element is not met, whatever Section 3 gives.
+advertising_route(some_false, _, _, _, art_28_2_presentation_not_prohibited, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    result_citations(art_28_2_presentation_not_prohibited, Citations).
+% Step 21: Section 3 does not apply; same BASIS and CITATIONS (Q10, Q8).
+advertising_route(ElementState, not_applicable, _, _, art_28_2_presentation_not_prohibited, [], Citations) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    elements_not_false(ElementState),
+    result_citations(art_28_2_presentation_not_prohibited, Citations).
+% Step 22: Section 3 applies and all three elements hold.
+advertising_route(all_true, applies, _, _, art_28_2_presentation_prohibited, [], Citations) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    result_citations(art_28_2_presentation_prohibited, Citations).
+% Step 23: the first absent element (Q9).
+advertising_route(first_absent(MissingKey), SectionState, _, _, indeterminate([MissingKey]), [], []) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    section_state_open(SectionState).
+% Step 24: Section 3 lacks an enterprise fact.
+advertising_route(ElementState, missing(MissingKeys), _, _, indeterminate(MissingKeys), [], []) :-
+    implements(eu_reg_2022_2065_art_19_1),
+    elements_present(ElementState).
+% Step 25: Section 3 waits on the designation statement (Q7).
+advertising_route(ElementState, referral, ProfilingReading, AwarenessReading, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_19_2),
+    elements_present(ElementState),
+    designation_referral([advertisements_based_on_profiling_of_recipient-ProfilingReading, aware_with_reasonable_certainty_recipient_is_minor-AwarenessReading, designated_as_very_large_online_platform-absent], Result).
+% Step 26: the first unsure judgement of profiling and awareness goes to a lawyer.
+advertising_route(first_unsure(UnsureKey), applies, ProfilingReading, AwarenessReading, Result, [], []) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    open_textured_referral(UnsureKey, [advertisements_based_on_profiling_of_recipient-ProfilingReading, aware_with_reasonable_certainty_recipient_is_minor-AwarenessReading], Result).
+
+% ---- facade verdict ----------------------------------------------------
+% breached: measures not compliant, or presentation prohibited; complied: measures
+% compliant and presentation not prohibited; not_engaged: measures not required and
+% presentation not prohibited; otherwise the first not-final answer, compliance first.
+decide_dsa_art_28_minors_order(Profile, dsa_art_28_minors_order_verdict(Status, Citations)) :-
+    art_28_1_compliance_status(Profile, ComplianceResult, _ComplianceBasis, _ComplianceCitations),
+    art_28_2_advertising_status(Profile, AdvertisingResult, _AdvertisingBasis, _AdvertisingCitations),
+    compliance_class(ComplianceResult, ComplianceClass),
+    advertising_class(AdvertisingResult, AdvertisingClass),
+    overall_verdict(ComplianceClass, AdvertisingClass, Status, Citations).
+
+compliance_class(art_28_1_measures_not_compliant, breach).
+compliance_class(art_28_1_measures_compliant, compliant).
+compliance_class(art_28_1_measures_not_required, not_required).
+compliance_class(indeterminate(MissingKeys), pending(indeterminate(MissingKeys))).
+compliance_class(needs_legal_review(Reason, Context), pending(needs_legal_review(Reason, Context))).
+compliance_class(input_problems(Problems), pending(input_problems(Problems))).
+
+advertising_class(art_28_2_presentation_prohibited, breach).
+advertising_class(art_28_2_presentation_not_prohibited, clear).
+advertising_class(indeterminate(MissingKeys), pending(indeterminate(MissingKeys))).
+advertising_class(needs_legal_review(Reason, Context), pending(needs_legal_review(Reason, Context))).
+advertising_class(input_problems(Problems), pending(input_problems(Problems))).
+
+compliance_not_breach(compliant).
+compliance_not_breach(not_required).
+compliance_not_breach(pending(_)).
+
+overall_verdict(breach, _, dsa_art_28_minors_order_breached, Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    overall_citations(Citations).
+overall_verdict(ComplianceClass, breach, dsa_art_28_minors_order_breached, Citations) :-
+    implements(eu_reg_2022_2065_art_28_2),
+    compliance_not_breach(ComplianceClass),
+    overall_citations(Citations).
+overall_verdict(compliant, clear, dsa_art_28_minors_order_complied, Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    overall_citations(Citations).
+overall_verdict(not_required, clear, dsa_art_28_minors_order_not_engaged, Citations) :-
+    implements(eu_reg_2022_2065_art_28_1),
+    overall_citations(Citations).
+overall_verdict(pending(Result), clear, Result, []).
+overall_verdict(pending(Result), pending(_), Result, []).
+overall_verdict(compliant, pending(Result), Result, []).
+overall_verdict(not_required, pending(Result), Result, []).
+
+% ---- projection: Status only -------------------------------------------
+dsa_art_28_minors_order_status(Profile, Status) :-
+    decide_dsa_art_28_minors_order(Profile, dsa_art_28_minors_order_verdict(Status, _Citations)).
+
+% ---- checklist: one row per question, each with its cite(...) list ------
+dsa_art_28_minors_order_checklist(Profile, [item(section_3_application, SectionResult, SectionCitations), item(art_28_1_obligation, ObligationResult, ObligationCitations), item(art_28_1_compliance, ComplianceResult, ComplianceCitations), item(art_28_2_advertising, AdvertisingResult, AdvertisingCitations)]) :-
+    section_3_application_status(Profile, SectionResult, _SectionBasis, SectionCitations),
+    art_28_1_obligation_status(Profile, ObligationResult, _ObligationBasis, ObligationCitations),
+    art_28_1_compliance_status(Profile, ComplianceResult, _ComplianceBasis, ComplianceCitations),
+    art_28_2_advertising_status(Profile, AdvertisingResult, _AdvertisingBasis, AdvertisingCitations).
+
+dsa_art_28_minors_order_decision_resolvable(Profile) :-
+    decide_dsa_art_28_minors_order(Profile, _Verdict).
+
+% ---- tests --------------------------------------------------------------
+test(a_medium_enterprise_is_in_section_3) :-
+    findall(Result-Basis-Citations, section_3_application_status([attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false)], Result, Basis, Citations), Answers),
+    Answers == [section_3_applies-[]-[cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2)]].
+test(a_small_enterprise_stated_not_designated_is_outside_section_3) :-
+    findall(Result-Basis, section_3_application_status([attribute(provider_qualifies_as_micro_or_small_enterprise, true), attribute(designated_as_very_large_online_platform, attested(false, attestation(host, moment, stated, none)))], Result, Basis, _), Answers),
+    Answers == [section_3_not_applicable-[outside_fact(designated_as_very_large_online_platform, attested(false, attestation(host, moment, stated, none)))]].
+test(a_small_enterprise_stated_not_designated_is_not_in_section_3, fail) :-
+    section_3_application_status([attribute(provider_qualifies_as_micro_or_small_enterprise, true), attribute(designated_as_very_large_online_platform, attested(false, attestation(host, moment, stated, none)))], section_3_applies, _, _).
+test(a_designated_platform_is_in_section_3_with_an_empty_basis) :-
+    findall(Result-Basis, section_3_application_status([attribute(designated_as_very_large_online_platform, attested(true, attestation(host, moment, stated, none)))], Result, Basis, _), Answers),
+    Answers == [section_3_applies-[]].
+test(a_small_enterprise_without_designation_is_referred) :-
+    findall(Result, section_3_application_status([attribute(provider_within_12_months_after_losing_micro_or_small_status, true)], Result, _, _), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_2065_art_19_2), cite(commission_vlop_designation_decision)), [resolution(cite(commission_vlop_designation_decision), not_attempted), inputs_relied_on([designated_as_very_large_online_platform-absent])])]. % lint: C6 contract-fixed citation atom
+test(an_empty_profile_names_the_first_enterprise_key) :-
+    findall(Result, section_3_application_status([], Result, _, _), Answers),
+    Answers == [indeterminate([provider_qualifies_as_micro_or_small_enterprise])].
+test(a_platform_not_accessible_to_minors_has_no_obligation) :-
+    findall(Result-Citations, art_28_1_obligation_status([attribute(platform_accessible_to_minors, false)], Result, _, Citations), Answers),
+    Answers == [art_28_1_obligation_not_applicable-[cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_1)]].
+test(unsure_accessibility_goes_to_a_lawyer) :-
+    findall(Result, art_28_1_obligation_status([attribute(platform_accessible_to_minors, unsure), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false)], Result, _, _), Answers),
+    Answers == [needs_legal_review(open_textured(platform_accessible_to_minors, cite(eu_reg_2022_2065_art_28_1)), [inputs_relied_on([platform_accessible_to_minors-unsure])])].
+test(inadequate_measures_are_not_compliant) :-
+    findall(Result, art_28_1_compliance_status([attribute(platform_accessible_to_minors, true), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false), attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)], Result, _, _), Answers),
+    Answers == [art_28_1_measures_not_compliant].
+test(the_measures_key_is_named_before_a_referral) :-
+    findall(Result, art_28_1_compliance_status([attribute(platform_accessible_to_minors, true), attribute(provider_qualifies_as_micro_or_small_enterprise, true)], Result, _, _), Answers),
+    Answers == [indeterminate([measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors])].
+test(profiled_advertising_to_a_known_minor_is_prohibited) :-
+    findall(Result-Citations, art_28_2_advertising_status([attribute(advertisements_presented_to_recipient_on_interface, true), attribute(advertisements_based_on_profiling_of_recipient, true), attribute(aware_with_reasonable_certainty_recipient_is_minor, true), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false)], Result, _, Citations), Answers),
+    Answers == [art_28_2_presentation_prohibited-[cite(eu_reg_2022_2065_art_19_1), cite(eu_reg_2022_2065_art_19_2), cite(eu_reg_2022_2065_art_28_2)]].
+test(the_first_absent_element_is_named) :-
+    findall(Result, art_28_2_advertising_status([attribute(advertisements_based_on_profiling_of_recipient, unsure)], Result, _, _), Answers),
+    Answers == [indeterminate([advertisements_presented_to_recipient_on_interface])].
+test(outside_section_3_presentation_is_not_prohibited) :-
+    findall(Result-Basis, art_28_2_advertising_status([attribute(advertisements_presented_to_recipient_on_interface, true), attribute(advertisements_based_on_profiling_of_recipient, true), attribute(aware_with_reasonable_certainty_recipient_is_minor, true), attribute(provider_qualifies_as_micro_or_small_enterprise, true), attribute(designated_as_very_large_online_platform, attested(false, attestation(host, moment, stated, none)))], Result, Basis, _), Answers),
+    Answers == [art_28_2_presentation_not_prohibited-[]].
+test(an_unknown_key_is_an_input_problem_for_every_query) :-
+    findall(Result, art_28_2_advertising_status([attribute(colour, true)], Result, _, _), Answers),
+    Answers == [input_problems([unknown_key(colour)])].
+test(prohibited_presentation_is_a_breach) :-
+    findall(Status, dsa_art_28_minors_order_status([attribute(platform_accessible_to_minors, false), attribute(advertisements_presented_to_recipient_on_interface, true), attribute(advertisements_based_on_profiling_of_recipient, true), attribute(aware_with_reasonable_certainty_recipient_is_minor, true), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false)], Status), Statuses),
+    Statuses == [dsa_art_28_minors_order_breached].
+
+:- end_module(dsa_art_28_minors_order).

@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_dates.pl
 % Generated-companion for the `date_time` seam: 22 corpus domains
 % import predicates from

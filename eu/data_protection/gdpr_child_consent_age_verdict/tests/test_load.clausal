@@ -1,0 +1,44 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor loads, the result term builds
+% and destructures, and a real citation record resolves.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_child_consent_age_verdict/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/kernel, [gdpr_child_consent_age_verdict_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_child_consent_age_verdict/citations, [citation/2, implements/1]).
+
+test(the_verdict_term_builds_and_destructures) :-
+    Verdict = gdpr_child_consent_verdict(eligible, art8_not_engaged, not_applicable, [cite(eu_reg_2016_679_art_8_1)]),
+    Verdict = gdpr_child_consent_verdict(Status, Ground, Verification, Citations),
+    Status == eligible,
+    Ground == art8_not_engaged,
+    Verification == not_applicable,
+    Citations == [cite(eu_reg_2016_679_art_8_1)].
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(eligible, ineligible).
+
+test(the_grounds_are_distinct) :-
+    dif(child_at_least_16, child_at_least_national_age).
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_8_1, _Record).
+
+test(implements_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_8_2).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([], []).
+
+test(an_unknown_key_is_named) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(favourite_colour, blue)], [unknown_key(favourite_colour)]).
+
+test(a_bad_age_is_named) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(child_age_years, -1)], [wrong_type(child_age_years)]).
+
+test(a_good_attested_national_age_has_no_problem) :-
+    gdpr_child_consent_age_verdict_input_problems([attribute(member_state_digital_consent_age, attested(national_digital_consent_age(austria, 14, national_provision(act, article)), attestation(host, stamp, reason, none)))], []).
+
+:- end_module(test_load).

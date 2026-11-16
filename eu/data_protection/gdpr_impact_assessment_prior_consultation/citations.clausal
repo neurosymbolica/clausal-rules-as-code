@@ -1,0 +1,64 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% citations.clausal -- statutory citation records for eu/data_protection/gdpr_impact_assessment_prior_consultation.
+% Instrument: Regulation (EU) 2016/679 (General Data Protection Regulation),
+% consolidated text CELEX 02016R0679-20160504.
+%
+% citation/2 record form: a FACT, the key an atom, the second argument a
+% pair list with keys exactly label, ref, verbatim, in that order:
+%   citation(Key, [label-'...', ref-'...', verbatim-'...']).
+% The verbatim pair is OMITTED while the key's entry in
+% citations-sources.yaml is `status: unverified`; `status: verified`
+% carries a non-empty ref AND a verbatim that is an exact substring of
+% the source.
+%
+% Keys returned in a RESULT (the order's citation vocabulary):
+%   eu_reg_2016_679_art_36_1, eu_reg_2016_679_art_36_5.
+% Keys recorded for referral data only (never a verdict citation):
+%   eu_reg_2016_679_art_35_1 (inside not_governed_here/1, Q5),
+%   member_state_law_requiring_prior_consultation_and_authorisation (the TARGET of the
+%   cross_reference_unresolved referral for an absent member_state_requires_prior_authorisation).
+%
+% PROVENANCE: every operative clause opens its body with implements(Key).
+% implements/1 succeeds for every recorded key and fails for any other.
+% =====================================================================
+
+:- module(citations, [
+    citation/2,
+    implements/1,
+    basis_citation/2
+]).
+
+% lint: order-given atom (the eu_reg_2016_679_art_* keys are the corpus lexicon's canonical keys)
+citation(eu_reg_2016_679_art_36_1, [label-'Regulation (EU) 2016/679 Art 36(1) (prior consultation of the supervisory authority where the impact assessment indicates a high risk in the absence of mitigating measures)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504', verbatim-'The controller shall consult the supervisory authority prior to processing where a data protection impact assessment under Article 35 indicates that the processing would result in a high risk in the absence of measures taken by the controller to mitigate the risk.']). % lint: order-given atom
+citation(eu_reg_2016_679_art_36_5, [label-'Regulation (EU) 2016/679 Art 36(5) (Member State law may require consultation with, and prior authorisation from, the supervisory authority for processing for a task carried out in the public interest)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504', verbatim-'Notwithstanding paragraph 1, Member State law may require controllers to consult with, and obtain prior authorisation from, the supervisory authority in relation to processing by a controller for the performance of a task carried out by the controller in the public interest, including processing in relation to social protection and public health.']). % lint: order-given atom
+citation(eu_reg_2016_679_art_35_1, [label-'Regulation (EU) 2016/679 Art 35(1) (duty to carry out a data protection impact assessment; cited only in the not_governed_here referral)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504']). % lint: order-given atom
+citation(member_state_law_requiring_prior_consultation_and_authorisation, [label-'Member State law referred to in Regulation (EU) 2016/679 Art 36(5) requiring the controller to consult with, and obtain prior authorisation from, the supervisory authority (referral target of the cross_reference_unresolved referral; an attested outside fact, fetcher none)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504']). % lint: order-given atom
+
+% implements(Key): the provenance marker an operative clause opens with.
+implements(Key) :-
+    citation(Key, _).
+
+% basis_citation(Basis, cite(Key)): each final BASIS of decide_prior_consultation/2 and
+% the one citation it gives (INTERFACE - THE VERDICTS AND THEIR CITATIONS).
+basis_citation(art36_1_residual_high_risk, cite(eu_reg_2016_679_art_36_1)). % lint: order-given atom
+basis_citation(art36_1_condition_not_met, cite(eu_reg_2016_679_art_36_1)). % lint: order-given atom
+basis_citation(art36_5_member_state_prior_authorisation, cite(eu_reg_2016_679_art_36_5)). % lint: order-given atom
+
+test(the_residual_risk_provision_is_implemented) :-
+    implements(eu_reg_2016_679_art_36_1).
+test(the_member_state_provision_is_implemented) :-
+    implements(eu_reg_2016_679_art_36_5).
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_todo_primary_source).
+test(every_basis_cites_a_recorded_key) :-
+    findall(Key, basis_citation(_, cite(Key)), Keys),
+    length(Keys, 3),
+    maplist(implements, Keys).
+test(the_member_state_basis_cites_article_36_5) :-
+    findall(Citation, basis_citation(art36_5_member_state_prior_authorisation, Citation), Citations),
+    Citations == [cite(eu_reg_2016_679_art_36_5)].
+test(the_member_state_basis_does_not_cite_article_36_1, fail) :-
+    basis_citation(art36_5_member_state_prior_authorisation, cite(eu_reg_2016_679_art_36_1)).
+
+:- end_module(citations).

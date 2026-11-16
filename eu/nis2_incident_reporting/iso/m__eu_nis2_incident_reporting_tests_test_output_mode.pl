@@ -1,0 +1,47 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_nis2_incident_reporting_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_nis2_incident_reporting_nis2_incident_reporting, [decide_nis2_incident_reporting/2, nis2_incident_reporting_status/2, incident_reporting_steps/2, reporting_step_timeliness/4]).
+:- use_module(m__eu_nis2_incident_reporting_fixtures, [nis2_incident_reporting_profile_for/2]).
+
+test(limb_a_yields_exactly_one_status) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    findall(Status, nis2_incident_reporting_status(Profile, Status), Statuses),
+    Statuses == [significant].
+test(no_keys_is_indeterminate) :-
+    nis2_incident_reporting_profile_for(no_keys_given, Profile),
+    findall(Status, nis2_incident_reporting_status(Profile, Status), Statuses),
+    Statuses == [indeterminate([severe_operational_disruption_or_financial_loss, considerable_damage_to_other_persons])].
+test(unsure_limb_refers) :-
+    nis2_incident_reporting_profile_for(limb_a_unsure, Profile),
+    findall(Status, nis2_incident_reporting_status(Profile, Status), Statuses),
+    Statuses == [needs_legal_review(open_textured(severe_operational_disruption_or_financial_loss, cite(eu_dir_2022_2555_art_23_3_a)), [inputs_relied_on([severe_operational_disruption_or_financial_loss - unsure, considerable_damage_to_other_persons - false])])].
+test(unknown_key_is_input_problem) :-
+    nis2_incident_reporting_profile_for(unknown_key_given, Profile),
+    findall(Status, nis2_incident_reporting_status(Profile, Status), Statuses),
+    Statuses == [input_problems([unknown_key(bogus)])].
+test(the_verdict_carries_a_citation) :-
+    nis2_incident_reporting_profile_for(limb_b_met, Profile),
+    decide_nis2_incident_reporting(Profile, nis2_incident_reporting_verdict(significant, [cite(eu_dir_2022_2555_art_23_3_b)])).
+test(standard_steps_are_four_in_order) :-
+    findall(Steps, incident_reporting_steps([attribute(severe_operational_disruption_or_financial_loss, true), attribute(trust_service_provider_incident_affects_trust_services, false), attribute(incident_ongoing_at_final_report_due, false)], Steps), All),
+    All == [[step_due(early_warning, hours_after_awareness(24), cite(eu_dir_2022_2555_art_23_4_a)), step_due(incident_notification, hours_after_awareness(72), cite(eu_dir_2022_2555_art_23_4_b)), step_due(intermediate_report, on_request_of_csirt_or_competent_authority, cite(eu_dir_2022_2555_art_23_4_c)), step_due(final_report, months_after_notification(1), cite(eu_dir_2022_2555_art_23_4_d))]].
+test(significant_missing_crisp_keys_is_indeterminate) :-
+    incident_reporting_steps([attribute(considerable_damage_to_other_persons, true)], indeterminate([trust_service_provider_incident_affects_trust_services, incident_ongoing_at_final_report_due])).
+test(timeliness_single_solution_at_limit) :-
+    findall(Result, reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], early_warning, 24, Result), Results),
+    Results == [on_time].
+test(unsure_undue_delay_refers) :-
+    reporting_step_timeliness([attribute(incident_notification_without_undue_delay, unsure)], incident_notification, 10, needs_legal_review(open_textured(incident_notification_without_undue_delay, cite(eu_dir_2022_2555_art_23_4_b)), [inputs_relied_on([incident_notification_without_undue_delay - unsure])])).
+
+cp_test_names([limb_a_yields_exactly_one_status, no_keys_is_indeterminate, unsure_limb_refers, unknown_key_is_input_problem, the_verdict_carries_a_citation, standard_steps_are_four_in_order, significant_missing_crisp_keys_is_indeterminate, timeliness_single_solution_at_limit, unsure_undue_delay_refers]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

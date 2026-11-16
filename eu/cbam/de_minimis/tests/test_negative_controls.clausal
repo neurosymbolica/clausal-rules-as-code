@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> a different verdict), proving the route is
+% LOAD-BEARING. A negative states "no solution" as
+% `test(Name, fail) :- Goal.` and each is paired with a positive test over
+% the same near-miss case (the answer it DOES get), so a misspelt atom
+% shows up as a failing positive test.
+% Run: python -m clausal.testing eu/cbam/de_minimis/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/cbam/de_minimis/de_minimis, [
+    de_minimis_exemption/3,
+    de_minimis_goods_status/3,
+    de_minimis_status_values/1
+]).
+:- use_module(eu/cbam/de_minimis/fixtures, [de_minimis_profile_for/2]).
+
+exemption_of(Subject, Result) :-
+    de_minimis_profile_for(Subject, Profile),
+    de_minimis_exemption(Profile, Result, _Citations).
+
+goods_of(Subject, Result) :-
+    de_minimis_profile_for(Subject, Profile),
+    de_minimis_goods_status(Profile, Result, _Citations).
+
+test(both_verdict_atoms_are_real_verdict_atoms) :-
+    de_minimis_status_values(StatusValues),
+    member(de_minimis_exemption_applies, StatusValues),
+    member(de_minimis_exemption_does_not_apply, StatusValues).
+
+% Step 1 (applies) against its near miss one kilogram above.
+test(step_one_positive_at_the_limit) :-
+    exemption_of(at_limit_by_acceptance, de_minimis_exemption_applies).
+test(step_one_near_miss_does_not_apply) :-
+    exemption_of(one_kilogram_above_by_acceptance, de_minimis_exemption_does_not_apply).
+test(step_one_near_miss_is_not_exempt, fail) :-
+    exemption_of(one_kilogram_above_by_acceptance, de_minimis_exemption_applies).
+
+% Step 2 (does not apply) against its near miss at the limit.
+test(step_two_near_miss_is_not_over_the_threshold, fail) :-
+    exemption_of(at_limit_by_acceptance, de_minimis_exemption_does_not_apply).
+
+% The release basis reads the release figure.
+test(release_basis_positive_at_the_limit) :-
+    exemption_of(at_limit_by_release, de_minimis_exemption_applies).
+test(release_basis_near_miss_does_not_apply) :-
+    exemption_of(one_kilogram_above_by_release, de_minimis_exemption_does_not_apply).
+test(release_basis_near_miss_is_not_exempt, fail) :-
+    exemption_of(one_kilogram_above_by_release, de_minimis_exemption_applies).
+
+% Step 6 (referral) against both figures at the limit.
+test(step_six_positive_goes_to_a_lawyer) :-
+    exemption_of(unsure_figures_across_limit, needs_legal_review(open_textured(year_date_basis, cite(eu_reg_2023_956_art_2a_1)), [inputs_relied_on([year_date_basis-unsure])])).
+test(step_six_near_miss_applies) :-
+    exemption_of(unsure_both_at_limit, de_minimis_exemption_applies).
+test(step_six_near_miss_is_not_referred, fail) :-
+    exemption_of(unsure_both_at_limit, needs_legal_review(_, _)).
+
+% Step 5 (date basis absent) against both figures at the limit.
+test(step_five_positive_names_the_date_basis) :-
+    exemption_of(no_basis_figures_across_limit, indeterminate([year_date_basis])).
+test(step_five_near_miss_applies) :-
+    exemption_of(no_basis_both_at_limit, de_minimis_exemption_applies).
+test(step_five_near_miss_is_not_indeterminate, fail) :-
+    exemption_of(no_basis_both_at_limit, indeterminate(_)).
+
+% Step 4 (threshold absent) against zero figures.
+test(step_four_positive_names_the_threshold) :-
+    exemption_of(one_kilogram_without_threshold, indeterminate([single_mass_based_threshold_tonnes])).
+test(step_four_near_miss_applies) :-
+    exemption_of(zero_figures_without_threshold, de_minimis_exemption_applies).
+test(step_four_near_miss_is_not_indeterminate, fail) :-
+    exemption_of(zero_figures_without_threshold, indeterminate(_)).
+
+% Step 3 (relevant figure absent).
+test(step_three_positive_names_the_acceptance_figure) :-
+    exemption_of(acceptance_figure_absent, indeterminate([net_mass_kg_by_acceptance_date])).
+test(step_three_does_not_name_the_threshold_first, fail) :-
+    exemption_of(acceptance_figure_absent, indeterminate([single_mass_based_threshold_tonnes])).
+
+% Step 0 (input problems) against the whole-number control.
+test(step_zero_positive_gives_input_problems) :-
+    exemption_of(fractional_threshold, input_problems([wrong_type(single_mass_based_threshold_tonnes)])).
+test(step_zero_near_miss_applies) :-
+    exemption_of(whole_threshold_control, de_minimis_exemption_applies).
+test(step_zero_near_miss_has_no_input_problems, fail) :-
+    exemption_of(whole_threshold_control, input_problems(_)).
+
+% Step 7 (electricity) against other Annex I goods.
+test(step_seven_positive_electricity_is_outside) :-
+    goods_of(electricity_import, outside_de_minimis_exemption).
+test(step_seven_near_miss_is_counted) :-
+    goods_of(other_annex_i_goods_import, counted_toward_threshold).
+test(step_seven_near_miss_is_not_outside, fail) :-
+    goods_of(other_annex_i_goods_import, outside_de_minimis_exemption).
+
+% Step 8 (hydrogen) is never counted.
+test(step_eight_positive_hydrogen_is_outside) :-
+    goods_of(hydrogen_import, outside_de_minimis_exemption).
+test(step_eight_hydrogen_is_not_counted, fail) :-
+    goods_of(hydrogen_import, counted_toward_threshold).
+
+% Step 9 (counted) against goods not listed.
+test(step_nine_near_miss_is_not_goods_of_this_regulation) :-
+    goods_of(goods_not_listed_import, not_goods_of_this_regulation).
+test(step_nine_near_miss_is_not_counted, fail) :-
+    goods_of(goods_not_listed_import, counted_toward_threshold).
+
+% Step 10 (not listed) against other Annex I goods.
+test(step_ten_near_miss_is_goods_of_this_regulation, fail) :-
+    goods_of(other_annex_i_goods_import, not_goods_of_this_regulation).
+
+% Step 11 (goods_kind absent) against an electricity import.
+test(step_eleven_positive_names_goods_kind) :-
+    goods_of(goods_kind_absent, indeterminate([goods_kind])).
+test(step_eleven_near_miss_is_not_indeterminate, fail) :-
+    goods_of(electricity_import, indeterminate(_)).
+
+:- end_module(test_negative_controls).

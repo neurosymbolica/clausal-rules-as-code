@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """scaffold_citations.py -- decision-preserving scaffold of a domain's
 citations.clausal submodule (Part A of citation namespacing;
 docs/superpowers/plans/2026-07-16-citation-namespacing-partA.md).

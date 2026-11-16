@@ -1,0 +1,136 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_domain_name_data
+shape_family: deontic
+kit_version: "0.1.0"
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_domain_name_data"
+  - "queries"
+  - "fixtures"
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_domain_name_data.clausal --
+  - "decide_nis2_domain_name_data/2"
+  - "nis2_domain_name_data_status/2"
+  - "nis2_domain_name_data_checklist/2"
+  - "nis2_domain_name_data_decision_resolvable/1"
+  - "nis2_domain_name_data_status_values/1"
+  - "provider_duties/2"
+  - "required_registration_data/2"
+  - "publication_duty/3"
+  - "access_duty/3"
+  - "access_reply_timeliness/3"
+  - "tld_name_registry/0"
+  - "domain_name_registration_service_entity/0"
+  - "other/0"
+  - "must_publish_without_undue_delay/0"
+  - "no_publication_duty/0"
+  - "must_provide_access/0"
+  - "no_duty_to_provide_access/0"
+  - "on_time/0"
+  - "unsure/0"
+  - "provider_type/0"
+  - "point_of_contact_email_address_differs_from_registrant/0"
+  - "point_of_contact_telephone_number_differs_from_registrant/0"
+  - "registration_data_is_personal_data/0"
+  - "requester_is_legitimate_access_seeker/0"
+  - "request_is_lawful_and_duly_substantiated/0"
+  - "reply_without_undue_delay/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "duty/2"
+  - "field/2"
+  - "late/1"
+  # -- queries.clausal --
+  - "nis2_domain_name_data_profile_keys/1"
+  - "nis2_domain_name_data_input_problems/2"
+  - "nis2_domain_name_data_what_if/4"
+  - "access_reply_deadline/2"
+  - "access_reply_hours_elapsed/3"
+  - "access_reply_outcome/4"
+  # -- fixtures.clausal --
+  - "nis2_domain_name_data_subject/1"
+  - "nis2_domain_name_data_profile_for/2"
+  - "nis2_domain_name_data_assess/2"
+
+independence: no_external_scorer
+
+uses:
+  - "formalize_lib"
+
+scope: "What Directive (EU) 2022/2555 (NIS 2) Art 28(1) to (6) requires a Member State to require of TLD name registries and entities providing domain name registration services: the nine duties, the registration data to hold (Art 28(2)), whether non-personal data must be published (Art 28(4)), whether access to data must be provided (Art 28(5) first sentence), and whether a reply to an access request was within 72 hours (Art 28(5) second sentence). Out of scope, handed to a lawyer or a sibling order: who is a TLD name registry or registrar (Art 6), GDPR lawfulness, adequacy of procedures and data, national access procedures."
+
+sources:
+  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 28(1) to (6), unit 32022L2555"
+
+query_interface:
+  2: "nis2_domain_name_data_status/2"
+  7: "nis2_domain_name_data_checklist/2"
+  15: "access_reply_deadline/2"
+  16: "nis2_domain_name_data_what_if/4"
+
+deferred_set:
+- what: article_heading
+  units:
+  - 32022L2555#art_028
+  reason: 'The title of Article 28 carries no obligation: document structure. Deferred
+    so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: provider_definitions
+  instrument: Directive (EU) 2022/2555 Art 6 (definitions of a TLD name registry and
+    of an entity providing domain name registration services) and Arts 2 and 3
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  - 32022L2555#art_006
+  reason: Whether an entity is a TLD name registry, a registrar or an agent of registrars
+    (a privacy or proxy registration service provider, a reseller), and whether it
+    is within the scope of the Directive, is decided by Art 6 and the sibling order
+    on scope; this order takes provider_type as given.
+  consequence: The caller establishes the provider type first; an entity that is neither
+    has no Art 28 duty.
+- what: data_protection_law
+  instrument: Regulation (EU) 2016/679 (GDPR)
+  cites:
+  - 02016R0679-20160504#art_006
+  reason: Art 28(1) and (5) say the duties are carried out with due diligence and
+    in accordance with Union data protection law as regards personal data. Whether
+    processing or disclosure of a personal data item is lawful is decided by the GDPR
+    orders; this order takes whether the data are personal data, and whether the requester
+    and the request meet the conditions of Art 28(5), as the caller's judgements.
+  consequence: The answers say what Art 28 requires; the caller checks separately
+    that the processing and the disclosure are lawful under the GDPR.
+- what: adequacy_of_procedures
+  instrument: Directive (EU) 2022/2555 Art 28(1) and (3) and national law
+  cites:
+  - 32022L2555#art_036
+  reason: Whether the data are accurate and complete, and whether a verification procedure
+    is adequate, is a question of fact and of national implementation; this order
+    lists the duty to have the data and the procedures, not their quality.
+  consequence: The answers do not say whether a provider's data or procedures are
+    adequate.
+- what: national_access_procedures
+  instrument: national law of the Member States implementing Art 28(5)
+  cites:
+  - 32022L2555#art_036
+  reason: Who counts as a legitimate access seeker, what a duly substantiated request
+    must contain and what the disclosure procedure is are for national law; the Directive
+    requires Member States to make the procedures public and leaves their content
+    to them.
+  consequence: The answers give the Union requirement only; the country orders and
+    national law give the procedure.

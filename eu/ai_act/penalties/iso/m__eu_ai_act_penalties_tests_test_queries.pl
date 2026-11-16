@@ -1,0 +1,97 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_penalties_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(clpz)).
+:- use_module(m__eu_ai_act_penalties_queries, [penalties_profile_keys/1, penalties_what_if/4, no_union_maximum/0, set_by_member_state_rules/0, not_applicable_on_date/0, earlier_version_applies/0, no_commission_fine/0, fixed_amount/0, turnover_percentage/0, fine_maximum/2, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_ai_act_penalties_kernel, [penalties_input_problems/2]).
+:- use_module(m__eu_ai_act_penalties_penalties, [decide_penalties/2, penalties_status/2, penalties_checklist/2]).
+:- use_module(m__eu_ai_act_penalties_fixtures, [penalties_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    penalties_profile_keys(ProfileKeys),
+    ProfileKeys == [offender_category, infringement, offender_is_general_purpose_ai_model_provider, general_purpose_ai_model_infringement, provider_acted_intentionally_or_negligently, worldwide_annual_turnover_eur].
+test(the_input_check_gives_one_answer) :-
+    findall(Problems, penalties_input_problems([attribute(colour, red), attribute(infringement, prohibited_practice), attribute(infringement, other_infringement)], Problems), Answers),
+    Answers == [[duplicate_key(infringement), unknown_key(colour)]].
+test(the_status_of_a_capped_request) :-
+    penalties_profile_for(distributor_undertaking, Request),
+    findall(Status, penalties_status(Request, Status), Statuses),
+    Statuses == [union_maximum_determined].
+test(the_checklist_of_a_capped_request_carries_its_citations) :-
+    penalties_profile_for(small_mid_cap_deployer, Request),
+    findall(Items, penalties_checklist(Request, Items), Answers),
+    Answers == [[item(input_check, met, []), item(maximum, met, [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_e), cite(eu_reg_2024_1689_art_99_6a)])]].
+test(the_checklist_of_a_review_names_the_judgement) :-
+    penalties_profile_for(model_fine_intent_unsure, Request),
+    penalties_checklist(Request, Items),
+    Items == [item(input_check, met, []), item(maximum, unknown([provider_acted_intentionally_or_negligently]), [])].
+test(the_checklist_of_a_rejected_request_names_the_problems) :-
+    penalties_profile_for(duplicate_infringement_key, Request),
+    penalties_checklist(Request, Items),
+    Items == [item(input_check, unmet(input_problems([duplicate_key(infringement)])), []), item(maximum, unmet(input_rejected), [])].
+test(a_what_if_gives_one_answer) :-
+    penalties_profile_for(undertaking_provider_obligations_without_turnover, Request),
+    findall(Verdict, penalties_what_if(Request, worldwide_annual_turnover_eur, 1000000000, Verdict), Verdicts),
+    Verdicts == [penalties_verdict(union_maximum_determined, fine_maximum(3000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_a)])].
+test(a_what_if_with_a_bad_value_is_rejected) :-
+    penalties_profile_for(distributor_undertaking, Request),
+    penalties_what_if(Request, worldwide_annual_turnover_eur, -1, penalties_verdict(input_rejected, input_problems([wrong_type(worldwide_annual_turnover_eur)]), [])).
+test(an_sme_maximum_is_never_above_the_other_undertaking_maximum) :-
+    penalties_profile_for(small_or_medium_enterprise_notified_body, Request),
+    decide_penalties(Request, penalties_verdict(_, fine_maximum(SmallAmountEurCents, _), _)),
+    penalties_what_if(Request, offender_category, other_undertaking, penalties_verdict(_, fine_maximum(OtherAmountEurCents, _), _)),
+    SmallAmountEurCents #=< OtherAmountEurCents.
+test(the_model_fine_does_not_read_the_offender_category) :-
+    penalties_profile_for(model_fine_ignores_small_or_medium_category, Request),
+    decide_penalties(Request, Verdict),
+    findall(Hypothetical, penalties_what_if(Request, offender_category, other_undertaking, Hypothetical), Hypotheticals),
+    Hypotheticals == [Verdict].
+test(the_maximum_fine_does_not_read_the_model_keys) :-
+    penalties_profile_for(pinned_text_start_day, Request),
+    decide_penalties(Request, Verdict),
+    findall(Hypothetical, penalties_what_if(Request, offender_is_general_purpose_ai_model_provider, true, Hypothetical), Hypotheticals),
+    Hypotheticals == [Verdict].
+test(a_what_if_on_the_date_side_keeps_the_date) :-
+    penalties_profile_for(earlier_version_day_before_pinned_text, Request),
+    penalties_what_if(Request, offender_category, not_an_undertaking, penalties_verdict(no_union_maximum_determined, earlier_version_applies, [])).
+test(the_final_atoms_hold) :-
+    no_union_maximum,
+    set_by_member_state_rules,
+    not_applicable_on_date,
+    earlier_version_applies,
+    no_commission_fine,
+    fixed_amount,
+    turnover_percentage.
+test(the_constructors_recognise_their_shapes) :-
+    fine_maximum(75000000, fixed_amount),
+    indeterminate([worldwide_annual_turnover_eur]),
+    needs_legal_review(open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)), [inputs_relied_on([provider_acted_intentionally_or_negligently - unsure])]),
+    open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)),
+    inputs_relied_on([provider_acted_intentionally_or_negligently - unsure]),
+    provenance(commission_fault_route, [cite(eu_reg_2024_1689_art_101_1)]),
+    input_problems([unknown_key(colour)]),
+    unknown_key(colour),
+    wrong_type(profile),
+    duplicate_key(offender_category).
+
+test(a_well_formed_profile_is_not_rejected, fail) :-
+    penalties_input_problems([attribute(offender_category, other_undertaking)], [_|_]).
+test(the_checklist_of_a_capped_request_is_not_uncited, fail) :-
+    penalties_profile_for(small_mid_cap_deployer, Request),
+    penalties_checklist(Request, [_, item(maximum, met, [])]).
+test(an_indeterminate_with_two_keys_is_not_the_shape, fail) :-
+    indeterminate([offender_category, infringement]).
+test(an_empty_problem_list_is_not_input_problems, fail) :-
+    input_problems([]).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_input_check_gives_one_answer, the_status_of_a_capped_request, the_checklist_of_a_capped_request_carries_its_citations, the_checklist_of_a_review_names_the_judgement, the_checklist_of_a_rejected_request_names_the_problems, a_what_if_gives_one_answer, a_what_if_with_a_bad_value_is_rejected, an_sme_maximum_is_never_above_the_other_undertaking_maximum, the_model_fine_does_not_read_the_offender_category, the_maximum_fine_does_not_read_the_model_keys, a_what_if_on_the_date_side_keeps_the_date, the_final_atoms_hold, the_constructors_recognise_their_shapes]).
+cp_test_fail_names([a_well_formed_profile_is_not_rejected, the_checklist_of_a_capped_request_is_not_uncited, an_indeterminate_with_two_keys_is_not_the_shape, an_empty_problem_list_is_not_input_problems]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

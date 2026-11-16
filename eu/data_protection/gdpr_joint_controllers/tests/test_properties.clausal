@@ -1,0 +1,184 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the fixture
+% subjects and over a generated grid of every combination of key states
+% (4 x 3 x 3 x 4 = 144 well-formed profiles).
+% Totality + determinism: every profile yields exactly ONE answer per query.
+% Invariants: a not-final result carries no citation and no basis; a final
+% one carries citations from the query's vocabulary; entitled implies liable
+% for the entire damage; the parties are returned exactly as given; input
+% problems are reported alike by every query.
+% Run: python -m clausal.testing eu/data_protection/gdpr_joint_controllers/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_joint_controllers/gdpr_joint_controllers, [
+    decide_gdpr_joint_controllers/2,
+    rights_against_each_joint_controller/3,
+    liability_for_the_entire_damage/4,
+    recourse_after_full_compensation/4
+]).
+:- use_module(eu/data_protection/gdpr_joint_controllers/kernel, [gdpr_joint_controllers_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_joint_controllers/fixtures, [
+    gdpr_joint_controllers_subject/1,
+    gdpr_joint_controllers_profile_for/2
+]).
+
+fixture_profile(Profile) :-
+    gdpr_joint_controllers_subject(Subject),
+    gdpr_joint_controllers_profile_for(Subject, Profile).
+
+entries(_, absent, []).
+entries(Key, present(Value), [attribute(Key, Value)]).
+
+generated_profile(Profile) :-
+    member(Joint, [absent, present(true), present(false), present(unsure)]),
+    member(Statement, [absent, present(attested(true, attestation(registry_host, moment, stated_reason, none))), present(attested(false, attestation(registry_host, moment, stated_reason, url(statement_location, retrieved_moment))))]),
+    member(Parties, [absent, present([]), present([controller_b, processor_c])]),
+    member(Payment, [absent, present(true), present(false), present(unsure)]),
+    entries(controllers_jointly_determine_purposes_and_means, Joint, JointEntries),
+    entries(responsible_under_article_82_2_and_3, Statement, StatementEntries),
+    entries(other_responsible_parties, Parties, PartiesEntries),
+    entries(full_compensation_paid, Payment, PaymentEntries),
+    append([JointEntries, StatementEntries, PartiesEntries, PaymentEntries], Profile).
+
+any_profile(Profile) :-
+    fixture_profile(Profile).
+any_profile(Profile) :-
+    generated_profile(Profile).
+
+profile_total(Total) :-
+    findall(Profile, any_profile(Profile), Profiles),
+    length(Profiles, Total).
+
+facade_count(Profile, Count) :-
+    findall(Verdict, decide_gdpr_joint_controllers(Profile, Verdict), Verdicts),
+    length(Verdicts, Count).
+rights_count(Profile, Count) :-
+    findall(Result, rights_against_each_joint_controller(Profile, Result, _), Results),
+    length(Results, Count).
+liability_count(Profile, Count) :-
+    findall(Result, liability_for_the_entire_damage(Profile, Result, _, _), Results),
+    length(Results, Count).
+recourse_count(Profile, Count) :-
+    findall(Result, recourse_after_full_compensation(Profile, Result, _, _), Results),
+    length(Results, Count).
+
+result_finality(not_joint_controllers, final).
+result_finality(rights_exercisable_against_this_controller, final).
+result_finality(not_responsible_for_the_damage, final).
+result_finality(no_other_responsible_party, final).
+result_finality(liable_for_the_entire_damage, final).
+result_finality(not_entitled_to_claim_back, final).
+result_finality(entitled_to_claim_back(_), final).
+result_finality(indeterminate(_), not_final).
+result_finality(needs_legal_review(_, _), not_final).
+result_finality(input_problems(_), not_final).
+
+citations_shaped(Result, []) :-
+    result_finality(Result, not_final).
+citations_shaped(Result, [_|_]) :-
+    result_finality(Result, final).
+
+liability_basis_shaped(Result, []) :-
+    result_finality(Result, not_final).
+liability_basis_shaped(Result, [outside_fact(responsible_under_article_82_2_and_3, attested(_, attestation(_, _, _, _)))]) :-
+    result_finality(Result, final).
+
+recourse_basis_shaped(Result, []) :-
+    result_finality(Result, not_final).
+recourse_basis_shaped(not_entitled_to_claim_back, []).
+recourse_basis_shaped(Result, [outside_fact(responsible_under_article_82_2_and_3, attested(_, attestation(_, _, _, _)))]) :-
+    result_finality(Result, final).
+
+citations_within(Citations, Allowed) :-
+    subtract(Citations, Allowed, Outside),
+    Outside == [].
+
+same_term(Left-Right) :-
+    Left == Right.
+
+% ---- totality and determinism -------------------------------------------
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    findall(Subject, gdpr_joint_controllers_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject,
+            (gdpr_joint_controllers_subject(Subject), gdpr_joint_controllers_profile_for(Subject, Profile), decide_gdpr_joint_controllers(Profile, _)),
+            ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(the_grid_has_every_combination) :-
+    findall(Profile, generated_profile(Profile), Profiles),
+    length(Profiles, 144).
+test(facade_answers_exactly_once) :-
+    findall(Count, (any_profile(Profile), facade_count(Profile, Count)), Counts),
+    sort(Counts, [1]).
+test(rights_answers_exactly_once) :-
+    findall(Count, (any_profile(Profile), rights_count(Profile, Count)), Counts),
+    sort(Counts, [1]).
+test(liability_answers_exactly_once) :-
+    findall(Count, (any_profile(Profile), liability_count(Profile, Count)), Counts),
+    sort(Counts, [1]).
+test(recourse_answers_exactly_once) :-
+    findall(Count, (any_profile(Profile), recourse_count(Profile, Count)), Counts),
+    sort(Counts, [1]).
+test(input_check_answers_exactly_once) :-
+    findall(Count,
+            (any_profile(Profile), findall(Problems, gdpr_joint_controllers_input_problems(Profile, Problems), Answers), length(Answers, Count)),
+            Counts),
+    sort(Counts, [1]).
+
+% ---- shape invariants ---------------------------------------------------
+test(rights_citations_follow_finality) :-
+    profile_total(Total),
+    findall(Profile,
+            (any_profile(Profile), rights_against_each_joint_controller(Profile, Result, Citations), citations_shaped(Result, Citations), citations_within(Citations, [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)])),
+            Shaped),
+    length(Shaped, Total).
+test(liability_citations_and_basis_follow_finality) :-
+    profile_total(Total),
+    findall(Profile,
+            (any_profile(Profile), liability_for_the_entire_damage(Profile, Result, Basis, Citations), citations_shaped(Result, Citations), liability_basis_shaped(Result, Basis), citations_within(Citations, [cite(eu_reg_2016_679_art_82_4)])),
+            Shaped),
+    length(Shaped, Total).
+test(recourse_citations_and_basis_follow_finality) :-
+    profile_total(Total),
+    findall(Profile,
+            (any_profile(Profile), recourse_after_full_compensation(Profile, Result, Basis, Citations), citations_shaped(Result, Citations), recourse_basis_shaped(Result, Basis), citations_within(Citations, [cite(eu_reg_2016_679_art_82_4), cite(eu_reg_2016_679_art_82_5)])),
+            Shaped),
+    length(Shaped, Total).
+
+% ---- domain invariants --------------------------------------------------
+test(entitled_implies_liable_for_the_entire_damage) :-
+    findall(LiabilityResult,
+            (any_profile(Profile), recourse_after_full_compensation(Profile, entitled_to_claim_back(_), _, _), liability_for_the_entire_damage(Profile, LiabilityResult, _, _)),
+            LiabilityResults),
+    sort(LiabilityResults, [liable_for_the_entire_damage]).
+test(parties_returned_exactly_as_given) :-
+    findall(Parties-Given,
+            (any_profile(Profile), recourse_after_full_compensation(Profile, entitled_to_claim_back(Parties), _, _), member(attribute(other_responsible_parties, Given), Profile)),
+            Pairs),
+    Pairs = [_|_],
+    maplist(same_term, Pairs).
+test(basis_copies_the_attested_term) :-
+    findall(Copied-Given,
+            (any_profile(Profile), liability_for_the_entire_damage(Profile, _, [outside_fact(responsible_under_article_82_2_and_3, Copied)], _), member(attribute(responsible_under_article_82_2_and_3, Given), Profile)),
+            Pairs),
+    Pairs = [_|_],
+    maplist(same_term, Pairs).
+test(absent_statement_never_gives_a_final_liability) :-
+    findall(Result,
+            (generated_profile(Profile), member(attribute(other_responsible_parties, _), Profile), entries(responsible_under_article_82_2_and_3, absent, []), liability_for_the_entire_damage([attribute(full_compensation_paid, true)], Result, _, _)),
+            Results),
+    sort(Results, [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3-absent])])]).
+
+problems_agree(Subject) :-
+    gdpr_joint_controllers_profile_for(Subject, Profile),
+    gdpr_joint_controllers_input_problems(Profile, [Problem|Problems]),
+    rights_against_each_joint_controller(Profile, input_problems([Problem|Problems]), []),
+    liability_for_the_entire_damage(Profile, input_problems([Problem|Problems]), [], []),
+    recourse_after_full_compensation(Profile, input_problems([Problem|Problems]), [], []).
+
+test(input_problems_agree_across_queries) :-
+    maplist(problems_agree, [malformed_bare_statement, malformed_party_identifier, malformed_duplicate_payment]).
+
+:- end_module(test_properties).

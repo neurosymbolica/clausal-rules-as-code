@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 """The provenance-marker functor, and NOTHING ELSE.
 
 A LEAF MODULE ON PURPOSE: it imports nothing, so adding it to `auto/rerun.py`'s

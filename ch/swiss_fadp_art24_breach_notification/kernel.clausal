@@ -1,0 +1,288 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for ch/swiss_fadp_art24_breach_notification (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL: the slice
+% swiss_fadp_art24_breach_notification.clausal and queries.clausal.
+% The scaffold writes the order's input check
+% swiss_fadp_art24_breach_notification_input_problems/2 here, exported, for
+% every file to import.
+% deontic family: STATUS is a modal vocabulary (required / not_required /
+% may_be_restricted_deferred_or_omitted).
+%
+% Source (a reading, not a lawyer's; the German text is authoritative):
+%   Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation
+%   Stand 7 July 2025: Art 5 Bst. h (definition of Verletzung der
+%   Datensicherheit), Art 24 Abs. 1, 3, 4 and 5 (breach reporting and
+%   information of the data subject); Regulation (EU) 2016/679 Art 33(1)
+%   (comparison limb). The input check is typed against the order's
+%   input_contract and decides no article.
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% Result terms of the slice (the answer positions of the queries):
+%   RESULT (argument 2 of each limb query) is EITHER one final atom:
+%     authority_notification_required | authority_notification_not_required
+%       (swiss_controller_report_to_commissioner/3,
+%        eu_controller_notification_to_supervisory_authority/3)
+%     report_to_controller_required | report_to_controller_not_required
+%       (swiss_processor_report_to_controller/3)
+%     information_of_data_subject_required
+%     | information_of_data_subject_not_required
+%     | information_of_data_subject_may_be_restricted_deferred_or_omitted
+%       (swiss_information_of_data_subject/3)
+%   OR one status compound ITSELF (never in a list):
+%     indeterminate([Key])            -- one bare key atom, the first missing
+%                                        key in root_exports order;
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                     -- Pairs a flat list of Key-Value terms,
+%                                        the present input keys of the query in
+%                                        root_exports order (THE PAIRS RULE);
+%     input_problems(Problems)        -- Problems the non-empty list of
+%                                        duplicate_key/1, wrong_type/1 and
+%                                        unknown_key/1 terms.
+%   CITATIONS (argument 3) is a flat list of cite(Key); [] when not final.
+%   Comparison: compare_swiss_eu_authority_notification(Profile, SwissResult,
+%     EuResult, Difference, ChangedBy), Difference same | differs |
+%     not_comparable, ChangedBy a flat list of cite(Key).
+%   Facade headline verdict term:
+%     swiss_fadp_art24_breach_notification_verdict(status, citations)
+%
+% Key states read by the slice and queries (key_state/3):
+%   absent | true | false | unsure -- called only on a profile with no
+%   input problems, so each key occurs at most once and has one state.
+% =====================================================================
+
+:- module(kernel, [
+    swiss_fadp_art24_breach_notification_input_problems/2,
+    swiss_fadp_art24_breach_notification_contract_keys/1,
+    swiss_fadp_art24_breach_notification_key_state/3,
+    swiss_fadp_art24_breach_notification_first_key_in_state/4,
+    swiss_fadp_art24_breach_notification_pairs/3
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+
+% ---- the contract keys, in root_exports / input_contract order -----
+swiss_fadp_art24_breach_notification_contract_keys([
+    breach_of_data_security,
+    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights,
+    information_necessary_for_protection_of_data_subject,
+    commissioner_requested_information_of_data_subject,
+    article_26_ground_or_statutory_secrecy_obligation_applies,
+    information_impossible_or_requires_disproportionate_effort,
+    information_ensured_comparably_by_public_announcement,
+    personal_data_breach,
+    breach_unlikely_to_result_in_risk
+]).
+
+% ---- key states: absent, true, false or unsure ---------------------
+% swiss_fadp_art24_breach_notification_key_state(Profile, Key, State):
+% called only on a problem-free profile (each key at most once, each value
+% in its type), so exactly one clause holds. Profile plumbing: no marker.
+swiss_fadp_art24_breach_notification_key_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+swiss_fadp_art24_breach_notification_key_state(Profile, Key, State) :-
+    profile_get(Profile, Key, Value),
+    present_state(Value, State).
+
+present_state(true, true).
+present_state(false, false).
+present_state(unsure, unsure).
+
+% swiss_fadp_art24_breach_notification_first_key_in_state(Profile, Keys, State, Key):
+% Key is the first of the ordered Keys whose state is State; no solution
+% when none is. The two recursive clauses are disjoint on the state.
+swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|_], State, Key) :-
+    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State).
+swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|Keys], State, Found) :-
+    swiss_fadp_art24_breach_notification_key_state(Profile, Key, OtherState),
+    dif(OtherState, State),
+    swiss_fadp_art24_breach_notification_first_key_in_state(Profile, Keys, State, Found).
+
+% swiss_fadp_art24_breach_notification_pairs(Profile, InputKeys, Pairs): THE PAIRS RULE.
+% Key-Value for each key of InputKeys (given in root_exports order) that is
+% present in Profile, the unsure one included; an absent key is no pair.
+swiss_fadp_art24_breach_notification_pairs(_, [], []).
+swiss_fadp_art24_breach_notification_pairs(Profile, [Key|Keys], Pairs) :-
+    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State),
+    swiss_fadp_art24_breach_notification_pairs(Profile, Keys, LaterPairs),
+    pair_for_state(State, Key, LaterPairs, Pairs).
+
+pair_for_state(absent, _, Pairs, Pairs).
+pair_for_state(State, Key, Pairs, [Key-State|Pairs]) :-
+    dif(State, absent).
+
+% ---- input checks: the problems a profile has, if any -----------
+% swiss_fadp_art24_breach_notification_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+swiss_fadp_art24_breach_notification_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    swiss_fadp_art24_breach_notification_contract_keys(Keys),
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(breach_of_data_security, judgement).
+key_type(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, judgement).
+key_type(information_necessary_for_protection_of_data_subject, judgement).
+key_type(commissioner_requested_information_of_data_subject, boolean).
+key_type(article_26_ground_or_statutory_secrecy_obligation_applies, judgement).
+key_type(information_impossible_or_requires_disproportionate_effort, judgement).
+key_type(information_ensured_comparably_by_public_announcement, judgement).
+key_type(personal_data_breach, judgement).
+key_type(breach_unlikely_to_result_in_risk, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

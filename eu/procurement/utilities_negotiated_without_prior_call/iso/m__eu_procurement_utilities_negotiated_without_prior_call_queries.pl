@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_utilities_negotiated_without_prior_call_queries, [utilities_negotiated_without_prior_call_profile_keys/1, utilities_negotiated_without_prior_call_what_if/4]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

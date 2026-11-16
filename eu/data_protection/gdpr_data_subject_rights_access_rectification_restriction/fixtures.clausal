@@ -1,0 +1,57 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles (attribute lists) for the
+% access, rectification and restriction decisions, with near-miss controls.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_data_subject_rights_access_rectification_restriction_subject/1,
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for/2,
+    gdpr_data_subject_rights_access_rectification_restriction_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_data_subject_rights_access_rectification_restriction/request_basis, [decide_data_subject_request/2]).
+
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_plain).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_unfounded).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_not_unfounded).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_unfounded_unsure).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_unable_to_identify).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_restricted_by_law).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_identity_suspended).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_identity_confirmed).
+gdpr_data_subject_rights_access_rectification_restriction_subject(access_identity_unknown).
+gdpr_data_subject_rights_access_rectification_restriction_subject(rectification_inaccurate).
+gdpr_data_subject_rights_access_rectification_restriction_subject(rectification_incomplete).
+gdpr_data_subject_rights_access_rectification_restriction_subject(rectification_not_engaged).
+gdpr_data_subject_rights_access_rectification_restriction_subject(restriction_accuracy_contested).
+gdpr_data_subject_rights_access_rectification_restriction_subject(restriction_unlawful_opposed).
+gdpr_data_subject_rights_access_rectification_restriction_subject(restriction_objection_pending).
+gdpr_data_subject_rights_access_rectification_restriction_subject(restriction_not_engaged).
+gdpr_data_subject_rights_access_rectification_restriction_subject(restriction_verification_unknown).
+gdpr_data_subject_rights_access_rectification_restriction_subject(profile_with_unknown_key).
+
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_plain, [attribute(request_type, access)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_unfounded, [attribute(request_type, access), attribute(request_manifestly_unfounded_or_excessive, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_not_unfounded, [attribute(request_type, access), attribute(request_manifestly_unfounded_or_excessive, false)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_unfounded_unsure, [attribute(request_type, access), attribute(request_manifestly_unfounded_or_excessive, unsure)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_unable_to_identify, [attribute(request_type, access), attribute(controller_demonstrates_unable_to_identify_data_subject, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_restricted_by_law, [attribute(request_type, access), attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(host, at_time, legal_register, none)))]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_identity_suspended, [attribute(request_type, access), attribute(reasonable_doubts_about_identity, true), attribute(identity_confirmed, false)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_identity_confirmed, [attribute(request_type, access), attribute(reasonable_doubts_about_identity, true), attribute(identity_confirmed, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_identity_unknown, [attribute(request_type, access), attribute(reasonable_doubts_about_identity, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(rectification_inaccurate, [attribute(request_type, rectification), attribute(personal_data_inaccurate, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(rectification_incomplete, [attribute(request_type, rectification), attribute(personal_data_inaccurate, false), attribute(personal_data_incomplete_in_light_of_purposes, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(rectification_not_engaged, [attribute(request_type, rectification), attribute(personal_data_inaccurate, false), attribute(personal_data_incomplete_in_light_of_purposes, false)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_accuracy_contested, [attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_unlawful_opposed, [attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, false), attribute(personal_data_unlawfully_processed, true), attribute(data_subject_opposes_erasure, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_objection_pending, [attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, false), attribute(personal_data_unlawfully_processed, false), attribute(controller_no_longer_needs_data_for_processing_purposes, false), attribute(objection_under_art21_1_made, true), attribute(verification_of_overriding_grounds_pending, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_not_engaged, [attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, false), attribute(personal_data_unlawfully_processed, false), attribute(controller_no_longer_needs_data_for_processing_purposes, false), attribute(objection_under_art21_1_made, false)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(restriction_verification_unknown, [attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, false), attribute(personal_data_unlawfully_processed, false), attribute(controller_no_longer_needs_data_for_processing_purposes, false), attribute(objection_under_art21_1_made, true)]).
+gdpr_data_subject_rights_access_rectification_restriction_profile_for(profile_with_unknown_key, [attribute(request_type, access), attribute(not_a_contract_key, true)]).
+
+gdpr_data_subject_rights_access_rectification_restriction_assess(Subject, Result) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(Subject, Profile),
+    decide_data_subject_request(Profile, Result).
+
+:- end_module(fixtures).

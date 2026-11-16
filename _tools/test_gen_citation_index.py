@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: EUPL-1.2
 from _tools import gen_citation_index as gci
 
 def test_instrument_prefix():

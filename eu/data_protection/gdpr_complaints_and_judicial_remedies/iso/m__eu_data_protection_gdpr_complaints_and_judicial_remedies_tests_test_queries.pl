@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_queries, [gdpr_complaints_and_judicial_remedies_profile_keys/1, gdpr_complaints_and_judicial_remedies_what_if/4, gdpr_complaints_and_judicial_remedies_eligibility/4, is_data_subject/0, authority_competent_under_articles_55_and_56/0, unsure/0, indeterminate/1, needs_legal_review/2, provenance/2, outside_fact/2, attested/2, url/2, document/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_kernel, [gdpr_complaints_and_judicial_remedies_input_problems/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_complaints_and_judicial_remedies_profile_keys(ProfileKeys),
+    ProfileKeys == [is_data_subject, data_subject_considers_processing_infringes_regulation, decision_is_legally_binding, decision_concerns_the_caller, complaint_lodged_under_article_77, authority_competent_under_articles_55_and_56, authority_handled_the_complaint, three_months_from_the_complaint_have_passed, authority_informed_on_progress_or_outcome, data_subject_considers_rights_infringed_by_processing, defendant_is_member_state_public_authority_acting_in_public_powers].
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
+test(the_root_atoms_are_served) :-
+    is_data_subject,
+    authority_competent_under_articles_55_and_56,
+    unsure.
+test(what_if_the_baseline_is_available) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)], decision_is_legally_binding, true, remedy_available).
+test(what_if_a_false_concern_takes_the_remedy_away) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)], decision_concerns_the_caller, false, remedy_open).
+test(what_if_a_wrong_typed_value_is_an_input_problem) :-
+    gdpr_complaints_and_judicial_remedies_what_if([], is_data_subject, unsure, input_problems([wrong_type(is_data_subject)])).
+test(what_if_has_one_answer) :-
+    findall(Status, gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true)], data_subject_considers_processing_infringes_regulation, true, Status), Statuses),
+    Statuses == [remedy_available].
+test(eligibility_complaint_right_eligible) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(complaint_right, [attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, true)], eligible, [cite(eu_reg_2016_679_art_77_1)]).
+test(eligibility_decision_remedy_ineligible) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(authority_decision_remedy_right, [attribute(decision_is_legally_binding, false)], ineligible, [cite(eu_reg_2016_679_art_78_1)]).
+test(eligibility_inaction_remedy_eligible) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right, [attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, false)], eligible, [cite(eu_reg_2016_679_art_78_2)]).
+test(eligibility_judicial_remedy_eligible) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right, [attribute(is_data_subject, true), attribute(data_subject_considers_rights_infringed_by_processing, true)], eligible, [cite(eu_reg_2016_679_art_79_1)]).
+test(eligibility_input_problems_are_indeterminate_eligibility) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(complaint_right, not_a_profile, indeterminate_eligibility, []).
+test(eligibility_a_missing_key_is_indeterminate_eligibility) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right, [], indeterminate_eligibility, []).
+test(eligibility_inaction_has_one_answer) :-
+    findall(Label - Citations, gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right, [attribute(is_data_subject, false)], Label, Citations), Answers),
+    Answers == [ineligible - [cite(eu_reg_2016_679_art_78_2)]].
+test(recogniser_indeterminate_names_one_contract_key) :-
+    indeterminate([complaint_lodged_under_article_77]).
+test(recogniser_needs_legal_review_open_textured) :-
+    needs_legal_review(open_textured(decision_concerns_the_caller, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - true, decision_concerns_the_caller - unsure])]).
+test(recogniser_needs_legal_review_cross_reference) :-
+    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56 - absent])]).
+test(recogniser_provenance) :-
+    provenance(host_attestation_service, register_lookup).
+test(recogniser_outside_fact) :-
+    outside_fact(authority_competent_under_articles_55_and_56, attested(false, attestation(host, at, reason, none))).
+test(recogniser_attested_true) :-
+    attested(true, attestation(host, at, reason, url('https://example.org/competence', '2026-11-12'))).
+test(recogniser_url) :-
+    url('https://example.org/competence', '2026-11-12').
+test(recogniser_document) :-
+    document(upload_0001, sha256_digest).
+test(recogniser_input_problems) :-
+    input_problems([wrong_type(profile)]).
+test(recogniser_unknown_key) :-
+    unknown_key(colour).
+test(recogniser_wrong_type) :-
+    wrong_type(decision_is_legally_binding).
+test(recogniser_duplicate_key) :-
+    duplicate_key(authority_handled_the_complaint).
+
+test(what_if_a_false_concern_is_not_available, fail) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)], decision_concerns_the_caller, false, remedy_available).
+test(eligibility_the_forum_is_not_an_eligibility, fail) :-
+    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_forum, [attribute(defendant_is_member_state_public_authority_acting_in_public_powers, true)], _, _).
+test(recogniser_indeterminate_refuses_an_unknown_key, fail) :-
+    indeterminate([colour]).
+test(recogniser_needs_legal_review_refuses_an_empty_context, fail) :-
+    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), []).
+test(recogniser_outside_fact_refuses_another_key, fail) :-
+    outside_fact(is_data_subject, attested(false, attestation(host, at, reason, none))).
+test(recogniser_attested_refuses_unsure, fail) :-
+    attested(unsure, attestation(host, at, reason, none)).
+test(recogniser_input_problems_refuses_an_empty_list, fail) :-
+    input_problems([]).
+test(recogniser_unknown_key_refuses_a_contract_key, fail) :-
+    unknown_key(decision_concerns_the_caller).
+test(recogniser_wrong_type_refuses_an_unknown_key, fail) :-
+    wrong_type(colour).
+test(recogniser_duplicate_key_refuses_the_profile, fail) :-
+    duplicate_key(profile).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_re_exported_input_check_names_an_unknown_key, the_root_atoms_are_served, what_if_the_baseline_is_available, what_if_a_false_concern_takes_the_remedy_away, what_if_a_wrong_typed_value_is_an_input_problem, what_if_has_one_answer, eligibility_complaint_right_eligible, eligibility_decision_remedy_ineligible, eligibility_inaction_remedy_eligible, eligibility_judicial_remedy_eligible, eligibility_input_problems_are_indeterminate_eligibility, eligibility_a_missing_key_is_indeterminate_eligibility, eligibility_inaction_has_one_answer, recogniser_indeterminate_names_one_contract_key, recogniser_needs_legal_review_open_textured, recogniser_needs_legal_review_cross_reference, recogniser_provenance, recogniser_outside_fact, recogniser_attested_true, recogniser_url, recogniser_document, recogniser_input_problems, recogniser_unknown_key, recogniser_wrong_type, recogniser_duplicate_key]).
+cp_test_fail_names([what_if_a_false_concern_is_not_available, eligibility_the_forum_is_not_an_eligibility, recogniser_indeterminate_refuses_an_unknown_key, recogniser_needs_legal_review_refuses_an_empty_context, recogniser_outside_fact_refuses_another_key, recogniser_attested_refuses_unsure, recogniser_input_problems_refuses_an_empty_list, recogniser_unknown_key_refuses_a_contract_key, recogniser_wrong_type_refuses_an_unknown_key, recogniser_duplicate_key_refuses_the_profile]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

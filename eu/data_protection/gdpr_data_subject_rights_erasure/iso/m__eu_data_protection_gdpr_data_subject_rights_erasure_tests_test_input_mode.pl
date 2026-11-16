@@ -1,0 +1,78 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_erasure_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_queries, [decide_data_subject_request/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_kernel, [gdpr_data_subject_rights_erasure_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_erasure_fixtures, [gdpr_data_subject_rights_erasure_profile_for/2]).
+
+test(must_comply_holds_with_the_whole_verdict_bound) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(must_comply, art17_1_a, none, [], [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_a)])).
+test(a_relief_holds_with_the_exception_bound) :-
+    gdpr_data_subject_rights_erasure_profile_for(need_not_comply_freedom_of_expression, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(need_not_comply, art17_1_a, art17_3_a, [], _)).
+test(the_suspension_holds_with_the_status_bound) :-
+    gdpr_data_subject_rights_erasure_profile_for(suspended_identity_not_confirmed, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])).
+test(a_term_that_is_not_a_list_is_an_input_problem) :-
+    findall(Verdict, decide_data_subject_request(not_a_profile, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(input_problems([wrong_type(profile)]), none, none, [], [])].
+test(an_unbound_profile_is_an_input_problem) :-
+    findall(Verdict, decide_data_subject_request(_, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(input_problems([wrong_type(profile)]), none, none, [], [])].
+test(a_list_of_pairs_is_not_an_attribute_list) :-
+    gdpr_data_subject_rights_erasure_input_problems([request_type - erasure], [wrong_type(profile)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    findall(Problems, gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure), attribute(colour, blue), attribute(colour, red)], Problems), ProblemLists),
+    ProblemLists == [[unknown_key(colour)]].
+test(a_crisp_flag_given_unsure_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure), attribute(consent_withdrawn, unsure)], [wrong_type(consent_withdrawn)]).
+test(wrong_types_come_before_unknown_keys) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(colour, blue), attribute(request_type, erasure), attribute(consent_withdrawn, unsure)], [wrong_type(consent_withdrawn), unknown_key(colour)]).
+test(a_request_type_outside_the_enum_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, deletion)], [wrong_type(request_type)]).
+test(a_bare_outside_fact_value_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure), attribute(legislative_restriction_applies_to_the_right, true)], [wrong_type(legislative_restriction_applies_to_the_right)]).
+test(an_impossible_calendar_date_is_wrong_type) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure), attribute(request_received_on, date(2026, 2, 30))], [wrong_type(request_received_on)]).
+test(a_valid_date_is_accepted_and_ignored) :-
+    findall(Verdict, decide_data_subject_request([attribute(request_type, erasure), attribute(data_no_longer_necessary_for_purposes, true), attribute(request_received_on, date(2026, 2, 28))], Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_request_verdict(must_comply, art17_1_a, none, [], [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_a)])].
+test(a_duplicate_key_is_never_also_wrong_type) :-
+    gdpr_data_subject_rights_erasure_input_problems([attribute(request_type, erasure), attribute(consent_withdrawn, yes), attribute(consent_withdrawn, true)], [duplicate_key(consent_withdrawn)]).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_consent_withdrawn, Profile),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []).
+test(an_unread_key_does_not_change_the_answer) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    decide_data_subject_request(Profile, Verdict),
+    findall(OtherVerdict, decide_data_subject_request([attribute(personal_data_inaccurate, true)|Profile], OtherVerdict), OtherVerdicts),
+    OtherVerdicts == [Verdict].
+test(the_entry_order_does_not_change_the_answer) :-
+    gdpr_data_subject_rights_erasure_profile_for(needs_legal_review_erasure_law_unattested, Profile),
+    decide_data_subject_request(Profile, Verdict),
+    reverse(Profile, ReversedProfile),
+    findall(OtherVerdict, decide_data_subject_request(ReversedProfile, OtherVerdict), OtherVerdicts),
+    OtherVerdicts == [Verdict].
+
+test(the_wrong_bound_comply_is_rejected, fail) :-
+    gdpr_data_subject_rights_erasure_profile_for(must_comply_no_longer_necessary, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(need_not_comply, _, _, _, _)).
+test(the_wrong_bound_exception_is_rejected, fail) :-
+    gdpr_data_subject_rights_erasure_profile_for(need_not_comply_freedom_of_expression, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(_, _, art17_3_b, _, _)).
+test(the_suspension_is_not_a_relief, fail) :-
+    gdpr_data_subject_rights_erasure_profile_for(suspended_identity_not_confirmed, Profile),
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(need_not_comply, _, _, _, _)).
+
+cp_test_names([must_comply_holds_with_the_whole_verdict_bound, a_relief_holds_with_the_exception_bound, the_suspension_holds_with_the_status_bound, a_term_that_is_not_a_list_is_an_input_problem, an_unbound_profile_is_an_input_problem, a_list_of_pairs_is_not_an_attribute_list, a_repeated_unknown_key_is_named_once, a_crisp_flag_given_unsure_is_wrong_type, wrong_types_come_before_unknown_keys, a_request_type_outside_the_enum_is_wrong_type, a_bare_outside_fact_value_is_wrong_type, an_impossible_calendar_date_is_wrong_type, a_valid_date_is_accepted_and_ignored, a_duplicate_key_is_never_also_wrong_type, a_well_formed_profile_has_no_problem, an_unread_key_does_not_change_the_answer, the_entry_order_does_not_change_the_answer]).
+cp_test_fail_names([the_wrong_bound_comply_is_rejected, the_wrong_bound_exception_is_rejected, the_suspension_is_not_a_relief]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,312 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_automated_decision_request_basis, [decide_data_subject_request/2, request_basis/2, decide_request_basis/2, request_basis_status/2, request_basis_checklist/2, request_basis_decision_resolvable/1, request_basis_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_automated_decision_kernel, [gdpr_data_subject_rights_automated_decision_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_automated_decision_citations, [implements/1]).
+
+request_basis_status_values([art22_1, none]).
+
+exception_names([art22_2_a, art22_2_b, art22_2_c, art12_5_manifestly_unfounded_or_excessive, art12_2_unable_to_identify, art23_legislative_restriction]).
+
+exception_conditions(art22_2_a, [human_intervention, express_point_of_view, contest_decision]).
+exception_conditions(art22_2_b, []).
+exception_conditions(art22_2_c, [human_intervention, express_point_of_view, contest_decision]).
+exception_conditions(art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged]).
+exception_conditions(art12_2_unable_to_identify, []).
+exception_conditions(art23_legislative_restriction, []).
+
+exception_citations(art22_2_a, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_3)]).
+exception_citations(art22_2_b, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_b)]).
+exception_citations(art22_2_c, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_c), cite(eu_reg_2016_679_art_22_3)]).
+exception_citations(art12_5_manifestly_unfounded_or_excessive, [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_22_1)]).
+exception_citations(art12_2_unable_to_identify, [cite(eu_reg_2016_679_art_12_2), cite(eu_reg_2016_679_art_22_1)]).
+exception_citations(art23_legislative_restriction, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_23_1)]).
+
+limb_judgements(engagement, [decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects]).
+limb_judgements(suspension, [reasonable_doubts_about_identity]).
+limb_judgements(special_category_bar, []).
+limb_judgements(art22_2_a, [decision_necessary_for_contract_with_data_subject]).
+limb_judgements(art22_2_b, []).
+limb_judgements(art22_2_c, []).
+limb_judgements(art12_5_manifestly_unfounded_or_excessive, [request_manifestly_unfounded_or_excessive]).
+limb_judgements(art12_2_unable_to_identify, []).
+limb_judgements(art23_legislative_restriction, []).
+
+limb_citation(engagement, cite(eu_reg_2016_679_art_22_1)).
+limb_citation(suspension, cite(eu_reg_2016_679_art_12_6)).
+limb_citation(special_category_bar, cite(eu_reg_2016_679_art_22_4)).
+limb_citation(art22_2_a, cite(eu_reg_2016_679_art_22_2_a)).
+limb_citation(art22_2_b, cite(eu_reg_2016_679_art_22_2_b)).
+limb_citation(art22_2_c, cite(eu_reg_2016_679_art_22_2_c)).
+limb_citation(art12_5_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)).
+limb_citation(art12_2_unable_to_identify, cite(eu_reg_2016_679_art_12_2)).
+limb_citation(art23_legislative_restriction, cite(eu_reg_2016_679_art_23_1)).
+
+referral_citation(decision_based_solely_on_automated_processing, eu_reg_2016_679_art_22_1).
+referral_citation(decision_produces_legal_or_similarly_significant_effects, eu_reg_2016_679_art_22_1).
+referral_citation(decision_necessary_for_contract_with_data_subject, eu_reg_2016_679_art_22_2_a).
+referral_citation(reasonable_doubts_about_identity, eu_reg_2016_679_art_12_6).
+referral_citation(request_manifestly_unfounded_or_excessive, eu_reg_2016_679_art_12_5).
+
+read_key_order([identity_confirmed, special_category_condition_and_safeguards_met_for_decision, reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects, decision_necessary_for_contract_with_data_subject]).
+
+judgement_key_order([reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects, decision_necessary_for_contract_with_data_subject]).
+
+key_status(Profile, Key, _, met) :-
+    profile_get(Profile, Key, true).
+key_status(Profile, Key, _, unmet) :-
+    profile_get(Profile, Key, false).
+key_status(Profile, Key, _, open([], [Key])) :-
+    profile_get(Profile, Key, unsure).
+key_status(Profile, Key, required, open([Key], [])) :-
+    profile_lacks(Profile, Key).
+key_status(Profile, Key, defeater, unmet) :-
+    profile_lacks(Profile, Key).
+
+outside_status(Profile, Key, met) :-
+    profile_get(Profile, Key, attested(true, _)).
+outside_status(Profile, Key, unmet) :-
+    profile_get(Profile, Key, attested(false, _)).
+outside_status(Profile, Key, unmet) :-
+    profile_lacks(Profile, Key).
+
+negated(met, unmet).
+negated(unmet, met).
+negated(open(Absent, Unsure), open(Absent, Unsure)).
+
+conjoined(unmet, _, unmet).
+conjoined(met, Status, Status).
+conjoined(open(_, _), unmet, unmet).
+conjoined(open(Absent, Unsure), met, open(Absent, Unsure)).
+conjoined(open(AbsentFirst, UnsureFirst), open(AbsentSecond, UnsureSecond), open(Absent, Unsure)) :-
+    append(AbsentFirst, AbsentSecond, Absent),
+    append(UnsureFirst, UnsureSecond, Unsure).
+
+engagement(Profile, Status) :-
+    implements(eu_reg_2016_679_art_22_1),
+    key_status(Profile, decision_based_solely_on_automated_processing, required, Solely),
+    key_status(Profile, decision_produces_legal_or_similarly_significant_effects, required, Effects),
+    conjoined(Solely, Effects, Status).
+
+suspension(Profile, Status) :-
+    implements(eu_reg_2016_679_art_12_6),
+    key_status(Profile, reasonable_doubts_about_identity, defeater, Doubts),
+    key_status(Profile, identity_confirmed, required, Confirmed),
+    negated(Confirmed, NotConfirmed),
+    conjoined(Doubts, NotConfirmed, Status).
+
+special_category_bar(Profile, Status) :-
+    implements(eu_reg_2016_679_art_22_4),
+    key_status(Profile, decision_based_on_special_categories, defeater, Special),
+    key_status(Profile, special_category_condition_and_safeguards_met_for_decision, required, Condition),
+    negated(Condition, ConditionNotMet),
+    conjoined(Special, ConditionNotMet, Status).
+
+exception_status(art22_2_a, Profile, Status) :-
+    implements(eu_reg_2016_679_art_22_2_a),
+    key_status(Profile, decision_necessary_for_contract_with_data_subject, defeater, Necessary),
+    special_category_bar(Profile, Bar),
+    negated(Bar, NoBar),
+    conjoined(Necessary, NoBar, Status).
+exception_status(art22_2_b, Profile, Status) :-
+    implements(eu_reg_2016_679_art_22_2_b),
+    outside_status(Profile, decision_authorised_by_union_or_member_state_law, Authorised),
+    special_category_bar(Profile, Bar),
+    negated(Bar, NoBar),
+    conjoined(Authorised, NoBar, Status).
+exception_status(art22_2_c, Profile, Status) :-
+    implements(eu_reg_2016_679_art_22_2_c),
+    key_status(Profile, data_subject_gave_explicit_consent, defeater, Consent),
+    special_category_bar(Profile, Bar),
+    negated(Bar, NoBar),
+    conjoined(Consent, NoBar, Status).
+exception_status(art12_5_manifestly_unfounded_or_excessive, Profile, Status) :-
+    implements(eu_reg_2016_679_art_12_5),
+    key_status(Profile, request_manifestly_unfounded_or_excessive, defeater, Status).
+exception_status(art12_2_unable_to_identify, Profile, Status) :-
+    implements(eu_reg_2016_679_art_12_2),
+    key_status(Profile, controller_demonstrates_unable_to_identify_data_subject, defeater, Status).
+exception_status(art23_legislative_restriction, Profile, Status) :-
+    implements(eu_reg_2016_679_art_23_1),
+    outside_status(Profile, legislative_restriction_applies_to_the_right, Status).
+
+exception_limbs(Profile, Limbs) :-
+    exception_names(Names),
+    exception_limbs_for(Names, Profile, Limbs).
+
+exception_limbs_for([], _, []).
+exception_limbs_for([Name|Names], Profile, [limb(Name, Status)|Limbs]) :-
+    exception_status(Name, Profile, Status),
+    exception_limbs_for(Names, Profile, Limbs).
+
+first_met([], none).
+first_met([limb(Name, met)|_], Name).
+first_met([limb(_, unmet)|Remaining], Name) :-
+    first_met(Remaining, Name).
+first_met([limb(_, open(_, _))|Remaining], Name) :-
+    first_met(Remaining, Name).
+
+status_kind(met, met).
+status_kind(unmet, unmet).
+status_kind(open(_, _), open).
+
+basis_of(met, art22_1).
+basis_of(open, none).
+
+any_open([], false).
+any_open([limb(_, open(_, _))|_], true).
+any_open([limb(_, met)|Remaining], Flag) :-
+    any_open(Remaining, Flag).
+any_open([limb(_, unmet)|Remaining], Flag) :-
+    any_open(Remaining, Flag).
+
+collect_absent([], []).
+collect_absent([limb(_, open(Absent, _))|Remaining], Keys) :-
+    collect_absent(Remaining, RemainingKeys),
+    append(Absent, RemainingKeys, Keys).
+collect_absent([limb(_, met)|Remaining], Keys) :-
+    collect_absent(Remaining, Keys).
+collect_absent([limb(_, unmet)|Remaining], Keys) :-
+    collect_absent(Remaining, Keys).
+
+collect_unsure([], []).
+collect_unsure([limb(_, open(_, Unsure))|Remaining], Keys) :-
+    collect_unsure(Remaining, RemainingKeys),
+    append(Unsure, RemainingKeys, Keys).
+collect_unsure([limb(_, met)|Remaining], Keys) :-
+    collect_unsure(Remaining, Keys).
+collect_unsure([limb(_, unmet)|Remaining], Keys) :-
+    collect_unsure(Remaining, Keys).
+
+collect_reads([], []).
+collect_reads([limb(LimbName, open(_, _))|Remaining], Keys) :-
+    limb_judgements(LimbName, OwnKeys),
+    collect_reads(Remaining, RemainingKeys),
+    append(OwnKeys, RemainingKeys, Keys).
+collect_reads([limb(_, met)|Remaining], Keys) :-
+    collect_reads(Remaining, Keys).
+collect_reads([limb(_, unmet)|Remaining], Keys) :-
+    collect_reads(Remaining, Keys).
+
+ordered_keys([], _, []).
+ordered_keys([Key|Order], Keys, Ordered) :-
+    memberd_t(Key, Keys, Present),
+    ordered_keys_step(Present, Key, Order, Keys, Ordered).
+
+ordered_keys_step(true, Key, Order, Keys, [Key|Ordered]) :-
+    ordered_keys(Order, Keys, Ordered).
+ordered_keys_step(false, _, Order, Keys, Ordered) :-
+    ordered_keys(Order, Keys, Ordered).
+
+pairs_for([], _, []).
+pairs_for([Key|Keys], Profile, [Key - Value|Pairs]) :-
+    profile_get(Profile, Key, Value),
+    pairs_for(Keys, Profile, Pairs).
+pairs_for([Key|Keys], Profile, Pairs) :-
+    profile_lacks(Profile, Key),
+    pairs_for(Keys, Profile, Pairs).
+
+decide_data_subject_request(Profile, Verdict) :-
+    gdpr_data_subject_rights_automated_decision_input_problems(Profile, Problems),
+    decide_checked(Problems, Profile, Verdict).
+
+decide_checked([Problem|Problems], _, gdpr_data_subject_request_verdict(input_problems([Problem|Problems]), none, none, [], [])).
+decide_checked([], Profile, gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])) :-
+    profile_lacks(Profile, request_type).
+decide_checked([], Profile, Verdict) :-
+    profile_get(Profile, request_type, RequestType),
+    decide_for_type(RequestType, Profile, Verdict).
+
+decide_for_type(RequestType, Profile, Verdict) :-
+    engagement(Profile, Engagement),
+    suspension(Profile, Suspension),
+    exception_limbs(Profile, ExceptionLimbs),
+    first_met(ExceptionLimbs, Exception),
+    Limbs = [limb(engagement, Engagement), limb(suspension, Suspension)|ExceptionLimbs],
+    status_kind(Engagement, EngagementKind),
+    status_kind(Suspension, SuspensionKind),
+    any_open(Limbs, AnyOpen),
+    assemble(EngagementKind, Exception, SuspensionKind, AnyOpen, RequestType, Limbs, Profile, Verdict).
+
+assemble(unmet, _, _, _, _, _, _, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [cite(eu_reg_2016_679_art_22_1)])) :-
+    implements(eu_reg_2016_679_art_22_1).
+assemble(EngagementKind, Exception, _, _, _, _, _, gdpr_data_subject_request_verdict(need_not_comply, Basis, Exception, Conditions, Citations)) :-
+    implements(eu_reg_2016_679_art_22_1),
+    dif(EngagementKind, unmet),
+    dif(Exception, none),
+    basis_of(EngagementKind, Basis),
+    exception_conditions(Exception, Conditions),
+    exception_citations(Exception, Citations).
+assemble(EngagementKind, none, met, _, _, _, _, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])) :-
+    implements(eu_reg_2016_679_art_12_6),
+    dif(EngagementKind, unmet).
+assemble(EngagementKind, none, SuspensionKind, true, RequestType, Limbs, Profile, Verdict) :-
+    implements(eu_reg_2016_679_art_22_1),
+    dif(EngagementKind, unmet),
+    dif(SuspensionKind, met),
+    referral(Limbs, Profile, RequestType, Verdict).
+assemble(met, none, unmet, false, _, _, _, gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], [cite(eu_reg_2016_679_art_22_1)])) :-
+    implements(eu_reg_2016_679_art_22_1).
+
+referral(Limbs, Profile, RequestType, Verdict) :-
+    collect_absent(Limbs, AbsentKeys),
+    read_key_order(Order),
+    ordered_keys(Order, AbsentKeys, MissingKeys),
+    referral_for(MissingKeys, Limbs, Profile, RequestType, Verdict).
+
+referral_for([Key|Keys], _, _, _, gdpr_data_subject_request_verdict(indeterminate([Key|Keys]), none, none, [], [])).
+referral_for([], Limbs, Profile, RequestType, gdpr_data_subject_request_verdict(needs_legal_review(open_textured(Input, cite(Citation)), [inputs_relied_on(Pairs)]), none, none, [], [])) :-
+    collect_unsure(Limbs, UnsureKeys),
+    read_key_order(Order),
+    ordered_keys(Order, UnsureKeys, [Input|_]),
+    referral_citation(Input, Citation),
+    collect_reads(Limbs, ReadKeys),
+    judgement_key_order(JudgementOrder),
+    ordered_keys(JudgementOrder, ReadKeys, ReliedKeys),
+    pairs_for(ReliedKeys, Profile, JudgementPairs),
+    Pairs = [request_type - RequestType|JudgementPairs].
+
+request_basis(Profile, Basis) :-
+    gdpr_data_subject_rights_automated_decision_input_problems(Profile, Problems),
+    basis_checked(Problems, Profile, Basis).
+
+basis_checked([Problem|Problems], _, input_problems([Problem|Problems])).
+basis_checked([], Profile, Basis) :-
+    decide_checked([], Profile, gdpr_data_subject_request_verdict(_, Basis, _, _, _)).
+
+decide_request_basis(Profile, request_basis_verdict(Basis, Citations)) :-
+    decide_data_subject_request(Profile, gdpr_data_subject_request_verdict(_, Basis, _, _, Citations)).
+
+request_basis_status(Profile, Basis) :-
+    decide_request_basis(Profile, request_basis_verdict(Basis, _)).
+
+request_basis_decision_resolvable(Profile) :-
+    decide_request_basis(Profile, _).
+
+request_basis_checklist(Profile, Items) :-
+    gdpr_data_subject_rights_automated_decision_input_problems(Profile, Problems),
+    checklist_for(Problems, Profile, Items).
+
+checklist_for([_|_], _, [item(input_check, unmet, cite(eu_reg_2016_679_art_22_1))]).
+checklist_for([], Profile, Items) :-
+    engagement(Profile, Engagement),
+    suspension(Profile, Suspension),
+    special_category_bar(Profile, Bar),
+    exception_limbs(Profile, ExceptionLimbs),
+    limbs_items([limb(engagement, Engagement), limb(suspension, Suspension), limb(special_category_bar, Bar)|ExceptionLimbs], Items).
+
+limbs_items([], []).
+limbs_items([limb(LimbName, Status)|Limbs], [item(LimbName, ItemStatus, Citation)|Items]) :-
+    item_status(Status, ItemStatus),
+    limb_citation(LimbName, Citation),
+    limbs_items(Limbs, Items).
+
+item_status(met, met).
+item_status(unmet, unmet).
+item_status(open(Absent, Unsure), unknown(Keys)) :-
+    append(Absent, Unsure, Keys).

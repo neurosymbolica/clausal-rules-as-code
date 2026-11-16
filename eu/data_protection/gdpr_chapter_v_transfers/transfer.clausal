@@ -1,0 +1,253 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% transfer.clausal -- the "transfer" DETERMINATION for eu/data_protection/gdpr_chapter_v_transfers,
+% self-contained top to bottom: its value rows, its verdict assembly from
+% the shared Chapter V cascade, its outside-fact record, its legacy
+% projections, its checklist and its per-rule tests.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), Chapter V, pinned consolidated
+% text 02016R0679-20160504 (in force from 2016-05-04):
+%   Art 44 [art_044]: a transfer 'shall take place only if' the conditions
+%     of the Chapter are complied with (the frame of every verdict);
+%   Art 45(1), 45(3), 45(8) [parag_045.001, parag_045.003, parag_045.008]:
+%     the adequacy outside fact and its cross reference;
+%   Art 46, 47(1), 48, 49 [parag_046.001, parag_047.001, art_048,
+%     parag_049.001]: decided in the kernel cascade, read here.
+%
+% decide_transfer(Profile, Verdict): Verdict is eligible | ineligible |
+%   indeterminate(MissingKeys) | needs_legal_review(Reason, Context) |
+%   input_problems(Problems). The bare atom indeterminate is NEVER written.
+% THE PAIRS RULE: derogation_claimed-Value first when present, then, in
+%   root_exports order, adequacy_decision_in_force-absent when that fact is
+%   absent, then the present judgements the ending stage read (the kernel
+%   gives them in root_exports order). The four further outside facts are
+%   never pairs.
+% Input problems come FIRST: every relation answers the order's value for
+% a profile with problems.
+% lint: allow-abbreviation spec-mandated atom (art49_1_second_subpara, eu_reg_2016_679_art_49_1_second_subpara)
+% =====================================================================
+
+:- module(transfer, [
+    decide_transfer/2,
+    transfer_status/2,
+    transfer_permitted/2,
+    transfer_verdict/3,
+    transfer_checklist/2,
+    transfer_requirement/4,
+    transfer_requirement_ids/1,
+    transfer_outside_facts/2,
+    transfer_decision_resolvable/1,
+    transfer_status_values/1
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/kernel, [gdpr_chapter_v_transfers_input_problems/2, gdpr_chapter_v_transfers_cascade/5]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/citations, [implements/1]).
+
+% ---- value rows owned by this determination ---------------------------
+% The final verdict vocabulary (the compounds are statuses, never bare).
+transfer_status_values([eligible, ineligible]).
+
+% The cascade requirements, in cascade order, each with the provision that
+% states its stage (reading 1).
+requirement_row(art45_adequacy, cite(eu_reg_2016_679_art_45_1)).
+requirement_row(art46_safeguards, cite(eu_reg_2016_679_art_46_1)).
+requirement_row(art49_derogation, cite(eu_reg_2016_679_art_49_1)).
+
+% The four further outside facts, in root_exports order, each with the
+% provision it records (readings 5 to 7). Only RECORDED here.
+further_outside_fact_rows([
+    row(transfer_is_onward_transfer, cite(eu_reg_2016_679_art_44)),
+    row(binding_corporate_rules_approved, cite(eu_reg_2016_679_art_47_1)),
+    row(third_country_judgment_or_decision_requires_transfer, cite(eu_reg_2016_679_art_48)),
+    row(international_agreement_basis_for_judgment_or_decision, cite(eu_reg_2016_679_art_48))
+]).
+
+% ---- the determination: requirement that ended it, and its verdict ----
+% Exactly one solution per Profile: the input check gives one answer, and
+% for a clean profile the cascade gives one answer.
+transfer_determination(Profile, none, input_problems([Problem|Problems])) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, [Problem|Problems]).
+transfer_determination(Profile, RequirementId, Verdict) :-
+    implements(eu_reg_2016_679_art_44),
+    gdpr_chapter_v_transfers_input_problems(Profile, []),
+    gdpr_chapter_v_transfers_cascade(Profile, RequirementId, Outcome, JudgementPairs, Citation),
+    outcome_verdict(Outcome, Profile, JudgementPairs, Citation, Verdict).
+
+% outcome_verdict(Outcome, Profile, JudgementPairs, Citation, Verdict):
+% one clause per cascade outcome, the verdict in the head.
+outcome_verdict(met, _, _, _, eligible) :-
+    implements(eu_reg_2016_679_art_44).
+outcome_verdict(unmet, _, _, _, ineligible) :-
+    implements(eu_reg_2016_679_art_44).
+outcome_verdict(open_by_absence(MissingKeys), _, _, _, indeterminate(MissingKeys)) :-
+    implements(eu_reg_2016_679_art_44).
+outcome_verdict(open_by_judgement(InputKey), Profile, JudgementPairs, Citation, needs_legal_review(open_textured(InputKey, Citation), [inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_44),
+    relied_on_pairs(Profile, JudgementPairs, Pairs).
+outcome_verdict(open_by_outside_fact(adequacy_decision_in_force), Profile, JudgementPairs, _, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_45), cite(eu_reg_2016_679_art_45_3)), [resolution(cite(eu_reg_2016_679_art_45_3), not_attempted), inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_45_3),
+    relied_on_pairs(Profile, JudgementPairs, Pairs).
+
+% THE PAIRS RULE (profile plumbing, no marker).
+relied_on_pairs(Profile, JudgementPairs, Pairs) :-
+    claim_pairs(Profile, ClaimPairs),
+    adequacy_marker_pairs(Profile, MarkerPairs),
+    append(MarkerPairs, JudgementPairs, OrderedPairs),
+    append(ClaimPairs, OrderedPairs, Pairs).
+
+claim_pairs(Profile, [derogation_claimed-Claim]) :-
+    profile_get(Profile, derogation_claimed, Claim).
+claim_pairs(Profile, []) :-
+    profile_lacks(Profile, derogation_claimed).
+
+adequacy_marker_pairs(Profile, [adequacy_decision_in_force-absent]) :-
+    profile_lacks(Profile, adequacy_decision_in_force).
+adequacy_marker_pairs(Profile, []) :-
+    profile_get(Profile, adequacy_decision_in_force, _).
+
+% ---- the main verdict and its projections ------------------------------
+decide_transfer(Profile, Verdict) :-
+    transfer_determination(Profile, _, Verdict).
+
+transfer_status(Profile, Status) :-
+    decide_transfer(Profile, Status).
+
+transfer_decision_resolvable(Profile) :-
+    decide_transfer(Profile, _).
+
+transfer_permitted(Profile, Permitted) :-
+    decide_transfer(Profile, Verdict),
+    permitted_projection(Verdict, Permitted).
+
+permitted_projection(eligible, true).
+permitted_projection(ineligible, false).
+permitted_projection(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+permitted_projection(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+permitted_projection(input_problems(Problems), input_problems(Problems)).
+
+transfer_verdict(Profile, Verdict, Basis) :-
+    transfer_determination(Profile, RequirementId, Verdict),
+    verdict_basis(Verdict, RequirementId, Basis).
+
+transfer_requirement(Profile, RequirementId, Verdict, Basis) :-
+    transfer_determination(Profile, RequirementId, Verdict),
+    verdict_basis(Verdict, RequirementId, Basis).
+
+% The basis is the requirement that ended the evaluation, only when it is
+% met; every other status has basis none.
+verdict_basis(eligible, RequirementId, RequirementId) :-
+    implements(eu_reg_2016_679_art_44).
+verdict_basis(ineligible, _, none).
+verdict_basis(indeterminate(_), _, none).
+verdict_basis(needs_legal_review(_, _), _, none).
+verdict_basis(input_problems(_), _, none).
+
+% ---- checklist: the one cascade requirement met, else empty ------------
+transfer_checklist(Profile, Items) :-
+    transfer_verdict(Profile, Verdict, Basis),
+    checklist_items(Verdict, Basis, Items).
+
+checklist_items(eligible, Basis, [Basis]).
+checklist_items(ineligible, _, []).
+checklist_items(indeterminate(_), _, []).
+checklist_items(needs_legal_review(_, _), _, []).
+checklist_items(input_problems(_), _, []).
+
+transfer_requirement_ids(RequirementIds) :-
+    implements(eu_reg_2016_679_art_44),
+    findall(RequirementId, requirement_row(RequirementId, _), RequirementIds).
+
+% ---- outside facts: recorded as given ---------------------------------
+transfer_outside_facts(Profile, input_problems([Problem|Problems])) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, [Problem|Problems]).
+transfer_outside_facts(Profile, [AdequacyItem|FurtherItems]) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, []),
+    adequacy_outside_fact(Profile, AdequacyItem),
+    further_outside_fact_rows(Rows),
+    present_outside_facts(Rows, Profile, FurtherItems).
+
+% The adequacy fact (Art 45(3), the list of Art 45(8)) is always listed.
+adequacy_outside_fact(Profile, outside_fact(adequacy_decision_in_force, Attested)) :-
+    implements(eu_reg_2016_679_art_45_8),
+    profile_get(Profile, adequacy_decision_in_force, Attested).
+adequacy_outside_fact(Profile, outside_fact(adequacy_decision_in_force, absent)) :-
+    implements(eu_reg_2016_679_art_45_8),
+    profile_lacks(Profile, adequacy_decision_in_force).
+
+% A further outside fact is listed only when present (Q5).
+present_outside_facts([], _, []).
+present_outside_facts([row(Key, _)|Rows], Profile, [outside_fact(Key, Attested)|Items]) :-
+    profile_get(Profile, Key, Attested),
+    present_outside_facts(Rows, Profile, Items).
+present_outside_facts([row(Key, _)|Rows], Profile, Items) :-
+    profile_lacks(Profile, Key),
+    present_outside_facts(Rows, Profile, Items).
+
+% ---- tests -------------------------------------------------------------
+test(an_empty_profile_names_the_safeguard_judgement) :-
+    findall(Verdict, decide_transfer([], Verdict), Verdicts),
+    Verdicts == [indeterminate([safeguard_in_place])].
+test(an_attested_adequacy_decision_is_eligible_on_art45) :-
+    findall(Verdict-Basis,
+            transfer_verdict([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], Verdict, Basis),
+            Answers),
+    Answers == [eligible-art45_adequacy].
+test(an_attested_adequacy_decision_is_not_ineligible, fail) :-
+    decide_transfer([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], ineligible).
+test(the_eligible_checklist_holds_its_basis) :-
+    findall(Items,
+            transfer_checklist([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], Items),
+            Answers),
+    Answers == [[art45_adequacy]].
+test(an_absent_adequacy_fact_with_no_safeguard_refers_on_the_cross_reference) :-
+    findall(Verdict,
+            decide_transfer([attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_a)], Verdict),
+            Verdicts),
+    Verdicts == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_45), cite(eu_reg_2016_679_art_45_3)), [resolution(cite(eu_reg_2016_679_art_45_3), not_attempted), inputs_relied_on([derogation_claimed-art49_1_a, adequacy_decision_in_force-absent, safeguard_in_place-false])])].
+test(an_unsure_safeguard_refers_after_a_complete_hypothetical_claim) :-
+    findall(Verdict,
+            decide_transfer([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, unsure), attribute(derogation_claimed, art49_1_b), attribute(contract_necessity, true)], Verdict),
+            Verdicts),
+    Verdicts == [needs_legal_review(open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)), [inputs_relied_on([derogation_claimed-art49_1_b, safeguard_in_place-unsure])])].
+test(an_unsure_point_judgement_refers_on_its_own_row) :-
+    findall(Verdict,
+            decide_transfer([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_e), attribute(legal_claims_necessity, unsure)], Verdict),
+            Verdicts),
+    Verdicts == [needs_legal_review(open_textured(legal_claims_necessity, cite(eu_reg_2016_679_art_49_1_e)), [inputs_relied_on([derogation_claimed-art49_1_e, legal_claims_necessity-unsure])])].
+test(no_claim_after_two_unmet_stages_is_ineligible_at_stage_three) :-
+    findall(RequirementId-Verdict-Basis,
+            transfer_requirement([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false)], RequirementId, Verdict, Basis),
+            Answers),
+    Answers == [art49_derogation-ineligible-none].
+test(no_claim_after_two_unmet_stages_is_not_eligible, fail) :-
+    decide_transfer([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false)], eligible).
+test(ineligible_is_not_permitted) :-
+    findall(Permitted,
+            transfer_permitted([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false)], Permitted),
+            Answers),
+    Answers == [false].
+test(an_unknown_key_comes_first_everywhere) :-
+    findall(Verdict-Basis, transfer_verdict([attribute(colour, blue)], Verdict, Basis), Verdicts),
+    Verdicts == [input_problems([unknown_key(colour)])-none],
+    findall(Items, transfer_checklist([attribute(colour, blue)], Items), Checklists),
+    Checklists == [[]],
+    findall(RequirementId, transfer_requirement([attribute(colour, blue)], RequirementId, _, _), RequirementIds),
+    RequirementIds == [none],
+    findall(Facts, transfer_outside_facts([attribute(colour, blue)], Facts), OutsideFacts),
+    OutsideFacts == [input_problems([unknown_key(colour)])].
+test(outside_facts_record_the_absent_adequacy_fact_and_present_further_facts) :-
+    findall(Facts,
+            transfer_outside_facts([attribute(safeguard_in_place, true), attribute(binding_corporate_rules_approved, attested(true, attestation(test_host, test_time, test_reason, none)))], Facts),
+            Answers),
+    Answers == [[outside_fact(adequacy_decision_in_force, absent), outside_fact(binding_corporate_rules_approved, attested(true, attestation(test_host, test_time, test_reason, none)))]].
+test(approved_binding_corporate_rules_are_eligible_on_art46) :-
+    findall(Verdict-Basis,
+            transfer_verdict([attribute(safeguard_in_place, false), attribute(binding_corporate_rules_approved, attested(true, attestation(test_host, test_time, test_reason, none)))], Verdict, Basis),
+            Answers),
+    Answers == [eligible-art46_safeguards].
+test(the_requirement_ids_are_in_cascade_order) :-
+    transfer_requirement_ids(RequirementIds),
+    RequirementIds == [art45_adequacy, art46_safeguards, art49_derogation].
+
+:- end_module(transfer).

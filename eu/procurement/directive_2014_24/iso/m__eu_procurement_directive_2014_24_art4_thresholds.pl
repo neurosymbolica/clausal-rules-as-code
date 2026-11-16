@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_procurement_directive_2014_24_art4_thresholds, [art4_threshold/4, current_art4_threshold/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

@@ -1,0 +1,445 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_joint_controllers.clausal -- the "gdpr_joint_controllers" DETERMINATION for
+% eu/data_protection/gdpr_joint_controllers, self-contained top to bottom:
+% its referral rows, its decision limbs, its per-rule tests, its checklist
+% and its verdict assembly.
+%
+% Source (a reading, not a lawyer's): Regulation (EU) 2016/679
+% (GDPR), consolidated text 02016R0679-20160504 (fmx4 cut by
+% tools/pin_statute.py, fetched 2026-11-12):
+%   - Art 26(3)  [parag_026.003]  rights in respect of and against each joint
+%                                 controller (query rights_against_each_joint_controller);
+%   - Art 28(10) [parag_028.010]  a processor jointly determining purposes and
+%                                 means is a controller (cited beside Art 26(3));
+%   - Art 82(4)  [parag_082.004]  liability for the entire damage
+%                                 (query liability_for_the_entire_damage);
+%   - Art 82(5)  [parag_082.005]  claim back after full compensation
+%                                 (query recourse_after_full_compensation).
+% Deferred (read only through profile keys): Art 26(1) and (2), Art 82(1)
+% to (3), the rest of Art 28, Art 4.
+%
+% No statutory figure: the rules state no threshold, period, rate or amount
+% (Q7), so the only ground tables here are the order's referral rows, each
+% carrying ready-made cite(Key) terms.
+%
+% Every query takes PROFILE first, checks THE INPUT CHECK first and yields
+% exactly ONE solution: the profile keys are read into states by
+% complementary clauses, and the limbs have disjoint guards with the
+% ground result in the head.
+% =====================================================================
+
+:- module(gdpr_joint_controllers, [
+    decide_gdpr_joint_controllers/2,
+    gdpr_joint_controllers_status/2,
+    gdpr_joint_controllers_checklist/2,
+    gdpr_joint_controllers_decision_resolvable/1,
+    gdpr_joint_controllers_status_values/1,
+    rights_against_each_joint_controller/3,
+    liability_for_the_entire_damage/4,
+    recourse_after_full_compensation/4,
+    not_joint_controllers/0,
+    rights_exercisable_against_this_controller/0,
+    not_responsible_for_the_damage/0,
+    no_other_responsible_party/0,
+    liable_for_the_entire_damage/0,
+    not_entitled_to_claim_back/0,
+    entitled_to_claim_back/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_joint_controllers/kernel, [gdpr_joint_controllers_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_joint_controllers/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, eval_requirements/4]).
+
+% ---- result constructors (exported data terms; no clauses) ----------------
+:- constructors([entitled_to_claim_back(parties), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(input, citation), cross_reference_unresolved(citation, target), resolution(target, status), inputs_relied_on(pairs), outside_fact(key, attested), attested(value, attestation), attestation(by, at, reason, evidence), url(location, retrieved_at), document(upload_identifier, digest), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% ---- result atoms (exported, never called as queries) ---------------------
+not_joint_controllers.
+rights_exercisable_against_this_controller.
+not_responsible_for_the_damage.
+no_other_responsible_party.
+liable_for_the_entire_damage.
+not_entitled_to_claim_back.
+
+% ---- the order's referral rows (REFERRALS), ready-made cite(Key) terms ----
+referral(joint_determination_unsure,
+         needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means,
+                                          cite(eu_reg_2016_679_art_26_3)),
+                            [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])])).
+referral(full_compensation_unsure,
+         needs_legal_review(open_textured(full_compensation_paid,
+                                          cite(eu_reg_2016_679_art_82_5)),
+                            [inputs_relied_on([full_compensation_paid-unsure])])).
+referral(responsibility_statement_not_shown_entire_damage,
+         needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4),
+                                                       cite(responsibility_under_article_82_statement)),
+                            [resolution(cite(responsibility_under_article_82_statement), not_attempted),
+                             inputs_relied_on([responsible_under_article_82_2_and_3-absent])])).
+referral(responsibility_statement_not_shown_claim_back,
+         needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4),
+                                                       cite(responsibility_under_article_82_statement)),
+                            [resolution(cite(responsibility_under_article_82_statement), not_attempted),
+                             inputs_relied_on([responsible_under_article_82_2_and_3-absent])])).
+
+% ---- reading the profile into states (plumbing; well-formed profile only) ----
+% A judgement key: absent, or its value true, false or unsure.
+judgement_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+judgement_state(Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+
+% The outside fact: absent, or stated(Truth, Attested), Attested as supplied.
+responsibility_state(Profile, absent) :-
+    profile_lacks(Profile, responsible_under_article_82_2_and_3).
+responsibility_state(Profile, stated(Truth, Attested)) :-
+    profile_get(Profile, responsible_under_article_82_2_and_3, Attested),
+    Attested = attested(Truth, _).
+
+% The list key: absent, empty, or listed(Parties) exactly as given.
+parties_state(Profile, absent) :-
+    profile_lacks(Profile, other_responsible_parties).
+parties_state(Profile, State) :-
+    profile_get(Profile, other_responsible_parties, Parties),
+    list_state(Parties, State).
+
+list_state([], empty).
+list_state([First|Others], listed([First|Others])).
+
+statement_not_false(absent).
+statement_not_false(stated(true, _)).
+
+parties_not_empty(absent).
+parties_not_empty(listed(_)).
+
+payment_not_false(absent).
+payment_not_false(true).
+payment_not_false(unsure).
+
+% =====================================================================
+% (A) rights_against_each_joint_controller(Profile, Result, Citations)
+% =====================================================================
+rights_against_each_joint_controller(Profile, input_problems([Problem|Problems]), []) :-
+    gdpr_joint_controllers_input_problems(Profile, [Problem|Problems]).
+rights_against_each_joint_controller(Profile, Result, Citations) :-
+    gdpr_joint_controllers_input_problems(Profile, []),
+    judgement_state(Profile, controllers_jointly_determine_purposes_and_means, Joint),
+    rights_limb(Joint, Result, Citations).
+
+% A1: not a joint controller; Art 26(3) does not reach the caller.
+rights_limb(false, not_joint_controllers, [cite(eu_reg_2016_679_art_26_3)]) :-
+    implements(eu_reg_2016_679_art_26_3).
+% A2: the judgement is asked for.
+rights_limb(absent, indeterminate([controllers_jointly_determine_purposes_and_means]), []) :-
+    implements(eu_reg_2016_679_art_26_3).
+% A3: open-textured judgement handed to a lawyer.
+rights_limb(unsure, Referral, []) :-
+    implements(eu_reg_2016_679_art_26_3),
+    referral(joint_determination_unsure, Referral).
+% A4: joint controller (a processor jointly determining included, Art 28(10)).
+rights_limb(true, rights_exercisable_against_this_controller, [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]) :-
+    implements(eu_reg_2016_679_art_26_3),
+    implements(eu_reg_2016_679_art_28_10).
+
+% =====================================================================
+% (B) liability_for_the_entire_damage(Profile, Result, Basis, Citations)
+% =====================================================================
+liability_for_the_entire_damage(Profile, input_problems([Problem|Problems]), [], []) :-
+    gdpr_joint_controllers_input_problems(Profile, [Problem|Problems]).
+liability_for_the_entire_damage(Profile, Result, Basis, Citations) :-
+    gdpr_joint_controllers_input_problems(Profile, []),
+    responsibility_state(Profile, Statement),
+    parties_state(Profile, PartiesState),
+    liability_limb(Statement, PartiesState, Result, Basis, Citations).
+
+% B1: stated not responsible, whatever the list.
+liability_limb(stated(false, Attested), _, not_responsible_for_the_damage, [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_4)]) :-
+    implements(eu_reg_2016_679_art_82_4).
+% B2: the absent outside fact is referred, whatever the list.
+liability_limb(absent, _, Referral, [], []) :-
+    implements(eu_reg_2016_679_art_82_4),
+    referral(responsibility_statement_not_shown_entire_damage, Referral).
+% B3: responsible; the other responsible parties are asked for.
+liability_limb(stated(true, _), absent, indeterminate([other_responsible_parties]), [], []) :-
+    implements(eu_reg_2016_679_art_82_4).
+% B4: responsible and alone: Art 82(4) does not apply (Q1).
+liability_limb(stated(true, Attested), empty, no_other_responsible_party, [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_4)]) :-
+    implements(eu_reg_2016_679_art_82_4).
+% B5: responsible with at least one other: liable for the entire damage.
+liability_limb(stated(true, Attested), listed(_), liable_for_the_entire_damage, [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_4)]) :-
+    implements(eu_reg_2016_679_art_82_4).
+
+% =====================================================================
+% (C) recourse_after_full_compensation(Profile, Result, Basis, Citations)
+% =====================================================================
+recourse_after_full_compensation(Profile, input_problems([Problem|Problems]), [], []) :-
+    gdpr_joint_controllers_input_problems(Profile, [Problem|Problems]).
+recourse_after_full_compensation(Profile, Result, Basis, Citations) :-
+    gdpr_joint_controllers_input_problems(Profile, []),
+    responsibility_state(Profile, Statement),
+    parties_state(Profile, PartiesState),
+    judgement_state(Profile, full_compensation_paid, Payment),
+    recourse_limb(Statement, PartiesState, Payment, Result, Basis, Citations).
+
+% C1: stated not responsible, whatever the list and the payment.
+recourse_limb(stated(false, Attested), _, _, not_entitled_to_claim_back, [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_5)]) :-
+    implements(eu_reg_2016_679_art_82_5).
+% C2: no other responsible party to claim from (Q3).
+recourse_limb(Statement, empty, _, not_entitled_to_claim_back, [], [cite(eu_reg_2016_679_art_82_5)]) :-
+    implements(eu_reg_2016_679_art_82_5),
+    statement_not_false(Statement).
+% C3: full compensation not paid (Q4).
+recourse_limb(Statement, PartiesState, false, not_entitled_to_claim_back, [], [cite(eu_reg_2016_679_art_82_5)]) :-
+    implements(eu_reg_2016_679_art_82_5),
+    statement_not_false(Statement),
+    parties_not_empty(PartiesState).
+% C4: the absent outside fact is referred.
+recourse_limb(absent, PartiesState, Payment, Referral, [], []) :-
+    implements(eu_reg_2016_679_art_82_5),
+    parties_not_empty(PartiesState),
+    payment_not_false(Payment),
+    referral(responsibility_statement_not_shown_claim_back, Referral).
+% C5: responsible; the other responsible parties are asked for.
+recourse_limb(stated(true, _), absent, Payment, indeterminate([other_responsible_parties]), [], []) :-
+    implements(eu_reg_2016_679_art_82_5),
+    payment_not_false(Payment).
+% C6: whether full compensation was paid is asked for.
+recourse_limb(stated(true, _), listed(_), absent, indeterminate([full_compensation_paid]), [], []) :-
+    implements(eu_reg_2016_679_art_82_5).
+% C7: open-textured judgement handed to a lawyer.
+recourse_limb(stated(true, _), listed(_), unsure, Referral, [], []) :-
+    implements(eu_reg_2016_679_art_82_5),
+    referral(full_compensation_unsure, Referral).
+% C8: entitled to claim back from each listed party; no part or amount stated (Q7).
+recourse_limb(stated(true, Attested), listed(Parties), true, entitled_to_claim_back(Parties), [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_5)]) :-
+    implements(eu_reg_2016_679_art_82_5).
+
+% =====================================================================
+% Facade: eligibility view of the Art 82(5) claim back.
+% =====================================================================
+gdpr_joint_controllers_status_values([eligible, ineligible, unresolved, referred_for_legal_review, malformed_input]).
+
+decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(eligible, Citations)) :-
+    recourse_after_full_compensation(Profile, entitled_to_claim_back(_), _, Citations).
+decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(ineligible, Citations)) :-
+    recourse_after_full_compensation(Profile, not_entitled_to_claim_back, _, Citations).
+decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(unresolved, Citations)) :-
+    recourse_after_full_compensation(Profile, indeterminate(_), _, Citations).
+decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(referred_for_legal_review, Citations)) :-
+    recourse_after_full_compensation(Profile, needs_legal_review(_, _), _, Citations).
+decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(malformed_input, Citations)) :-
+    recourse_after_full_compensation(Profile, input_problems(_), _, Citations).
+
+gdpr_joint_controllers_status(Profile, Status) :-
+    decide_gdpr_joint_controllers(Profile, gdpr_joint_controllers_verdict(Status, _)).
+
+gdpr_joint_controllers_decision_resolvable(Profile) :-
+    decide_gdpr_joint_controllers(Profile, _).
+
+% ---- checklist: one row per condition of Art 82(5), each cited ----------
+recourse_requirement_ids([caller_responsible_for_the_damage, other_responsible_party_listed, full_compensation_paid]).
+
+gdpr_joint_controllers_checklist(Profile, Items) :-
+    gdpr_joint_controllers_input_problems(Profile, []),
+    recourse_requirement_ids(RequirementIds),
+    eval_requirements(RequirementIds, Profile, recourse_requirement, Items).
+gdpr_joint_controllers_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2016_679_art_82_5))]) :-
+    gdpr_joint_controllers_input_problems(Profile, [Problem|Problems]).
+
+% Condition (a): paid in accordance with paragraph 4 -- the caller responsible.
+recourse_requirement(caller_responsible_for_the_damage, Profile, Status, cite(eu_reg_2016_679_art_82_4)) :-
+    implements(eu_reg_2016_679_art_82_4),
+    responsibility_state(Profile, Statement),
+    statement_item_status(Statement, Status).
+% Conditions (a) and (c): at least one other responsible party, listed.
+recourse_requirement(other_responsible_party_listed, Profile, Status, cite(eu_reg_2016_679_art_82_4)) :-
+    implements(eu_reg_2016_679_art_82_4),
+    parties_state(Profile, PartiesState),
+    parties_item_status(PartiesState, Status).
+% Condition (b): full compensation paid (the caller's judgement).
+recourse_requirement(full_compensation_paid, Profile, Status, cite(eu_reg_2016_679_art_82_5)) :-
+    implements(eu_reg_2016_679_art_82_5),
+    judgement_state(Profile, full_compensation_paid, Payment),
+    payment_item_status(Payment, Status).
+
+statement_item_status(stated(true, _), met).
+statement_item_status(stated(false, _), unmet(not_responsible_for_the_damage)).
+statement_item_status(absent, unknown([responsible_under_article_82_2_and_3])).
+
+parties_item_status(listed(_), met).
+parties_item_status(empty, unmet(no_other_responsible_party)).
+parties_item_status(absent, unknown([other_responsible_parties])).
+
+payment_item_status(true, met).
+payment_item_status(false, unmet(full_compensation_not_paid)).
+payment_item_status(absent, unknown([full_compensation_paid])).
+payment_item_status(unsure, unknown([full_compensation_paid])).
+
+% ---- test helper: an attested statement as the host supplies it --------
+example_statement(Truth, attested(Truth, attestation(registry_host, moment, stated_reason, none))).
+
+% ---- tests: rights_against_each_joint_controller ------------------------
+test(rights_joint_false_is_not_joint_controllers) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, false)], Result, Citations),
+            Answers),
+    Answers == [not_joint_controllers-[cite(eu_reg_2016_679_art_26_3)]].
+test(rights_joint_false_is_not_exercisable, fail) :-
+    rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, false)], rights_exercisable_against_this_controller, _).
+test(rights_joint_absent_is_asked_for) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller([], Result, Citations),
+            Answers),
+    Answers == [indeterminate([controllers_jointly_determine_purposes_and_means])-[]].
+test(rights_joint_unsure_goes_to_a_lawyer) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, unsure)], Result, Citations),
+            Answers),
+    Answers == [needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_3)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])])-[]].
+test(rights_joint_true_is_exercisable_once) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, true), attribute(full_compensation_paid, true)], Result, Citations),
+            Answers),
+    Answers == [rights_exercisable_against_this_controller-[cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]].
+test(rights_input_problem_comes_first) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, true), attribute(full_compensation_paid, yes)], Result, Citations),
+            Answers),
+    Answers == [input_problems([wrong_type(full_compensation_paid)])-[]].
+test(rights_not_an_attribute_list) :-
+    findall(Result-Citations,
+            rights_against_each_joint_controller(not_a_profile, Result, Citations),
+            Answers),
+    Answers == [input_problems([wrong_type(profile)])-[]].
+
+% ---- tests: liability_for_the_entire_damage -----------------------------
+test(liability_stated_false_whatever_the_list) :-
+    example_statement(false, Attested),
+    findall(Result-Basis-Citations,
+            liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested)], Result, Basis, Citations),
+            Answers),
+    Answers == [not_responsible_for_the_damage-[outside_fact(responsible_under_article_82_2_and_3, Attested)]-[cite(eu_reg_2016_679_art_82_4)]].
+test(liability_statement_absent_is_referred) :-
+    findall(Result-Basis-Citations,
+            liability_for_the_entire_damage([attribute(other_responsible_parties, [processor_b])], Result, Basis, Citations),
+            Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3-absent])])-[]-[]].
+test(liability_parties_absent_are_asked_for) :-
+    example_statement(true, Attested),
+    findall(Result-Basis-Citations,
+            liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested)], Result, Basis, Citations),
+            Answers),
+    Answers == [indeterminate([other_responsible_parties])-[]-[]].
+test(liability_alone_is_no_other_responsible_party) :-
+    example_statement(true, Attested),
+    findall(Result,
+            liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [])], Result, _, _),
+            Results),
+    Results == [no_other_responsible_party].
+test(liability_with_another_is_the_entire_damage) :-
+    example_statement(true, Attested),
+    findall(Result-Basis,
+            liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b])], Result, Basis, _),
+            Answers),
+    Answers == [liable_for_the_entire_damage-[outside_fact(responsible_under_article_82_2_and_3, Attested)]].
+test(liability_alone_is_not_the_entire_damage, fail) :-
+    example_statement(true, Attested),
+    liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [])], liable_for_the_entire_damage, _, _).
+test(liability_bare_true_statement_is_wrong_type) :-
+    findall(Result,
+            liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, true)], Result, _, _),
+            Results),
+    Results == [input_problems([wrong_type(responsible_under_article_82_2_and_3)])].
+
+% ---- tests: recourse_after_full_compensation ----------------------------
+test(recourse_stated_false_whatever_else) :-
+    example_statement(false, Attested),
+    findall(Result-Basis,
+            recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(full_compensation_paid, unsure)], Result, Basis, _),
+            Answers),
+    Answers == [not_entitled_to_claim_back-[outside_fact(responsible_under_article_82_2_and_3, Attested)]].
+test(recourse_empty_list_with_statement_absent) :-
+    findall(Result-Basis-Citations,
+            recourse_after_full_compensation([attribute(other_responsible_parties, [])], Result, Basis, Citations),
+            Answers),
+    Answers == [not_entitled_to_claim_back-[]-[cite(eu_reg_2016_679_art_82_5)]].
+test(recourse_payment_false_with_everything_else_absent) :-
+    findall(Result-Basis-Citations,
+            recourse_after_full_compensation([attribute(full_compensation_paid, false)], Result, Basis, Citations),
+            Answers),
+    Answers == [not_entitled_to_claim_back-[]-[cite(eu_reg_2016_679_art_82_5)]].
+test(recourse_statement_absent_referred_before_unsure_payment) :-
+    findall(Result,
+            recourse_after_full_compensation([attribute(full_compensation_paid, unsure)], Result, _, _),
+            Results),
+    Results == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3-absent])])].
+test(recourse_parties_named_before_unsure_payment) :-
+    example_statement(true, Attested),
+    findall(Result,
+            recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(full_compensation_paid, unsure)], Result, _, _),
+            Results),
+    Results == [indeterminate([other_responsible_parties])].
+test(recourse_payment_absent_is_asked_for) :-
+    example_statement(true, Attested),
+    findall(Result,
+            recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b])], Result, _, _),
+            Results),
+    Results == [indeterminate([full_compensation_paid])].
+test(recourse_payment_unsure_goes_to_a_lawyer) :-
+    example_statement(true, Attested),
+    findall(Result-Citations,
+            recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, unsure)], Result, _, Citations),
+            Answers),
+    Answers == [needs_legal_review(open_textured(full_compensation_paid, cite(eu_reg_2016_679_art_82_5)), [inputs_relied_on([full_compensation_paid-unsure])])-[]].
+test(recourse_entitled_keeps_the_list_as_given) :-
+    example_statement(true, Attested),
+    findall(Result-Basis-Citations,
+            recourse_after_full_compensation([attribute(full_compensation_paid, true), attribute(other_responsible_parties, [processor_b, controller_c, processor_b]), attribute(responsible_under_article_82_2_and_3, Attested)], Result, Basis, Citations),
+            Answers),
+    Answers == [entitled_to_claim_back([processor_b, controller_c, processor_b])-[outside_fact(responsible_under_article_82_2_and_3, Attested)]-[cite(eu_reg_2016_679_art_82_5)]].
+test(recourse_unpaid_is_not_entitled, fail) :-
+    example_statement(true, Attested),
+    recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, false)], entitled_to_claim_back(_), _, _).
+test(recourse_unpaid_is_not_entitled_positive) :-
+    example_statement(true, Attested),
+    recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, false)], not_entitled_to_claim_back, [], [cite(eu_reg_2016_679_art_82_5)]).
+test(recourse_duplicate_and_unknown_keys) :-
+    findall(Result,
+            recourse_after_full_compensation([attribute(extra_key, x), attribute(full_compensation_paid, true), attribute(full_compensation_paid, true)], Result, _, _),
+            Results),
+    Results == [input_problems([duplicate_key(full_compensation_paid), unknown_key(extra_key)])].
+
+% ---- tests: facade verdict and checklist --------------------------------
+test(facade_entitled_is_eligible) :-
+    example_statement(true, Attested),
+    findall(Status,
+            gdpr_joint_controllers_status([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, true)], Status),
+            Statuses),
+    Statuses == [eligible].
+test(facade_absent_statement_is_referred) :-
+    gdpr_joint_controllers_status([], referred_for_legal_review).
+test(facade_absent_statement_is_not_eligible, fail) :-
+    gdpr_joint_controllers_status([], eligible).
+test(checklist_rows_are_cited) :-
+    example_statement(true, Attested),
+    gdpr_joint_controllers_checklist([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, []), attribute(full_compensation_paid, true)], Items),
+    member(item(caller_responsible_for_the_damage, met, cite(eu_reg_2016_679_art_82_4)), Items),
+    member(item(other_responsible_party_listed, unmet(no_other_responsible_party), cite(eu_reg_2016_679_art_82_4)), Items),
+    member(item(full_compensation_paid, met, cite(eu_reg_2016_679_art_82_5)), Items).
+
+:- end_module(gdpr_joint_controllers).

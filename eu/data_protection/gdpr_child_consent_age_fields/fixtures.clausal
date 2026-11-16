@@ -1,0 +1,103 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_child_consent_age_fields.
+% A TOP-LAYER consumer. A profile is an attribute list of attribute(Key, Value);
+% dates are date(Y, M, D) terms. The national ages below are attested TEST DATA only.
+% Boundary pairs: age 16 / 15, national 15 with age 15 / 14, floor 13 / 12.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_child_consent_age_fields_subject/1,
+    gdpr_child_consent_age_fields_profile_for/2,
+    gdpr_child_consent_age_fields_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_child_consent_age_fields/child_consent_status, [decide_child_consent_status/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_child_consent_age_fields_subject(not_engaged_not_directed).
+gdpr_child_consent_age_fields_subject(age_16_own_consent).
+gdpr_child_consent_age_fields_subject(age_15_national_16).
+gdpr_child_consent_age_fields_subject(age_15_national_15).
+gdpr_child_consent_age_fields_subject(age_14_national_15).
+gdpr_child_consent_age_fields_subject(age_13_national_13).
+gdpr_child_consent_age_fields_subject(age_12_parent_given).
+gdpr_child_consent_age_fields_subject(age_12_no_parent).
+gdpr_child_consent_age_fields_subject(age_14_national_absent).
+gdpr_child_consent_age_fields_subject(age_14_other_state_fact).
+gdpr_child_consent_age_fields_subject(service_unsure).
+gdpr_child_consent_age_fields_subject(age_missing).
+gdpr_child_consent_age_fields_subject(invalid_age).
+gdpr_child_consent_age_fields_subject(parent_given_efforts_not_reasonable).
+gdpr_child_consent_age_fields_subject(parent_given_efforts_unsure).
+gdpr_child_consent_age_fields_subject(age_14_member_state_missing).
+
+% ---- Building blocks ---------------------------------------------------
+engaged_attributes([attribute(processing_rests_on_consent, true), attribute(information_society_service, true), attribute(offered_directly_to_child, true)]).
+
+national_context(MemberState, [attribute(member_state, MemberState), attribute(member_state_selection_test, controller_establishment), attribute(consent_date, date(2026, 5, 1))]).
+
+attested_age(MemberState, AgeYears, attribute(member_state_digital_consent_age, attested(national_digital_consent_age(MemberState, AgeYears, national_act(data_protection_act, article_one)), attestation(decision_layer, date(2026, 11, 9), user_declared, none)))).
+
+% ---- Profiles --------------------------------------------------------
+gdpr_child_consent_age_fields_profile_for(not_engaged_not_directed, [attribute(processing_rests_on_consent, true), attribute(information_society_service, true), attribute(offered_directly_to_child, false)]).
+gdpr_child_consent_age_fields_profile_for(age_16_own_consent, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 16)], Profile).
+gdpr_child_consent_age_fields_profile_for(age_15_national_16, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(germany, Context),
+    attested_age(germany, 16, Fact),
+    append(Engaged, [attribute(child_age_years, 15), attribute(parental_consent_given, false), Fact|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(age_15_national_15, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(france, Context),
+    attested_age(france, 15, Fact),
+    append(Engaged, [attribute(child_age_years, 15), attribute(parental_consent_given, false), Fact|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(age_14_national_15, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(france, Context),
+    attested_age(france, 15, Fact),
+    append(Engaged, [attribute(child_age_years, 14), attribute(parental_consent_given, false), Fact|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(age_13_national_13, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(belgium, Context),
+    attested_age(belgium, 13, Fact),
+    append(Engaged, [attribute(child_age_years, 13), attribute(parental_consent_given, false), Fact|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(age_12_parent_given, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 12), attribute(parental_consent_given, true), attribute(verification_efforts_reasonable, true)], Profile).
+gdpr_child_consent_age_fields_profile_for(age_12_no_parent, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 12), attribute(parental_consent_given, false)], Profile).
+gdpr_child_consent_age_fields_profile_for(age_14_national_absent, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(austria, Context),
+    append(Engaged, [attribute(child_age_years, 14), attribute(parental_consent_given, false)|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(age_14_other_state_fact, Profile) :-
+    engaged_attributes(Engaged),
+    national_context(austria, Context),
+    attested_age(germany, 16, Fact),
+    append(Engaged, [attribute(child_age_years, 14), attribute(parental_consent_given, false), Fact|Context], Profile).
+gdpr_child_consent_age_fields_profile_for(service_unsure, [attribute(processing_rests_on_consent, true), attribute(information_society_service, unsure), attribute(offered_directly_to_child, true), attribute(child_age_years, 14)]).
+gdpr_child_consent_age_fields_profile_for(age_missing, Profile) :-
+    engaged_attributes(Profile).
+gdpr_child_consent_age_fields_profile_for(invalid_age, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, -1)], Profile).
+gdpr_child_consent_age_fields_profile_for(parent_given_efforts_not_reasonable, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 15), attribute(parental_consent_given, true), attribute(verification_efforts_reasonable, false)], Profile).
+gdpr_child_consent_age_fields_profile_for(parent_given_efforts_unsure, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 15), attribute(parental_consent_given, true), attribute(verification_efforts_reasonable, unsure)], Profile).
+gdpr_child_consent_age_fields_profile_for(age_14_member_state_missing, Profile) :-
+    engaged_attributes(Engaged),
+    append(Engaged, [attribute(child_age_years, 14), attribute(parental_consent_given, false), attribute(member_state_selection_test, child_residence), attribute(consent_date, date(2026, 5, 1))], Profile).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_child_consent_age_fields_assess(Subject, Result) :-
+    gdpr_child_consent_age_fields_profile_for(Subject, Profile),
+    decide_child_consent_status(Profile, Result).
+
+:- end_module(fixtures).

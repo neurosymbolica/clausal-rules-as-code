@@ -1,0 +1,151 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% transfer_basis.clausal -- the "transfer_basis" DETERMINATION for eu/data_protection/gdpr_chapter_v_transfers,
+% self-contained top to bottom: its value rows, its basis assembly from the
+% shared Chapter V cascade, its checklist, its projections and its per-rule
+% tests.
+% Verdict family pinned by the order: transfer_basis/2 -> {art45_adequacy, art46_safeguards, art49_derogation, none}.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), Chapter V, pinned consolidated
+% text 02016R0679-20160504 (in force from 2016-05-04):
+%   Art 44 [art_044]: a transfer 'shall take place only if' the conditions
+%     of the Chapter are complied with; the BASIS is the stage of the
+%     cascade on which the transfer may take place;
+%   Art 45(1) [parag_045.001]: art45_adequacy;
+%   Art 46(1), 46(2)(b), 47(1) [parag_046.001, point_046.002_b,
+%     parag_047.001]: art46_safeguards;
+%   Art 49(1) [parag_049.001]: art49_derogation.
+% The cascade itself (stages, strong Kleene, the Art 49(3) defeater)
+% is decided in the kernel and only read here.
+%
+% transfer_basis(Profile, Basis): Basis is art45_adequacy, art46_safeguards
+%   or art49_derogation when the answer is eligible, else none (none also
+%   for every non-final status, input problems included). Exactly one
+%   solution per Profile.
+% =====================================================================
+
+:- module(transfer_basis, [
+    transfer_basis/2,
+    decide_transfer_basis/2,
+    transfer_basis_status/2,
+    transfer_basis_checklist/2,
+    transfer_basis_decision_resolvable/1,
+    transfer_basis_status_values/1
+]).
+
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/kernel, [gdpr_chapter_v_transfers_input_problems/2, gdpr_chapter_v_transfers_cascade/5]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The verdict vocabulary as a ground table (used by the property tests).
+transfer_basis_status_values([art45_adequacy, art46_safeguards, art49_derogation, none]).
+
+% The bases of the cascade, in cascade order (reading 1), each with the
+% provision on which a transfer may take place at that stage.
+basis_row(art45_adequacy, cite(eu_reg_2016_679_art_45_1)).
+basis_row(art46_safeguards, cite(eu_reg_2016_679_art_46_1)).
+basis_row(art49_derogation, cite(eu_reg_2016_679_art_49_1)).
+
+% ---- the determination ------------------------------------------------
+% Input problems come FIRST: the basis is none and no provision is cited.
+decide_transfer_basis(Profile, transfer_basis_verdict(none, [])) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, [_|_]).
+% A clean profile: the kernel cascade gives exactly one ending stage.
+decide_transfer_basis(Profile, Verdict) :-
+    implements(eu_reg_2016_679_art_44),
+    gdpr_chapter_v_transfers_input_problems(Profile, []),
+    gdpr_chapter_v_transfers_cascade(Profile, RequirementId, Outcome, _JudgementPairs, Citation),
+    basis_verdict(Outcome, RequirementId, Citation, Verdict).
+
+% basis_verdict(Outcome, RequirementId, Citation, Verdict): one clause per
+% cascade outcome, the basis in the head. Only a MET stage is a basis.
+basis_verdict(met, RequirementId, Citation, transfer_basis_verdict(RequirementId, [Citation])) :-
+    implements(eu_reg_2016_679_art_44),
+    basis_row(RequirementId, _).
+basis_verdict(unmet, _, Citation, transfer_basis_verdict(none, [Citation])) :-
+    implements(eu_reg_2016_679_art_44).
+basis_verdict(open_by_absence(_), _, Citation, transfer_basis_verdict(none, [Citation])) :-
+    implements(eu_reg_2016_679_art_44).
+basis_verdict(open_by_judgement(_), _, Citation, transfer_basis_verdict(none, [Citation])) :-
+    implements(eu_reg_2016_679_art_44).
+basis_verdict(open_by_outside_fact(_), _, Citation, transfer_basis_verdict(none, [Citation])) :-
+    implements(eu_reg_2016_679_art_45_3).
+
+% ---- the public basis and its projections ------------------------------
+transfer_basis(Profile, Basis) :-
+    decide_transfer_basis(Profile, transfer_basis_verdict(Basis, _Citations)).
+
+transfer_basis_status(Profile, Status) :-
+    decide_transfer_basis(Profile, transfer_basis_verdict(Status, _Citations)).
+
+transfer_basis_decision_resolvable(Profile) :-
+    decide_transfer_basis(Profile, _Verdict).
+
+% ---- checklist: one row for the stage that ended the evaluation ------
+% With input problems the checklist is empty.
+transfer_basis_checklist(Profile, []) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, [_|_]).
+transfer_basis_checklist(Profile, [item(RequirementId, ItemStatus, Citation)]) :-
+    implements(eu_reg_2016_679_art_44),
+    gdpr_chapter_v_transfers_input_problems(Profile, []),
+    gdpr_chapter_v_transfers_cascade(Profile, RequirementId, Outcome, _JudgementPairs, Citation),
+    item_status(Outcome, ItemStatus).
+
+% item_status(Outcome, ItemStatus): one clause per cascade outcome.
+item_status(met, met).
+item_status(unmet, unmet(stage_not_met)).
+item_status(open_by_absence(MissingKeys), unknown(MissingKeys)).
+item_status(open_by_judgement(InputKey), referred(open_textured(InputKey))).
+item_status(open_by_outside_fact(Key), referred(cross_reference_unresolved(Key))).
+
+% ---- tests -------------------------------------------------------------
+test(an_empty_profile_has_no_basis) :-
+    findall(Basis, transfer_basis([], Basis), Bases),
+    Bases == [none].
+test(an_attested_adequacy_decision_is_the_art45_basis) :-
+    findall(Basis,
+            transfer_basis([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], Basis),
+            Bases),
+    Bases == [art45_adequacy].
+test(an_attested_adequacy_decision_is_not_without_basis, fail) :-
+    transfer_basis([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], none).
+test(a_safeguard_in_place_is_the_art46_basis_whatever_the_adequacy_fact) :-
+    findall(Basis, transfer_basis([attribute(safeguard_in_place, true)], Basis), Bases),
+    Bases == [art46_safeguards].
+test(approved_binding_corporate_rules_are_the_art46_basis) :-
+    findall(Basis,
+            transfer_basis([attribute(safeguard_in_place, false), attribute(binding_corporate_rules_approved, attested(true, attestation(test_host, test_time, test_reason, none)))], Basis),
+            Bases),
+    Bases == [art46_safeguards].
+test(a_met_derogation_is_the_art49_basis) :-
+    findall(Basis,
+            transfer_basis([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_a), attribute(explicit_consent_obtained, true)], Basis),
+            Bases),
+    Bases == [art49_derogation].
+test(public_powers_leave_explicit_consent_without_basis) :-
+    findall(Basis,
+            transfer_basis([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_a), attribute(explicit_consent_obtained, true), attribute(public_authority_public_powers, true)], Basis),
+            Bases),
+    Bases == [none].
+test(public_powers_do_not_give_the_art49_basis, fail) :-
+    transfer_basis([attribute(adequacy_decision_in_force, attested(false, attestation(test_host, test_time, test_reason, none))), attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_a), attribute(explicit_consent_obtained, true), attribute(public_authority_public_powers, true)], art49_derogation).
+test(a_referral_has_no_basis) :-
+    findall(Basis,
+            transfer_basis([attribute(safeguard_in_place, false), attribute(derogation_claimed, art49_1_a)], Basis),
+            Bases),
+    Bases == [none].
+test(input_problems_have_no_basis_and_an_empty_checklist) :-
+    findall(Basis, transfer_basis([attribute(colour, blue)], Basis), Bases),
+    Bases == [none],
+    findall(Items, transfer_basis_checklist([attribute(colour, blue)], Items), Checklists),
+    Checklists == [[]].
+test(the_checklist_cites_the_deciding_stage) :-
+    findall(Items,
+            transfer_basis_checklist([attribute(adequacy_decision_in_force, attested(true, attestation(test_host, test_time, test_reason, none)))], Items),
+            Checklists),
+    Checklists == [[item(art45_adequacy, met, cite(eu_reg_2016_679_art_45_1))]].
+test(the_checklist_names_the_missing_safeguard_judgement) :-
+    findall(Items, transfer_basis_checklist([], Items), Checklists),
+    Checklists == [[item(art46_safeguards, unknown([safeguard_in_place]), cite(eu_reg_2016_679_art_46_1))]].
+
+:- end_module(transfer_basis).

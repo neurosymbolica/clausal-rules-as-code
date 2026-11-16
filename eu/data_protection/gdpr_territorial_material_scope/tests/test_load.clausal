@@ -1,0 +1,48 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor loads and its algebra and
+% citation records behave as the order pins.
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/kernel, [all_status/2, any_status/2, negated/2, citation_order/1]).
+:- use_module(eu/data_protection/gdpr_territorial_material_scope/citations, [citation/2, implements/1]).
+
+test(an_unmet_element_dominates_an_and) :-
+    all_status([met, absent, unmet], unmet).
+
+test(absence_ranks_before_judgement_in_an_and) :-
+    all_status([met, judgement, absent], absent).
+
+test(all_met_is_met) :-
+    all_status([met, met], met).
+
+test(met_dominates_an_or) :-
+    any_status([unmet, absent, met], met).
+
+test(all_unmet_or_is_unmet) :-
+    any_status([unmet, unmet], unmet).
+
+test(negation_swaps_met_and_unmet) :-
+    negated(met, unmet),
+    negated(unmet, met),
+    negated(absent, absent).
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(applies, does_not_apply).
+
+test(the_verdict_term_builds_and_destructures) :-
+    Verdict = gdpr_scope_verdict(applies, art3_1, not_applicable, []),
+    Verdict = gdpr_scope_verdict(Applies, Ground, Representative, Citations),
+    Applies == applies,
+    Ground == art3_1,
+    Representative == not_applicable,
+    Citations == [].
+
+test(a_real_citation_record_resolves) :-
+    citation(eu_reg_2016_679_art_3_1, _Record),
+    implements(eu_reg_2016_679_art_3_1).
+
+test(the_citation_vocabulary_starts_with_article_2_1) :-
+    citation_order([cite(eu_reg_2016_679_art_2_1)|_]).
+
+:- end_module(test_load).

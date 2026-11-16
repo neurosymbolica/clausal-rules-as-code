@@ -1,0 +1,76 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_provider_side_duties_fixtures, [provider_side_duties_subject/1, provider_side_duties_profile_for/2, provider_side_duties_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_provider_side_duties_provider_side_duties, [decide_provider_side_duties/2]).
+
+fixture(fixture_annex_iii_provider_duty_applies, complete(provider, []), ce_marking, date(2027, 12, 2)).
+fixture(fixture_annex_iii_day_before_application, complete(provider, []), ce_marking, date(2027, 12, 1)).
+fixture(fixture_annex_i_before_2_august_2028, complete(provider, [high_risk_route - annex_i]), ce_marking, date(2028, 8, 1)).
+fixture(fixture_annex_i_on_2_august_2028, complete(provider, [high_risk_route - annex_i]), ce_marking, date(2028, 8, 2)).
+fixture(fixture_not_a_high_risk_ai_system, complete(provider, [high_risk_ai_system - false]), ce_marking, date(2029, 1, 1)).
+fixture(fixture_high_risk_ai_system_control, complete(provider, []), ce_marking, date(2029, 1, 1)).
+fixture(fixture_importer_asks_a_provider_duty, complete(importer, []), quality_management_system, date(2029, 1, 1)).
+fixture(fixture_provider_asks_a_provider_duty, complete(provider, []), quality_management_system, date(2029, 1, 1)).
+fixture(fixture_large_scale_component_before_31_december_2030, complete(provider, [component_of_a_large_scale_it_system_listed_in_annex_x - true, placed_on_the_market_or_put_into_service_before_2_august_2027 - true, intended_to_be_used_by_public_authorities - true]), ce_marking, date(2030, 12, 30)).
+fixture(fixture_large_scale_component_on_31_december_2030, complete(provider, [component_of_a_large_scale_it_system_listed_in_annex_x - true, placed_on_the_market_or_put_into_service_before_2_august_2027 - true, intended_to_be_used_by_public_authorities - true]), ce_marking, date(2030, 12, 31)).
+fixture(fixture_public_authority_provider_before_2_august_2030, complete(provider, [placed_on_the_market_or_put_into_service_before_2_august_2027 - true, intended_to_be_used_by_public_authorities - true]), registration, date(2030, 8, 1)).
+fixture(fixture_public_authority_provider_on_2_august_2030, complete(provider, [placed_on_the_market_or_put_into_service_before_2_august_2027 - true, intended_to_be_used_by_public_authorities - true]), registration, date(2030, 8, 2)).
+fixture(fixture_already_placed_importer, complete(importer, [placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii - true]), importer_name_and_contact_address, date(2029, 1, 1)).
+fixture(fixture_already_placed_importer_with_significant_change, complete(importer, [placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii - true, significant_change_in_design_as_from_the_date_of_application_of_chapter_iii - true]), importer_name_and_contact_address, date(2029, 1, 1)).
+fixture(fixture_logs_not_under_the_providers_control, complete(provider, [logs_under_the_providers_control - false]), log_keeping, date(2029, 1, 1)).
+fixture(fixture_logs_under_the_providers_control, complete(provider, []), log_keeping, date(2029, 1, 1)).
+fixture(fixture_ai_literacy_before_chapter_i, complete(deployer, []), ai_literacy_measures, date(2025, 2, 1)).
+fixture(fixture_ai_literacy_earlier_text, complete(deployer, []), ai_literacy_measures, date(2025, 2, 2)).
+fixture(fixture_ai_literacy_day_before_pinned_text, complete(deployer, []), ai_literacy_measures, date(2026, 7, 26)).
+fixture(fixture_ai_literacy_deployer_applies, complete(deployer, []), ai_literacy_measures, date(2026, 7, 27)).
+fixture(fixture_ai_literacy_not_an_ai_system, complete(deployer, [ai_system - false]), ai_literacy_measures, date(2027, 1, 1)).
+fixture(fixture_ai_literacy_importer_not_the_addressee, complete(importer, []), ai_literacy_measures, date(2027, 1, 1)).
+fixture(fixture_missing_actor_role, given([attribute(ai_system, true)]), ai_literacy_measures, date(2027, 1, 1)).
+fixture(fixture_actor_role_given, given([attribute(ai_system, true), attribute(actor_role, deployer)]), ai_literacy_measures, date(2027, 1, 1)).
+fixture(fixture_empty_profile, given([]), compliance_with_the_requirements_of_section_2, date(2029, 1, 1)).
+fixture(fixture_unsure_risk_referral, given([attribute(high_risk_ai_system, true), attribute(high_risk_route, annex_iii), attribute(actor_role, distributor), attribute(component_of_a_large_scale_it_system_listed_in_annex_x, false), attribute(placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, false), attribute(significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, false), attribute(presents_a_risk_within_the_meaning_of_article_79_1, unsure)]), distributor_information_on_a_risk, date(2028, 1, 1)).
+fixture(fixture_settled_risk, given([attribute(high_risk_ai_system, true), attribute(high_risk_route, annex_iii), attribute(actor_role, distributor), attribute(component_of_a_large_scale_it_system_listed_in_annex_x, false), attribute(placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, false), attribute(significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, false), attribute(presents_a_risk_within_the_meaning_of_article_79_1, true)]), distributor_information_on_a_risk, date(2028, 1, 1)).
+fixture(fixture_duplicate_and_unknown_keys, given([attribute(actor_role, provider), attribute(actor_role, deployer), attribute(colour, blue)]), ai_literacy_measures, date(2027, 1, 1)).
+fixture(fixture_well_formed_keys, given([attribute(actor_role, provider), attribute(ai_system, true)]), ai_literacy_measures, date(2027, 1, 1)).
+
+provider_side_duties_subject(Subject) :-
+    fixture(Subject, _, _, _).
+
+provider_side_duties_profile_for(Subject, duty_case(Profile, Duty, AssessmentDate)) :-
+    fixture(Subject, Description, Duty, AssessmentDate),
+    fixture_profile(Description, Profile).
+
+fixture_profile(complete(Role, Overrides), Profile) :-
+    complete_profile(Role, BaseProfile),
+    apply_overrides(Overrides, BaseProfile, Profile).
+fixture_profile(given(Profile), Profile).
+
+complete_profile(Role, [attribute(ai_system, true), attribute(high_risk_ai_system, true), attribute(high_risk_route, annex_iii), attribute(actor_role, Role), attribute(component_of_a_large_scale_it_system_listed_in_annex_x, false), attribute(placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_date_of_application_of_chapter_iii, false), attribute(significant_change_in_design_as_from_the_date_of_application_of_chapter_iii, false), attribute(intended_to_be_used_by_public_authorities, false), attribute(provider_established_in_a_third_country, false), attribute(logs_under_the_providers_control, true), attribute(reasoned_request_from_a_competent_authority, false), attribute(request_from_a_market_surveillance_authority_for_a_copy_of_the_mandate, false), attribute(competent_authority_action_in_relation_to_the_system, false), attribute(system_under_the_operators_responsibility, false), attribute(provider_considers_or_has_reason_to_consider_the_system_not_in_conformity, false), attribute(presents_a_risk_within_the_meaning_of_article_79_1, false), attribute(provider_aware_of_the_risk, false), attribute(representative_considers_or_has_reason_to_consider_the_provider_acting_contrary_to_its_obligations, false), attribute(importer_has_sufficient_reason_to_consider_the_system_not_in_conformity_or_falsified, false), attribute(distributor_considers_or_has_reason_to_consider_the_system_not_in_conformity, false), attribute(distributor_has_made_the_system_available_on_the_market, false)]).
+
+apply_overrides([], Profile, Profile).
+apply_overrides([OverrideKey - OverrideValue|Overrides], ProfileIn, ProfileOut) :-
+    replace_attribute(ProfileIn, OverrideKey, OverrideValue, ProfileNext),
+    apply_overrides(Overrides, ProfileNext, ProfileOut).
+
+replace_attribute([], _, _, []).
+replace_attribute([attribute(OverrideKey, _)|Elements], OverrideKey, OverrideValue, [attribute(OverrideKey, OverrideValue)|Replaced]) :-
+    replace_attribute(Elements, OverrideKey, OverrideValue, Replaced).
+replace_attribute([attribute(OtherKey, OtherValue)|Elements], OverrideKey, OverrideValue, [attribute(OtherKey, OtherValue)|Replaced]) :-
+    dif(OtherKey, OverrideKey),
+    replace_attribute(Elements, OverrideKey, OverrideValue, Replaced).
+
+provider_side_duties_assess(Subject, Result) :-
+    provider_side_duties_profile_for(Subject, Case),
+    decide_provider_side_duties(Case, Result).
+
+test(every_subject_has_one_case) :-
+    findall(Subject, provider_side_duties_subject(Subject), Subjects),
+    sort(Subjects, UniqueSubjects),
+    length(Subjects, SubjectCount),
+    length(UniqueSubjects, SubjectCount).
+test(an_override_replaces_the_value) :-
+    provider_side_duties_profile_for(fixture_not_a_high_risk_ai_system, duty_case(Profile, _, _)),
+    member(attribute(high_risk_ai_system, false), Profile).

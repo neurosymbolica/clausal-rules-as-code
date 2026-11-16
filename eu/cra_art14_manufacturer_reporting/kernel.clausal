@@ -1,0 +1,234 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/cra_art14_manufacturer_reporting (temporal family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one exception is the
+% scaffold's input check cra_art14_manufacturer_reporting_input_problems/2,
+% which is written here from the order's typed input contract and exported
+% for the slice and queries to import.
+%
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned unit text
+% of 32024R2847 (original OJ text, OJ L, 2024/2847, 20.11.2024):
+%   Art 14(5), with points (a) and (b): severity of an incident;
+%   Art 14(2)(a)-(c), Art 14(4)(a)-(c) and Art 14(6): the reporting steps;
+%   Art 71(2), second sentence: Article 14 applies from 11 September 2026.
+% The input check itself decides no statutory condition: it is plumbing,
+% and carries no implements/1 marker.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. This package has ONE determination
+% slice (cra_art14_manufacturer_reporting.clausal), so no domain predicate
+% is shared and none is defined here. Move a predicate here only when a
+% SECOND file calls it, and import it by full path:
+%   :- use_module(eu/cra_art14_manufacturer_reporting/kernel, [shared_predicate/2]).
+%
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms, so that every file spells them alike.
+%
+% Result term of the slice (the facade verdict):
+%   cra_art14_manufacturer_reporting_verdict(Status, Citations)
+%     Status    -- the severity status of severe_incident_status/3: the atom
+%                  severe or not_severe, or one non-final compound below;
+%     Citations -- a set-like list of cite(Key) terms; [] on every
+%                  non-final Status.
+%
+% Answers of the three contract queries:
+%   severe_incident_status(Profile, Status, Citations)
+%     severe      with [cite(eu_reg_2024_2847_art_14_5)]
+%     not_severe  with [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]
+%   manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps)
+%     Steps is [] or a list of step_due(Step, Limit, cite(Key)):
+%       Step  -- early_warning | notification | final_report | intermediate_report
+%       Limit -- hours_after_awareness(N) (N 24 or 72),
+%                days_after_measure_available(14),
+%                months_after_notification(1),
+%                or the atom on_request_of_coordinator_csirt
+%     or a non-final compound alone.
+%   manufacturer_reporting_step_timeliness(Profile, Event, Step, HoursElapsed, Result)
+%     Result is on_time, late(hour_limit), late(without_undue_delay),
+%     or a non-final compound.
+%
+% Non-final compounds (never the bare atoms):
+%   indeterminate([Key])           -- exactly one absent key;
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                                  -- Pairs are Key-Value pairs of the
+%                                     judgement keys read, root_exports order;
+%   input_problems(Problems)       -- Problems a list of duplicate_key(Key),
+%                                     wrong_type(Key) and unknown_key(Key).
+%
+% Arguments (not profile keys): Event is actively_exploited_vulnerability
+% or incident_impacting_product_security; Step is early_warning or
+% notification; the judgement value besides true and false is unsure.
+% =====================================================================
+
+:- module(kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% cra_art14_manufacturer_reporting_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] (an unbound
+%   Profile, a partial list, a list with an unbound element or with an element that is
+%   not attribute(Key, Value)) gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type (an unbound value included); then unknown_key(Key) for each key
+%   outside the contract, in the order of its first occurrence in Profile. Each key is
+%   named once. An absent key is not a problem.
+% The order's INPUT CHECK: a KEY that is not an atom (a number, a string, a compound,
+% an unbound variable) is a key outside the four, unknown_key(KEY) as given; so an
+% element attribute(Key, Value) is an attribute whatever Key is, and keys are compared
+% by identity (==), never by unification.
+% Every step is complementary clauses: exactly one clause holds for each input.
+cra_art14_manufacturer_reporting_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [affects_protection_of_sensitive_or_important_data_or_functions, leads_to_malicious_code_in_product_or_user_systems, early_warning_without_undue_delay, notification_without_undue_delay],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(affects_protection_of_sensitive_or_important_data_or_functions, judgement).
+key_type(leads_to_malicious_code_in_product_or_user_systems, judgement).
+key_type(early_warning_without_undue_delay, judgement).
+key_type(notification_without_undue_delay, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a proper list of attribute(Key, Value)
+% items; false for anything else, an unbound Term or a partial list included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+% attribute_t(Element, T): an unbound element is not an attribute; any
+% attribute(Key, Value) is one, whatever Key is (a non-atom Key is an unknown key).
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_key_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+% known_key_t(Key, Known, T): T is true when Key is identical (==) to a member of
+% Known; it never binds Key, so an unbound Key gives one answer.
+known_key_t(_, [], false).
+known_key_t(Key, [KnownKey|_], true) :-
+    Key == KnownKey.
+known_key_t(Key, [KnownKey|KnownKeys], T) :-
+    Key \== KnownKey,
+    known_key_t(Key, KnownKeys, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

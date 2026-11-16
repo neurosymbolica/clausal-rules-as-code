@@ -1,0 +1,94 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/eprivacy_breach_traffic_location_marketing.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Directive 2002/58/EC (the ePrivacy Directive), consolidated text
+% 02002L0058-20091219. Every answer is under the Directive's text only
+% (reading (1)); every reading is the a reading, not a lawyer's.
+%
+% Query types served:
+%   #2 eligibility -- the facade verdict decide_eprivacy_breach_traffic_
+%      location_marketing/2 (eligible | ineligible | national_law_decides |
+%      not_applicable, or a non-final status) with its cited checklist,
+%      both owned by the determination slice; this layer adds no rule.
+%   #16 what-if -- eprivacy_breach_traffic_location_marketing_what_if/4:
+%      replace (or add) one attribute(Key, Value) and re-evaluate the
+%      facade status.
+%   schema -- eprivacy_breach_traffic_location_marketing_profile_keys/1:
+%      the thirty-five keys of the typed input contract, in its order.
+%   input check -- eprivacy_breach_traffic_location_marketing_input_problems/2,
+%      re-exported from the kernel as the scaffold wrote it.
+%   result constructors -- input_problems/1, unknown_key/1, wrong_type/1,
+%      duplicate_key/1, indeterminate/1, needs_legal_review/2,
+%      open_textured/2, inputs_relied_on/1, provenance/2: the shapes of the
+%      result terms, never called as queries. unknown_key/1, wrong_type/1,
+%      duplicate_key/1 and provenance/2 are pure data: they have no clauses,
+%      only the constructors/1 declaration naming their fields.
+%   root atoms -- the thirty-five profile key atoms, the judgement value
+%      unsure and the eight enum atoms are listed under root_atoms: in
+%      manifest.yaml (an export list holds only name/arity entries), and
+%      the generated package facade makes them reachable on the root.
+%
+% The what-if works on an ATTRIBUTE LIST (the order's profile type), so it
+% does not use kit/query_combinators override_key/4, whose first argument
+% is a dict: it drops every attribute(Key, _) and adds attribute(Key, Value).
+% =====================================================================
+
+:- module(queries, [
+    eprivacy_breach_traffic_location_marketing_profile_keys/1,
+    eprivacy_breach_traffic_location_marketing_input_problems/2,
+    eprivacy_breach_traffic_location_marketing_what_if/4,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2
+]).
+
+:- use_module(eu/eprivacy_breach_traffic_location_marketing/kernel, [eprivacy_breach_traffic_location_marketing_input_problems/2]).
+:- use_module(eu/eprivacy_breach_traffic_location_marketing/eprivacy_breach_traffic_location_marketing, [eprivacy_breach_traffic_location_marketing_status/2]).
+
+:- constructors([unknown_key(key), wrong_type(key), duplicate_key(key), provenance(clause, citations)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+eprivacy_breach_traffic_location_marketing_profile_keys([breach_provider_of_publicly_available_service, personal_data_breach_occurred, authority_required_individual_notification, breach_likely_to_adversely_affect_subscriber_or_individual, protection_measures_demonstrated_to_authority, traffic_provider_of_public_network_or_service, traffic_data_relating_to_subscribers_or_users, traffic_processing_purpose, traffic_data_still_needed_for_transmission, traffic_data_necessary_for_billing_or_interconnection, traffic_billing_challenge_or_payment_period_running, traffic_marketing_provider_of_publicly_available_service, traffic_marketing_prior_consent_given, traffic_marketing_consent_withdrawn, traffic_marketing_processing_within_necessary_extent_and_duration, location_data_other_than_traffic_data_in_scope, location_data_made_anonymous, location_consent_given, location_consent_withdrawn, location_processing_within_necessary_extent_and_duration_for_value_added_service, location_processing_temporarily_refused, marketing_communication_for_direct_marketing, marketing_subscriber_is_natural_person, marketing_communication_means, marketing_prior_consent_given, marketing_contact_details_obtained_from_customer_in_sale, marketing_sender_obtained_the_contact_details, marketing_own_similar_products_or_services, marketing_objection_offered_at_collection, marketing_objection_offered_in_each_message, marketing_customer_refused_or_objected, email_sender_identity_disguised_or_concealed, email_contravenes_electronic_commerce_directive_article_6, email_valid_cessation_address_provided, email_encourages_visiting_contravening_websites]).
+
+% #16 what-if: re-evaluate with one key hypothetically set to NewValue.
+eprivacy_breach_traffic_location_marketing_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    eprivacy_breach_traffic_location_marketing_status(Hypothesis, NewStatus).
+
+% replace_attribute(Profile, Key, Value, Hypothesis): every attribute(Key, _)
+% dropped, attribute(Key, Value) added at the end (list plumbing, no rule).
+replace_attribute([], Key, Value, [attribute(Key, Value)]).
+replace_attribute([attribute(Key, _)|Elements], Key, Value, Hypothesis) :-
+    replace_attribute(Elements, Key, Value, Hypothesis).
+replace_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    dif(ElementKey, Key),
+    replace_attribute(Elements, Key, Value, Hypothesis).
+
+% ---- result constructors (shapes of the result terms) -----------------
+input_problems([_|_]).
+
+indeterminate([_]).
+
+needs_legal_review(open_textured(_, cite(_)), [inputs_relied_on(_)|_]).
+
+open_textured(_, cite(_)).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+test(the_schema_has_thirty_five_keys) :-
+    eprivacy_breach_traffic_location_marketing_profile_keys(Keys),
+    length(Keys, 35).
+test(what_if_replaces_a_key) :-
+    replace_attribute([attribute(a_key, false), attribute(other_key, true)], a_key, true, Hypothesis),
+    Hypothesis == [attribute(other_key, true), attribute(a_key, true)].
+:- end_module(queries).

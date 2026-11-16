@@ -1,0 +1,261 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Every fixture subject resolves to its EXPECTED status (asserted as the
+% concrete term), exactly once; every at-threshold subject is paired with a
+% one-unit-below control that gets the opposite verdict.
+% Run: python -m clausal.testing eu/dma_art_3_gatekeeper_order/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/dma_art_3_gatekeeper_order, [
+    decide_dma_art_3_gatekeeper_order/2,
+    dma_art_3_gatekeeper_order_status/2,
+    dma_art_3_gatekeeper_order_checklist/2,
+    dma_art_3_gatekeeper_order_decision_resolvable/1,
+    dma_art_3_gatekeeper_order_status_values/1,
+    dma_art_3_gatekeeper_order_subject/1,
+    dma_art_3_gatekeeper_order_profile_for/2,
+    dma_art_3_gatekeeper_order_assess/2,
+    impact_threshold_status/3,
+    gateway_threshold_status/3,
+    entrenchment_threshold_status/3,
+    presumption_status/3,
+    designation_requirements_status/4,
+    gatekeeper_status/4,
+    dma_art_3_gatekeeper_order_input_problems/2
+]).
+
+% ---- expected status per subject -------------------------------------
+expected_status(all_thresholds_at_boundary, requirements_presumed_met).
+expected_status(member_states_two, requirements_not_met).
+expected_status(turnover_at_threshold, requirements_presumed_met).
+expected_status(turnover_one_euro_below, requirements_not_met).
+expected_status(market_capitalisation_at_threshold, requirements_presumed_met).
+expected_status(market_capitalisation_one_euro_below, requirements_not_met).
+expected_status(end_users_one_below, requirements_not_met).
+expected_status(business_users_one_below, requirements_not_met).
+expected_status(end_users_third_year_one_below, requirements_not_met).
+expected_status(business_users_third_year_one_below, requirements_not_met).
+expected_status(presumed_arguments_unstated, indeterminate([rebuttal_arguments_presented])).
+expected_status(presumed_rebuttal_accepted, requirements_not_met).
+expected_status(presumed_rebuttal_rejected, requirements_presumed_met).
+expected_status(presumed_rebuttal_conclusion_not_shown, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_3_5), cite(commission_rebuttal_conclusion)), [resolution(cite(commission_rebuttal_conclusion), not_attempted), inputs_relied_on([rebuttal_accepted_by_commission-absent])])).
+expected_status(below_thresholds_all_judgements_true, requirements_met).
+expected_status(below_thresholds_one_judgement_false, requirements_not_met).
+expected_status(below_thresholds_judgement_unsure, needs_legal_review(open_textured(core_platform_service_is_important_gateway, cite(eu_reg_2022_1925_art_3_1_b)), [inputs_relied_on([significant_impact_on_internal_market-true, core_platform_service_is_important_gateway-unsure, entrenched_and_durable_position-true])])).
+expected_status(below_thresholds_judgement_absent, indeterminate([core_platform_service_is_important_gateway])).
+expected_status(designated_attested_true, requirements_presumed_met).
+expected_status(designated_attested_false, requirements_presumed_met).
+expected_status(malformed_float_turnover, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)])).
+
+% assessed(Subject, Status, Citations): the subject has exactly one verdict.
+assessed(Subject, Status, Citations) :-
+    findall(Verdict, dma_art_3_gatekeeper_order_assess(Subject, Verdict), Verdicts),
+    Verdicts = [dma_art_3_gatekeeper_order_verdict(Status, Citations)].
+
+every_subject_as_expected([]).
+every_subject_as_expected([Subject|Subjects]) :-
+    expected_status(Subject, ExpectedStatus),
+    assessed(Subject, FoundStatus, _),
+    FoundStatus == ExpectedStatus,
+    every_subject_as_expected(Subjects).
+
+every_subject_has_a_checklist([]).
+every_subject_has_a_checklist([Subject|Subjects]) :-
+    dma_art_3_gatekeeper_order_profile_for(Subject, Profile),
+    dma_art_3_gatekeeper_order_checklist(Profile, [_FirstItem|_OtherItems]),
+    every_subject_has_a_checklist(Subjects).
+
+% ---- every subject ---------------------------------------------------
+test(every_subject_resolves_once_to_its_expected_status) :-
+    findall(Subject, dma_art_3_gatekeeper_order_subject(Subject), Subjects),
+    length(Subjects, 21),
+    every_subject_as_expected(Subjects).
+test(every_subject_has_a_non_empty_checklist) :-
+    findall(Subject, dma_art_3_gatekeeper_order_subject(Subject), Subjects),
+    every_subject_has_a_checklist(Subjects).
+
+% ---- the presumption route and its boundary pairs --------------------
+test(all_thresholds_at_boundary_is_presumed_met_with_citations) :-
+    assessed(all_thresholds_at_boundary, requirements_presumed_met, Citations),
+    Citations == [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2)].
+test(all_thresholds_at_boundary_is_not_requirements_not_met, fail) :-
+    dma_art_3_gatekeeper_order_assess(all_thresholds_at_boundary, dma_art_3_gatekeeper_order_verdict(requirements_not_met, _)).
+test(member_states_two_is_not_met_with_citations) :-
+    assessed(member_states_two, requirements_not_met, Citations),
+    Citations == [cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2)].
+test(member_states_two_is_not_presumed_met, fail) :-
+    dma_art_3_gatekeeper_order_assess(member_states_two, dma_art_3_gatekeeper_order_verdict(requirements_presumed_met, _)).
+test(turnover_pair_gets_opposite_verdicts) :-
+    assessed(turnover_at_threshold, requirements_presumed_met, _),
+    assessed(turnover_one_euro_below, requirements_not_met, _).
+test(market_capitalisation_pair_gets_opposite_verdicts) :-
+    assessed(market_capitalisation_at_threshold, requirements_presumed_met, _),
+    assessed(market_capitalisation_one_euro_below, requirements_not_met, _).
+test(end_users_one_below_is_not_presumed_met, fail) :-
+    dma_art_3_gatekeeper_order_assess(end_users_one_below, dma_art_3_gatekeeper_order_verdict(requirements_presumed_met, _)).
+test(end_users_one_below_is_not_met) :-
+    assessed(end_users_one_below, requirements_not_met, _).
+test(business_users_one_below_is_not_met) :-
+    assessed(business_users_one_below, requirements_not_met, _).
+
+% ---- the six contract queries on the boundary subjects ----------------
+test(impact_met_at_the_turnover_threshold) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_at_threshold, Profile),
+    findall(Result-Citations, impact_threshold_status(Profile, Result, Citations), Answers),
+    Answers == [impact_threshold_met-[cite(eu_reg_2022_1925_art_3_2_a)]].
+test(impact_not_met_one_euro_below_the_turnover_threshold) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_one_euro_below, Profile),
+    findall(Result-Citations, impact_threshold_status(Profile, Result, Citations), Answers),
+    Answers == [impact_threshold_not_met-[cite(eu_reg_2022_1925_art_3_2_a)]].
+test(impact_not_met_with_two_member_states) :-
+    dma_art_3_gatekeeper_order_profile_for(member_states_two, Profile),
+    findall(Result, impact_threshold_status(Profile, Result, _), Answers),
+    Answers == [impact_threshold_not_met].
+test(impact_not_met_one_euro_below_the_market_threshold) :-
+    dma_art_3_gatekeeper_order_profile_for(market_capitalisation_one_euro_below, Profile),
+    findall(Result, impact_threshold_status(Profile, Result, _), Answers),
+    Answers == [impact_threshold_not_met].
+test(gateway_met_at_the_user_thresholds) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    findall(Result-Citations, gateway_threshold_status(Profile, Result, Citations), Answers),
+    Answers == [gateway_threshold_met-[cite(eu_reg_2022_1925_art_3_2_b)]].
+test(gateway_not_met_one_business_user_below) :-
+    dma_art_3_gatekeeper_order_profile_for(business_users_one_below, Profile),
+    findall(Result, gateway_threshold_status(Profile, Result, _), Answers),
+    Answers == [gateway_threshold_not_met].
+test(gateway_still_met_when_only_the_third_year_is_below) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_third_year_one_below, Profile),
+    findall(Result, gateway_threshold_status(Profile, Result, _), Answers),
+    Answers == [gateway_threshold_met].
+test(entrenchment_not_met_when_the_third_year_is_below) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_third_year_one_below, Profile),
+    findall(Result-Citations, entrenchment_threshold_status(Profile, Result, Citations), Answers),
+    Answers == [entrenchment_threshold_not_met-[cite(eu_reg_2022_1925_art_3_2_c), cite(eu_reg_2022_1925_art_3_2_b)]].
+test(entrenchment_met_at_the_boundary) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    findall(Result, entrenchment_threshold_status(Profile, Result, _), Answers),
+    Answers == [entrenchment_threshold_met].
+test(presumption_applies_at_the_boundary) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    findall(Result-Citations, presumption_status(Profile, Result, Citations), Answers),
+    Answers == [gatekeeper_presumed-[cite(eu_reg_2022_1925_art_3_2_a), cite(eu_reg_2022_1925_art_3_2_b), cite(eu_reg_2022_1925_art_3_2_c)]].
+test(presumption_fails_on_the_third_business_year) :-
+    dma_art_3_gatekeeper_order_profile_for(business_users_third_year_one_below, Profile),
+    findall(Result-Citations, presumption_status(Profile, Result, Citations), Answers),
+    Answers = [gatekeeper_not_presumed-Citations],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2022_1925_art_3_2_b), cite(eu_reg_2022_1925_art_3_2_c)].
+
+% ---- the rebuttal route (Art 3(5)) -----------------------------------
+test(accepted_rebuttal_copies_the_attestation_into_the_basis) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_accepted, Profile),
+    member(attribute(rebuttal_accepted_by_commission, Attested), Profile),
+    findall(Result-Basis-Citations, designation_requirements_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [requirements_not_met-[outside_fact(rebuttal_accepted_by_commission, Attested)]-[cite(eu_reg_2022_1925_art_3_1), cite(eu_reg_2022_1925_art_3_2), cite(eu_reg_2022_1925_art_3_5)]].
+test(rejected_rebuttal_is_presumed_met_with_the_basis) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_rejected, Profile),
+    member(attribute(rebuttal_accepted_by_commission, Attested), Profile),
+    findall(Result-Basis, designation_requirements_status(Profile, Result, Basis, _), Answers),
+    Answers == [requirements_presumed_met-[outside_fact(rebuttal_accepted_by_commission, Attested)]].
+test(rejected_rebuttal_is_not_requirements_not_met, fail) :-
+    dma_art_3_gatekeeper_order_assess(presumed_rebuttal_rejected, dma_art_3_gatekeeper_order_verdict(requirements_not_met, _)).
+test(conclusion_not_shown_is_referred_without_citations) :-
+    dma_art_3_gatekeeper_order_profile_for(presumed_rebuttal_conclusion_not_shown, Profile),
+    findall(Basis-Citations, designation_requirements_status(Profile, _, Basis, Citations), Answers),
+    Answers == [[]-[]].
+test(arguments_unstated_names_the_key) :-
+    assessed(presumed_arguments_unstated, indeterminate([rebuttal_arguments_presented]), []).
+
+% ---- the judgement route (Art 3(1)) ----------------------------------
+test(all_judgements_true_is_requirements_met_with_point_citations) :-
+    assessed(below_thresholds_all_judgements_true, requirements_met, Citations),
+    Citations == [cite(eu_reg_2022_1925_art_3_1_a), cite(eu_reg_2022_1925_art_3_1_b), cite(eu_reg_2022_1925_art_3_1_c)].
+test(one_false_judgement_is_not_requirements_met, fail) :-
+    dma_art_3_gatekeeper_order_assess(below_thresholds_one_judgement_false, dma_art_3_gatekeeper_order_verdict(requirements_met, _)).
+test(one_false_judgement_is_requirements_not_met) :-
+    assessed(below_thresholds_one_judgement_false, requirements_not_met, _).
+test(unsure_judgement_is_referred_without_citations) :-
+    assessed(below_thresholds_judgement_unsure, needs_legal_review(open_textured(core_platform_service_is_important_gateway, cite(eu_reg_2022_1925_art_3_1_b)), _), []).
+
+% ---- the designation (Art 3(9)) --------------------------------------
+test(designation_attested_true_is_a_designated_gatekeeper) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_true, Profile),
+    member(attribute(designated_as_gatekeeper_for_core_platform_service, Attested), Profile),
+    findall(Result-Basis-Citations, gatekeeper_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [designated_gatekeeper-[outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested)]-[cite(eu_reg_2022_1925_art_3_9)]].
+test(designation_attested_false_is_not_a_designated_gatekeeper) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_false, Profile),
+    findall(Result, gatekeeper_status(Profile, Result, _, _), Answers),
+    Answers == [not_designated_gatekeeper].
+test(designation_attested_false_is_not_designated, fail) :-
+    dma_art_3_gatekeeper_order_profile_for(designated_attested_false, Profile),
+    gatekeeper_status(Profile, designated_gatekeeper, _, _).
+test(designation_not_shown_is_referred) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    findall(Result-Basis-Citations, gatekeeper_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_3_9), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent])])-[]-[]].
+
+% ---- evidence constructors: url/2, document/2, provenance/2 -----------
+% The attestation's EVIDENCE (url/2 or document/2) and its REASON (here a
+% provenance/2 term) are copied into BASIS exactly as supplied, never read.
+test(url_evidence_is_copied_into_the_basis) :-
+    Attested = attested(true, attestation(european_commission, at_2026_09_06, designation_decision, url('https://eur-lex.europa.eu/decision', retrieved_2026_09_06))),
+    findall(Result-Basis-Citations, gatekeeper_status([attribute(designated_as_gatekeeper_for_core_platform_service, Attested)], Result, Basis, Citations), Answers),
+    Answers == [designated_gatekeeper-[outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(true, attestation(european_commission, at_2026_09_06, designation_decision, url('https://eur-lex.europa.eu/decision', retrieved_2026_09_06))))]-[cite(eu_reg_2022_1925_art_3_9)]].
+test(document_evidence_is_copied_into_the_basis) :-
+    Attested = attested(false, attestation(european_commission, at_2026_09_06, designation_decision, document(upload_one, sha_one))),
+    findall(Result-Basis, gatekeeper_status([attribute(designated_as_gatekeeper_for_core_platform_service, Attested)], Result, Basis, _), Answers),
+    Answers == [not_designated_gatekeeper-[outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(false, attestation(european_commission, at_2026_09_06, designation_decision, document(upload_one, sha_one))))]].
+test(document_evidence_is_not_designated, fail) :-
+    gatekeeper_status([attribute(designated_as_gatekeeper_for_core_platform_service, attested(false, attestation(european_commission, at_2026_09_06, designation_decision, document(upload_one, sha_one))))], designated_gatekeeper, _, _).
+test(provenance_reason_is_copied_into_the_basis) :-
+    Attested = attested(true, attestation(european_commission, at_2026_09_06, provenance(designation_decision, commission_register), none)),
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems([attribute(designated_as_gatekeeper_for_core_platform_service, Attested)], Problems), ProblemAnswers),
+    ProblemAnswers == [[]],
+    gatekeeper_status([attribute(designated_as_gatekeeper_for_core_platform_service, Attested)], designated_gatekeeper, [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(true, attestation(european_commission, at_2026_09_06, provenance(designation_decision, commission_register), none)))], [cite(eu_reg_2022_1925_art_3_9)]).
+
+% ---- the input check -------------------------------------------------
+test(malformed_float_turnover_has_a_bare_problem_list) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(union_turnover_eur_most_recent_financial_year)]].
+test(malformed_float_turnover_answers_every_query_with_input_problems) :-
+    dma_art_3_gatekeeper_order_profile_for(malformed_float_turnover, Profile),
+    impact_threshold_status(Profile, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)]), []),
+    gatekeeper_status(Profile, input_problems([wrong_type(union_turnover_eur_most_recent_financial_year)]), [], []),
+    assessed(malformed_float_turnover, input_problems(_), []).
+test(the_integer_control_has_no_problem) :-
+    dma_art_3_gatekeeper_order_profile_for(turnover_at_threshold, Profile),
+    dma_art_3_gatekeeper_order_input_problems(Profile, []).
+test(a_duplicate_key_is_named_once_and_never_wrong_type) :-
+    findall(Problems, dma_art_3_gatekeeper_order_input_problems([attribute(member_states_where_core_platform_service_provided, 3), attribute(member_states_where_core_platform_service_provided, -1)], Problems), Answers),
+    Answers == [[duplicate_key(member_states_where_core_platform_service_provided)]].
+test(a_duplicate_key_answers_every_query_with_input_problems) :-
+    Profile = [attribute(rebuttal_arguments_presented, true), attribute(rebuttal_arguments_presented, true)],
+    findall(Result-Citations, presumption_status(Profile, Result, Citations), Answers),
+    Answers == [input_problems([duplicate_key(rebuttal_arguments_presented)])-[]],
+    designation_requirements_status(Profile, input_problems([duplicate_key(rebuttal_arguments_presented)]), [], []).
+test(a_single_key_is_not_a_duplicate, fail) :-
+    dma_art_3_gatekeeper_order_input_problems([attribute(rebuttal_arguments_presented, true)], [duplicate_key(rebuttal_arguments_presented)]).
+
+% ---- facade agreement ------------------------------------------------
+test(status_projection_agrees_with_the_verdict) :-
+    dma_art_3_gatekeeper_order_profile_for(below_thresholds_all_judgements_true, Profile),
+    findall(Status, dma_art_3_gatekeeper_order_status(Profile, Status), Answers),
+    Answers == [requirements_met].
+test(decision_resolvable_and_status_values) :-
+    dma_art_3_gatekeeper_order_profile_for(all_thresholds_at_boundary, Profile),
+    dma_art_3_gatekeeper_order_decision_resolvable(Profile),
+    decide_dma_art_3_gatekeeper_order(Profile, dma_art_3_gatekeeper_order_verdict(Status, _)),
+    dma_art_3_gatekeeper_order_status_values(StatusValues),
+    member(Status, StatusValues).
+test(checklist_rows_carry_citations) :-
+    dma_art_3_gatekeeper_order_profile_for(end_users_one_below, Profile),
+    dma_art_3_gatekeeper_order_checklist(Profile, Items),
+    length(Items, 7),
+    member(item(gateway_threshold, unmet(gateway_threshold_not_met), cite(eu_reg_2022_1925_art_3_2_b)), Items),
+    member(item(significant_impact_on_internal_market, unmet(judged_false), cite(eu_reg_2022_1925_art_3_1_a)), Items).
+
+:- end_module(test_public_interface).

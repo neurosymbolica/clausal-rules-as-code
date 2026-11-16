@@ -1,0 +1,455 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_information_duties_timing
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "information_deadline_basis"
+  - "information_timing_verdict"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- keep in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  - "gdpr_information_duties_timing_input_problems/2"
+  - "gdpr_information_duties_timing_date_order/3"
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- information_deadline_basis.clausal --
+  - "decide_information_deadline_basis/2"
+  - "information_deadline_basis_status/2"
+  - "information_deadline_basis_checklist/2"
+  - "information_deadline_basis_decision_resolvable/1"
+  - "information_deadline_basis_status_values/1"
+  - "information_deadline_basis_outcome/2"
+  - "information_deadline/2"
+  - "information_deadline_basis/2"
+  # -- information_timing_verdict.clausal --
+  - "decide_information_timing_verdict/2"
+  - "information_timing_verdict_status/2"
+  - "information_timing_verdict_checklist/2"
+  - "information_timing_verdict_decision_resolvable/1"
+  - "information_timing_verdict_status_values/1"
+  - "information_timing_verdict/3"
+  # -- queries.clausal --
+  - "gdpr_information_duties_timing_profile_keys/1"
+  - "gdpr_information_duties_timing_what_if/4"
+  - "gdpr_information_duties_timing_obligation/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_information_duties_timing_subject/1"
+  - "gdpr_information_duties_timing_profile_for/2"
+  - "gdpr_information_duties_timing_assess/2"
+
+# root_atoms: the bare atoms the scorer reads as package-root attributes
+# (an export list holds name/arity entries only). true and false are reserved.
+root_atoms:
+  - "personal_data_collected_from_data_subject"
+  - "items_provided"
+  - "items_data_subject_already_has"
+  - "data_protection_officer_designated"
+  - "processing_based_on_legitimate_interests"
+  - "recipients_exist"
+  - "transfer_intended"
+  - "processing_based_on_consent"
+  - "automated_decision_making_under_article_22"
+  - "obtaining_date"
+  - "provision_date"
+  - "data_used_for_communication_with_data_subject"
+  - "first_communication_date"
+  - "disclosure_to_another_recipient_envisaged"
+  - "first_disclosure_date"
+  - "provided_within_reasonable_period"
+  - "provision_impossible_or_disproportionate_effort"
+  - "protective_measures_taken"
+  - "obtaining_or_disclosure_laid_down_by_law"
+  - "professional_secrecy_obligation_by_law"
+  - "further_processing_for_another_purpose_intended"
+  - "further_processing_start_date"
+  - "further_processing_information_date"
+  - "further_processing_items_provided"
+  - "paragraph_2_information_relevant_to_further_processing"
+  - "public_holidays"
+  - "controller_identity_and_contact_details"
+  - "data_protection_officer_contact_details"
+  - "purposes_and_legal_basis"
+  - "legitimate_interests"
+  - "recipients_or_categories_of_recipients"
+  - "third_country_transfer_information"
+  - "categories_of_personal_data"
+  - "storage_period_or_criteria"
+  - "data_subject_rights"
+  - "right_to_withdraw_consent"
+  - "right_to_lodge_complaint"
+  - "statutory_or_contractual_requirement"
+  - "source_of_personal_data"
+  - "automated_decision_making_information"
+  - "other_purpose_information"
+  - "art13_1"
+  - "art14_3_a"
+  - "art14_3_b"
+  - "art14_3_c"
+  - "timely"
+  - "late"
+  - "unsure"
+  - "profile"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only kit modules (formalize_lib, kit/deadline_lib),
+# no shared backbone package.
+uses: []
+
+scope: "WHEN the controller must give the data subject the information of GDPR
+  Art 13(1) (data collected from the data subject: at the time the personal data
+  are obtained) or Art 14 (data not obtained from the data subject: Art 14(3)(a)
+  within a reasonable period and at the latest within one month, (b) at the latest
+  at the first communication, (c) at the latest at the first disclosure to another
+  recipient, the earliest applicable date binding), and whether the one provision
+  carried by the profile came in time. The one-month period is computed by
+  Regulation (EEC, Euratom) No 1182/71 Art 3(1), 3(2)(c) and 3(4), applied to the
+  GDPR by the G4 order, with an attested public-holiday list. Answers
+  information_deadline/2 (the date), information_deadline_basis/2 (the limb) and
+  information_timing_verdict/3 (timely | late, cited), with the input check
+  gdpr_information_duties_timing_input_problems/2. The reasonable period is the
+  user's judgement provided_within_reasonable_period; unsure refers to a lawyer.
+  Out of scope: which items are owed or missing, the Art 14(5) exemptions,
+  further processing and the headline verdict (sibling orders), the adequacy of
+  an item's content (Q11), the form of the notice under Art 12, layered notices
+  and as-of dates (Q12)."
+
+sources:
+  - "Regulation (EU) 2016/679 (General Data Protection Regulation), OJ L 119, 4.5.2016, consolidated text 02016R0679-20160504 with the 2018 corrigendum: Art 13(1) chapeau and points (a)-(f)"
+  - "Regulation (EU) 2016/679, Art 14(3), chapeau and points (a)-(c) (time limits), with Art 14(1) for the route"
+  - "Regulation (EU) 2016/679, Art 4(1), 4(4), 4(7) and 4(9) (definitions used for reasoning, never cited in a result)"
+  - "Regulation (EEC, Euratom) No 1182/71 determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971 (CELEX 31971R1182): Art 3(1) second subparagraph, Art 3(2)(c), Art 3(4)"
+
+query_interface:
+  2: "information_timing_verdict/3"                   # eligibility: timely | late with citations (checklist information_timing_verdict_checklist/2)
+  13: "gdpr_information_duties_timing_what_if/4"      # compliance_check: is a proposed provision in time
+  14: "gdpr_information_duties_timing_obligation/2"   # obligation_surfacing: provide the information by DATE under LIMB
+  15: "information_deadline/2"                        # deadline: the date; consequence of missing it is late
+  16: "gdpr_information_duties_timing_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_013
+  - 02016R0679-20160504#art_014
+  reason: 'The titles of Articles 4, 13 and 14 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for.'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: art4_definitions_used_for_reasoning
+  debt: true
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_9
+  reason: 'Quoted above for the terms data subject (Art 4(1)), profiling (Art 4(4),
+    inside the automated decision-making item), controller (Art 4(7)) and recipient
+    (Art 4(9), whose exception for public authorities in a particular inquiry bounds
+    recipients_exist). No limb reads them: the profile states the facts in those terms
+    already.'
+  consequence: whether data is personal data, who is the controller and whether a
+    body is a recipient are not tested. The caller must establish them under Art 4(1),
+    (7) and (9) itself before stating the profile, in particular recipients_exist.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: art4_definitions_not_read
+  debt: true
+  units:
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  reason: Art 4 is pinned whole because the smallest document element that contains
+    Art 4(1), (4), (7) and (9) is the article. The other definitions (processing,
+    restriction, pseudonymisation, filing system, processor, third party, consent,
+    personal data breach, genetic, biometric and health data, main establishment,
+    representative, enterprise, group, binding corporate rules, supervisory authority
+    and the rest) are read by no limb. Consent as such is reached through the crisp
+    flag processing_based_on_consent.
+  consequence: 'None for a caller: no answer turns on these definitions; consent reaches
+    the order only as the flag processing_based_on_consent, which the caller states.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: art14_3_a_specific_circumstances
+  debt: true
+  units:
+  - 02016R0679-20160504#point_014.003_a
+  partial: true
+  reason: Formalized as the one-month outer limit (exact) and the judgement provided_within_reasonable_period.
+    The words "having regard to the specific circumstances in which the personal data
+    are processed" are inside the judgement.
+  consequence: The answer takes provided_within_reasonable_period as the caller's
+    judgement and checks only the one-month outer limit; the caller must weigh the
+    specific circumstances of the processing under Art 14(3)(a) itself before judging
+    it.
+  declaration: exception_modelled
+- what: regulation_1182_71_article_headings
+  not_formalized_because: structural
+  units:
+  - 31971R1182#art_002
+  - 31971R1182#art_003
+  - 31971R1182#art_004
+  - 31971R1182#art_005
+  reason: 'The titles of Articles 2 to 5 of Regulation (EEC, Euratom) No 1182/71 carry
+    no rule: document structure, not operative law. Deferred so every unit of the
+    pinned extracts is accounted for.'
+  consequence: 'None for a caller: an article title carries no rule.'
+  declaration: not_an_exception
+- what: regulation_1182_71_article_1_scope
+  debt: true
+  units:
+  - 31971R1182#art_001
+  reason: Article 1 limits Regulation (EEC, Euratom) No 1182/71 to acts of the Council
+    or Commission; Regulation (EU) 2016/679 is an act of the European Parliament and
+    of the Council. This order applies Article 3 to the periods of Regulation (EU)
+    2016/679 by analogy (a lawyer point, see PERIODS), so no rule reads Article 1.
+  consequence: 'Every deadline this order gives rests on applying Article 3 of Regulation
+    (EEC, Euratom) No 1182/71 to Regulation (EU) 2016/679, which Article 1 of that
+    Regulation does not itself provide: a caller that relies on the date accepts that
+    reading, or computes the period under the rule it holds applicable.'
+  declaration: answered_with_caveat
+- what: regulation_1182_71_article_2_public_holidays_and_working_days
+  not_formalized_because: national_law
+  units:
+  - 31971R1182#parag_002.001
+  - 31971R1182#parag_002.002
+  reason: 'Article 2(1) defines public holidays as the days designated as such in
+    the Member State or in the Community institution in which action is to be taken,
+    as published by the Commission in the Official Journal; Article 2(2) defines working
+    days as all days other than public holidays, Sundays and Saturdays. This order
+    chooses no Member State or institution and reads no published list: public holidays
+    arrive as the outside fact public_holidays, and PERIODS states the working day
+    of the Article 3(4) shift itself.'
+  consequence: The caller attests in public_holidays the public holidays of the Member
+    State or Community institution in which the action is to be taken (Article 2(1));
+    a public holiday missing from that list, or an absent list, leaves a deadline
+    that falls on that day unmoved, one working day early.
+  declaration: answered_with_caveat
+- what: regulation_1182_71_article_3_rules_not_applied
+  debt: true
+  units:
+  - 31971R1182#parag_003.002
+  - 31971R1182#point_003.002_a
+  - 31971R1182#point_003.002_b
+  - 31971R1182#point_003.002_d
+  - 31971R1182#parag_003.003
+  - 31971R1182#parag_003.005
+  reason: The periods of this order are expressed in months and run from an event,
+    so they read only Article 3(1), second subparagraph, Article 3(2)(c) and Article
+    3(4) (PERIODS). The opening words of Article 3(2) only make point (c) subject
+    to paragraphs 1 and 4, which is how PERIODS applies them; points (a), (b) and
+    (d) govern periods expressed in hours, in days and in parts of months; Article
+    3(3) (Saturdays, Sundays and public holidays count within a period) holds by construction
+    in a count of calendar months; Article 3(5) (a period of two days or more includes
+    at least two working days) is not applied.
+  consequence: 'None for a caller: no period of this order is expressed in hours,
+    in days or in parts of months, and a period of a month or more holds the two working
+    days of Article 3(5).'
+  declaration: not_an_exception
+- what: regulation_1182_71_articles_4_and_5_acts_and_specified_dates
+  not_formalized_because: institutional
+  units:
+  - 31971R1182#parag_004.001
+  - 31971R1182#parag_004.002
+  - 31971R1182#parag_004.003
+  - 31971R1182#parag_005.001
+  - 31971R1182#parag_005.002
+  reason: 'Article 4 governs the entry into force, taking effect, application and
+    expiry of acts of the Council or Commission; Article 5 governs an action to be
+    effected at a specified moment or date in implementation of such an act. No period
+    of this order is either: each runs from an event (PERIODS).'
+  consequence: 'None for a caller: no answer of this order concerns the entry into
+    force or expiry of an act, or an action fixed at a specified moment or date.'
+  declaration: not_an_exception
+- what: art13_1_items_owed
+  debt: true
+  units:
+  - 02016R0679-20160504#point_013.001_a
+  - 02016R0679-20160504#point_013.001_b
+  - 02016R0679-20160504#point_013.001_c
+  - 02016R0679-20160504#point_013.001_d
+  - 02016R0679-20160504#point_013.001_e
+  - 02016R0679-20160504#point_013.001_f
+  reason: Points (a) to (f) of Art 13(1) list the items of information owed. Under
+    the SPLIT SCOPE of 2026-11-03 the checklist of items and the items missing are
+    answered by the sibling order gdpr-information-duties-items-and-further-processing;
+    this order reads only the time fixed by the chapeau of Art 13(1) ('at the time
+    when personal data are obtained').
+  consequence: Which items are owed and whether each was given are not tested here;
+    the timing verdict says only whether the one provision came in time. The caller
+    asks the sibling order for the items.
+  declaration: not_an_exception
+  open: formalised by the sibling order gdpr-information-duties-items-and-further-processing;
+    the deferral stands for this run.
+- what: art13_2_3_4_further_items_further_processing_and_exemption
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_013.002
+  - 02016R0679-20160504#point_013.002_a
+  - 02016R0679-20160504#point_013.002_b
+  - 02016R0679-20160504#point_013.002_c
+  - 02016R0679-20160504#point_013.002_d
+  - 02016R0679-20160504#point_013.002_e
+  - 02016R0679-20160504#point_013.002_f
+  - 02016R0679-20160504#parag_013.003
+  - 02016R0679-20160504#parag_013.004
+  reason: Art 13(2) (the further items), Art 13(3) (information before further processing
+    for another purpose) and Art 13(4) (the data subject already has the information)
+    are answered by the sibling orders gdpr-information-duties-items-and-further-processing
+    and gdpr-information-duties-headline-verdict (SPLIT SCOPE); no relation of this
+    order reads them.
+  consequence: The further items, further-processing information and the exemption
+    for information the data subject already has are not tested here; the caller asks
+    the sibling orders.
+  declaration: not_an_exception
+  open: formalised by the sibling orders; the deferral stands for this run.
+- what: art14_1_route_chapeau_and_items_owed
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_014.001
+  - 02016R0679-20160504#point_014.001_a
+  - 02016R0679-20160504#point_014.001_b
+  - 02016R0679-20160504#point_014.001_c
+  - 02016R0679-20160504#point_014.001_d
+  - 02016R0679-20160504#point_014.001_e
+  - 02016R0679-20160504#point_014.001_f
+  reason: The chapeau of Art 14(1) is reached only as the route (the caller's crisp
+    flag personal_data_collected_from_data_subject false selects Art 14(3), reading
+    1); points (a) to (f) list the items owed, answered by the sibling order gdpr-information-duties-items-and-further-processing
+    (SPLIT SCOPE).
+  consequence: Whether the data were obtained from the data subject is the caller's
+    statement (Q5), and which Art 14(1) items are owed is not tested here; the caller
+    asks the sibling order for the items.
+  declaration: answered_with_caveat
+  open: formalised by the sibling order; the deferral stands for this run.
+- what: art14_2_further_items_owed
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_014.002
+  - 02016R0679-20160504#point_014.002_a
+  - 02016R0679-20160504#point_014.002_b
+  - 02016R0679-20160504#point_014.002_c
+  - 02016R0679-20160504#point_014.002_d
+  - 02016R0679-20160504#point_014.002_e
+  - 02016R0679-20160504#point_014.002_f
+  - 02016R0679-20160504#point_014.002_g
+  reason: Art 14(2) lists the further items owed on the Art 14 route; they are answered
+    by the sibling order gdpr-information-duties-items-and-further-processing (SPLIT
+    SCOPE). This order reads Art 14(3) only for when the information of paragraphs
+    1 and 2 is due.
+  consequence: Which Art 14(2) items are owed is not tested here; the caller asks
+    the sibling order.
+  declaration: not_an_exception
+  open: formalised by the sibling order; the deferral stands for this run.
+- what: art14_4_further_processing
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_014.004
+  reason: Art 14(4) (information prior to further processing for another purpose)
+    is answered by the sibling order gdpr-information-duties-items-and-further-processing
+    (SPLIT SCOPE); the further-processing keys are accepted and ignored here.
+  consequence: The timing of further-processing information is not tested here; the
+    caller asks the sibling order.
+  declaration: not_an_exception
+  open: formalised by the sibling order; the deferral stands for this run.
+- what: art14_5_exemptions
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_014.005
+  - 02016R0679-20160504#point_014.005_a
+  - 02016R0679-20160504#point_014.005_b
+  - 02016R0679-20160504#point_014.005_c
+  - 02016R0679-20160504#point_014.005_d
+  reason: The exemptions of Art 14(5) are answered by the sibling orders (SPLIT SCOPE);
+    the keys they read (provision_impossible_or_disproportionate_effort, protective_measures_taken,
+    obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law)
+    are accepted, checked by the input check and ignored here.
+  consequence: The deadline and the timing verdict are given even where an Art 14(5)
+    exemption would lift the duty; the caller asks the sibling order whether the duty
+    applies at all before relying on a late verdict.
+  declaration: answered_with_caveat
+  open: formalised by the sibling orders; the deferral stands for this run.
+
+excluded_set:
+- what: transparent_information_and_modalities
+  instrument: Regulation (EU) 2016/679 Art 12
+  cites:
+  - 02016R0679-20160504#art_012
+  reason: Art 12 (concise, transparent, intelligible and easily accessible form; clear
+    and plain language; free of charge; standardised icons) governs HOW the information
+    is given. It is pinned for the sibling data-subject-rights order, not here.
+  consequence: The form of the notice is not tested; an item "provided" in an unreadable
+    notice counts as provided.
+- what: regulatory_guidance
+  instrument: Article 29 Working Party Guidelines on transparency (WP260 rev.01) as
+    endorsed by the EDPB
+  cites:
+  - 02016R0679-20160504#parag_070.001
+  - 02016R0679-20160504#point_070.001_e
+  reason: Soft law, not pinned and not quoted; named as the authority of the Q1 ruling
+    (reading 4, the earliest date binds). Reading (5) and Q5 are where it would also
+    matter.
+  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
+    itself. A caller who relies on the guidance beyond the earliest-date ruling reads
+    it and applies it itself.

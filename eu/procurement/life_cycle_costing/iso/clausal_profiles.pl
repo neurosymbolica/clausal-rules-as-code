@@ -1,10 +1,11 @@
+% SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_profiles.pl
 % Generated-companion providing tri_get/3 (three-valued profile read) over
 % Task 2's attribute-list profile shape: [attribute(Key, Value), ...]. Pure,
 % cut-free, ->-free (`throw/1` is the one exception -- see profile_get_strict/3
 % below, and the same allowance clausal_dates.pl documents for `;`/`\+`).
 % Mirrors the engine's tri_get/3 builtin (see
-% clausal/clausal/logic/builtins/dict_set.py, _tri_get__3):
+% clausal/logic/builtins/dict_set.py, _tri_get__3):
 % a present key binds Value to its stored value; an absent key binds Value to
 % the Kleene undefined; deterministic (one solution when it succeeds).
 %
@@ -41,7 +42,7 @@
 % cheaper, ISO-portable operators are used rather than dif/2, which neither
 % target engine resolves without library(dif).
 % attrs_put/3 is the companion side of Task 2's goal-position dict-splat
-% lowering (see clausal/clausal/tools/clausal_to_prolog.py,
+% lowering (see clausal/tools/clausal_to_prolog.py,
 % _convert_is_rhs_splat): the engine translates ``X is {**D, k1: v1, ...}``
 % to ``attrs_put(D, [attribute(k1, v1), ...], X)`` with the pair list
 % key-sorted. attrs_put/3 is pure functional override over the same
@@ -66,7 +67,7 @@
 % dif/2). attrs_put_one/4 is the private single-pair helper, not exported,
 % mirroring tri_profile_get/tri_profile_has.
 %
-% is_dict/1: needed
+% is_dict/1: found needed by task-4 of the 2026-09-02 ISO export plan,
 % once formalize_lib.pl started vendoring BY TRANSLATION instead of by a
 % handwritten copy. kit/formalize_lib.clausal's profile_get/3 has a leading
 % clause -- "DICT-NATIVE PROFILES (transition bridge)" -- that calls
@@ -116,7 +117,7 @@
 % profile_get_strict/3 -- C-pre's remedy (2026-09-05, controller ruling on the
 % BLOCKED first pass). The engine's own strict dict-subscript read (`V is
 % P[K]`) RAISES a catchable error on a missing key
-% (clausal/clausal/logic/runtime/dict_ops.py:_subscript):
+% (clausal/logic/runtime/dict_ops.py:_subscript):
 %
 %   error(existence_error(dict_key, K), '[]/2')
 %

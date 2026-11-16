@@ -1,0 +1,90 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_information_duties_items_and_further_processing_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_information_duties_items_and_further_processing_queries, [gdpr_information_duties_items_and_further_processing_profile_keys/1, gdpr_information_duties_items_and_further_processing_what_if/4, gdpr_information_duties_items_and_further_processing_deadline/2, gdpr_information_duties_items_and_further_processing_compliance_check/3, gdpr_information_duties_items_and_further_processing_obligations/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_items_and_further_processing_kernel, [gdpr_information_duties_items_and_further_processing_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_items_and_further_processing_further_processing_information_verdict, [further_processing_information_verdict_status/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_items_and_further_processing_fixtures, [gdpr_information_duties_items_and_further_processing_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_information_duties_items_and_further_processing_profile_keys(ProfileKeys),
+    ProfileKeys == [personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays].
+test(the_input_check_accepts_a_fixture_profile) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_in_time, Profile),
+    gdpr_information_duties_items_and_further_processing_input_problems(Profile, []).
+test(the_input_check_names_an_unknown_key) :-
+    gdpr_information_duties_items_and_further_processing_input_problems([attribute(bogus_key, true)], [unknown_key(bogus_key)]).
+test(eligibility_status_in_time) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_in_time, Profile),
+    further_processing_information_verdict_status(Profile, eligible).
+test(what_if_flips_the_route_to_art14) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_complete, Profile),
+    gdpr_information_duties_items_and_further_processing_what_if(Profile, personal_data_collected_from_data_subject, false, art14).
+test(what_if_with_the_same_value_keeps_the_route) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_complete, Profile),
+    gdpr_information_duties_items_and_further_processing_what_if(Profile, personal_data_collected_from_data_subject, true, art13).
+test(what_if_adds_an_absent_key) :-
+    gdpr_information_duties_items_and_further_processing_what_if([], personal_data_collected_from_data_subject, true, art13).
+test(what_if_yields_one_answer) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_complete, Profile),
+    findall(Status, gdpr_information_duties_items_and_further_processing_what_if(Profile, personal_data_collected_from_data_subject, false, Status), Statuses),
+    Statuses == [art14].
+test(starting_in_time_is_permitted) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_in_time, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, permitted([cite(eu_reg_2016_679_art_13_3)])).
+test(starting_the_same_day_is_prohibited) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_same_day, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, prohibited([cite(eu_reg_2016_679_art_13_3)])).
+test(no_further_processing_is_permitted) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_not_intended, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, permitted([])).
+test(an_unsure_relevance_is_referred) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_relevance_unsure, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, needs_legal_review(open_textured(paragraph_2_information_relevant_to_further_processing, _), _)).
+test(a_missing_start_date_is_indeterminate) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_without_start_date, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, indeterminate([further_processing_start_date])).
+test(obligations_name_the_missing_item) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art14_categories_missing, Profile),
+    gdpr_information_duties_items_and_further_processing_obligations(Profile, [missing_item(categories_of_personal_data, cite(eu_reg_2016_679_art_14_1_d))]).
+test(no_obligation_left_for_a_complete_notice) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_complete, Profile),
+    gdpr_information_duties_items_and_further_processing_obligations(Profile, [no_item_missing]).
+test(the_deadline_is_the_day_before_the_start) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_in_time, Profile),
+    gdpr_information_duties_items_and_further_processing_deadline(Profile, deadline(date(2026, 5, 31), cite(eu_reg_2016_679_art_13_3), consequence(ineligible))).
+test(the_art14_deadline_cites_art14_4) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art14_further_in_time, Profile),
+    gdpr_information_duties_items_and_further_processing_deadline(Profile, deadline(_, cite(eu_reg_2016_679_art_14_4), consequence(ineligible))).
+test(no_deadline_without_further_processing) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_not_intended, Profile),
+    gdpr_information_duties_items_and_further_processing_deadline(Profile, not_applicable).
+test(the_deadline_needs_the_start_date) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_without_start_date, Profile),
+    gdpr_information_duties_items_and_further_processing_deadline(Profile, indeterminate([further_processing_start_date])).
+test(the_deadline_of_an_empty_profile_names_the_gate_keys) :-
+    gdpr_information_duties_items_and_further_processing_deadline([], indeterminate([personal_data_collected_from_data_subject, further_processing_for_another_purpose_intended])).
+test(the_deadline_reports_input_problems) :-
+    gdpr_information_duties_items_and_further_processing_deadline([attribute(bogus_key, true)], input_problems([unknown_key(bogus_key)])).
+
+test(eligibility_status_same_day_is_not_eligible, fail) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_same_day, Profile),
+    further_processing_information_verdict_status(Profile, eligible).
+test(starting_the_same_day_is_not_permitted, fail) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_same_day, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, start_further_processing, permitted(_)).
+test(an_unknown_action_has_no_answer, fail) :-
+    gdpr_information_duties_items_and_further_processing_profile_for(art13_further_in_time, Profile),
+    gdpr_information_duties_items_and_further_processing_compliance_check(Profile, unknown_action, _).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_input_check_accepts_a_fixture_profile, the_input_check_names_an_unknown_key, eligibility_status_in_time, what_if_flips_the_route_to_art14, what_if_with_the_same_value_keeps_the_route, what_if_adds_an_absent_key, what_if_yields_one_answer, starting_in_time_is_permitted, starting_the_same_day_is_prohibited, no_further_processing_is_permitted, an_unsure_relevance_is_referred, a_missing_start_date_is_indeterminate, obligations_name_the_missing_item, no_obligation_left_for_a_complete_notice, the_deadline_is_the_day_before_the_start, the_art14_deadline_cites_art14_4, no_deadline_without_further_processing, the_deadline_needs_the_start_date, the_deadline_of_an_empty_profile_names_the_gate_keys, the_deadline_reports_input_problems]).
+cp_test_fail_names([eligibility_status_same_day_is_not_eligible, starting_the_same_day_is_not_permitted, an_unknown_action_has_no_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

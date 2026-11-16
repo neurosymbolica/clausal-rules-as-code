@@ -1,0 +1,161 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade: each fixture subject resolves to its expected
+% verdict, near-miss controls get the opposite one.
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_processor_contract, [
+    decide_processor_contract/2,
+    processor_contract_status/2,
+    contract_missing_stipulations/2,
+    contract_checklist/2,
+    processor_contract_outside_facts/2,
+    gdpr_processor_contract_what_if/4,
+    gdpr_processor_contract_subject/1,
+    gdpr_processor_contract_profile_for/2,
+    gdpr_processor_contract_assess/2
+]).
+
+verdicts_of(Subject, Verdicts) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    findall(Verdict, decide_processor_contract(Profile, Verdict), Verdicts).
+
+status_of(Subject, Status) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    findall(Found, processor_contract_status(Profile, Found), Statuses),
+    Statuses = [Status].
+
+test(baseline_is_eligible_with_every_citation_once) :-
+    verdicts_of(compliant_without_subprocessor, Verdicts),
+    Verdicts == [processor_contract_verdict(eligible, [], [
+        cite(eu_reg_2016_679_art_28_3),
+        cite(eu_reg_2016_679_art_28_9),
+        cite(eu_reg_2016_679_art_28_1),
+        cite(eu_reg_2016_679_art_28_3_f),
+        cite(eu_reg_2016_679_art_28_3_e),
+        cite(eu_reg_2016_679_art_28_3_d),
+        cite(eu_reg_2016_679_art_28_3_b),
+        cite(eu_reg_2016_679_art_28_3_g),
+        cite(eu_reg_2016_679_art_28_3_h),
+        cite(eu_reg_2016_679_art_28_3_second_subpara),
+        cite(eu_reg_2016_679_art_28_3_a),
+        cite(eu_reg_2016_679_art_28_3_c),
+        cite(eu_reg_2016_679_art_28_2)
+    ])].
+
+test(baseline_checklist_has_twenty_one_limbs) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    contract_checklist(Profile, Items),
+    length(Items, 21).
+
+test(specific_subprocessor_is_eligible_and_reads_six_more_limbs) :-
+    status_of(compliant_with_specific_subprocessor, eligible),
+    gdpr_processor_contract_profile_for(compliant_with_specific_subprocessor, Profile),
+    contract_checklist(Profile, Items),
+    length(Items, 27).
+
+test(general_subprocessor_is_eligible_and_reads_every_limb) :-
+    status_of(compliant_with_general_subprocessor, eligible),
+    gdpr_processor_contract_profile_for(compliant_with_general_subprocessor, Profile),
+    contract_checklist(Profile, Items),
+    length(Items, 29).
+
+test(missing_audit_clause_is_ineligible_and_cited_to_point_h) :-
+    verdicts_of(audit_clause_missing, Verdicts),
+    Verdicts == [processor_contract_verdict(ineligible, [stipulates_information_and_audit_rights], [cite(eu_reg_2016_679_art_28_3_h)])].
+
+test(missing_audit_clause_shows_in_the_checklist) :-
+    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
+    contract_checklist(Profile, Items),
+    member(checklist_item(stipulates_information_and_audit_rights, cite(eu_reg_2016_679_art_28_3_h), unmet), Items).
+
+test(missing_keys_are_listed_in_root_export_order) :-
+    gdpr_processor_contract_profile_for(confidentiality_and_security_missing, Profile),
+    contract_missing_stipulations(Profile, Missing),
+    Missing == [stipulates_confidentiality_commitment, stipulates_security_measures].
+
+test(missing_keys_have_parallel_citations) :-
+    verdicts_of(confidentiality_and_security_missing, Verdicts),
+    Verdicts == [processor_contract_verdict(ineligible, [stipulates_confidentiality_commitment, stipulates_security_measures], [cite(eu_reg_2016_679_art_28_3_b), cite(eu_reg_2016_679_art_28_3_c)])].
+
+test(eligible_has_no_missing_keys) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    contract_missing_stipulations(Profile, []).
+
+test(not_a_processor_is_not_applicable) :-
+    verdicts_of(not_a_processor, Verdicts),
+    Verdicts == [processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])].
+
+test(processor_determining_purposes_is_deferred) :-
+    verdicts_of(processor_determines_purposes, Verdicts),
+    Verdicts == [processor_contract_verdict(needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on([processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-true, standard_clauses_adopted-absent])]), [], [])].
+
+test(the_controller_gate_precedes_the_checklist) :-
+    status_of(controller_with_missing_clause, needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), _)).
+
+test(unsure_guarantees_is_open_textured) :-
+    verdicts_of(guarantees_unsure, Verdicts),
+    Verdicts == [processor_contract_verdict(needs_legal_review(open_textured(processor_provides_sufficient_guarantees, cite(eu_reg_2016_679_art_28_1)), [inputs_relied_on([contract_binding_on_processor-true, processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-false, processor_provides_sufficient_guarantees-unsure, standard_clauses_adopted-absent])]), [], [])].
+
+test(unsure_subprocessor_obligations_is_open_textured) :-
+    verdicts_of(subprocessor_obligations_unsure, Verdicts),
+    Verdicts == [processor_contract_verdict(needs_legal_review(open_textured(subprocessor_obligations_same, cite(eu_reg_2016_679_art_28_4)), [inputs_relied_on([contract_binding_on_processor-true, processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-false, processor_provides_sufficient_guarantees-true, standard_clauses_adopted-absent, subprocessor_obligations_same-unsure, subprocessor_provides_sufficient_guarantees-true])]), [], [])].
+
+test(unsure_role_is_open_textured) :-
+    verdicts_of(role_unsure, Verdicts),
+    Verdicts == [processor_contract_verdict(needs_legal_review(open_textured(processing_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8)), [inputs_relied_on([processing_on_behalf_of_controller-unsure, standard_clauses_adopted-absent])]), [], [])].
+
+test(absent_role_key_is_indeterminate) :-
+    verdicts_of(role_unestablished, Verdicts),
+    Verdicts == [processor_contract_verdict(indeterminate([processing_on_behalf_of_controller]), [], [])].
+
+test(absent_contract_key_is_indeterminate) :-
+    verdicts_of(in_writing_unestablished, Verdicts),
+    Verdicts == [processor_contract_verdict(indeterminate([contract_in_writing]), [], [])].
+
+test(general_authorisation_without_opportunity_to_object_is_ineligible) :-
+    verdicts_of(general_authorisation_without_opportunity_to_object, Verdicts),
+    Verdicts == [processor_contract_verdict(ineligible, [controller_given_opportunity_to_object], [cite(eu_reg_2016_679_art_28_2)])].
+
+test(late_specific_authorisation_is_ineligible) :-
+    verdicts_of(specific_authorisation_given_late, Verdicts),
+    Verdicts == [processor_contract_verdict(ineligible, [subprocessor_authorisation_given_before_engagement], [cite(eu_reg_2016_679_art_28_2)])].
+
+test(no_authorisation_is_ineligible_and_dependent_keys_are_not_read) :-
+    verdicts_of(subprocessor_engaged_without_authorisation, Verdicts),
+    Verdicts == [processor_contract_verdict(ineligible, [subprocessor_authorisation], [cite(eu_reg_2016_679_art_28_2)])].
+
+test(input_problem_comes_first) :-
+    verdicts_of(input_problem_in_writing_unsure, Verdicts),
+    Verdicts == [processor_contract_verdict(input_problems([wrong_type(contract_in_writing)]), [], [])].
+
+test(checklist_is_empty_for_input_problems) :-
+    gdpr_processor_contract_profile_for(input_problem_in_writing_unsure, Profile),
+    contract_checklist(Profile, []).
+
+test(outside_fact_absent_is_recorded) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, absent)]).
+
+test(outside_fact_attested_is_recorded_and_does_not_change_the_status) :-
+    gdpr_processor_contract_profile_for(standard_clauses_attested, Profile),
+    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, attested(true, attestation(decision_layer, recorded_at_review, user_confirmed, none)))]),
+    status_of(standard_clauses_attested, eligible).
+
+test(what_if_dropping_a_clause_flips_eligible_to_ineligible) :-
+    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+    gdpr_processor_contract_what_if(Profile, stipulates_information_and_audit_rights, false, ineligible).
+
+test(what_if_restoring_the_clause_flips_back_to_eligible) :-
+    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
+    gdpr_processor_contract_what_if(Profile, stipulates_information_and_audit_rights, true, eligible).
+
+test(every_subject_gets_exactly_one_verdict) :-
+    gdpr_processor_contract_subject(Subject),
+    verdicts_of(Subject, [_]).
+
+test(assess_wrapper_matches_the_decision) :-
+    gdpr_processor_contract_assess(audit_clause_missing, processor_contract_verdict(ineligible, _, _)).
+
+:- end_module(test_public_interface).

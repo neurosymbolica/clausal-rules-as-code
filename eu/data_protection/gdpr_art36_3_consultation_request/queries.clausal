@@ -1,0 +1,107 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_art36_3_consultation_request.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types of this domain and where each is served:
+%   #13 compliance_check -- consultation_request_status/4 (the slice):
+%       is the consultation request complete under Art 36(3)?
+%   #4  enumeration      -- missing_consultation_request_items/4 (the slice):
+%       every item of Art 36(3) that applies and is not provided, (a) to (f).
+%   #7  justification    -- gdpr_art36_3_consultation_request_checklist/2
+%       (the slice): one item(ItemAtom, Status, cite(PointKey)) row per point.
+%   #16 what-if          -- gdpr_art36_3_consultation_request_what_if/4 (here):
+%       override one key, re-evaluate the status; the override is re-checked
+%       by the input check, so an out-of-type value gives input_problems(...).
+%
+% gdpr_art36_3_consultation_request_profile_keys/1: the ten profile keys, in contract order
+% gdpr_art36_3_consultation_request_input_problems/2: the problems a profile has ([] = none),
+%   re-exported from the kernel exactly as the scaffold wrote it.
+%
+% ROOT EXPORTS: the result atoms and the item atoms of the called contract
+% are declared here as facts, so the package root resolves each of them.
+% The result constructors are exported as data and have NO clauses: a
+% constructor is a data term, never called as a query. None of these
+% decides anything statutory: they carry no implements/1 marker.
+%
+% The order has no figure, threshold or date, so no flip-point or
+% comparison combinator applies. Presence, not adequacy, is what every key
+% states: no open-textured judgement is invented here; the one role question
+% is handed to a human through the attested outside fact.
+%
+% NOTE: the kit's override_key/4 works on dicts only; this order's PROFILE is
+% an attribute list, so the what-if override is a local attribute-list
+% override (profile plumbing, no statutory content).
+% =====================================================================
+
+:- module(queries, [
+    gdpr_art36_3_consultation_request_profile_keys/1,
+    gdpr_art36_3_consultation_request_input_problems/2,
+    gdpr_art36_3_consultation_request_what_if/4,
+    consultation_request_complete/0,
+    consultation_request_incomplete/0,
+    not_governed_by_article_36_3/0,
+    respective_responsibilities/0,
+    purposes_and_means/0,
+    measures_and_safeguards/0,
+    data_protection_officer_contact_details/0,
+    data_protection_impact_assessment/0,
+    other_requested_information/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_art36_3_consultation_request/kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_art36_3_consultation_request/gdpr_art36_3_consultation_request, [gdpr_art36_3_consultation_request_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_art36_3_consultation_request_profile_keys([consultation_under_article_36_1, joint_controllers_or_processors_involved, respective_responsibilities_provided, purposes_and_means_provided, measures_and_safeguards_provided, data_protection_officer_designated, data_protection_officer_contact_details_provided, impact_assessment_provided, other_information_requested_by_supervisory_authority, requested_other_information_provided]).
+
+% #16 what-if: re-evaluate the status with one key hypothetically overridden
+gdpr_art36_3_consultation_request_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis), % (a) THE LOGIC WAS WRONG: override_key/4 needs a dict; the PROFILE is an attribute list
+    gdpr_art36_3_consultation_request_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, Hypothesis): every attribute(Key, _)
+% is dropped and attribute(Key, Value) is added once at the end.
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== Key,
+    override_attribute(Elements, Key, Value, Hypothesis).
+override_attribute([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
+    ElementKey == Key,
+    override_attribute(Elements, Key, Value, Hypothesis).
+
+% ---- root exports: result atoms of consultation_request_status/4 ------
+consultation_request_complete.
+consultation_request_incomplete.
+not_governed_by_article_36_3.
+
+% ---- root exports: item atoms of missing_consultation_request_items/4 -
+respective_responsibilities.
+purposes_and_means.
+measures_and_safeguards.
+data_protection_officer_contact_details.
+data_protection_impact_assessment.
+other_requested_information.
+
+% ---- root exports: result constructors --------------------------------
+% indeterminate/1, needs_legal_review/2, cross_reference_unresolved/2,
+% resolution/2, inputs_relied_on/1, outside_fact/2, attested/2,
+% attestation/4, url/2, document/2, input_problems/1, unknown_key/1,
+% wrong_type/1 and duplicate_key/1 are data terms: exported, no clauses.
+
+:- end_module(queries).

@@ -1,0 +1,280 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_art15_access_copy (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This domain has ONE
+% determination slice (gdpr_art15_access_copy.clausal), so no domain
+% predicate is shared between slices and nothing else is exported here.
+% Exception: the scaffold writes the order's input check
+% gdpr_art15_access_copy_input_problems/2 here, exported, for every file
+% (the slice and queries.clausal) to import by its full path:
+%   :- use_module(eu/data_protection/gdpr_art15_access_copy/kernel, [gdpr_art15_access_copy_input_problems/2]).
+% deontic family: STATUS is a modal vocabulary (cf. eu/procurement/exclusion_grounds).
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 15(1) (chapeau and points
+% (a) to (h)), Art 15(2), Art 15(3) and Art 15(4), pinned consolidated text
+% 02016R0679-20160504 (in force from 2016-05-04, with the 2018 corrigendum).
+% The input check itself applies no provision: it checks the PROFILE alone
+% against the order's typed input contract (INTERFACE - THE INPUT CHECK), so
+% it carries no provenance marker.
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% RESULT TERMS (the RESULT argument of each query; CITATIONS is a set-like
+% list of cite(Key) terms; BASIS, where a query has it, a list of
+% outside_fact(Key, Attested) terms, Attested the attested(...) term exactly
+% as supplied):
+%   access_answer_items(Profile, Result, Basis, Citations):
+%     Result is a non-empty list of item atoms in item order
+%     (confirmation_of_processing, access_to_personal_data,
+%     purposes_of_processing, categories_of_personal_data,
+%     recipients_or_categories_of_recipients, storage_period_or_criteria,
+%     rights_to_rectification_erasure_restriction_and_objection,
+%     right_to_lodge_complaint, source_of_personal_data,
+%     automated_decision_making_information, transfer_safeguards_information,
+%     copy_of_personal_data), or a status compound.
+%   access_answer_items_missing(Profile, Result, Basis, Citations):
+%     Result is a non-empty item list, the atom no_item_missing, or a
+%     status compound.
+%   copy_scope(Profile, Result, Citations): no_personal_data_to_copy |
+%     full_copy | copy_limited_by_rights_and_freedoms_of_others, or a status.
+%   copy_fee(Profile, Result, Citations): no_personal_data_to_copy |
+%     no_fee_under_article_15_3 | reasonable_fee_permitted, or a status.
+%   information_form(Profile, Result, Citations): no_electronic_request |
+%     other_form_requested | commonly_used_electronic_form, or a status.
+% STATUS COMPOUNDS (never written as bare atoms):
+%   indeterminate([Key])             -- one bare missing key, never an outside fact;
+%   needs_legal_review(Reason, Context)
+%     Reason open_textured(Input, cite(Citation)),
+%       Context [inputs_relied_on(Pairs)];
+%     Reason cross_reference_unresolved(cite(Citation), cite(Target)),
+%       Context [resolution(cite(Target), not_attempted), inputs_relied_on([Key-absent])];
+%   input_problems(Problems)         -- Problems a list of duplicate_key(Key),
+%                                       wrong_type(Key), unknown_key(Key), or
+%                                       [wrong_type(profile)].
+% SLICE VERDICT TERM (the facade's decide_* output):
+%   gdpr_art15_access_copy_verdict(Status, Citations)
+%     Status one of access_answer_complete | access_answer_incomplete |
+%     access_answer_awaiting_input | access_answer_referred_for_legal_review |
+%     access_answer_input_rejected (mapped from access_answer_items_missing/4);
+%     Citations a list of cite(Key) terms.
+% =====================================================================
+
+:- module(kernel, [gdpr_art15_access_copy_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_art15_access_copy_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_art15_access_copy_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [items_provided, personal_data_concerning_data_subject_processed, disclosure_to_recipients_made_or_envisaged, some_personal_data_not_collected_from_data_subject, source_information_available, automated_decision_making_referred_to_in_article_22, transfer_to_third_country_or_international_organisation, transfer_subject_to_article_46_safeguards, copy_would_adversely_affect_rights_and_freedoms_of_others, further_copy_requested, request_made_by_electronic_means, other_form_requested_by_data_subject],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(items_provided, list(item)).
+key_type(personal_data_concerning_data_subject_processed, boolean).
+key_type(disclosure_to_recipients_made_or_envisaged, boolean).
+key_type(some_personal_data_not_collected_from_data_subject, boolean).
+key_type(source_information_available, boolean).
+key_type(automated_decision_making_referred_to_in_article_22, outside_fact).
+key_type(transfer_to_third_country_or_international_organisation, boolean).
+key_type(transfer_subject_to_article_46_safeguards, outside_fact).
+key_type(copy_would_adversely_affect_rights_and_freedoms_of_others, judgement).
+key_type(further_copy_requested, boolean).
+key_type(request_made_by_electronic_means, boolean).
+key_type(other_form_requested_by_data_subject, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(item, Value, T) :-
+    in_type_t(enum([confirmation_of_processing, access_to_personal_data, purposes_of_processing, categories_of_personal_data, recipients_or_categories_of_recipients, storage_period_or_criteria, rights_to_rectification_erasure_restriction_and_objection, right_to_lodge_complaint, source_of_personal_data, automated_decision_making_information, transfer_safeguards_information, copy_of_personal_data]), Value, T).
+
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(list(Type), Value, T) :-
+    list_in_type_t(Value, Type, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% list_in_type_t(Value, Type, T): T is true when Value is a list whose every element is in Type.
+list_in_type_t(Value, _, true) :-
+    Value == [].
+list_in_type_t([Element|Elements], Type, T) :-
+    in_type_t(Type, Element, ElementInType),
+    list_in_type_t(Elements, Type, ElementsInType),
+    truth_and(ElementInType, ElementsInType, T).
+list_in_type_t(Value, _, false) :-
+    Value \== [],
+    Value \= [_|_].
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+:- end_module(kernel).

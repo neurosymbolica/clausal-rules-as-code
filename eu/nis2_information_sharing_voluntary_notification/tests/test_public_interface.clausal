@@ -1,0 +1,319 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Every fixture subject resolves to its EXPECTED answer; each near-miss
+% control gets the opposite answer; every query yields exactly ONE solution.
+% Run: python -m clausal.testing eu/nis2_information_sharing_voluntary_notification/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/nis2_information_sharing_voluntary_notification, [
+    voluntary_notification_possible/3,
+    information_exchange_permitted/3,
+    arrangement_notification_duty/3,
+    nis2_information_sharing_voluntary_notification_input_problems/2,
+    nis2_information_sharing_voluntary_notification_what_if/4,
+    decide_nis2_information_sharing_voluntary_notification/2,
+    nis2_information_sharing_voluntary_notification_status/2,
+    nis2_information_sharing_voluntary_notification_checklist/2,
+    nis2_information_sharing_voluntary_notification_decision_resolvable/1,
+    nis2_information_sharing_voluntary_notification_status_values/1,
+    nis2_information_sharing_voluntary_notification_subject/1,
+    nis2_information_sharing_voluntary_notification_profile_for/2,
+    nis2_information_sharing_voluntary_notification_assess/2,
+    essential_entity/0,
+    important_entity/0,
+    out_of_scope/0,
+    incident/0,
+    significant_incident/0,
+    cyber_threat/0,
+    near_miss/0,
+    entered/0,
+    withdrew/0,
+    no_arrangement_event/0,
+    provenance/2
+]).
+
+% ---- helpers ----------------------------------------------------------
+% answers_of(Query, Subject, Answers): every Result-Citations answer of Query.
+answers_of(Query, Subject, Answers) :-
+    nis2_information_sharing_voluntary_notification_profile_for(Subject, Profile),
+    findall(Result-Citations, call(Query, Profile, Result, Citations), Answers).
+
+single_answer(Query, Subject) :-
+    answers_of(Query, Subject, Answers),
+    length(Answers, 1).
+
+statuses_of(Subject, Statuses) :-
+    nis2_information_sharing_voluntary_notification_profile_for(Subject, Profile),
+    findall(Status, nis2_information_sharing_voluntary_notification_status(Profile, Status), Statuses).
+
+checklist_is_cited(Subject) :-
+    nis2_information_sharing_voluntary_notification_profile_for(Subject, Profile),
+    nis2_information_sharing_voluntary_notification_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(item_is_cited, [FirstItem|OtherItems]).
+
+item_is_cited(item(_, _, cite(Key))) :-
+    atom(Key).
+
+all_subjects(Subjects) :-
+    findall(Subject, nis2_information_sharing_voluntary_notification_subject(Subject), Subjects).
+
+% ---- whole-registry properties ------------------------------------------
+test(every_subject_has_a_profile_and_a_known_status) :-
+    all_subjects(Subjects),
+    length(Subjects, 19),
+    nis2_information_sharing_voluntary_notification_status_values(StatusValues),
+    maplist(subject_status_in(StatusValues), Subjects).
+
+subject_status_in(StatusValues, Subject) :-
+    nis2_information_sharing_voluntary_notification_assess(Subject, nis2_information_sharing_voluntary_notification_verdict(Status, _Citations)),
+    member(Status, StatusValues).
+
+test(every_query_gives_exactly_one_answer_for_every_subject) :-
+    all_subjects(Subjects),
+    maplist(single_answer(voluntary_notification_possible), Subjects),
+    maplist(single_answer(information_exchange_permitted), Subjects),
+    maplist(single_answer(arrangement_notification_duty), Subjects).
+
+test(every_subject_has_one_facade_status) :-
+    all_subjects(Subjects),
+    maplist(one_status, Subjects).
+
+one_status(Subject) :-
+    statuses_of(Subject, Statuses),
+    length(Statuses, 1).
+
+test(every_subject_has_a_non_empty_cited_checklist) :-
+    all_subjects(Subjects),
+    maplist(checklist_is_cited, Subjects).
+
+test(every_subject_is_resolvable) :-
+    all_subjects(Subjects),
+    maplist(subject_resolvable, Subjects).
+
+subject_resolvable(Subject) :-
+    nis2_information_sharing_voluntary_notification_profile_for(Subject, Profile),
+    nis2_information_sharing_voluntary_notification_decision_resolvable(Profile).
+
+test(checklist_and_resolvable_hold_on_the_baseline_fixture) :-
+    checklist_is_cited(essential_entity_notifying_an_incident),
+    subject_resolvable(essential_entity_notifying_an_incident).
+
+test(the_public_interface_resolves_on_the_baseline_fixture) :-
+    single_answer(voluntary_notification_possible, essential_entity_notifying_an_incident),
+    single_answer(information_exchange_permitted, essential_entity_notifying_an_incident),
+    single_answer(arrangement_notification_duty, essential_entity_notifying_an_incident),
+    statuses_of(essential_entity_notifying_an_incident, Statuses),
+    Statuses == [eligible].
+
+% ---- the vocabulary atoms and constructors of the root exports ----------
+test(the_enumeration_atoms_are_callable_root_exports) :-
+    essential_entity,
+    important_entity,
+    out_of_scope,
+    incident,
+    significant_incident,
+    cyber_threat,
+    near_miss,
+    entered,
+    withdrew,
+    no_arrangement_event.
+
+test(the_provenance_constructor_builds_and_destructures) :-
+    Context = [inputs_relied_on([arrangement_is_a_cybersecurity_information_sharing_arrangement-unsure]), provenance(arrangement_judgement_step, [cite(eu_dir_2022_2555_art_29_2)])],
+    Context = [_, provenance(ClauseName, ClauseCitations)],
+    ClauseName == arrangement_judgement_step,
+    ClauseCitations == [cite(eu_dir_2022_2555_art_29_2)].
+
+test(an_important_entity_can_notify_a_cyber_threat) :-
+    important_entity,
+    cyber_threat,
+    findall(Result-Citations, voluntary_notification_possible([attribute(entity_class, important_entity), attribute(event_kind, cyber_threat)], Result, Citations), Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_a)]].
+test(an_other_entity_can_notify_a_cyber_threat) :-
+    cyber_threat,
+    findall(Result-Citations, voluntary_notification_possible([attribute(entity_class, out_of_scope), attribute(event_kind, cyber_threat)], Result, Citations), Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_b)]].
+test(an_unclassified_entity_can_notify_a_significant_incident) :-
+    significant_incident,
+    findall(Result-Citations, voluntary_notification_possible([attribute(event_kind, significant_incident)], Result, Citations), Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_a), cite(eu_dir_2022_2555_art_30_1_b)]].
+test(an_important_entity_can_notify_an_incident_not_significant) :-
+    important_entity,
+    findall(Result, voluntary_notification_possible([attribute(entity_class, important_entity), attribute(event_kind, incident)], Result, _), Results),
+    Results == [voluntary_notification_possible].
+
+test(an_important_entity_entering_must_notify) :-
+    important_entity,
+    entered,
+    findall(Result-Citations, arrangement_notification_duty([attribute(entity_class, important_entity), attribute(arrangement_event, entered), attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, true)], Result, Citations), Answers),
+    Answers == [must_notify_on_entering-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_essential_entity_withdrawing_must_notify) :-
+    withdrew,
+    findall(Result-Citations, arrangement_notification_duty([attribute(entity_class, essential_entity), attribute(arrangement_event, withdrew), attribute(arrangement_is_a_cybersecurity_information_sharing_arrangement, true)], Result, Citations), Answers),
+    Answers == [must_notify_on_withdrawal_taking_effect-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_important_entity_with_no_arrangement_event_has_no_duty) :-
+    no_arrangement_event,
+    findall(Result-Citations, arrangement_notification_duty([attribute(entity_class, important_entity), attribute(arrangement_event, no_arrangement_event)], Result, Citations), Answers),
+    Answers == [no_notification_duty-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_important_entity_with_no_arrangement_event_has_no_entering_duty, fail) :-
+    arrangement_notification_duty([attribute(entity_class, important_entity), attribute(arrangement_event, no_arrangement_event)], must_notify_on_entering, _).
+test(a_wrong_arrangement_event_is_an_input_problem) :-
+    arrangement_notification_duty([attribute(arrangement_event, joined)], input_problems([wrong_type(arrangement_event)]), []).
+
+% ---- Art 30(1): voluntary notification ----------------------------------
+test(an_essential_entity_can_notify_an_incident) :-
+    answers_of(voluntary_notification_possible, essential_entity_notifying_an_incident, Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_a)]].
+test(an_essential_entity_incident_is_eligible) :-
+    nis2_information_sharing_voluntary_notification_assess(essential_entity_notifying_an_incident, Verdict),
+    Verdict == nis2_information_sharing_voluntary_notification_verdict(eligible, [cite(eu_dir_2022_2555_art_30_1_a)]).
+test(an_other_entity_cannot_notify_an_incident) :-
+    answers_of(voluntary_notification_possible, other_entity_notifying_an_incident, Answers),
+    Answers == [voluntary_notification_not_possible-[cite(eu_dir_2022_2555_art_30_1_b)]].
+test(an_other_entity_incident_is_not_possible, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_an_incident, Profile),
+    voluntary_notification_possible(Profile, voluntary_notification_possible, _).
+test(an_other_entity_incident_is_ineligible) :-
+    nis2_information_sharing_voluntary_notification_assess(other_entity_notifying_an_incident, Verdict),
+    Verdict == nis2_information_sharing_voluntary_notification_verdict(ineligible, [cite(eu_dir_2022_2555_art_30_1_a), cite(eu_dir_2022_2555_art_30_1_b)]).
+test(an_other_entity_incident_is_not_eligible, fail) :-
+    nis2_information_sharing_voluntary_notification_assess(other_entity_notifying_an_incident, nis2_information_sharing_voluntary_notification_verdict(eligible, _)).
+test(an_other_entity_can_notify_a_significant_incident) :-
+    answers_of(voluntary_notification_possible, other_entity_notifying_a_significant_incident, Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_b)]].
+test(an_other_entity_significant_incident_is_eligible) :-
+    statuses_of(other_entity_notifying_a_significant_incident, Statuses),
+    Statuses == [eligible].
+test(an_unclassified_entity_can_notify_a_cyber_threat_under_both_points) :-
+    answers_of(voluntary_notification_possible, unclassified_entity_notifying_a_cyber_threat, Answers),
+    Answers == [voluntary_notification_possible-[cite(eu_dir_2022_2555_art_30_1_a), cite(eu_dir_2022_2555_art_30_1_b)]].
+test(an_unclassified_entity_cyber_threat_is_eligible) :-
+    statuses_of(unclassified_entity_notifying_a_cyber_threat, Statuses),
+    Statuses == [eligible].
+test(an_unclassified_entity_incident_needs_the_class) :-
+    answers_of(voluntary_notification_possible, unclassified_entity_notifying_an_incident, Answers),
+    Answers == [indeterminate([entity_class])-[]].
+test(an_unclassified_entity_incident_is_undetermined) :-
+    statuses_of(unclassified_entity_notifying_an_incident, Statuses),
+    Statuses == [eligibility_undetermined].
+test(an_unclassified_entity_incident_is_not_eligible, fail) :-
+    nis2_information_sharing_voluntary_notification_assess(unclassified_entity_notifying_an_incident, nis2_information_sharing_voluntary_notification_verdict(eligible, _)).
+
+% ---- Art 29(1): information exchange ------------------------------------
+test(an_exchange_aiming_at_response_is_permitted) :-
+    answers_of(information_exchange_permitted, exchange_aiming_at_response, Answers),
+    Answers == [information_exchange_permitted-[cite(eu_dir_2022_2555_art_29_1)]].
+test(an_exchange_meeting_neither_point_is_not_permitted) :-
+    answers_of(information_exchange_permitted, exchange_meeting_neither_point, Answers),
+    Answers == [information_exchange_not_permitted-[cite(eu_dir_2022_2555_art_29_1)]].
+test(an_exchange_meeting_neither_point_is_not_permitted_answer, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(exchange_meeting_neither_point, Profile),
+    information_exchange_permitted(Profile, information_exchange_permitted, _).
+test(an_exchange_enhancing_cybersecurity_alone_is_permitted) :-
+    answers_of(information_exchange_permitted, exchange_enhancing_cybersecurity_only, Answers),
+    Answers == [information_exchange_permitted-[cite(eu_dir_2022_2555_art_29_1)]].
+test(an_exchange_of_irrelevant_information_is_not_permitted) :-
+    answers_of(information_exchange_permitted, exchange_of_irrelevant_information, Answers),
+    Answers == [information_exchange_not_permitted-[cite(eu_dir_2022_2555_art_29_1)]].
+test(an_exchange_with_unsure_relevance_goes_to_review) :-
+    answers_of(information_exchange_permitted, exchange_with_unsure_relevance, Answers),
+    Answers == [needs_legal_review(open_textured(information_is_relevant_cybersecurity_information, cite(eu_dir_2022_2555_art_29_1)), [inputs_relied_on([information_is_relevant_cybersecurity_information-unsure, sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact-true])])-[]].
+test(an_exchange_with_unsure_relevance_and_no_points_names_the_points) :-
+    answers_of(information_exchange_permitted, exchange_with_unsure_relevance_and_no_points, Answers),
+    Answers == [indeterminate([sharing_aims_to_prevent_detect_respond_to_or_recover_from_incidents_or_mitigate_their_impact, sharing_enhances_the_level_of_cybersecurity])-[]].
+test(an_exchange_with_unsure_relevance_and_no_points_is_not_a_referral, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(exchange_with_unsure_relevance_and_no_points, Profile),
+    information_exchange_permitted(Profile, needs_legal_review(_, _), _).
+test(an_exchange_subject_without_class_is_undetermined) :-
+    statuses_of(exchange_aiming_at_response, Statuses),
+    Statuses == [eligibility_undetermined].
+
+% ---- Art 29(2) and (4): arrangement notification ------------------------
+test(an_essential_entity_entering_must_notify) :-
+    answers_of(arrangement_notification_duty, essential_entity_entering_an_arrangement, Answers),
+    Answers == [must_notify_on_entering-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_essential_entity_entering_is_eligible) :-
+    statuses_of(essential_entity_entering_an_arrangement, Statuses),
+    Statuses == [eligible].
+test(an_other_entity_entering_has_no_duty) :-
+    answers_of(arrangement_notification_duty, other_entity_entering_an_arrangement, Answers),
+    Answers == [no_notification_duty-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_other_entity_entering_has_no_entering_duty, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(other_entity_entering_an_arrangement, Profile),
+    arrangement_notification_duty(Profile, must_notify_on_entering, _).
+test(an_other_entity_entering_is_undetermined) :-
+    statuses_of(other_entity_entering_an_arrangement, Statuses),
+    Statuses == [eligibility_undetermined].
+test(an_important_entity_withdrawing_must_notify) :-
+    answers_of(arrangement_notification_duty, important_entity_withdrawing_from_an_arrangement, Answers),
+    Answers == [must_notify_on_withdrawal_taking_effect-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_important_entity_leaving_an_informal_contact_has_no_duty) :-
+    answers_of(arrangement_notification_duty, important_entity_withdrawing_from_an_informal_contact, Answers),
+    Answers == [no_notification_duty-[cite(eu_dir_2022_2555_art_29_4)]].
+test(an_important_entity_leaving_an_informal_contact_has_no_withdrawal_duty, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(important_entity_withdrawing_from_an_informal_contact, Profile),
+    arrangement_notification_duty(Profile, must_notify_on_withdrawal_taking_effect, _).
+test(an_unsure_arrangement_goes_to_review) :-
+    answers_of(arrangement_notification_duty, essential_entity_entering_an_unsure_arrangement, Answers),
+    Answers == [needs_legal_review(open_textured(arrangement_is_a_cybersecurity_information_sharing_arrangement, cite(eu_dir_2022_2555_art_29_2)), [inputs_relied_on([arrangement_is_a_cybersecurity_information_sharing_arrangement-unsure])])-[]].
+test(an_unsure_arrangement_without_event_names_the_event) :-
+    answers_of(arrangement_notification_duty, essential_entity_with_an_unsure_arrangement_and_no_event, Answers),
+    Answers == [indeterminate([arrangement_event])-[]].
+test(an_unsure_arrangement_without_event_is_not_a_referral, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(essential_entity_with_an_unsure_arrangement_and_no_event, Profile),
+    arrangement_notification_duty(Profile, needs_legal_review(_, _), _).
+
+% ---- the input check ----------------------------------------------------
+test(an_untyped_key_is_an_unknown_key) :-
+    nis2_information_sharing_voluntary_notification_profile_for(profile_with_an_untyped_key, Profile),
+    findall(Problems, nis2_information_sharing_voluntary_notification_input_problems(Profile, Problems), Answers),
+    Answers == [[unknown_key(entity_in_scope)]].
+test(an_untyped_key_answers_every_query_with_input_problems) :-
+    answers_of(voluntary_notification_possible, profile_with_an_untyped_key, NotificationAnswers),
+    NotificationAnswers == [input_problems([unknown_key(entity_in_scope)])-[]],
+    answers_of(information_exchange_permitted, profile_with_an_untyped_key, ExchangeAnswers),
+    ExchangeAnswers == [input_problems([unknown_key(entity_in_scope)])-[]],
+    answers_of(arrangement_notification_duty, profile_with_an_untyped_key, ArrangementAnswers),
+    ArrangementAnswers == [input_problems([unknown_key(entity_in_scope)])-[]].
+test(an_untyped_key_is_undetermined) :-
+    statuses_of(profile_with_an_untyped_key, Statuses),
+    Statuses == [eligibility_undetermined].
+test(the_empty_profile_has_no_problem) :-
+    nis2_information_sharing_voluntary_notification_profile_for(empty_profile, Profile),
+    nis2_information_sharing_voluntary_notification_input_problems(Profile, []).
+test(the_empty_profile_has_a_problem, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(empty_profile, Profile),
+    nis2_information_sharing_voluntary_notification_input_problems(Profile, [_|_]).
+test(the_empty_profile_names_the_missing_notification_keys) :-
+    answers_of(voluntary_notification_possible, empty_profile, Answers),
+    Answers == [indeterminate([entity_class, event_kind])-[]].
+test(a_non_list_profile_is_a_wrong_type) :-
+    nis2_information_sharing_voluntary_notification_input_problems(not_a_profile, [wrong_type(profile)]).
+
+% ---- what-if ----------------------------------------------------------
+test(what_if_the_other_entity_were_essential_it_is_eligible) :-
+    nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_an_incident, Profile),
+    nis2_information_sharing_voluntary_notification_what_if(Profile, entity_class, essential_entity, eligible).
+test(what_if_the_essential_entity_were_other_it_is_ineligible) :-
+    nis2_information_sharing_voluntary_notification_profile_for(essential_entity_notifying_an_incident, Profile),
+    nis2_information_sharing_voluntary_notification_what_if(Profile, entity_class, out_of_scope, ineligible).
+test(what_if_the_essential_entity_were_other_it_is_not_eligible, fail) :-
+    nis2_information_sharing_voluntary_notification_profile_for(essential_entity_notifying_an_incident, Profile),
+    nis2_information_sharing_voluntary_notification_what_if(Profile, entity_class, out_of_scope, eligible).
+test(what_if_the_other_entity_incident_were_significant_it_is_eligible) :-
+    nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_an_incident, Profile),
+    nis2_information_sharing_voluntary_notification_what_if(Profile, event_kind, significant_incident, eligible).
+
+% ---- decide and checklist shape -----------------------------------------
+test(the_checklist_of_an_other_entity_incident) :-
+    nis2_information_sharing_voluntary_notification_profile_for(other_entity_notifying_an_incident, Profile),
+    nis2_information_sharing_voluntary_notification_checklist(Profile, Items),
+    Items == [item(essential_or_important_entity, unmet(not_an_essential_or_important_entity), cite(eu_dir_2022_2555_art_30_1_a)), item(event_open_to_every_entity, unmet(incident_not_significant), cite(eu_dir_2022_2555_art_30_1_b))].
+test(decide_gives_one_verdict_for_an_essential_entity) :-
+    nis2_information_sharing_voluntary_notification_profile_for(essential_entity_notifying_an_incident, Profile),
+    findall(Verdict, decide_nis2_information_sharing_voluntary_notification(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+:- end_module(test_public_interface).

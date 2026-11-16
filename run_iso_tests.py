@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """Run every domain's tests on an ISO Prolog engine, through the generated `.pl` files.
 
 Each domain folder has an `iso/` subfolder: plain ISO Prolog generated from the domain's

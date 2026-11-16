@@ -1,0 +1,388 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees).
+% Each fixture subject resolves to its EXPECTED verdict: the concrete status
+% atom, the MAXIMUM term and the set of citations; its checklist is
+% non-empty; each near-miss control gets a different answer.
+% Run: python -m clausal.testing eu/ai_act/penalties/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/ai_act/penalties, [
+    maximum_fine/4,
+    general_purpose_ai_model_maximum_fine/4,
+    decide_penalties/2,
+    penalties_status/2,
+    penalties_checklist/2,
+    penalties_decision_resolvable/1,
+    penalties_status_values/1,
+    penalties_subject/1,
+    penalties_profile_for/2,
+    penalties_assess/2
+]).
+
+% ---- expected(Subject, Status, Maximum, Citations) ---------------------
+expected(earlier_version_day_before_pinned_text, no_union_maximum_determined, earlier_version_applies, []).
+expected(pinned_text_start_day, union_maximum_determined, fine_maximum(7000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_3)]).
+expected(deferred_prohibition_day_before_application, no_union_maximum_determined, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_a)]).
+expected(deferred_prohibition_application_day, union_maximum_determined, fine_maximum(7000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_3)]).
+expected(deferred_prohibition_public_authority_day_before, no_union_maximum_determined, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_a)]).
+expected(public_authority_operator_breach, no_union_maximum_determined, set_by_member_state_rules, [cite(eu_reg_2024_1689_art_99_8)]).
+expected(public_authority_absent_infringement_day_before_december, information_missing, indeterminate([infringement]), []).
+expected(public_authority_absent_infringement_december_day, no_union_maximum_determined, set_by_member_state_rules, [cite(eu_reg_2024_1689_art_99_8)]).
+expected(union_institution_prohibition, union_maximum_determined, fine_maximum(150000000, fixed_amount), [cite(eu_reg_2024_1689_art_100_1), cite(eu_reg_2024_1689_art_100_2)]).
+expected(union_institution_deferred_prohibition_from_december, union_maximum_determined, fine_maximum(150000000, fixed_amount), [cite(eu_reg_2024_1689_art_100_1), cite(eu_reg_2024_1689_art_100_2)]).
+expected(union_institution_incorrect_information, union_maximum_determined, fine_maximum(75000000, fixed_amount), [cite(eu_reg_2024_1689_art_100_1), cite(eu_reg_2024_1689_art_100_3)]).
+expected(union_institution_other_infringement, union_maximum_determined, fine_maximum(75000000, fixed_amount), [cite(eu_reg_2024_1689_art_100_1), cite(eu_reg_2024_1689_art_100_3)]).
+expected(other_infringement_undertaking, no_union_maximum_determined, no_union_maximum, [cite(eu_reg_2024_1689_art_99_3), cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_5)]).
+expected(not_an_undertaking_provider_obligations, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_a)]).
+expected(not_an_undertaking_authorised_representative, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_b)]).
+expected(undertaking_provider_obligations_without_turnover, information_missing, indeterminate([worldwide_annual_turnover_eur]), []).
+expected(offender_category_absent, information_missing, indeterminate([offender_category]), []).
+expected(infringement_absent, information_missing, indeterminate([infringement]), []).
+expected(prohibition_turnover_at_boundary, union_maximum_determined, fine_maximum(3500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_3)]).
+expected(prohibition_turnover_above_boundary, union_maximum_determined, fine_maximum(3500000007, turnover_percentage), [cite(eu_reg_2024_1689_art_99_3)]).
+expected(transparency_turnover_at_boundary, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_g)]).
+expected(transparency_turnover_above_boundary, union_maximum_determined, fine_maximum(1500000003, turnover_percentage), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_g)]).
+expected(incorrect_information_turnover_at_boundary, union_maximum_determined, fine_maximum(750000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_5)]).
+expected(incorrect_information_turnover_above_boundary, union_maximum_determined, fine_maximum(750000001, turnover_percentage), [cite(eu_reg_2024_1689_art_99_5)]).
+expected(distributor_undertaking, union_maximum_determined, fine_maximum(3000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_d)]).
+expected(provider_and_operator_undertaking, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_da)]).
+expected(small_or_medium_enterprise_prohibition_at_boundary, union_maximum_determined, fine_maximum(3500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_3), cite(eu_reg_2024_1689_art_99_6)]).
+expected(small_or_medium_enterprise_prohibition_below_boundary, union_maximum_determined, fine_maximum(3499999993, turnover_percentage), [cite(eu_reg_2024_1689_art_99_3), cite(eu_reg_2024_1689_art_99_6)]).
+expected(small_or_medium_enterprise_notified_body, union_maximum_determined, fine_maximum(300000000, turnover_percentage), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_f), cite(eu_reg_2024_1689_art_99_6)]).
+expected(small_mid_cap_importer_at_boundary, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_c), cite(eu_reg_2024_1689_art_99_6a)]).
+expected(small_mid_cap_importer_below_boundary, union_maximum_determined, fine_maximum(1499999997, turnover_percentage), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_c), cite(eu_reg_2024_1689_art_99_6a)]).
+expected(small_mid_cap_deployer, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_e), cite(eu_reg_2024_1689_art_99_6a)]).
+expected(small_mid_cap_prohibition_below_boundary, union_maximum_determined, fine_maximum(3500000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_3)]).
+expected(profile_and_date_problems, input_rejected, input_problems([unknown_key(colour), wrong_type(infringement_date)]), []).
+expected(duplicate_infringement_key, input_rejected, input_problems([duplicate_key(infringement)]), []).
+expected(profile_not_an_attribute_list, input_rejected, input_problems([wrong_type(profile)]), []).
+expected(model_fine_before_pinned_text, no_union_maximum_determined, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_b)]).
+expected(model_fine_day_before_application, no_union_maximum_determined, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_b)]).
+expected(model_fine_application_day, union_maximum_determined, fine_maximum(3000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_a)]).
+expected(model_fine_not_a_provider, no_union_maximum_determined, no_commission_fine, [cite(eu_reg_2024_1689_art_101_1)]).
+expected(model_fine_none_of_the_acts, no_union_maximum_determined, no_commission_fine, [cite(eu_reg_2024_1689_art_101_1)]).
+expected(model_fine_no_intent_or_negligence, no_union_maximum_determined, no_commission_fine, [cite(eu_reg_2024_1689_art_101_1)]).
+expected(model_fine_intent_unsure, legal_review_needed, needs_legal_review(open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)), [inputs_relied_on([provider_acted_intentionally_or_negligently-unsure])]), []).
+expected(model_fine_intent_settled, union_maximum_determined, fine_maximum(3000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_a)]).
+expected(model_fine_intent_unsure_act_absent, information_missing, indeterminate([general_purpose_ai_model_infringement]), []).
+expected(model_fine_provider_absent, information_missing, indeterminate([offender_is_general_purpose_ai_model_provider]), []).
+expected(model_fine_turnover_absent, information_missing, indeterminate([worldwide_annual_turnover_eur]), []).
+expected(model_fine_information_request, union_maximum_determined, fine_maximum(6000000000, turnover_percentage), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_b)]).
+expected(model_fine_measure_at_boundary, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_c)]).
+expected(model_fine_measure_above_boundary, union_maximum_determined, fine_maximum(1500000003, turnover_percentage), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_c)]).
+expected(model_fine_access_small_provider, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_d)]).
+expected(model_fine_ignores_small_or_medium_category, union_maximum_determined, fine_maximum(1500000000, fixed_amount), [cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_a)]).
+expected(model_fine_input_problems, input_rejected, input_problems([wrong_type(offender_is_general_purpose_ai_model_provider)]), []).
+
+% ---- near-miss controls: control_pair(Positive, Control) ---------------
+% Each control differs from its positive case by one day, one euro or one
+% key value, and gets a different MAXIMUM.
+control_pair(pinned_text_start_day, earlier_version_day_before_pinned_text).
+control_pair(deferred_prohibition_application_day, deferred_prohibition_day_before_application).
+control_pair(public_authority_absent_infringement_december_day, public_authority_absent_infringement_day_before_december).
+control_pair(public_authority_operator_breach, deferred_prohibition_public_authority_day_before).
+control_pair(union_institution_other_infringement, other_infringement_undertaking).
+control_pair(not_an_undertaking_provider_obligations, undertaking_provider_obligations_without_turnover).
+control_pair(prohibition_turnover_above_boundary, prohibition_turnover_at_boundary).
+control_pair(transparency_turnover_above_boundary, transparency_turnover_at_boundary).
+control_pair(incorrect_information_turnover_above_boundary, incorrect_information_turnover_at_boundary).
+control_pair(small_or_medium_enterprise_prohibition_below_boundary, small_or_medium_enterprise_prohibition_at_boundary).
+control_pair(small_mid_cap_importer_below_boundary, small_mid_cap_importer_at_boundary).
+control_pair(small_or_medium_enterprise_prohibition_below_boundary, small_mid_cap_prohibition_below_boundary).
+control_pair(model_fine_application_day, model_fine_day_before_application).
+control_pair(model_fine_measure_above_boundary, model_fine_measure_at_boundary).
+control_pair(model_fine_intent_settled, model_fine_intent_unsure).
+control_pair(model_fine_intent_settled, model_fine_no_intent_or_negligence).
+control_pair(model_fine_intent_unsure, model_fine_intent_unsure_act_absent).
+
+% Pairs whose control also gets the opposite STATUS atom.
+status_pair(pinned_text_start_day, earlier_version_day_before_pinned_text).
+status_pair(deferred_prohibition_application_day, deferred_prohibition_day_before_application).
+status_pair(public_authority_absent_infringement_december_day, public_authority_absent_infringement_day_before_december).
+status_pair(not_an_undertaking_provider_obligations, undertaking_provider_obligations_without_turnover).
+status_pair(model_fine_application_day, model_fine_day_before_application).
+status_pair(model_fine_intent_settled, model_fine_intent_unsure).
+status_pair(model_fine_intent_settled, model_fine_no_intent_or_negligence).
+
+% ---- helpers (test plumbing) --------------------------------------------
+subject_matches_expectation(Subject) :-
+    expected(Subject, Status, Maximum, Citations),
+    findall(Verdict, penalties_assess(Subject, Verdict), Verdicts),
+    Verdicts = [penalties_verdict(GotStatus, GotMaximum, GotCitations)],
+    GotStatus == Status,
+    GotMaximum == Maximum,
+    msort(GotCitations, SortedGot),
+    msort(Citations, SortedExpected),
+    SortedGot == SortedExpected,
+    sort(GotCitations, DistinctGot),
+    length(GotCitations, CitationCount),
+    length(DistinctGot, CitationCount).
+
+subject_status_is_expected(Subject) :-
+    expected(Subject, Status, _, _),
+    penalties_profile_for(Subject, Request),
+    findall(GotStatus, penalties_status(Request, GotStatus), Statuses),
+    Statuses == [Status].
+
+subject_status_is_a_value(Subject) :-
+    penalties_assess(Subject, penalties_verdict(Status, _, _)),
+    penalties_status_values(StatusValues),
+    member(Status, StatusValues).
+
+subject_has_checklist(Subject) :-
+    penalties_profile_for(Subject, Request),
+    penalties_decision_resolvable(Request),
+    findall(Items, penalties_checklist(Request, Items), Checklists),
+    Checklists = [[_|_]].
+
+% A determined maximum carries its citations on the checklist item.
+subject_checklist_cites_the_maximum(Subject) :-
+    penalties_profile_for(Subject, Request),
+    penalties_checklist(Request, Items),
+    member(item(maximum, met, [cite(_)|_]), Items).
+
+pair_differs(Positive-Control) :-
+    penalties_assess(Positive, penalties_verdict(_, PositiveMaximum, _)),
+    penalties_assess(Control, penalties_verdict(_, ControlMaximum, _)),
+    dif(PositiveMaximum, ControlMaximum).
+
+pair_status_differs(Positive-Control) :-
+    penalties_assess(Positive, penalties_verdict(PositiveStatus, _, _)),
+    penalties_assess(Control, penalties_verdict(ControlStatus, _, _)),
+    dif(PositiveStatus, ControlStatus).
+
+% ---- the whole registry -------------------------------------------------
+test(every_subject_has_one_expectation) :-
+    findall(Subject, penalties_subject(Subject), Subjects),
+    msort(Subjects, SortedSubjects),
+    findall(Subject, expected(Subject, _, _, _), ExpectedSubjects),
+    msort(ExpectedSubjects, SortedExpected),
+    SortedSubjects == SortedExpected,
+    sort(Subjects, DistinctSubjects),
+    SortedSubjects == DistinctSubjects.
+test(every_subject_resolves_to_its_expected_verdict) :-
+    findall(Subject, penalties_subject(Subject), Subjects),
+    maplist(subject_matches_expectation, Subjects).
+test(every_subject_status_is_its_expected_atom) :-
+    findall(Subject, penalties_subject(Subject), Subjects),
+    maplist(subject_status_is_expected, Subjects).
+test(every_status_is_in_the_vocabulary) :-
+    findall(Subject, penalties_subject(Subject), Subjects),
+    maplist(subject_status_is_a_value, Subjects).
+test(every_subject_has_a_non_empty_checklist) :-
+    findall(Subject, penalties_subject(Subject), Subjects),
+    maplist(subject_has_checklist, Subjects).
+test(every_determined_maximum_is_cited_on_its_checklist) :-
+    findall(Subject, expected(Subject, union_maximum_determined, _, _), Subjects),
+    maplist(subject_checklist_cites_the_maximum, Subjects).
+test(every_near_miss_control_gets_another_maximum) :-
+    findall(Positive-Control, control_pair(Positive, Control), Pairs),
+    maplist(pair_differs, Pairs).
+test(every_status_control_gets_the_opposite_status) :-
+    findall(Positive-Control, status_pair(Positive, Control), Pairs),
+    maplist(pair_status_differs, Pairs).
+
+% ---- one test per subject ------------------------------------------------
+test(earlier_version_day_before_pinned_text) :-
+    subject_matches_expectation(earlier_version_day_before_pinned_text).
+test(pinned_text_start_day) :-
+    subject_matches_expectation(pinned_text_start_day).
+test(deferred_prohibition_day_before_application) :-
+    subject_matches_expectation(deferred_prohibition_day_before_application).
+test(deferred_prohibition_application_day) :-
+    subject_matches_expectation(deferred_prohibition_application_day).
+test(deferred_prohibition_public_authority_day_before) :-
+    subject_matches_expectation(deferred_prohibition_public_authority_day_before).
+test(public_authority_operator_breach) :-
+    subject_matches_expectation(public_authority_operator_breach).
+test(public_authority_absent_infringement_day_before_december) :-
+    subject_matches_expectation(public_authority_absent_infringement_day_before_december).
+test(public_authority_absent_infringement_december_day) :-
+    subject_matches_expectation(public_authority_absent_infringement_december_day).
+test(union_institution_prohibition) :-
+    subject_matches_expectation(union_institution_prohibition).
+test(union_institution_deferred_prohibition_from_december) :-
+    subject_matches_expectation(union_institution_deferred_prohibition_from_december).
+test(union_institution_incorrect_information) :-
+    subject_matches_expectation(union_institution_incorrect_information).
+test(union_institution_other_infringement) :-
+    subject_matches_expectation(union_institution_other_infringement).
+test(other_infringement_undertaking) :-
+    subject_matches_expectation(other_infringement_undertaking).
+test(not_an_undertaking_provider_obligations) :-
+    subject_matches_expectation(not_an_undertaking_provider_obligations).
+test(not_an_undertaking_authorised_representative) :-
+    subject_matches_expectation(not_an_undertaking_authorised_representative).
+test(undertaking_provider_obligations_without_turnover) :-
+    subject_matches_expectation(undertaking_provider_obligations_without_turnover).
+test(offender_category_absent) :-
+    subject_matches_expectation(offender_category_absent).
+test(infringement_absent) :-
+    subject_matches_expectation(infringement_absent).
+test(prohibition_turnover_at_boundary) :-
+    subject_matches_expectation(prohibition_turnover_at_boundary).
+test(prohibition_turnover_above_boundary) :-
+    subject_matches_expectation(prohibition_turnover_above_boundary).
+test(transparency_turnover_at_boundary) :-
+    subject_matches_expectation(transparency_turnover_at_boundary).
+test(transparency_turnover_above_boundary) :-
+    subject_matches_expectation(transparency_turnover_above_boundary).
+test(incorrect_information_turnover_at_boundary) :-
+    subject_matches_expectation(incorrect_information_turnover_at_boundary).
+test(incorrect_information_turnover_above_boundary) :-
+    subject_matches_expectation(incorrect_information_turnover_above_boundary).
+test(distributor_undertaking) :-
+    subject_matches_expectation(distributor_undertaking).
+test(provider_and_operator_undertaking) :-
+    subject_matches_expectation(provider_and_operator_undertaking).
+test(small_or_medium_enterprise_prohibition_at_boundary) :-
+    subject_matches_expectation(small_or_medium_enterprise_prohibition_at_boundary).
+test(small_or_medium_enterprise_prohibition_below_boundary) :-
+    subject_matches_expectation(small_or_medium_enterprise_prohibition_below_boundary).
+test(small_or_medium_enterprise_notified_body) :-
+    subject_matches_expectation(small_or_medium_enterprise_notified_body).
+test(small_mid_cap_importer_at_boundary) :-
+    subject_matches_expectation(small_mid_cap_importer_at_boundary).
+test(small_mid_cap_importer_below_boundary) :-
+    subject_matches_expectation(small_mid_cap_importer_below_boundary).
+test(small_mid_cap_deployer) :-
+    subject_matches_expectation(small_mid_cap_deployer).
+test(small_mid_cap_prohibition_below_boundary) :-
+    subject_matches_expectation(small_mid_cap_prohibition_below_boundary).
+test(profile_and_date_problems) :-
+    subject_matches_expectation(profile_and_date_problems).
+test(duplicate_infringement_key) :-
+    subject_matches_expectation(duplicate_infringement_key).
+test(profile_not_an_attribute_list) :-
+    subject_matches_expectation(profile_not_an_attribute_list).
+test(model_fine_before_pinned_text) :-
+    subject_matches_expectation(model_fine_before_pinned_text).
+test(model_fine_day_before_application) :-
+    subject_matches_expectation(model_fine_day_before_application).
+test(model_fine_application_day) :-
+    subject_matches_expectation(model_fine_application_day).
+test(model_fine_not_a_provider) :-
+    subject_matches_expectation(model_fine_not_a_provider).
+test(model_fine_none_of_the_acts) :-
+    subject_matches_expectation(model_fine_none_of_the_acts).
+test(model_fine_no_intent_or_negligence) :-
+    subject_matches_expectation(model_fine_no_intent_or_negligence).
+test(model_fine_intent_unsure) :-
+    subject_matches_expectation(model_fine_intent_unsure).
+test(model_fine_intent_settled) :-
+    subject_matches_expectation(model_fine_intent_settled).
+test(model_fine_intent_unsure_act_absent) :-
+    subject_matches_expectation(model_fine_intent_unsure_act_absent).
+test(model_fine_provider_absent) :-
+    subject_matches_expectation(model_fine_provider_absent).
+test(model_fine_turnover_absent) :-
+    subject_matches_expectation(model_fine_turnover_absent).
+test(model_fine_information_request) :-
+    subject_matches_expectation(model_fine_information_request).
+test(model_fine_measure_at_boundary) :-
+    subject_matches_expectation(model_fine_measure_at_boundary).
+test(model_fine_measure_above_boundary) :-
+    subject_matches_expectation(model_fine_measure_above_boundary).
+test(model_fine_access_small_provider) :-
+    subject_matches_expectation(model_fine_access_small_provider).
+test(model_fine_ignores_small_or_medium_category) :-
+    subject_matches_expectation(model_fine_ignores_small_or_medium_category).
+test(model_fine_input_problems) :-
+    subject_matches_expectation(model_fine_input_problems).
+
+% ---- negative tests, each paired with the positive one above -------------
+test(the_day_before_the_pinned_text_is_not_a_determined_maximum, fail) :-
+    penalties_profile_for(earlier_version_day_before_pinned_text, Request),
+    penalties_status(Request, union_maximum_determined).
+test(the_pinned_text_start_day_is_not_the_earlier_version, fail) :-
+    penalties_assess(pinned_text_start_day, penalties_verdict(_, earlier_version_applies, _)).
+test(at_the_boundary_the_basis_is_not_the_turnover, fail) :-
+    penalties_assess(prohibition_turnover_at_boundary, penalties_verdict(_, fine_maximum(_, turnover_percentage), _)).
+test(above_the_boundary_the_basis_is_not_the_fixed_amount, fail) :-
+    penalties_assess(prohibition_turnover_above_boundary, penalties_verdict(_, fine_maximum(_, fixed_amount), _)).
+test(a_small_mid_cap_prohibition_does_not_take_the_lower_amount, fail) :-
+    penalties_assess(small_mid_cap_prohibition_below_boundary, penalties_verdict(_, fine_maximum(3499999993, _), _)).
+test(a_small_mid_cap_prohibition_does_not_cite_article_99_6a, fail) :-
+    penalties_assess(small_mid_cap_prohibition_below_boundary, penalties_verdict(_, _, Citations)),
+    member(cite(eu_reg_2024_1689_art_99_6a), Citations).
+test(a_deferred_prohibition_of_a_public_authority_is_not_for_member_state_rules, fail) :-
+    penalties_assess(deferred_prohibition_public_authority_day_before, penalties_verdict(_, set_by_member_state_rules, _)).
+test(an_offender_not_an_undertaking_does_not_take_the_turnover_amount, fail) :-
+    penalties_assess(not_an_undertaking_provider_obligations, penalties_verdict(_, fine_maximum(_, turnover_percentage), _)).
+test(the_model_fine_never_answers_the_earlier_version, fail) :-
+    penalties_assess(model_fine_before_pinned_text, penalties_verdict(_, earlier_version_applies, _)).
+test(an_unsure_judgement_is_not_a_determined_maximum, fail) :-
+    penalties_profile_for(model_fine_intent_unsure, Request),
+    penalties_status(Request, union_maximum_determined).
+test(a_missing_act_is_not_sent_to_review, fail) :-
+    penalties_assess(model_fine_intent_unsure_act_absent, penalties_verdict(legal_review_needed, _, _)).
+test(the_model_fine_does_not_apply_the_small_or_medium_rule, fail) :-
+    penalties_assess(model_fine_ignores_small_or_medium_category, penalties_verdict(_, fine_maximum(300000000, _), _)).
+test(a_rejected_input_has_no_citations, fail) :-
+    penalties_assess(profile_and_date_problems, penalties_verdict(_, _, [_|_])).
+
+% ---- checklist shape and the facade directly ------------------------------
+test(the_checklist_of_a_determined_maximum_carries_its_citations) :-
+    penalties_profile_for(small_mid_cap_importer_at_boundary, Request),
+    penalties_checklist(Request, Items),
+    Items == [item(input_check, met, []), item(maximum, met, [cite(eu_reg_2024_1689_art_99_4), cite(eu_reg_2024_1689_art_99_4_c), cite(eu_reg_2024_1689_art_99_6a)])].
+test(the_checklist_of_a_review_names_the_judgement) :-
+    penalties_profile_for(model_fine_intent_unsure, Request),
+    penalties_checklist(Request, Items),
+    Items == [item(input_check, met, []), item(maximum, unknown([provider_acted_intentionally_or_negligently]), [])].
+test(the_checklist_of_rejected_input_marks_the_input_check_unmet) :-
+    penalties_profile_for(duplicate_infringement_key, Request),
+    penalties_checklist(Request, [item(input_check, unmet(input_problems([duplicate_key(infringement)])), [])|_]).
+test(the_facade_decides_a_request_once) :-
+    findall(Verdict, decide_penalties(maximum_fine([attribute(offender_category, other_undertaking), attribute(infringement, incorrect_incomplete_or_misleading_information), attribute(worldwide_annual_turnover_eur, 750000000)], date(2026, 9, 1)), Verdict), Verdicts),
+    Verdicts == [penalties_verdict(union_maximum_determined, fine_maximum(750000000, fixed_amount), [cite(eu_reg_2024_1689_art_99_5)])].
+
+% ---- the called contract directly: maximum_fine/4 --------------------------
+test(maximum_fine_called_directly_gives_one_answer) :-
+    findall(Maximum-Citations, maximum_fine([attribute(offender_category, not_an_undertaking), attribute(infringement, prohibited_practice)], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [fine_maximum(3500000000, fixed_amount)-[cite(eu_reg_2024_1689_art_99_3)]].
+
+% ---- the called contract directly: general_purpose_ai_model_maximum_fine/4 --
+% One case per outcome: fine_maximum (both bases), no_commission_fine,
+% not_applicable_on_date, indeterminate, needs_legal_review, input_problems.
+test(general_purpose_ai_model_maximum_fine_turnover_basis) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, infringed_relevant_provisions), attribute(provider_acted_intentionally_or_negligently, true), attribute(worldwide_annual_turnover_eur, 1000000000)], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [fine_maximum(3000000000, turnover_percentage)-[cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_a)]].
+test(general_purpose_ai_model_maximum_fine_fixed_basis_at_the_boundary) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, access_for_evaluation_under_article_92_not_given), attribute(provider_acted_intentionally_or_negligently, true), attribute(worldwide_annual_turnover_eur, 500000000)], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [fine_maximum(1500000000, fixed_amount)-[cite(eu_reg_2024_1689_art_101_1), cite(eu_reg_2024_1689_art_101_1_d)]].
+test(general_purpose_ai_model_maximum_fine_no_commission_fine) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, none_of_article_101_1)], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [no_commission_fine-[cite(eu_reg_2024_1689_art_101_1)]].
+test(general_purpose_ai_model_maximum_fine_not_applicable_on_date) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true)], date(2026, 8, 1), Maximum, Citations), Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_b)]].
+test(general_purpose_ai_model_maximum_fine_indeterminate) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [indeterminate([offender_is_general_purpose_ai_model_provider])-[]].
+test(general_purpose_ai_model_maximum_fine_needs_legal_review) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, measure_under_article_93_not_complied_with), attribute(provider_acted_intentionally_or_negligently, unsure), attribute(worldwide_annual_turnover_eur, 10)], date(2026, 9, 1), Maximum, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)), [inputs_relied_on([provider_acted_intentionally_or_negligently-unsure])])-[]].
+test(general_purpose_ai_model_maximum_fine_input_problems) :-
+    findall(Maximum-Citations, general_purpose_ai_model_maximum_fine([attribute(colour, red)], date(2026, 2, 30), Maximum, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour), wrong_type(infringement_date)])-[]].
+test(general_purpose_ai_model_maximum_fine_on_the_application_day_is_not_inapplicable, fail) :-
+    general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true)], date(2026, 8, 2), not_applicable_on_date, _).
+
+% ---- the optional provenance element of a referral context -----------------
+% The CONTEXT of needs_legal_review may carry one trailing, unscored
+% provenance(CLAUSE, CITATIONS) after inputs_relied_on(PAIRS); the scored
+% part is unchanged by it.
+test(a_provenance_element_may_follow_the_pairs_of_a_referral) :-
+    general_purpose_ai_model_maximum_fine([attribute(offender_is_general_purpose_ai_model_provider, true), attribute(general_purpose_ai_model_infringement, infringed_relevant_provisions), attribute(provider_acted_intentionally_or_negligently, unsure), attribute(worldwide_annual_turnover_eur, 1000000000)], date(2026, 9, 1), needs_legal_review(Reason, [inputs_relied_on(Pairs)]), []),
+    Marker = provenance(commission_fault_route, [cite(eu_reg_2024_1689_art_101_1)]),
+    Context = [inputs_relied_on(Pairs), Marker],
+    Context = [inputs_relied_on(ScoredPairs), provenance(Clause, ProvenanceCitations)],
+    ScoredPairs == [provider_acted_intentionally_or_negligently-unsure],
+    Clause == commission_fault_route,
+    ProvenanceCitations == [cite(eu_reg_2024_1689_art_101_1)],
+    Reason == open_textured(provider_acted_intentionally_or_negligently, cite(eu_reg_2024_1689_art_101_1)).
+
+:- end_module(test_public_interface).

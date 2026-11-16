@@ -1,0 +1,120 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative subjects for eu/labour/working_time_weekly_limit.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls, and nothing else. Profile keys, subject names and
+% shift kinds are atoms and need no import.
+%
+% A subject is a case(Profile, Worker, Shifts, PeriodStart, PeriodEnd) term:
+% Profile an attribute list [attribute(Key, Value), ...], Worker an atom or an
+% integer, Shifts a list of shift(WorkerId, date_time(Y, M, D, H, MIN),
+% date_time(Y, M, D, H, MIN), Kind) rows, the period two date(Y, M, D) terms,
+% both days included.
+%
+% Every route has a positive case and a one-unit near-miss control:
+% at the limit / one minute over (2880 / 2881 counted minutes in a week, and
+% 2468 / 2469 with a day of paid annual leave), at the ceiling / one day over
+% (four, six and twelve months by the month rule), a whole period of sick
+% leave / one minute short of it, an on-call kind that matters / one that
+% does not, a shift crossing the end of the period at the limit / one minute
+% over, another worker's rota / the same rota for its own worker, and a bad
+% profile / a good one.
+% The standard week is Monday 2026-03-02 to Sunday 2026-03-08 (10080 minutes).
+% =====================================================================
+
+:- module(fixtures, [
+    working_time_weekly_limit_subject/1,
+    working_time_weekly_limit_profile_for/2,
+    working_time_weekly_limit_assess/2
+]).
+
+:- use_module(eu/labour/working_time_weekly_limit/working_time_weekly_limit, [decide_working_time_weekly_limit/2]).
+
+% ---- Subject registry ------------------------------------------------
+working_time_weekly_limit_subject(at_limit).
+working_time_weekly_limit_subject(one_minute_over).
+working_time_weekly_limit_subject(option_absent_over).
+working_time_weekly_limit_subject(opt_out_agreed).
+working_time_weekly_limit_subject(opt_out_without_agreement).
+working_time_weekly_limit_subject(agreement_false_option_absent).
+working_time_weekly_limit_subject(leave_day_at_limit).
+working_time_weekly_limit_subject(leave_day_one_minute_over).
+working_time_weekly_limit_subject(member_state_period_at_four_months).
+working_time_weekly_limit_subject(member_state_period_one_day_over).
+working_time_weekly_limit_subject(basis_absent_one_day_over).
+working_time_weekly_limit_subject(derogation_period_at_six_months).
+working_time_weekly_limit_subject(derogation_period_one_day_over).
+working_time_weekly_limit_subject(collective_agreement_period_at_twelve_months).
+working_time_weekly_limit_subject(offshore_period_at_twelve_months).
+working_time_weekly_limit_subject(period_one_day_over_twelve_months).
+working_time_weekly_limit_subject(all_sick_leave).
+working_time_weekly_limit_subject(sick_leave_one_minute_short).
+working_time_weekly_limit_subject(on_site_absent_matters).
+working_time_weekly_limit_subject(on_site_absent_does_not_matter).
+working_time_weekly_limit_subject(on_site_unsure_matters).
+working_time_weekly_limit_subject(on_site_counted).
+working_time_weekly_limit_subject(on_site_not_counted).
+working_time_weekly_limit_subject(standby_absent_matters).
+working_time_weekly_limit_subject(edge_shift_at_limit).
+working_time_weekly_limit_subject(edge_shift_one_minute_over).
+working_time_weekly_limit_subject(other_worker_ignored).
+working_time_weekly_limit_subject(same_rota_own_worker).
+working_time_weekly_limit_subject(bad_profile).
+working_time_weekly_limit_subject(good_profile_control).
+
+% ---- Cases -------------------------------------------------------------
+% The 48-hour average: exactly 2880 minutes (across two midnights) and 2881.
+working_time_weekly_limit_profile_for(at_limit, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(one_minute_over, case([attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% The Art 22(1) option over the limit.
+working_time_weekly_limit_profile_for(option_absent_over, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(opt_out_agreed, case([attribute(member_state_uses_article_22_option, true), attribute(worker_agreement_to_exceed_obtained_first, true)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(opt_out_without_agreement, case([attribute(member_state_uses_article_22_option, true), attribute(worker_agreement_to_exceed_obtained_first, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(agreement_false_option_absent, case([attribute(worker_agreement_to_exceed_obtained_first, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 1), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% Paid annual leave neutral: a whole day out, COUNTABLE 8640, boundary 2468.
+working_time_weekly_limit_profile_for(leave_day_at_limit, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 0, 0), paid_annual_leave), shift(w1, date_time(2026, 3, 3, 0, 0), date_time(2026, 3, 4, 17, 8), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(leave_day_one_minute_over, case([attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 0, 0), paid_annual_leave), shift(w1, date_time(2026, 3, 3, 0, 0), date_time(2026, 3, 4, 17, 9), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% The reference-period ceilings by the month rule.
+working_time_weekly_limit_profile_for(member_state_period_at_four_months, case([attribute(reference_period_basis, member_state_reference_period)], w1, [], date(2026, 1, 31), date(2026, 5, 30))).
+working_time_weekly_limit_profile_for(member_state_period_one_day_over, case([attribute(reference_period_basis, member_state_reference_period)], w1, [], date(2026, 1, 31), date(2026, 5, 31))).
+working_time_weekly_limit_profile_for(basis_absent_one_day_over, case([], w1, [], date(2026, 1, 31), date(2026, 5, 31))).
+working_time_weekly_limit_profile_for(derogation_period_at_six_months, case([attribute(reference_period_basis, derogation_under_article_17_3_or_article_18)], w1, [], date(2026, 1, 1), date(2026, 6, 30))).
+working_time_weekly_limit_profile_for(derogation_period_one_day_over, case([attribute(reference_period_basis, derogation_under_article_17_3_or_article_18)], w1, [], date(2026, 1, 1), date(2026, 7, 1))).
+working_time_weekly_limit_profile_for(collective_agreement_period_at_twelve_months, case([attribute(reference_period_basis, collective_agreement_under_article_19)], w1, [], date(2026, 1, 1), date(2026, 12, 31))).
+working_time_weekly_limit_profile_for(offshore_period_at_twelve_months, case([attribute(reference_period_basis, offshore_work_under_article_20_2)], w1, [], date(2026, 1, 1), date(2026, 12, 31))).
+working_time_weekly_limit_profile_for(period_one_day_over_twelve_months, case([attribute(reference_period_basis, collective_agreement_under_article_19)], w1, [], date(2026, 1, 1), date(2027, 1, 1))).
+
+% Sick leave neutral: the whole period, and one minute short of it.
+working_time_weekly_limit_profile_for(all_sick_leave, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 9, 0, 0), sick_leave)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(sick_leave_one_minute_short, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 8, 23, 59), sick_leave)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% On-call time: work 2000 minutes; on-site 1000 minutes (matters) or 880 (does not).
+working_time_weekly_limit_profile_for(on_site_absent_matters, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 16, 40), on_call_on_site)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(on_site_absent_does_not_matter, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 14, 40), on_call_on_site)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(on_site_unsure_matters, case([attribute(on_call_on_site_counts_as_working_time, unsure), attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 16, 40), on_call_on_site)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(on_site_counted, case([attribute(on_call_on_site_counts_as_working_time, true), attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 16, 40), on_call_on_site)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(on_site_not_counted, case([attribute(on_call_on_site_counts_as_working_time, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 16, 40), on_call_on_site)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(standby_absent_matters, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 9, 20), work), shift(w1, date_time(2026, 3, 4, 0, 0), date_time(2026, 3, 4, 16, 40), on_call_standby)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% A shift crossing the end of the period counts for its part inside it:
+% 2760 + 120 = 2880, and 2760 + 121 = 2881.
+working_time_weekly_limit_profile_for(edge_shift_at_limit, case([], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 22, 0), work), shift(w1, date_time(2026, 3, 8, 22, 0), date_time(2026, 3, 9, 6, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(edge_shift_one_minute_over, case([attribute(member_state_uses_article_22_option, false)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 3, 22, 0), work), shift(w1, date_time(2026, 3, 8, 21, 59), date_time(2026, 3, 9, 6, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% Workers compared as terms: the rota of worker 1 is not the rota of w1.
+working_time_weekly_limit_profile_for(other_worker_ignored, case([attribute(member_state_uses_article_22_option, false)], w1, [shift(1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 8, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(same_rota_own_worker, case([attribute(member_state_uses_article_22_option, false)], 1, [shift(1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 8, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% The input check comes first.
+working_time_weekly_limit_profile_for(bad_profile, case([attribute(reference_period_basis, x), attribute(foo, 1), attribute(foo, 2)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+working_time_weekly_limit_profile_for(good_profile_control, case([attribute(reference_period_basis, member_state_reference_period)], w1, [shift(w1, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 4, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8))).
+
+% ---- Convenience wrapper ---------------------------------------------
+working_time_weekly_limit_assess(Subject, Verdict) :-
+    working_time_weekly_limit_profile_for(Subject, SubjectCase),
+    decide_working_time_weekly_limit(SubjectCase, Verdict).
+
+:- end_module(fixtures).

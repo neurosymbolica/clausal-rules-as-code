@@ -1,0 +1,268 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_complaints_and_judicial_remedies (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This package has ONE
+% determination slice (gdpr_complaints_and_judicial_remedies.clausal), so
+% no domain predicate is shared and none is defined here.
+% Exception: the scaffold writes the order's input check
+% gdpr_complaints_and_judicial_remedies_input_problems/2 here, exported, for
+% the slice (and queries.clausal) to import. It is kept as the scaffold wrote it.
+% deontic family: each RESULT states whether a RIGHT exists (the permission
+% to invoke a remedy), or which courts Art 79(2) names.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 77(1), Art 78(1), Art 78(2),
+% Art 79(1) and Art 79(2), pinned unit text of 02016R0679-20160504 (the
+% consolidated text of 2016-05-04, fmx4 cut by tools/pin_statute.py,
+% fetched 2026-11-12): units parag_077.001, parag_078.001, parag_078.002,
+% parag_079.001 and parag_079.002. Art 77(2), Art 78(3) and (4) and the
+% article titles are deferred. Arts 55 and 56 are not pinned: competence is
+% the outside fact authority_competent_under_articles_55_and_56.
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% Result terms (the slice builds them; nothing here to export):
+%
+%   gdpr_complaints_and_judicial_remedies_verdict(Status, Citations)
+%     Status    -- exactly the RESULT of the query asked (below).
+%     Citations -- a set-like list of cite(Key) terms, each Key one of
+%                  eu_reg_2016_679_art_77_1, eu_reg_2016_679_art_78_1,
+%                  eu_reg_2016_679_art_78_2, eu_reg_2016_679_art_79_1,
+%                  eu_reg_2016_679_art_79_2; [] for a RESULT that is not final.
+%
+%   Final RESULT atoms, per query:
+%     complaint_right/3                   complaint_right_exists | no_complaint_right
+%     authority_decision_remedy_right/3   decision_remedy_right_exists | no_decision_remedy_right
+%     authority_inaction_remedy_right/4   inaction_remedy_right_exists | no_inaction_remedy_right
+%     controller_processor_remedy_right/3 judicial_remedy_right_exists | no_judicial_remedy_right
+%     controller_processor_forum/3        forum_establishment_state_only
+%                                         | forum_establishment_or_habitual_residence_state
+%
+%   Non-final RESULT compounds (never written bare), exactly one of:
+%     input_problems(Problems)    -- Problems the non-empty list this input
+%                                    check derives: duplicate_key(Key),
+%                                    wrong_type(Key), unknown_key(Key), or
+%                                    [wrong_type(profile)] alone.
+%     indeterminate([Key])        -- the FIRST absent needed key.
+%     needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_78_1)),
+%                        [inputs_relied_on(Pairs)])
+%                                 -- Key the first unsure judgement; Pairs the
+%                                    present judgement keys as Key-Value.
+%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2),
+%                                                   cite(competence_statement)),
+%                        [resolution(cite(competence_statement), not_attempted),
+%                         inputs_relied_on([authority_competent_under_articles_55_and_56-absent])])
+%                                 -- the absent outside fact the answer turns on.
+%
+%   BASIS (authority_inaction_remedy_right/4 only): [] or
+%     [outside_fact(authority_competent_under_articles_55_and_56, Attested)],
+%     Attested the attested(Value, attestation(By, At, Reason, Evidence))
+%     term copied exactly as supplied, never read.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [gdpr_complaints_and_judicial_remedies_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
+%   Key in every item gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [is_data_subject, data_subject_considers_processing_infringes_regulation, decision_is_legally_binding, decision_concerns_the_caller, complaint_lodged_under_article_77, authority_competent_under_articles_55_and_56, authority_handled_the_complaint, three_months_from_the_complaint_have_passed, authority_informed_on_progress_or_outcome, data_subject_considers_rights_infringed_by_processing, defendant_is_member_state_public_authority_acting_in_public_powers],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(is_data_subject, boolean).
+key_type(data_subject_considers_processing_infringes_regulation, boolean).
+key_type(decision_is_legally_binding, judgement).
+key_type(decision_concerns_the_caller, judgement).
+key_type(complaint_lodged_under_article_77, boolean).
+key_type(authority_competent_under_articles_55_and_56, outside_fact).
+key_type(authority_handled_the_complaint, boolean).
+key_type(three_months_from_the_complaint_have_passed, boolean).
+key_type(authority_informed_on_progress_or_outcome, boolean).
+key_type(data_subject_considers_rights_infringed_by_processing, boolean).
+key_type(defendant_is_member_state_public_authority_acting_in_public_powers, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, each Key ground; false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, T) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+no_variables_t([], true).
+no_variables_t([_|_], false).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    memberd_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([], []).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems(_, [wrong_type(profile)]).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, unsure)], [wrong_type(is_data_subject)]).
+test(a_judgement_given_unsure_is_well_formed) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(decision_is_legally_binding, unsure)], []).
+test(a_repeated_key_is_a_duplicate_only) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(is_data_subject, unsure)], [duplicate_key(is_data_subject)]).
+
+:- end_module(kernel).

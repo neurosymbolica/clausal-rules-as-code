@@ -1,0 +1,156 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input
+% tolerance of THE INPUT CHECK and step 0 of the three queries.
+% Run: python -m clausal.testing eu/labour/weekly_rest/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/labour/weekly_rest/weekly_rest, [
+    weekly_rest_status/2,
+    weekly_rest_status/7,
+    shortest_weekly_rest_minutes/6,
+    first_period_without_weekly_rest/6
+]).
+:- use_module(eu/labour/weekly_rest/kernel, [weekly_rest_input_problems/2]).
+:- use_module(eu/labour/weekly_rest/fixtures, [weekly_rest_profile_for/2]).
+
+seven_day_reference([attribute(weekly_rest_reference_period, seven_day_period)]).
+
+whole_week_shift(Worker, ShiftKind, shift(Worker, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 9, 0, 0), ShiftKind)).
+
+% ---- bound verdicts ------------------------------------------------------
+test(status_holds_with_the_verdict_bound) :-
+    weekly_rest_profile_for(rest_of_2100_minutes_given, WeeklyRestCase),
+    weekly_rest_status(WeeklyRestCase, weekly_rest_given).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    weekly_rest_profile_for(rest_of_2100_minutes_given, WeeklyRestCase),
+    weekly_rest_status(WeeklyRestCase, weekly_rest_not_given).
+
+test(the_contract_query_holds_with_result_and_citations_bound) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    weekly_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, weekly_rest_not_given, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_5_second_subpara), cite(eu_dir_2003_88_art_16_a)]).
+
+test(the_minutes_hold_when_bound) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    shortest_weekly_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, 2099).
+
+test(one_minute_more_is_rejected_when_bound, fail) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    shortest_weekly_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, 2100).
+
+test(the_day_holds_when_bound) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    first_period_without_weekly_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, date(2026, 3, 2)).
+
+test(a_later_day_is_rejected_when_bound, fail) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    first_period_without_weekly_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, date(2026, 3, 9)).
+
+% ---- the input check of the profile -------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    weekly_rest_input_problems([], []).
+
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, weekly_rest_input_problems(_UnboundProfile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, weekly_rest_input_problems([attribute(worker_category, other_worker)|_OpenTail], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_element_that_is_not_an_attribute_spoils_the_list) :-
+    weekly_rest_input_problems([attribute(worker_category, other_worker), loose_element], [wrong_type(profile)]).
+
+test(a_number_key_is_an_unknown_key) :-
+    weekly_rest_input_problems([attribute(7, seven)], [unknown_key(7)]).
+
+test(a_compound_key_is_an_unknown_key) :-
+    weekly_rest_input_problems([attribute(note(audit), reviewed)], [unknown_key(note(audit))]).
+
+test(an_unbound_value_is_wrong_type) :-
+    findall(Problems, weekly_rest_input_problems([attribute(worker_category, _UnboundValue)], Problems), Answers),
+    Answers == [[wrong_type(worker_category)]].
+
+test(a_number_for_an_enumeration_is_wrong_type) :-
+    weekly_rest_input_problems([attribute(weekly_rest_minimum, 2100)], [wrong_type(weekly_rest_minimum)]).
+
+test(a_judgement_outside_true_false_unsure_is_wrong_type) :-
+    weekly_rest_input_problems([attribute(on_call_standby_counts_as_working_time, maybe)], [wrong_type(on_call_standby_counts_as_working_time)]).
+
+test(unsure_is_a_judgement_value) :-
+    weekly_rest_input_problems([attribute(on_call_on_site_counts_as_working_time, unsure), attribute(on_call_standby_counts_as_working_time, false)], []).
+
+test(a_repeated_key_is_a_duplicate_only_even_with_equal_values) :-
+    weekly_rest_input_problems([attribute(worker_category, other_worker), attribute(worker_category, other_worker)], [duplicate_key(worker_category)]).
+
+test(a_repeated_key_with_a_bad_value_is_still_a_duplicate_only) :-
+    weekly_rest_input_problems([attribute(worker_category, other_worker), attribute(worker_category, pilot)], [duplicate_key(worker_category)]).
+
+test(contract_keys_come_before_unknown_keys) :-
+    weekly_rest_input_problems([attribute(zeta_note, one), attribute(worker_category, pilot), attribute(zeta_note, two), attribute(weekly_rest_minimum, weekly)], [wrong_type(weekly_rest_minimum), wrong_type(worker_category), unknown_key(zeta_note)]).
+
+% ---- step 0 of the queries: the arguments -------------------------------
+test(an_unbound_worker_is_wrong_type) :-
+    findall(Result-Citations, weekly_rest_status([], _UnboundWorker, [], date(2026, 3, 2), date(2026, 3, 8), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(worker)])-[]].
+
+test(problems_come_in_the_stated_order) :-
+    weekly_rest_status([attribute(audit_note, reviewed)], 3.5, [], date(2026, 3, 2), date(2026, 3, 1), input_problems([unknown_key(audit_note), wrong_type(worker), wrong_type(period_end)]), []).
+
+test(shifts_that_are_not_a_list_are_wrong_type) :-
+    shortest_weekly_rest_minutes([], worker_one, not_a_list, date(2026, 3, 2), date(2026, 3, 8), input_problems([wrong_type(shifts)])).
+
+test(a_shift_ending_before_it_starts_is_wrong_type) :-
+    shortest_weekly_rest_minutes([], worker_one, [shift(worker_one, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 2, 8, 0), work)], date(2026, 3, 2), date(2026, 3, 8), input_problems([wrong_type(shifts)])).
+
+test(an_unknown_shift_kind_is_wrong_type) :-
+    first_period_without_weekly_rest([], worker_one, [shift(worker_one, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), training)], date(2026, 3, 2), date(2026, 3, 8), input_problems([wrong_type(shifts)])).
+
+test(an_unreal_period_start_is_wrong_type_and_the_end_is_checked_as_a_date) :-
+    shortest_weekly_rest_minutes([], worker_one, [], date(2026, 2, 30), date(2026, 3, 8), input_problems([wrong_type(period_start)])).
+
+test(overlapping_rows_of_another_worker_are_not_read) :-
+    seven_day_reference(Profile),
+    shortest_weekly_rest_minutes(Profile, worker_one, [shift(worker_two, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(worker_two, date_time(2026, 3, 2, 15, 0), date_time(2026, 3, 2, 18, 0), work)], date(2026, 3, 2), date(2026, 3, 8), 10080).
+
+test(touching_rows_are_allowed) :-
+    seven_day_reference(Profile),
+    shortest_weekly_rest_minutes(Profile, worker_one, [shift(worker_one, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(worker_one, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 18, 0), work)], date(2026, 3, 2), date(2026, 3, 8), 9000).
+
+test(an_integer_worker_is_a_different_worker_from_an_atom) :-
+    seven_day_reference(Profile),
+    whole_week_shift(1, work, WorkShift),
+    shortest_weekly_rest_minutes(Profile, 1, [WorkShift], date(2026, 3, 2), date(2026, 3, 8), 0),
+    shortest_weekly_rest_minutes(Profile, w1, [WorkShift], date(2026, 3, 2), date(2026, 3, 8), 10080).
+
+% ---- what counts as rest (Art 2(1), Art 2(2)) ---------------------------
+test(paid_annual_leave_is_rest) :-
+    seven_day_reference(Profile),
+    whole_week_shift(worker_one, paid_annual_leave, LeaveShift),
+    shortest_weekly_rest_minutes(Profile, worker_one, [LeaveShift], date(2026, 3, 2), date(2026, 3, 8), 10080).
+
+test(sick_leave_is_rest) :-
+    seven_day_reference(Profile),
+    whole_week_shift(worker_one, sick_leave, SickShift),
+    shortest_weekly_rest_minutes(Profile, worker_one, [SickShift], date(2026, 3, 2), date(2026, 3, 8), 10080).
+
+test(on_site_on_call_judged_working_time_is_counted) :-
+    whole_week_shift(worker_one, on_call_on_site, OnCallShift),
+    shortest_weekly_rest_minutes([attribute(on_call_on_site_counts_as_working_time, true), attribute(weekly_rest_reference_period, seven_day_period)], worker_one, [OnCallShift], date(2026, 3, 2), date(2026, 3, 8), 0).
+
+test(on_site_on_call_judged_not_working_time_is_rest) :-
+    whole_week_shift(worker_one, on_call_on_site, OnCallShift),
+    shortest_weekly_rest_minutes([attribute(on_call_on_site_counts_as_working_time, false), attribute(weekly_rest_reference_period, seven_day_period)], worker_one, [OnCallShift], date(2026, 3, 2), date(2026, 3, 8), 10080).
+
+test(an_absent_on_site_judgement_is_asked_for) :-
+    seven_day_reference(Profile),
+    whole_week_shift(worker_one, on_call_on_site, OnCallShift),
+    shortest_weekly_rest_minutes(Profile, worker_one, [OnCallShift], date(2026, 3, 2), date(2026, 3, 8), indeterminate([on_call_on_site_counts_as_working_time])).
+
+test(an_unsure_standby_judgement_goes_to_a_lawyer) :-
+    whole_week_shift(worker_one, on_call_standby, StandbyShift),
+    shortest_weekly_rest_minutes([attribute(on_call_standby_counts_as_working_time, unsure), attribute(weekly_rest_reference_period, seven_day_period)], worker_one, [StandbyShift], date(2026, 3, 2), date(2026, 3, 8), needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_standby_counts_as_working_time-unsure])])).
+
+:- end_module(test_input_mode).

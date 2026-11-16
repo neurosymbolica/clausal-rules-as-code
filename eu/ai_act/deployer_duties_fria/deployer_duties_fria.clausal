@@ -1,0 +1,947 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% deployer_duties_fria.clausal -- the "deployer_duties_fria" DETERMINATION for
+% eu/ai_act/deployer_duties_fria, self-contained top to bottom: its
+% statutory VALUE facts, its derived arithmetic, its per-rule tests, its
+% checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act),
+% consolidated text 02024R1689-20260727 (as amended by Regulation (EU)
+% 2026/1744): Art 3 point (4) (deployer), Art 26(6), 26(7) and 26(11),
+% Art 27(1), (2) and (3), Art 111(1) and (2), Art 113 third paragraph
+% point (c)(i) and (ii).
+%
+% THE LADDER (INTERFACE - THE LIMBS) gives the answer of a COMPLETE
+% profile. THE STATUS RULE (INTERFACE - THE STATUSES) is computed over the
+% completions of the profile: the ladder is run once with every free key
+% (absent, or an unsure judgement) left unbound; a key is bound only when a
+% step reads it, so the solutions are the leaves of a decision tree that
+% partitions the completions. A key MATTERS when two compatible leaves bind
+% it to opposite values and give different answers (a WITNESS); the
+% 'behind' test reads the values the witnesses give the other key.
+% =====================================================================
+
+:- module(deployer_duties_fria, [
+    deployer_obligation_status/5,
+    log_retention_period_status/5,
+    decide_deployer_duties_fria/2,
+    deployer_duties_fria_status/2,
+    deployer_duties_fria_checklist/2,
+    deployer_duties_fria_decision_resolvable/1,
+    deployer_duties_fria_status_values/1,
+    not_applicable_on_date/0,
+    not_a_deployer/0,
+    not_a_high_risk_ai_system/0,
+    obligation_does_not_apply/0,
+    information_under_article_13_of_directive_2016_680/0,
+    compliance_required_by_31_december_2030/0,
+    existing_system_without_significant_changes_not_covered/0,
+    compliance_required_by_2_august_2030/0,
+    obligation_applies/0,
+    period_set_by_other_union_or_national_law/0,
+    retention_period_of_at_least_six_months/0,
+    retention_period_shorter_than_six_months/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(eu/ai_act/deployer_duties_fria/kernel, [deployer_duties_fria_input_problems/2]).
+:- use_module(eu/ai_act/deployer_duties_fria/citations, [implements/1]).
+
+% The input problem terms are data: constructors with no clauses.
+:- constructors([unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Art 26(6): "of at least six months", a whole number of months.
+:- constant_value(log_retention_minimum_months, 6).
+
+% The dates of Art 113(c)(i), Art 113(c)(ii), Art 111(1) and Art 111(2).
+statutory_date(listed_area_application, date(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
+statutory_date(product_legislation_application, date(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
+statutory_date(large_scale_compliance, date(2030, 12, 31), cite(eu_reg_2024_1689_art_111_1)).
+statutory_date(public_authority_compliance, date(2030, 8, 2), cite(eu_reg_2024_1689_art_111_2)).
+
+% The verdict vocabulary as a ground table (used by the property tests).
+deployer_duties_fria_status_values([
+    not_applicable_on_date,
+    not_a_deployer,
+    not_a_high_risk_ai_system,
+    obligation_does_not_apply,
+    information_under_article_13_of_directive_2016_680,
+    compliance_required_by_31_december_2030,
+    existing_system_without_significant_changes_not_covered,
+    compliance_required_by_2_august_2030,
+    obligation_applies,
+    period_set_by_other_union_or_national_law,
+    retention_period_of_at_least_six_months,
+    retention_period_shorter_than_six_months
+]).
+
+obligation_atoms([
+    log_retention,
+    information_of_workers_and_their_representatives,
+    information_of_natural_persons_subject_to_decisions,
+    fundamental_rights_impact_assessment,
+    notification_of_assessment_results
+]).
+
+% THE QUERY'S KEYS, in decision order (root_exports order).
+query_keys(obligation_query(_), [
+    deployer_of_the_system,
+    system_is_a_high_risk_ai_system_listed_in_annex_iii,
+    system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i,
+    logs_automatically_generated_by_the_system_under_the_deployers_control,
+    deployer_is_an_employer,
+    put_into_service_or_used_at_the_workplace,
+    makes_or_assists_in_making_decisions_related_to_natural_persons,
+    used_for_law_enforcement_purposes,
+    system_listed_under_point_2_of_annex_iii,
+    body_governed_by_public_law,
+    private_entity_providing_public_services,
+    system_listed_under_point_5_b_of_annex_iii,
+    system_listed_under_point_5_c_of_annex_iii,
+    exempt_from_notification_in_the_case_of_article_46_1,
+    component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027,
+    placed_on_the_market_or_put_into_service_before_the_chapter_iii_date,
+    significant_changes_in_design_as_from_the_chapter_iii_date,
+    intended_to_be_used_by_public_authorities
+]).
+query_keys(retention_query(_), [
+    deployer_of_the_system,
+    system_is_a_high_risk_ai_system_listed_in_annex_iii,
+    system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i,
+    logs_automatically_generated_by_the_system_under_the_deployers_control,
+    union_or_national_law_provides_otherwise_on_the_log_retention_period,
+    component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027,
+    placed_on_the_market_or_put_into_service_before_the_chapter_iii_date,
+    significant_changes_in_design_as_from_the_chapter_iii_date,
+    intended_to_be_used_by_public_authorities
+]).
+
+judgement_keys([
+    makes_or_assists_in_making_decisions_related_to_natural_persons,
+    body_governed_by_public_law,
+    private_entity_providing_public_services,
+    significant_changes_in_design_as_from_the_chapter_iii_date,
+    intended_to_be_used_by_public_authorities
+]).
+
+% The referral rows of the order: query, judgement key, citation.
+referral_row(obligation_query(_), makes_or_assists_in_making_decisions_related_to_natural_persons, eu_reg_2024_1689_art_26_11).
+referral_row(obligation_query(_), body_governed_by_public_law, eu_reg_2024_1689_art_27_1).
+referral_row(obligation_query(_), private_entity_providing_public_services, eu_reg_2024_1689_art_27_1).
+referral_row(obligation_query(_), significant_changes_in_design_as_from_the_chapter_iii_date, eu_reg_2024_1689_art_111_2).
+referral_row(obligation_query(_), intended_to_be_used_by_public_authorities, eu_reg_2024_1689_art_111_2).
+referral_row(retention_query(_), significant_changes_in_design_as_from_the_chapter_iii_date, eu_reg_2024_1689_art_111_2).
+referral_row(retention_query(_), intended_to_be_used_by_public_authorities, eu_reg_2024_1689_art_111_2).
+
+% THE APPLYING CITATIONS and THE NOT-APPLYING CITATIONS of OBLIGATION.
+applying_citations(log_retention, [cite(eu_reg_2024_1689_art_26_6)]).
+applying_citations(information_of_workers_and_their_representatives, [cite(eu_reg_2024_1689_art_26_7)]).
+applying_citations(information_of_natural_persons_subject_to_decisions, [cite(eu_reg_2024_1689_art_26_11)]).
+applying_citations(fundamental_rights_impact_assessment, [cite(eu_reg_2024_1689_art_27_1), cite(eu_reg_2024_1689_art_27_2)]).
+applying_citations(notification_of_assessment_results, [cite(eu_reg_2024_1689_art_27_3)]).
+
+not_applying_citations(log_retention, [cite(eu_reg_2024_1689_art_26_6)]).
+not_applying_citations(information_of_workers_and_their_representatives, [cite(eu_reg_2024_1689_art_26_7)]).
+not_applying_citations(information_of_natural_persons_subject_to_decisions, [cite(eu_reg_2024_1689_art_26_11)]).
+not_applying_citations(fundamental_rights_impact_assessment, [cite(eu_reg_2024_1689_art_27_1)]).
+not_applying_citations(notification_of_assessment_results, [cite(eu_reg_2024_1689_art_27_1), cite(eu_reg_2024_1689_art_27_3)]).
+
+% ---- result constructors (exported, never called as queries) ---------
+not_applicable_on_date.
+not_a_deployer.
+not_a_high_risk_ai_system.
+obligation_does_not_apply.
+information_under_article_13_of_directive_2016_680.
+compliance_required_by_31_december_2030.
+existing_system_without_significant_changes_not_covered.
+compliance_required_by_2_august_2030.
+obligation_applies.
+period_set_by_other_union_or_national_law.
+retention_period_of_at_least_six_months.
+retention_period_shorter_than_six_months.
+
+date(CalendarYear, CalendarMonth, CalendarDay) :-
+    assessment_date_t(date(CalendarYear, CalendarMonth, CalendarDay), true).
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    is_list(Context).
+
+open_textured(InputKey, cite(CitationKey)) :-
+    atom(InputKey),
+    atom(CitationKey).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(_Clause, Citations) :-
+    is_list(Citations).
+
+input_problems(Problems) :-
+    is_list(Problems).
+
+% ---- the contracted queries ------------------------------------------
+deployer_obligation_status(Profile, Obligation, AssessmentDate, Result, Citations) :-
+    deployer_duties_fria_input_problems(Profile, ProfileProblems),
+    obligation_atom_t(Obligation, ObligationValid),
+    assessment_date_t(AssessmentDate, DateValid),
+    flag_problem(DateValid, wrong_type(assessment_date), [], DateProblems),
+    flag_problem(ObligationValid, wrong_type(obligation), DateProblems, ArgumentProblems),
+    append(ProfileProblems, ArgumentProblems, Problems),
+    query_outcome(Problems, obligation_query(Obligation), Profile, AssessmentDate, Result, Citations).
+
+log_retention_period_status(Profile, RetentionMonths, AssessmentDate, Result, Citations) :-
+    deployer_duties_fria_input_problems(Profile, ProfileProblems),
+    retention_months_t(RetentionMonths, MonthsValid),
+    assessment_date_t(AssessmentDate, DateValid),
+    flag_problem(DateValid, wrong_type(assessment_date), [], DateProblems),
+    flag_problem(MonthsValid, wrong_type(retention_months), DateProblems, ArgumentProblems),
+    append(ProfileProblems, ArgumentProblems, Problems),
+    query_outcome(Problems, retention_query(RetentionMonths), Profile, AssessmentDate, Result, Citations).
+
+flag_problem(true, _, Problems, Problems).
+flag_problem(false, Problem, Problems, [Problem|Problems]).
+
+query_outcome([], Query, Profile, AssessmentDate, Result, Citations) :-
+    judged_status(Query, Profile, AssessmentDate, Result, Citations).
+query_outcome([Problem|Problems], _, _, _, input_problems([Problem|Problems]), []).
+
+% ---- argument checks (the input contract; no provision) --------------
+obligation_atom_t(Obligation, false) :-
+    var(Obligation).
+obligation_atom_t(Obligation, Truth) :-
+    nonvar(Obligation),
+    obligation_atoms(Atoms),
+    memberd_t(Obligation, Atoms, Truth).
+
+retention_months_t(RetentionMonths, Truth) :-
+    integer_t(RetentionMonths, IsInteger),
+    non_negative_t(IsInteger, RetentionMonths, Truth).
+
+non_negative_t(false, _, false).
+non_negative_t(true, RetentionMonths, true) :-
+    RetentionMonths #>= 0.
+non_negative_t(true, RetentionMonths, false) :-
+    RetentionMonths #< 0.
+
+integer_t(Term, Truth) :-
+    findall(Class, term_class(Term, Class), Classes),
+    sort(Classes, SortedClasses),
+    class_truth(SortedClasses, Truth).
+
+term_class(Term, unbound) :-
+    var(Term).
+term_class(Term, whole_number) :-
+    integer(Term).
+term_class(Term, other) :-
+    number(Term).
+term_class(Term, other) :-
+    atom(Term).
+term_class(Term, other) :-
+    compound(Term).
+
+class_truth([unbound], false).
+class_truth([whole_number], true).
+class_truth([other, whole_number], true).
+class_truth([other], false).
+class_truth([], false).
+
+assessment_date_t(Term, false) :-
+    var(Term).
+assessment_date_t(Term, false) :-
+    nonvar(Term),
+    Term \= date(_, _, _).
+assessment_date_t(Term, Truth) :-
+    nonvar(Term),
+    Term = date(CalendarYear, CalendarMonth, CalendarDay),
+    integer_t(CalendarYear, YearInteger),
+    integer_t(CalendarMonth, MonthInteger),
+    integer_t(CalendarDay, DayInteger),
+    date_parts_t(YearInteger, MonthInteger, DayInteger, CalendarYear, CalendarMonth, CalendarDay, Truth).
+
+date_parts_t(true, true, true, CalendarYear, CalendarMonth, CalendarDay, Truth) :-
+    calendar_day_t(CalendarYear, CalendarMonth, CalendarDay, Truth).
+date_parts_t(false, _, _, _, _, _, false).
+date_parts_t(true, false, _, _, _, _, false).
+date_parts_t(true, true, false, _, _, _, false).
+
+calendar_day_t(CalendarYear, CalendarMonth, CalendarDay, Truth) :-
+    range_t(CalendarYear, 1, 9999, YearInRange),
+    range_t(CalendarMonth, 1, 12, MonthInRange),
+    truth_and(YearInRange, MonthInRange, BothInRange),
+    day_in_month_t(BothInRange, CalendarYear, CalendarMonth, CalendarDay, Truth).
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, CalendarYear, CalendarMonth, CalendarDay, Truth) :-
+    month_length(CalendarMonth, CalendarYear, MonthLength),
+    range_t(CalendarDay, 1, MonthLength, Truth).
+
+range_t(Value, LowerBound, UpperBound, true) :-
+    Value #>= LowerBound,
+    Value #=< UpperBound.
+range_t(Value, LowerBound, _, false) :-
+    Value #< LowerBound.
+range_t(Value, _, UpperBound, false) :-
+    Value #> UpperBound.
+
+month_length_table(1, 31).
+month_length_table(3, 31).
+month_length_table(4, 30).
+month_length_table(5, 31).
+month_length_table(6, 30).
+month_length_table(7, 31).
+month_length_table(8, 31).
+month_length_table(9, 30).
+month_length_table(10, 31).
+month_length_table(11, 30).
+month_length_table(12, 31).
+
+month_length(2, CalendarYear, MonthLength) :-
+    leap_year_t(CalendarYear, IsLeap),
+    february_length(IsLeap, MonthLength).
+month_length(CalendarMonth, _, MonthLength) :-
+    month_length_table(CalendarMonth, MonthLength).
+
+february_length(true, 29).
+february_length(false, 28).
+
+leap_year_t(CalendarYear, true) :-
+    CalendarYear mod 400 =:= 0.
+leap_year_t(CalendarYear, false) :-
+    CalendarYear mod 400 =\= 0,
+    CalendarYear mod 100 =:= 0.
+leap_year_t(CalendarYear, true) :-
+    CalendarYear mod 100 =\= 0,
+    CalendarYear mod 4 =:= 0.
+leap_year_t(CalendarYear, false) :-
+    CalendarYear mod 4 =\= 0.
+
+% A calendar day as one ordered integer (year, month, day), for a valid date.
+day_number(date(CalendarYear, CalendarMonth, CalendarDay), DayNumber) :-
+    DayNumber #= CalendarYear * 10000 + CalendarMonth * 100 + CalendarDay.
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+truth_negated(true, false).
+truth_negated(false, true).
+
+same_atom_t(Value, Value, true).
+same_atom_t(Value, WantedValue, false) :-
+    dif(Value, WantedValue).
+
+boolean_value(true).
+boolean_value(false).
+
+% ---- the statutory dates applied --------------------------------------
+% Art 113(c)(i) dates Arts 26 and 27; the general date of Art 113, second
+% paragraph, does not (reading (2)).
+date_limit_number(listed_area_application, LimitNumber) :-
+    implements(eu_reg_2024_1689_art_113_c_i),
+    implements(eu_reg_2024_1689_art_113),
+    statutory_date(listed_area_application, StatutoryDate, _),
+    day_number(StatutoryDate, LimitNumber).
+date_limit_number(product_legislation_application, LimitNumber) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    statutory_date(product_legislation_application, StatutoryDate, _),
+    day_number(StatutoryDate, LimitNumber).
+date_limit_number(large_scale_compliance, LimitNumber) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    statutory_date(large_scale_compliance, StatutoryDate, _),
+    day_number(StatutoryDate, LimitNumber).
+date_limit_number(public_authority_compliance, LimitNumber) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    statutory_date(public_authority_compliance, StatutoryDate, _),
+    day_number(StatutoryDate, LimitNumber).
+
+% 'before date D': the day D itself is not before it.
+day_before_t(DayNumber, LimitNumber, true) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    DayNumber #< LimitNumber.
+day_before_t(DayNumber, LimitNumber, false) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    DayNumber #>= LimitNumber.
+
+% Art 26(6): six whole months is enough, five is not.
+minimum_months_t(RetentionMonths, true) :-
+    implements(eu_reg_2024_1689_art_26_6),
+    RetentionMonths #>= constant(log_retention_minimum_months).
+minimum_months_t(RetentionMonths, false) :-
+    implements(eu_reg_2024_1689_art_26_6),
+    RetentionMonths #< constant(log_retention_minimum_months).
+
+% ---- THE NAMED TESTS ---------------------------------------------------
+% Art 27(1), read with Annex III (lead words, point 2, point 5 lead words,
+% points 5(b) and 5(c)) for the meaning of the keys.
+named_condition(impact_assessment, all([
+        key_value(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        key_value(system_listed_under_point_2_of_annex_iii, false),
+        any([
+            key_value(body_governed_by_public_law, true),
+            key_value(private_entity_providing_public_services, true),
+            key_value(system_listed_under_point_5_b_of_annex_iii, true),
+            key_value(system_listed_under_point_5_c_of_annex_iii, true)
+        ])
+    ])) :-
+    implements(eu_reg_2024_1689_art_27_1),
+    implements(eu_reg_2024_1689_annex_iii),
+    implements(eu_reg_2024_1689_annex_iii_2),
+    implements(eu_reg_2024_1689_annex_iii_5),
+    implements(eu_reg_2024_1689_annex_iii_5_b),
+    implements(eu_reg_2024_1689_annex_iii_5_c).
+named_condition(product_legislation_route_only, all([
+        key_value(system_is_a_high_risk_ai_system_listed_in_annex_iii, false),
+        key_value(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, true)
+    ])) :-
+    implements(eu_reg_2024_1689_art_113_c_ii).
+named_condition(outside_high_risk, all([
+        key_value(system_is_a_high_risk_ai_system_listed_in_annex_iii, false),
+        key_value(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_113_c).
+named_condition(large_scale_component, all([
+        key_value(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, true),
+        before(large_scale_compliance)
+    ])) :-
+    implements(eu_reg_2024_1689_art_111_1).
+% Art 111(2), read with Art 3 points (9) and (11) for placing on the market
+% and putting into service.
+named_condition(existing_system, all([
+        key_value(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+        key_value(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, true),
+        key_value(significant_changes_in_design_as_from_the_chapter_iii_date, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    implements(eu_reg_2024_1689_art_3_9),
+    implements(eu_reg_2024_1689_art_3_11).
+named_condition(uncovered_existing_system, all([
+        named(existing_system),
+        key_value(intended_to_be_used_by_public_authorities, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_111_2).
+named_condition(public_authorities, all([
+        named(existing_system),
+        key_value(intended_to_be_used_by_public_authorities, true),
+        before(public_authority_compliance)
+    ])) :-
+    implements(eu_reg_2024_1689_art_111_2).
+
+% THE NOT-APPLYING TEST of OBLIGATION.
+not_applying_condition(log_retention, key_value(logs_automatically_generated_by_the_system_under_the_deployers_control, false)) :-
+    implements(eu_reg_2024_1689_art_26_6).
+not_applying_condition(information_of_workers_and_their_representatives, any([
+        key_value(deployer_is_an_employer, false),
+        key_value(put_into_service_or_used_at_the_workplace, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_26_7).
+not_applying_condition(information_of_natural_persons_subject_to_decisions, any([
+        key_value(system_is_a_high_risk_ai_system_listed_in_annex_iii, false),
+        key_value(makes_or_assists_in_making_decisions_related_to_natural_persons, false)
+    ])) :-
+    implements(eu_reg_2024_1689_art_26_11).
+not_applying_condition(fundamental_rights_impact_assessment, negation(named(impact_assessment))) :-
+    implements(eu_reg_2024_1689_art_27_1).
+not_applying_condition(notification_of_assessment_results, any([
+        negation(named(impact_assessment)),
+        key_value(exempt_from_notification_in_the_case_of_article_46_1, true)
+    ])) :-
+    implements(eu_reg_2024_1689_art_27_3).
+
+% ---- condition evaluation over a (partial) completion -----------------
+% A free key is bound only when read, so the solutions partition the
+% completions; ALL and ANY short-circuit.
+condition_t(key_value(ProfileKey, WantedValue), situation(_, _, Assignment), Truth) :-
+    member(ProfileKey-Value, Assignment),
+    boolean_value(Value),
+    same_atom_t(Value, WantedValue, Truth).
+condition_t(before(DateName), situation(_, DayNumber, _), Truth) :-
+    date_limit_number(DateName, LimitNumber),
+    day_before_t(DayNumber, LimitNumber, Truth).
+condition_t(all(Conditions), Situation, Truth) :-
+    all_conditions_t(Conditions, Situation, Truth).
+condition_t(any(Conditions), Situation, Truth) :-
+    any_conditions_t(Conditions, Situation, Truth).
+condition_t(negation(Condition), Situation, Truth) :-
+    condition_t(Condition, Situation, InnerTruth),
+    truth_negated(InnerTruth, Truth).
+condition_t(named(ConditionName), Situation, Truth) :-
+    named_condition(ConditionName, Condition),
+    condition_t(Condition, Situation, Truth).
+condition_t(obligation_is(WantedObligation), situation(obligation_query(Obligation), _, _), Truth) :-
+    same_atom_t(Obligation, WantedObligation, Truth).
+condition_t(minimum_months_met, situation(retention_query(RetentionMonths), _, _), Truth) :-
+    minimum_months_t(RetentionMonths, Truth).
+
+all_conditions_t([], _, true).
+all_conditions_t([Condition|Conditions], Situation, Truth) :-
+    condition_t(Condition, Situation, FirstTruth),
+    all_remaining_t(FirstTruth, Conditions, Situation, Truth).
+
+all_remaining_t(false, _, _, false).
+all_remaining_t(true, Conditions, Situation, Truth) :-
+    all_conditions_t(Conditions, Situation, Truth).
+
+any_conditions_t([], _, false).
+any_conditions_t([Condition|Conditions], Situation, Truth) :-
+    condition_t(Condition, Situation, FirstTruth),
+    any_remaining_t(FirstTruth, Conditions, Situation, Truth).
+
+any_remaining_t(true, _, _, true).
+any_remaining_t(false, Conditions, Situation, Truth) :-
+    any_conditions_t(Conditions, Situation, Truth).
+
+% ---- THE LADDERS -----------------------------------------------------
+% The law-enforcement step reads Art 26(11), second sentence, with the
+% definition of law enforcement in Art 3 point (46).
+obligation_steps(Obligation, [
+        step(before(listed_area_application), not_applicable_on_date,
+             [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]),
+        step(key_value(deployer_of_the_system, false), not_a_deployer,
+             [cite(eu_reg_2024_1689_art_3_4)]),
+        step(named(outside_high_risk), not_a_high_risk_ai_system, ApplyingCitations),
+        step(all([named(product_legislation_route_only), before(product_legislation_application)]), not_applicable_on_date,
+             [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]),
+        step(NotApplyingCondition, obligation_does_not_apply, NotApplyingCitations),
+        step(named(large_scale_component), compliance_required_by_31_december_2030,
+             [cite(eu_reg_2024_1689_art_111_1)|ApplyingCitations]),
+        step(named(uncovered_existing_system), existing_system_without_significant_changes_not_covered,
+             [cite(eu_reg_2024_1689_art_111_2)]),
+        step(named(public_authorities), compliance_required_by_2_august_2030,
+             [cite(eu_reg_2024_1689_art_111_2)|ApplyingCitations]),
+        step(all([obligation_is(information_of_natural_persons_subject_to_decisions), key_value(used_for_law_enforcement_purposes, true)]),
+             information_under_article_13_of_directive_2016_680,
+             [cite(eu_reg_2024_1689_art_26_11)]),
+        otherwise(obligation_applies, ApplyingCitations)
+    ]) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    implements(eu_reg_2024_1689_art_3_46),
+    applying_citations(Obligation, ApplyingCitations),
+    not_applying_condition(Obligation, NotApplyingCondition),
+    not_applying_citations(Obligation, NotApplyingCitations).
+
+retention_steps([
+        step(before(listed_area_application), not_applicable_on_date,
+             [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]),
+        step(key_value(deployer_of_the_system, false), not_a_deployer,
+             [cite(eu_reg_2024_1689_art_3_4)]),
+        step(named(outside_high_risk), not_a_high_risk_ai_system,
+             [cite(eu_reg_2024_1689_art_26_6)]),
+        step(all([named(product_legislation_route_only), before(product_legislation_application)]), not_applicable_on_date,
+             [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]),
+        step(key_value(logs_automatically_generated_by_the_system_under_the_deployers_control, false), obligation_does_not_apply,
+             [cite(eu_reg_2024_1689_art_26_6)]),
+        step(named(large_scale_component), compliance_required_by_31_december_2030,
+             [cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_26_6)]),
+        step(named(uncovered_existing_system), existing_system_without_significant_changes_not_covered,
+             [cite(eu_reg_2024_1689_art_111_2)]),
+        step(named(public_authorities), compliance_required_by_2_august_2030,
+             [cite(eu_reg_2024_1689_art_111_2), cite(eu_reg_2024_1689_art_26_6)]),
+        step(key_value(union_or_national_law_provides_otherwise_on_the_log_retention_period, true), period_set_by_other_union_or_national_law,
+             [cite(eu_reg_2024_1689_art_26_6)]),
+        step(minimum_months_met, retention_period_of_at_least_six_months,
+             [cite(eu_reg_2024_1689_art_26_6)]),
+        otherwise(retention_period_shorter_than_six_months, [cite(eu_reg_2024_1689_art_26_6)])
+    ]) :-
+    implements(eu_reg_2024_1689_art_26_6).
+
+ladder_walk([step(Condition, StepResult, StepCitations)|Steps], Situation, Result, Citations) :-
+    condition_t(Condition, Situation, Truth),
+    step_outcome(Truth, StepResult, StepCitations, Steps, Situation, Result, Citations).
+ladder_walk([otherwise(Result, Citations)], _, Result, Citations).
+
+step_outcome(true, StepResult, StepCitations, _, _, StepResult, StepCitations).
+step_outcome(false, _, _, Steps, Situation, Result, Citations) :-
+    ladder_walk(Steps, Situation, Result, Citations).
+
+query_steps(obligation_query(Obligation), Steps) :-
+    obligation_steps(Obligation, Steps).
+query_steps(retention_query(_), Steps) :-
+    retention_steps(Steps).
+
+% ---- THE STATUS RULE ---------------------------------------------------
+judged_status(Query, Profile, AssessmentDate, Result, Citations) :-
+    day_number(AssessmentDate, DayNumber),
+    query_keys(Query, ProfileKeys),
+    profile_entries(Profile, ProfileKeys, Entries),
+    maplist(entry_assignment, Entries, Assignment),
+    completion_leaves(Query, DayNumber, Assignment, Leaves),
+    findall(Answer, member(leaf(_, Answer), Leaves), AllAnswers),
+    sort(AllAnswers, Answers),
+    status_from_answers(Answers, Query, Entries, Leaves, Result, Citations).
+
+profile_entries(_, [], []).
+profile_entries(Profile, [ProfileKey|ProfileKeys], [ProfileKey-Entry|Entries]) :-
+    key_entry(Profile, ProfileKey, Entry),
+    profile_entries(Profile, ProfileKeys, Entries).
+
+key_entry(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_entry(Profile, ProfileKey, Entry) :-
+    profile_get(Profile, ProfileKey, Value),
+    value_entry(Value, Entry).
+
+value_entry(true, given(true)).
+value_entry(false, given(false)).
+value_entry(unsure, unsure).
+
+entry_assignment(ProfileKey-given(Value), ProfileKey-Value).
+entry_assignment(ProfileKey-absent, ProfileKey-_).
+entry_assignment(ProfileKey-unsure, ProfileKey-_).
+
+completion_leaves(Query, DayNumber, Assignment, Leaves) :-
+    findall(leaf(Assignment, answer(Result, SortedCitations)),
+            completion_answer(Query, DayNumber, Assignment, Result, SortedCitations),
+            Leaves).
+
+completion_answer(Query, DayNumber, Assignment, Result, SortedCitations) :-
+    query_steps(Query, Steps),
+    ladder_walk(Steps, situation(Query, DayNumber, Assignment), Result, Citations),
+    sort(Citations, SortedCitations).
+
+% (S1) settled; otherwise (S2) the missing key or (S3) the referral.
+status_from_answers([answer(Result, Citations)], _, _, _, Result, Citations).
+status_from_answers([_, _|_], Query, Entries, Leaves, Result, []) :-
+    free_key_records(Entries, Leaves, Records),
+    absent_mattering(Records, AbsentMattering),
+    unsettled_status(AbsentMattering, Records, Query, Entries, Result).
+
+unsettled_status([FirstRecord|OtherRecords], _, _, _, indeterminate([MissingKey])) :-
+    first_unblocked([FirstRecord|OtherRecords], [FirstRecord|OtherRecords], MissingKey).
+unsettled_status([], Records, Query, Entries, needs_legal_review(open_textured(Judgement, cite(CitationKey)), [inputs_relied_on(Pairs)])) :-
+    unsure_mattering(Records, [key_record(Judgement, _, _)|_]),
+    referral_row(Query, Judgement, CitationKey),
+    relied_pairs(Entries, Pairs).
+
+free_key_records([], _, []).
+free_key_records([_-given(_)|Entries], Leaves, Records) :-
+    free_key_records(Entries, Leaves, Records).
+free_key_records([ProfileKey-absent|Entries], Leaves, [key_record(ProfileKey, absent, Witnesses)|Records]) :-
+    key_witnesses(Leaves, ProfileKey, Witnesses),
+    free_key_records(Entries, Leaves, Records).
+free_key_records([ProfileKey-unsure|Entries], Leaves, [key_record(ProfileKey, unsure, Witnesses)|Records]) :-
+    key_witnesses(Leaves, ProfileKey, Witnesses),
+    free_key_records(Entries, Leaves, Records).
+
+% WITNESSES of a key: compatible leaves binding it true and false, with
+% different answers.
+key_witnesses(Leaves, ProfileKey, Witnesses) :-
+    leaves_binding(Leaves, ProfileKey, true, TrueLeaves),
+    leaves_binding(Leaves, ProfileKey, false, FalseLeaves),
+    findall(witness(TrueAssignment, FalseAssignment),
+            witness_pair(TrueLeaves, FalseLeaves, ProfileKey, TrueAssignment, FalseAssignment),
+            Witnesses).
+
+witness_pair(TrueLeaves, FalseLeaves, ProfileKey, TrueAssignment, FalseAssignment) :-
+    member(leaf(TrueAssignment, TrueAnswer), TrueLeaves),
+    member(leaf(FalseAssignment, FalseAnswer), FalseLeaves),
+    TrueAnswer \== FalseAnswer,
+    maplist(compatible_entry(ProfileKey), TrueAssignment, FalseAssignment).
+
+leaves_binding(Leaves, ProfileKey, WantedValue, BindingLeaves) :-
+    findall(leaf(Assignment, Answer),
+            leaf_binding(Leaves, ProfileKey, WantedValue, Assignment, Answer),
+            BindingLeaves).
+
+leaf_binding(Leaves, ProfileKey, WantedValue, Assignment, Answer) :-
+    member(leaf(Assignment, Answer), Leaves),
+    member(ProfileKey-Value, Assignment),
+    nonvar(Value),
+    Value == WantedValue.
+
+compatible_entry(ProfileKey, EntryKey-_, _) :-
+    EntryKey == ProfileKey.
+compatible_entry(ProfileKey, EntryKey-FirstValue, _-SecondValue) :-
+    EntryKey \== ProfileKey,
+    compatible_value(FirstValue, SecondValue).
+
+compatible_value(FirstValue, _) :-
+    var(FirstValue).
+compatible_value(FirstValue, SecondValue) :-
+    nonvar(FirstValue),
+    var(SecondValue).
+compatible_value(FirstValue, SecondValue) :-
+    nonvar(FirstValue),
+    nonvar(SecondValue),
+    FirstValue == SecondValue.
+
+absent_mattering([], []).
+absent_mattering([key_record(ProfileKey, absent, [Witness|Witnesses])|Records], [key_record(ProfileKey, absent, [Witness|Witnesses])|Mattering]) :-
+    absent_mattering(Records, Mattering).
+absent_mattering([key_record(_, absent, [])|Records], Mattering) :-
+    absent_mattering(Records, Mattering).
+absent_mattering([key_record(_, unsure, _)|Records], Mattering) :-
+    absent_mattering(Records, Mattering).
+
+unsure_mattering([], []).
+unsure_mattering([key_record(ProfileKey, unsure, [Witness|Witnesses])|Records], [key_record(ProfileKey, unsure, [Witness|Witnesses])|Mattering]) :-
+    unsure_mattering(Records, Mattering).
+unsure_mattering([key_record(_, unsure, [])|Records], Mattering) :-
+    unsure_mattering(Records, Mattering).
+unsure_mattering([key_record(_, absent, _)|Records], Mattering) :-
+    unsure_mattering(Records, Mattering).
+
+% The first absent key that matters and is not behind another.
+first_unblocked([key_record(ProfileKey, _, Witnesses)|Remaining], Candidates, Chosen) :-
+    behind_any_t(ProfileKey, Witnesses, Candidates, Blocked),
+    unblocked_choice(Blocked, ProfileKey, Remaining, Candidates, Chosen).
+
+unblocked_choice(false, ProfileKey, _, _, ProfileKey).
+unblocked_choice(true, _, Remaining, Candidates, Chosen) :-
+    first_unblocked(Remaining, Candidates, Chosen).
+
+behind_any_t(_, _, [], false).
+behind_any_t(ProfileKey, Witnesses, [key_record(OtherKey, _, OtherWitnesses)|Others], Truth) :-
+    behind_pair_t(ProfileKey, Witnesses, OtherKey, OtherWitnesses, PairTruth),
+    behind_any_t(ProfileKey, Witnesses, Others, OthersTruth),
+    truth_or(PairTruth, OthersTruth, Truth).
+
+behind_pair_t(ProfileKey, _, OtherKey, _, false) :-
+    ProfileKey == OtherKey.
+behind_pair_t(ProfileKey, Witnesses, OtherKey, OtherWitnesses, Truth) :-
+    ProfileKey \== OtherKey,
+    witness_values(Witnesses, OtherKey, OtherValues),
+    witness_values(OtherWitnesses, ProfileKey, OwnValues),
+    length(OtherValues, OtherCount),
+    length(OwnValues, OwnCount),
+    behind_counts(OtherCount, OwnCount, Truth).
+
+behind_counts(1, 2, true).
+behind_counts(1, 1, false).
+behind_counts(1, 0, false).
+behind_counts(0, _, false).
+behind_counts(2, _, false).
+
+witness_values(Witnesses, ProfileKey, Values) :-
+    findall(Value, witness_value(Witnesses, ProfileKey, Value), AllValues),
+    sort(AllValues, Values).
+
+witness_value(Witnesses, ProfileKey, Value) :-
+    member(witness(TrueAssignment, FalseAssignment), Witnesses),
+    member(ProfileKey-FirstValue, TrueAssignment),
+    member(ProfileKey-SecondValue, FalseAssignment),
+    pair_values(FirstValue, SecondValue, Value).
+
+pair_values(FirstValue, _, Value) :-
+    nonvar(FirstValue),
+    Value = FirstValue.
+pair_values(FirstValue, SecondValue, Value) :-
+    var(FirstValue),
+    nonvar(SecondValue),
+    Value = SecondValue.
+pair_values(FirstValue, SecondValue, Value) :-
+    var(FirstValue),
+    var(SecondValue),
+    boolean_value(Value).
+
+% THE PAIRS RULE: present judgement keys of the query, in order, as given.
+relied_pairs([], []).
+relied_pairs([ProfileKey-Entry|Entries], Pairs) :-
+    judgement_keys(JudgementKeys),
+    memberd_t(ProfileKey, JudgementKeys, IsJudgement),
+    relied_pair(IsJudgement, ProfileKey, Entry, Pairs, Remaining),
+    relied_pairs(Entries, Remaining).
+
+relied_pair(false, _, _, Pairs, Pairs).
+relied_pair(true, _, absent, Pairs, Pairs).
+relied_pair(true, ProfileKey, given(Value), [ProfileKey-Value|Pairs], Pairs).
+relied_pair(true, ProfileKey, unsure, [ProfileKey-unsure|Pairs], Pairs).
+
+% ---- facade: decision, projection, checklist ---------------------------
+decide_deployer_duties_fria(deployer_obligation_request(Profile, Obligation, AssessmentDate), deployer_duties_fria_verdict(Result, Citations)) :-
+    deployer_obligation_status(Profile, Obligation, AssessmentDate, Result, Citations).
+decide_deployer_duties_fria(log_retention_period_request(Profile, RetentionMonths, AssessmentDate), deployer_duties_fria_verdict(Result, Citations)) :-
+    log_retention_period_status(Profile, RetentionMonths, AssessmentDate, Result, Citations).
+
+deployer_duties_fria_status(Request, Status) :-
+    decide_deployer_duties_fria(Request, deployer_duties_fria_verdict(Status, _Citations)).
+
+deployer_duties_fria_decision_resolvable(Request) :-
+    decide_deployer_duties_fria(Request, _Verdict).
+
+deployer_duties_fria_checklist(Request, Checklist) :-
+    decide_deployer_duties_fria(Request, deployer_duties_fria_verdict(Result, Citations)),
+    result_kind(Result, ResultKind),
+    request_checklist(ResultKind, Request, Result, Citations, Checklist).
+
+result_kind(input_problems(_), refused).
+result_kind(indeterminate(_), judged).
+result_kind(needs_legal_review(_, _), judged).
+result_kind(Result, judged) :-
+    atom(Result).
+
+request_checklist(refused, _, Result, Citations, [item(input_check, Result, Citations)]).
+request_checklist(judged, Request, Result, Citations, [ApplicationItem, DeployerItem, ClassificationItem, item(determination, Result, Citations)]) :-
+    request_profile_date(Request, Profile, AssessmentDate),
+    application_item(AssessmentDate, ApplicationItem),
+    deployer_item(Profile, DeployerItem),
+    classification_item(Profile, ClassificationItem).
+
+request_profile_date(deployer_obligation_request(Profile, _, AssessmentDate), Profile, AssessmentDate).
+request_profile_date(log_retention_period_request(Profile, _, AssessmentDate), Profile, AssessmentDate).
+
+application_item(AssessmentDate, item(chapter_iii_application, Status, cite(eu_reg_2024_1689_art_113_c))) :-
+    implements(eu_reg_2024_1689_art_113_c_i),
+    day_number(AssessmentDate, DayNumber),
+    date_limit_number(listed_area_application, LimitNumber),
+    day_before_t(DayNumber, LimitNumber, IsBefore),
+    application_status(IsBefore, Status).
+
+application_status(true, unmet(before_chapter_iii_application_date)).
+application_status(false, met).
+
+deployer_item(Profile, item(deployer_role, Status, cite(eu_reg_2024_1689_art_3_4))) :-
+    implements(eu_reg_2024_1689_art_3_4),
+    key_entry(Profile, deployer_of_the_system, Entry),
+    deployer_status(Entry, Status).
+
+deployer_status(given(true), met).
+deployer_status(given(false), unmet(not_a_deployer)).
+deployer_status(absent, unknown([deployer_of_the_system])).
+
+classification_item(Profile, item(high_risk_classification, Status, cite(eu_reg_2024_1689_art_113_c))) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    key_entry(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, ListedEntry),
+    key_entry(Profile, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, ProductEntry),
+    classification_status(ListedEntry, ProductEntry, Status).
+
+classification_status(given(true), _, met).
+classification_status(given(false), given(true), met).
+classification_status(given(false), given(false), unmet(not_a_high_risk_ai_system)).
+classification_status(given(false), absent, unknown([system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i])).
+classification_status(absent, given(true), met).
+classification_status(absent, given(false), unknown([system_is_a_high_risk_ai_system_listed_in_annex_iii])).
+classification_status(absent, absent, unknown([system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i])).
+
+% ---- tests -------------------------------------------------------------
+test(before_the_first_chapter_iii_date_nothing_applies) :-
+    findall(Result-Citations,
+            deployer_obligation_status([], log_retention, date(2027, 12, 1), Result, Citations),
+            Answers),
+    Answers = [not_applicable_on_date-AnswerCitations],
+    sort(AnswerCitations, SortedCitations),
+    SortedCitations == [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)].
+
+test(malformed_arguments_are_input_problems) :-
+    deployer_obligation_status(not_a_list, unknown_duty, someday, Result, Citations),
+    Result == input_problems([wrong_type(profile), wrong_type(obligation), wrong_type(assessment_date)]),
+    Citations == [].
+
+test(an_unbound_obligation_is_a_wrong_type) :-
+    findall(Result, deployer_obligation_status([], _, date(2028, 1, 1), Result, _), Results),
+    Results == [input_problems([wrong_type(obligation)])].
+
+test(an_impossible_date_is_a_wrong_type) :-
+    deployer_obligation_status([], log_retention, date(2027, 2, 30), Result, _),
+    Result == input_problems([wrong_type(assessment_date)]).
+
+test(a_negative_retention_period_is_a_wrong_type) :-
+    log_retention_period_status([], -1, date(2028, 1, 1), Result, _),
+    Result == input_problems([wrong_type(retention_months)]).
+
+test(an_actor_that_is_not_the_deployer) :-
+    deployer_obligation_status([attribute(deployer_of_the_system, false)], log_retention, date(2028, 1, 1), Result, Citations),
+    Result == not_a_deployer,
+    Citations == [cite(eu_reg_2024_1689_art_3_4)].
+
+test(a_deployer_is_not_answered_as_not_a_deployer, fail) :-
+    deployer_obligation_status([attribute(deployer_of_the_system, true)], log_retention, date(2028, 1, 1), not_a_deployer, _).
+
+test(an_empty_profile_asks_for_the_deployer_first) :-
+    findall(Result-Citations,
+            deployer_obligation_status([], log_retention, date(2028, 1, 1), Result, Citations),
+            Answers),
+    Answers == [indeterminate([deployer_of_the_system])-[]].
+
+test(log_retention_applies_to_a_new_annex_iii_system) :-
+    Profile = [
+        attribute(deployer_of_the_system, true),
+        attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+        attribute(logs_automatically_generated_by_the_system_under_the_deployers_control, true),
+        attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+        attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false)
+    ],
+    deployer_obligation_status(Profile, log_retention, date(2028, 1, 1), Result, Citations),
+    Result == obligation_applies,
+    Citations == [cite(eu_reg_2024_1689_art_26_6)].
+
+test(an_annex_x_component_must_comply_by_the_end_of_2030) :-
+    Profile = [
+        attribute(deployer_of_the_system, true),
+        attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+        attribute(logs_automatically_generated_by_the_system_under_the_deployers_control, true),
+        attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, true)
+    ],
+    deployer_obligation_status(Profile, log_retention, date(2029, 1, 1), Result, Citations),
+    Result == compliance_required_by_31_december_2030,
+    sort(Citations, SortedCitations),
+    SortedCitations == [cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_26_6)].
+
+test(six_whole_months_meet_the_minimum) :-
+    Profile = [
+        attribute(deployer_of_the_system, true),
+        attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+        attribute(logs_automatically_generated_by_the_system_under_the_deployers_control, true),
+        attribute(union_or_national_law_provides_otherwise_on_the_log_retention_period, false),
+        attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+        attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false)
+    ],
+    log_retention_period_status(Profile, 6, date(2028, 1, 1), Result, _),
+    Result == retention_period_of_at_least_six_months.
+
+test(five_whole_months_fall_short) :-
+    Profile = [
+        attribute(deployer_of_the_system, true),
+        attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+        attribute(logs_automatically_generated_by_the_system_under_the_deployers_control, true),
+        attribute(union_or_national_law_provides_otherwise_on_the_log_retention_period, false),
+        attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+        attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false)
+    ],
+    log_retention_period_status(Profile, 5, date(2028, 1, 1), Result, _),
+    Result == retention_period_shorter_than_six_months.
+
+test(an_unsure_public_body_is_referred) :-
+    Profile = [
+        attribute(deployer_of_the_system, true),
+        attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+        attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+        attribute(system_listed_under_point_2_of_annex_iii, false),
+        attribute(body_governed_by_public_law, unsure),
+        attribute(private_entity_providing_public_services, false),
+        attribute(system_listed_under_point_5_b_of_annex_iii, false),
+        attribute(system_listed_under_point_5_c_of_annex_iii, false),
+        attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+        attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false)
+    ],
+    deployer_obligation_status(Profile, fundamental_rights_impact_assessment, date(2028, 1, 1), Result, Citations),
+    Result == needs_legal_review(open_textured(body_governed_by_public_law, cite(eu_reg_2024_1689_art_27_1)), [inputs_relied_on([body_governed_by_public_law-unsure, private_entity_providing_public_services-false])]),
+    Citations == [].
+
+test(the_checklist_carries_the_deployer_row) :-
+    deployer_duties_fria_checklist(deployer_obligation_request([attribute(deployer_of_the_system, false)], log_retention, date(2028, 1, 1)), Checklist),
+    member(item(deployer_role, unmet(not_a_deployer), cite(eu_reg_2024_1689_art_3_4)), Checklist).
+
+:- end_module(deployer_duties_fria).

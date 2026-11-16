@@ -1,0 +1,93 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_territorial_material_scope_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_queries, [gdpr_territorial_material_scope_profile_keys/1, gdpr_territorial_material_scope_what_if/4, gdpr_territorial_material_scope_compliance_check/3, decide_gdpr_scope/2]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_gdpr_applies, [gdpr_applies_status/2, gdpr_applies_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_territorial_material_scope_fixtures, [gdpr_territorial_material_scope_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_territorial_material_scope_profile_keys(ProfileKeys),
+    ProfileKeys == [personal_data_processed, processing_wholly_or_partly_automated, personal_data_in_filing_system, activity_outside_union_law, member_state_common_foreign_security_activity, processing_by_natural_person, purely_personal_or_household_activity, processing_by_competent_authority, criminal_law_enforcement_purpose, processing_by_union_institution, party_role, established_in_union, processing_in_context_of_establishment_activities, data_subjects_in_union, offering_goods_or_services_to_data_subjects_in_union, monitoring_behaviour_of_data_subjects_in_union, member_state_law_applies_by_public_international_law, public_authority_or_body, occasional_processing, special_or_criminal_data_on_large_scale, unlikely_to_result_in_risk].
+test(profile_keys_count_is_twenty_one) :-
+    gdpr_territorial_material_scope_profile_keys(ProfileKeys),
+    length(ProfileKeys, 21).
+test(status_determination_applies) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    gdpr_applies_status(Profile, applies).
+test(status_determination_does_not_apply) :-
+    gdpr_territorial_material_scope_profile_for(no_personal_data, Profile),
+    gdpr_applies_status(Profile, does_not_apply).
+test(package_verdict_one_solution) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    findall(Verdict, decide_gdpr_scope(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_scope_verdict(applies, art3_2_a, required, [cite(eu_reg_2016_679_art_2_1), cite(eu_reg_2016_679_art_3_2_a), cite(eu_reg_2016_679_art_27_1)])].
+test(checklist_has_one_row_per_limb) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_applies_checklist(Profile, Items),
+    length(Items, 11).
+test(checklist_row_for_the_met_limb_carries_its_citation) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_applies_checklist(Profile, Items),
+    member(item(l31, met, cite(eu_reg_2016_679_art_3_1)), Items).
+test(checklist_row_for_the_unmet_limb) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_applies_checklist(Profile, Items),
+    member(item(l32a, unmet, cite(eu_reg_2016_679_art_3_2_a)), Items).
+test(checklist_row_for_an_unsure_judgement_is_unknown) :-
+    gdpr_territorial_material_scope_profile_for(household_processing_unsure, Profile),
+    gdpr_applies_checklist(Profile, Items),
+    member(item(x_c, unknown, cite(eu_reg_2016_679_art_2_2_c)), Items).
+test(checklist_for_refused_input_is_a_single_unknown_row) :-
+    gdpr_territorial_material_scope_profile_for(unknown_key_given, Profile),
+    gdpr_applies_checklist(Profile, [item(input_check, unknown, cite(eu_reg_2016_679_art_2_1))]).
+test(compliance_not_permitted_when_representative_required) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, not_permitted).
+test(compliance_permitted_when_exempt) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_occasional_exempt, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, permitted).
+test(compliance_permitted_when_not_applicable) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, permitted).
+test(compliance_undetermined_when_scope_is_open) :-
+    gdpr_territorial_material_scope_profile_for(public_international_law_not_attested, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, undetermined).
+test(compliance_undetermined_when_judgement_is_unsure) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering_occasional_unsure, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, undetermined).
+test(compliance_yields_exactly_one_answer) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    findall(Result, gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, Result), Results),
+    Results == [not_permitted].
+test(what_if_flipping_establishment_removes_the_art3_1_ground) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, established_in_union, false, does_not_apply).
+test(what_if_adding_an_offering_brings_a_non_eu_party_in) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_no_targeting, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, offering_goods_or_services_to_data_subjects_in_union, true, applies).
+test(what_if_the_baseline_stays_the_same_without_a_flip) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, offering_goods_or_services_to_data_subjects_in_union, true, applies).
+test(what_if_a_bad_value_gives_input_problems) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    gdpr_territorial_material_scope_what_if(Profile, established_in_union, maybe, input_problems([wrong_type(established_in_union)])).
+test(what_if_yields_exactly_one_answer) :-
+    gdpr_territorial_material_scope_profile_for(eu_controller_in_context, Profile),
+    findall(Status, gdpr_territorial_material_scope_what_if(Profile, established_in_union, false, Status), Statuses),
+    Statuses == [does_not_apply].
+
+test(compliance_permitted_is_not_not_permitted, fail) :-
+    gdpr_territorial_material_scope_profile_for(non_eu_offering, Profile),
+    gdpr_territorial_material_scope_compliance_check(Profile, proceed_without_representative, permitted).
+
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_count_is_twenty_one, status_determination_applies, status_determination_does_not_apply, package_verdict_one_solution, checklist_has_one_row_per_limb, checklist_row_for_the_met_limb_carries_its_citation, checklist_row_for_the_unmet_limb, checklist_row_for_an_unsure_judgement_is_unknown, checklist_for_refused_input_is_a_single_unknown_row, compliance_not_permitted_when_representative_required, compliance_permitted_when_exempt, compliance_permitted_when_not_applicable, compliance_undetermined_when_scope_is_open, compliance_undetermined_when_judgement_is_unsure, compliance_yields_exactly_one_answer, what_if_flipping_establishment_removes_the_art3_1_ground, what_if_adding_an_offering_brings_a_non_eu_party_in, what_if_the_baseline_stays_the_same_without_a_flip, what_if_a_bad_value_gives_input_problems, what_if_yields_exactly_one_answer]).
+cp_test_fail_names([compliance_permitted_is_not_not_permitted]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

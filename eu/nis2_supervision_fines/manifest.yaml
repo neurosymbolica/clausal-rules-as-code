@@ -1,0 +1,306 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_supervision_fines
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_supervision_fines"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- keep in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The arity-0 entries are the result atoms and root_exports
+# atoms the scorer reads as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_supervision_fines.clausal --
+  - "fine_ceiling_floor/3"
+  - "minimum_powers/2"
+  - "escalation_powers_exercisable/3"
+  - "fine_barred_by_gdpr_fine/3"
+  - "data_protection_authority_information/2"
+  - "exercisable/0"
+  - "fine_barred/0"
+  - "fine_not_barred/0"
+  - "no_union_minimum/0"
+  - "fixed_amount/0"
+  - "turnover_percentage/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "minimum_national_maximum/2"
+  - "power/3"
+  - "not_exercisable/1"
+  - "inform_gdpr_supervisory_authorities/1"
+  - "inform_supervisory_authority_in_own_member_state/1"
+  - "decide_nis2_supervision_fines/2"
+  - "nis2_supervision_fines_status/2"
+  - "nis2_supervision_fines_checklist/2"
+  - "nis2_supervision_fines_decision_resolvable/1"
+  - "nis2_supervision_fines_status_values/1"
+  # -- queries.clausal --
+  - "nis2_supervision_fines_profile_keys/1"
+  - "nis2_supervision_fines_input_problems/2"
+  - "nis2_supervision_fines_what_if/4"
+  - "entity_class/0"
+  - "infringed_provision/0"
+  - "worldwide_annual_turnover_eur/0"
+  - "entity_is_public_administration/0"
+  - "earlier_measures_ineffective/0"
+  - "deadline_set_for_necessary_action/0"
+  - "required_action_taken_within_deadline/0"
+  - "infringement_may_entail_notifiable_personal_data_breach/0"
+  - "authority_became_aware_in_supervision_or_enforcement/0"
+  - "data_protection_authority_in_other_member_state/0"
+  - "gdpr_fine_imposed_under_art_58_2_i/0"
+  - "gdpr_fine_for_same_conduct/0"
+  - "essential/0"
+  - "important/0"
+  - "art_21/0"
+  - "art_23/0"
+  - "other/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "nis2_supervision_fines_subject/1"
+  - "nis2_supervision_fines_profile_for/2"
+  - "nis2_supervision_fines_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib), no
+# shared domain backbone package.
+uses: []
+
+scope: "Directive (EU) 2022/2555 (NIS 2), Articles 32(2), 32(4), 32(5), 33(2), 33(4),
+  34(4), 34(5) and 35(1) to (3): for an essential or important entity, (a) the least
+  national maximum fine a Member State must provide for an infringement of Article 21
+  or 23 (the higher of EUR 10 000 000 or 2 percent of worldwide turnover for essential,
+  EUR 7 000 000 or 1,4 percent for important, a floor and never a fine), (b) the minimum
+  supervisory, enforcement and escalation powers the competent authority must have,
+  (c) whether the Art 32(5) escalation powers are exercisable, (d) whether a GDPR fine
+  bars the NIS2 fine under Art 35(2), and (e) the duties to inform data protection
+  authorities under Art 35(1) and (3). Open-textured judgements (ineffective measures,
+  a notifiable breach, the same conduct) are handed to the user. Out of scope: the
+  actual national maximum and penalties (Art 36, country orders), the entity class and
+  public administration status (sibling scope order), whether Article 21 or 23 was
+  infringed (sibling orders), proportionality and the factors of Art 32(7), and the
+  deferred paragraphs listed below."
+
+sources:
+  - "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December
+    2022 on measures for a high common level of cybersecurity across the Union (NIS 2
+    Directive), OJ L 333, 27.12.2022, p. 80, Articles 32, 33, 34 and 35 (CELEX 32022L2555)"
+  - "Regulation (EU) 2016/679 (General Data Protection Regulation), OJ L 119, 4.5.2016,
+    Articles 4(12), 33, 55, 56 and 58(2)(i), as referred to by Directive (EU) 2022/2555
+    Article 35"
+
+query_interface:
+  2: "decide_nis2_supervision_fines/2"      # eligibility verdict on the Art 32(5) escalation powers
+  7: "nis2_supervision_fines_checklist/2"   # justification: one cited item per Art 32(5) condition
+  16: "nis2_supervision_fines_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32022L2555#art_032
+  - 32022L2555#art_033
+  - 32022L2555#art_034
+  - 32022L2555#art_035
+  reason: 'The titles of Articles 32 to 35 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: general_principles_of_supervision_and_fines
+  units:
+  - 32022L2555#parag_032.001
+  - 32022L2555#parag_033.001
+  - 32022L2555#parag_034.001
+  - 32022L2555#parag_034.002
+  reason: Art 32(1), 33(1) and 34(1) say supervisory and enforcement measures and
+    fines must be effective, proportionate and dissuasive, taking account of the circumstances
+    of each case; Art 33(1) says the authorities act on evidence of non-compliance
+    by an important entity "where necessary"; Art 34(2) says fines are imposed in
+    addition to the listed measures. These are open-textured principles of exercise
+    and no limb of this order reads them.
+  consequence: The answers do not say whether a measure or a fine is proportionate
+    or whether an authority must act; the caller judges that itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: how_powers_are_exercised
+  units:
+  - 32022L2555#parag_032.003
+  - 32022L2555#parag_033.003
+  - 32022L2555#parag_032.008
+  reason: Art 32(3) and 33(3) require the authority to state the purpose of an information
+    request and specify the information requested; Art 32(8) requires detailed reasoning,
+    notice of preliminary findings and a reasonable time for observations. They bind
+    the authority's procedure, not the powers it must have.
+  consequence: The answers do not say whether an authority followed the procedure;
+    the caller checks it itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: factors_for_measures_and_fines
+  units:
+  - 32022L2555#parag_032.007
+  - 32022L2555#point_032.007_a
+  - 32022L2555#point_032.007_a_i
+  - 32022L2555#point_032.007_a_ii
+  - 32022L2555#point_032.007_a_iii
+  - 32022L2555#point_032.007_a_iv
+  - 32022L2555#point_032.007_a_v
+  - 32022L2555#point_032.007_b
+  - 32022L2555#point_032.007_c
+  - 32022L2555#point_032.007_d
+  - 32022L2555#point_032.007_e
+  - 32022L2555#point_032.007_f
+  - 32022L2555#point_032.007_g
+  - 32022L2555#point_032.007_h
+  - 32022L2555#parag_033.005
+  - 32022L2555#parag_034.003
+  reason: Art 32(7) lists the factors an authority takes due account of in choosing
+    a measure (seriousness, duration, previous infringements, damage, intent or negligence,
+    mitigation, codes of conduct, cooperation); Art 33(5) applies Art 32(6) to (8)
+    to important entities and Art 34(3) applies the Art 32(7) factors to the amount
+    of a fine. The Directive gives the factors and no weights, so this order does
+    not compute a measure or a fine.
+  consequence: The answers never say which measure or what fine an authority should
+    choose; they give only the floors, the minimum powers and the conditions of this
+    order.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: liability_of_natural_persons
+  units:
+  - 32022L2555#parag_032.006
+  reason: Art 32(6) (natural persons who represent or control an essential entity
+    can be held liable for breach of their duties to ensure compliance) concerns persons,
+    not the entity, and is not a limb of any query here.
+  consequence: The answers do not say whether a natural person can be held liable.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: cooperation_with_other_authorities
+  units:
+  - 32022L2555#parag_032.009
+  - 32022L2555#parag_032.010
+  - 32022L2555#parag_033.006
+  reason: Art 32(9), 32(10) and 33(6) require the competent authority to inform and
+    cooperate with the authorities under Directive (EU) 2022/2557 and Regulation (EU)
+    2022/2554 (DORA); they bind the authority, not the entity, and change no power
+    or ceiling.
+  consequence: 'None for an entity caller: these paragraphs bind the authorities.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: periodic_penalties_and_public_administration_and_courts
+  units:
+  - 32022L2555#parag_034.006
+  - 32022L2555#parag_034.007
+  - 32022L2555#parag_034.008
+  reason: Art 34(6) (Member States MAY provide periodic penalty payments), Art 34(7)
+    (Member States may decide whether and how far fines apply to public administration
+    entities) and Art 34(8) (fines imposed by courts where the legal system has no
+    administrative fines) leave the rule to national law; they set no Union minimum.
+  consequence: The answers apply the Art 34 floors to every entity; whether national
+    law fines a public administration entity, and how, is for the country orders.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: enforcement_power_lead_ins
+  units:
+  - 32022L2555#parag_032.004
+  - 32022L2555#parag_033.004
+  reason: Art 32(4) and 33(4) open the list of enforcement powers with the words that
+    the competent authorities have the power at least to do what the points list.
+    The powers themselves are the points, which minimum_powers answers; the lead-in
+    only adds the words at least.
+  consequence: None for a caller beyond the points already answered.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: supervisory_power_lead_ins_and_targeted_audit_rules
+  units:
+  - 32022L2555#parag_032.002
+  - 32022L2555#parag_033.002
+  reason: Art 32(2) and 33(2) open the list of supervisory powers with a lead-in,
+    whose points minimum_powers answers, and close it with rules on targeted security
+    audits - they rest on risk assessments by the authority or the audited entity
+    or on other risk-related information, their results are made available to the
+    competent authority, and the costs of an audit by an independent body are paid
+    by the audited entity unless the authority decides otherwise in duly substantiated
+    cases.
+  consequence: The answers do not say on what basis an audit is carried out, who receives
+    its results or who pays for it; the caller reads the Directive text for that.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: national_maximum_fine
+  instrument: Directive (EU) 2022/2555 Art 36 and national law
+  cites:
+  - 32022L2555#art_036
+  reason: The actual national maximum fine and the rules on penalties are for each
+    Member State (Art 36); this order gives only the Union floor of Art 34(4) and
+    (5). The country orders give the national figures.
+  consequence: The answers say the least maximum a Member State must provide, never
+    the maximum it did.
+- what: entity_class_and_public_administration
+  instrument: Directive (EU) 2022/2555 Arts 2, 3 and 6
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  - 32022L2555#art_006
+  reason: Whether the entity is essential or important, and whether it is a public
+    administration entity, is decided by the sibling order on scope; this order takes
+    it as given.
+  consequence: The caller establishes the class and the public administration status
+    first.
+- what: content_of_articles_21_and_23
+  instrument: Directive (EU) 2022/2555 Arts 21 and 23
+  cites:
+  - 32022L2555#art_021
+  - 32022L2555#art_023
+  reason: Whether an entity infringed Article 21 or 23 is decided by the sibling orders
+    on reporting and risk measures; this order takes the infringed provision as an
+    input.
+  consequence: The caller establishes the infringement first.
+- what: competent_authority_and_gdpr_authority
+  instrument: Directive (EU) 2022/2555 Art 8; Regulation (EU) 2016/679 Arts 55, 56
+    and 58
+  cites:
+  - 32022L2555#art_008
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_058
+  reason: Which authority is competent under the Directive and which supervisory authority
+    is competent under the GDPR, and what a GDPR fine under Art 58(2)(i) is, are not
+    modelled; the caller states the facts.
+  consequence: The caller picks the authorities and states whether a GDPR fine was
+    imposed.

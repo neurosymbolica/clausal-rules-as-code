@@ -1,0 +1,119 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dsa_art_28_minors_order.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types of this order:
+%   #2 eligibility   decide_dsa_art_28_minors_order/2 and
+%                    dsa_art_28_minors_order_status/2 (the slice, re-exported by
+%                    the package facade): one verdict, with fixed citations when
+%                    final.
+%   #7 justification dsa_art_28_minors_order_checklist/2 (the slice): four rows
+%                    item(Identifier, Result, Citations), one per question of the
+%                    order, each with its own fixed cite(...) list when final.
+%   #16 what-if      dsa_art_28_minors_order_what_if/4 (here): override one key,
+%                    then re-evaluate the facade status.
+% dsa_art_28_minors_order_profile_keys/1: the profile key schema, in contract order.
+% dsa_art_28_minors_order_input_problems/2: the kernel's input check, re-exported.
+%
+% ROOT EXPORTS. The test cases read the eight profile key atoms, the judgement
+% value unsure and the atoms absent and not_attempted as package-root module
+% attributes. Each is served here as a bare 0-arity fact and exported, so the
+% package facade re-exports it. They are data atoms: no rule calls them.
+% (The nine result atoms are served by the determination slice.)
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is a
+% local list replacement (kit/query_combinators override_key/4 works on dicts).
+% Every contract key occurrence is replaced by the one new attribute, so an
+% override never creates a duplicate key; the new value is re-checked by the
+% input check, so a value outside its type gives input_problems(...).
+% Open-textured judgements are never decided here: an override is the user's own
+% hypothesis about a judgement, handed in as the value true, false or unsure.
+% =====================================================================
+
+:- module(queries, [
+    dsa_art_28_minors_order_profile_keys/1,
+    dsa_art_28_minors_order_input_problems/2,
+    dsa_art_28_minors_order_what_if/4,
+    platform_accessible_to_minors/0,
+    advertisements_presented_to_recipient_on_interface/0,
+    advertisements_based_on_profiling_of_recipient/0,
+    aware_with_reasonable_certainty_recipient_is_minor/0,
+    provider_qualifies_as_micro_or_small_enterprise/0,
+    provider_within_12_months_after_losing_micro_or_small_status/0,
+    designated_as_very_large_online_platform/0,
+    measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors/0,
+    unsure/0,
+    absent/0,
+    not_attempted/0
+]).
+
+:- use_module(eu/dsa_art_28_minors_order/kernel, [dsa_art_28_minors_order_input_problems/2]).
+:- use_module(eu/dsa_art_28_minors_order/dsa_art_28_minors_order, [dsa_art_28_minors_order_status/2]).
+
+% ---- root exports: the profile key atoms, in contract order ----------
+platform_accessible_to_minors.
+advertisements_presented_to_recipient_on_interface.
+advertisements_based_on_profiling_of_recipient.
+aware_with_reasonable_certainty_recipient_is_minor.
+provider_qualifies_as_micro_or_small_enterprise.
+provider_within_12_months_after_losing_micro_or_small_status.
+designated_as_very_large_online_platform.
+measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors.
+
+% ---- root exports: the judgement value, the absent marker, the resolution status
+unsure.
+absent.
+not_attempted.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dsa_art_28_minors_order_profile_keys([platform_accessible_to_minors, advertisements_presented_to_recipient_on_interface, advertisements_based_on_profiling_of_recipient, aware_with_reasonable_certainty_recipient_is_minor, provider_qualifies_as_micro_or_small_enterprise, provider_within_12_months_after_losing_micro_or_small_status, designated_as_very_large_online_platform, measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden. A term that is
+% not an attribute list cannot be overridden: its answer stays the input problem.
+dsa_art_28_minors_order_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    dsa_art_28_minors_order_input_problems(Profile, Problems),
+    what_if_on(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_on([wrong_type(profile)], _, _, _, input_problems([wrong_type(profile)])).
+what_if_on(Problems, Profile, OverriddenKey, NewValue, NewStatus) :-
+    dif(Problems, [wrong_type(profile)]),
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dsa_art_28_minors_order_status(Hypothesis, NewStatus).
+
+% override_attribute(Elements, OverriddenKey, NewValue, Hypothesis): every element
+% whose key is identical to OverriddenKey is dropped, and the one new attribute is
+% added at the end. Keys are compared with == so an unbound key is never bound.
+override_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+override_attribute([attribute(ElementKey, _)|Elements], OverriddenKey, NewValue, Hypothesis) :-
+    ElementKey == OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+
+% ---- tests --------------------------------------------------------------
+test(the_schema_holds_the_eight_contract_keys) :-
+    dsa_art_28_minors_order_profile_keys(ProfileKeys),
+    length(ProfileKeys, 8).
+test(the_root_atoms_are_served) :-
+    platform_accessible_to_minors,
+    designated_as_very_large_online_platform,
+    unsure,
+    absent,
+    not_attempted.
+test(adequate_measures_turn_a_breach_into_compliance) :-
+    findall(NewStatus, dsa_art_28_minors_order_what_if([attribute(platform_accessible_to_minors, true), attribute(advertisements_presented_to_recipient_on_interface, false), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false), attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)], measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true, NewStatus), Statuses),
+    Statuses == [dsa_art_28_minors_order_complied].
+test(the_unchanged_profile_is_a_breach) :-
+    findall(NewStatus, dsa_art_28_minors_order_what_if([attribute(platform_accessible_to_minors, true), attribute(advertisements_presented_to_recipient_on_interface, false), attribute(provider_qualifies_as_micro_or_small_enterprise, false), attribute(provider_within_12_months_after_losing_micro_or_small_status, false), attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)], measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false, NewStatus), Statuses),
+    Statuses == [dsa_art_28_minors_order_breached].
+test(an_override_outside_the_type_is_an_input_problem) :-
+    findall(NewStatus, dsa_art_28_minors_order_what_if([], platform_accessible_to_minors, maybe, NewStatus), Statuses),
+    Statuses == [input_problems([wrong_type(platform_accessible_to_minors)])].
+test(a_term_that_is_not_a_profile_stays_an_input_problem) :-
+    findall(NewStatus, dsa_art_28_minors_order_what_if(not_a_profile, platform_accessible_to_minors, true, NewStatus), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+
+:- end_module(queries).

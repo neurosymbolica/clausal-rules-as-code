@@ -1,0 +1,204 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative subjects for eu/data_protection/gdpr_complaints_and_judicial_remedies.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A PROFILE of this order is an ATTRIBUTE LIST [attribute(KEY, VALUE), ...]
+% (INTERFACE - THE PROFILE AND THE ATOMS), never a dict.
+%
+% Each subject is ONE situation asked of ONE query. For every route there is
+% a positive case and a one-key near-miss control that flips the result.
+% There are no numeric thresholds in this order (the three months of
+% Art 78(2) are a caller-stated boolean), so the boundary pairs are the
+% true/false flips of the deciding key.
+%
+% gdpr_complaints_and_judicial_remedies_assess(Subject, Verdict) answers the
+% subject's query: Verdict is
+%   gdpr_complaints_and_judicial_remedies_verdict(RESULT, CITATIONS)
+% with RESULT and CITATIONS exactly as the query gives them.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_complaints_and_judicial_remedies_subject/1,
+    gdpr_complaints_and_judicial_remedies_profile_for/2,
+    gdpr_complaints_and_judicial_remedies_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/gdpr_complaints_and_judicial_remedies, [
+    complaint_right/3,
+    authority_decision_remedy_right/3,
+    authority_inaction_remedy_right/4,
+    controller_processor_remedy_right/3,
+    controller_processor_forum/3
+]).
+
+% ---- fixture(Subject, Query, Profile) ---------------------------------
+
+% complaint_right/3 -- Art 77(1)
+fixture(complaint_data_subject_who_considers,
+        complaint_right,
+        [attribute(is_data_subject, true),
+         attribute(data_subject_considers_processing_infringes_regulation, true)]).
+fixture(complaint_data_subject_who_does_not_consider,
+        complaint_right,
+        [attribute(is_data_subject, true),
+         attribute(data_subject_considers_processing_infringes_regulation, false)]).
+fixture(complaint_not_a_data_subject,
+        complaint_right,
+        [attribute(is_data_subject, false),
+         attribute(data_subject_considers_processing_infringes_regulation, true)]).
+fixture(complaint_consideration_not_stated,
+        complaint_right,
+        [attribute(is_data_subject, true)]).
+fixture(complaint_settled_false_before_missing,
+        complaint_right,
+        [attribute(data_subject_considers_processing_infringes_regulation, false)]).
+
+% authority_decision_remedy_right/3 -- Art 78(1)
+fixture(decision_binding_and_concerning,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, true),
+         attribute(decision_concerns_the_caller, true)]).
+fixture(decision_not_binding,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, false),
+         attribute(decision_concerns_the_caller, true)]).
+fixture(decision_not_concerning,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, true),
+         attribute(decision_concerns_the_caller, false)]).
+fixture(decision_binding_unsure,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, unsure),
+         attribute(decision_concerns_the_caller, true)]).
+fixture(decision_concerns_unsure,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, true),
+         attribute(decision_concerns_the_caller, unsure)]).
+fixture(decision_unsure_with_concern_missing,
+        authority_decision_remedy_right,
+        [attribute(decision_is_legally_binding, unsure)]).
+
+% authority_inaction_remedy_right/4 -- Art 78(2)
+fixture(inaction_unhandled_competent,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, none))),
+         attribute(authority_handled_the_complaint, false)]).
+fixture(inaction_handled_and_informed,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, none))),
+         attribute(authority_handled_the_complaint, true),
+         attribute(three_months_from_the_complaint_have_passed, true),
+         attribute(authority_informed_on_progress_or_outcome, true)]).
+fixture(inaction_uninformed_after_three_months,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, url('https://example.org/competence', '2026-11-12')))),
+         attribute(authority_handled_the_complaint, true),
+         attribute(three_months_from_the_complaint_have_passed, true),
+         attribute(authority_informed_on_progress_or_outcome, false)]).
+fixture(inaction_handled_within_three_months,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, none))),
+         attribute(authority_handled_the_complaint, true),
+         attribute(three_months_from_the_complaint_have_passed, false)]).
+fixture(inaction_authority_not_competent,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(false, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, none))),
+         attribute(authority_handled_the_complaint, false)]).
+fixture(inaction_competence_not_stated,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_handled_the_complaint, false)]).
+fixture(inaction_no_complaint_lodged,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, false)]).
+fixture(inaction_handling_not_stated,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(complaint_lodged_under_article_77, true),
+         attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host_attestation_service, '2026-11-12T09:00:00Z', competence_attested_by_host, none)))]).
+
+% controller_processor_remedy_right/3 -- Art 79(1)
+fixture(judicial_data_subject_who_considers,
+        controller_processor_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(data_subject_considers_rights_infringed_by_processing, true)]).
+fixture(judicial_data_subject_who_does_not_consider,
+        controller_processor_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(data_subject_considers_rights_infringed_by_processing, false)]).
+fixture(judicial_not_a_data_subject,
+        controller_processor_remedy_right,
+        [attribute(is_data_subject, false),
+         attribute(data_subject_considers_rights_infringed_by_processing, true)]).
+
+% controller_processor_forum/3 -- Art 79(2)
+fixture(forum_public_authority_defendant,
+        controller_processor_forum,
+        [attribute(defendant_is_member_state_public_authority_acting_in_public_powers, true)]).
+fixture(forum_private_defendant,
+        controller_processor_forum,
+        [attribute(defendant_is_member_state_public_authority_acting_in_public_powers, false)]).
+fixture(forum_exception_not_stated,
+        controller_processor_forum,
+        []).
+
+% input problems -- answered first by every query
+fixture(input_unknown_key,
+        complaint_right,
+        [attribute(colour, blue)]).
+fixture(input_crisp_key_unsure,
+        controller_processor_remedy_right,
+        [attribute(is_data_subject, unsure)]).
+fixture(input_duplicate_key,
+        authority_inaction_remedy_right,
+        [attribute(is_data_subject, true),
+         attribute(is_data_subject, false)]).
+fixture(input_not_a_profile,
+        authority_decision_remedy_right,
+        not_a_profile).
+fixture(input_mixed_problems,
+        controller_processor_forum,
+        [attribute(colour, blue),
+         attribute(is_data_subject, true),
+         attribute(is_data_subject, true)]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_complaints_and_judicial_remedies_subject(Subject) :-
+    fixture(Subject, _, _).
+
+% ---- Profiles --------------------------------------------------------
+gdpr_complaints_and_judicial_remedies_profile_for(Subject, Profile) :-
+    fixture(Subject, _, Profile).
+
+% ---- Convenience wrapper: the subject's query answer -----------------
+gdpr_complaints_and_judicial_remedies_assess(Subject, gdpr_complaints_and_judicial_remedies_verdict(Result, Citations)) :-
+    fixture(Subject, Query, Profile),
+    query_answer(Query, Profile, Result, Citations).
+
+query_answer(complaint_right, Profile, Result, Citations) :-
+    complaint_right(Profile, Result, Citations).
+query_answer(authority_decision_remedy_right, Profile, Result, Citations) :-
+    authority_decision_remedy_right(Profile, Result, Citations).
+query_answer(authority_inaction_remedy_right, Profile, Result, Citations) :-
+    authority_inaction_remedy_right(Profile, Result, _Basis, Citations).
+query_answer(controller_processor_remedy_right, Profile, Result, Citations) :-
+    controller_processor_remedy_right(Profile, Result, Citations).
+query_answer(controller_processor_forum, Profile, Result, Citations) :-
+    controller_processor_forum(Profile, Result, Citations).
+
+:- end_module(fixtures).

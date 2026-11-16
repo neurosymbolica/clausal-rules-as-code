@@ -1,0 +1,430 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_records_and_officer
+shape_family: deontic
+kit_version: '0.1.0'
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - 'kernel'
+  - 'citations'
+  - 'parameters'
+  - 'gdpr_records_and_officer'
+  - 'queries'
+  - 'fixtures'
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # gdpr_records_and_officer_input_problems/2 is re-exported by queries.clausal
+  # -- citations.clausal --
+  - 'citation/2'
+  # -- gdpr_records_and_officer.clausal --
+  - 'decide_gdpr_records_and_officer/2'
+  - 'gdpr_records_and_officer_status/2'
+  - 'gdpr_records_and_officer_checklist/2'
+  - 'gdpr_records_and_officer_decision_resolvable/1'
+  - 'gdpr_records_and_officer_status_values/1'
+  - 'record_obligation/2'
+  - 'record_missing_items/2'
+  - 'data_protection_officer_designation/2'
+  - 'officer_missing_tasks/2'
+  - 'data_protection_officer_outside_facts/2'
+  - 'officer_position_status/5'
+  - 'met/0'
+  - 'not_met/0'
+  - 'missing_record_item/3'
+  - 'missing_officer_task/2'
+  - 'keep_controller_record/1'
+  - 'keep_processor_record/1'
+  - 'no_record_required/1'
+  - 'designate_data_protection_officer/1'
+  - 'no_designation_required/1'
+  - 'input_problems/1'
+  - 'unknown_key/1'
+  - 'wrong_type/1'
+  - 'duplicate_key/1'
+  - 'indeterminate/1'
+  - 'needs_legal_review/2'
+  - 'open_textured/2'
+  - 'cross_reference_unresolved/2'
+  - 'not_governed_here/1'
+  - 'resolution/2'
+  - 'inputs_relied_on/1'
+  - 'provenance/2'
+  - 'outside_fact/2'
+  - 'attested/2'
+  - 'attestation/4'
+  - 'url/2'
+  - 'document/2'
+  # -- queries.clausal --
+  - 'gdpr_records_and_officer_profile_keys/1'
+  - 'gdpr_records_and_officer_input_problems/2'
+  - 'gdpr_records_and_officer_what_if/4'
+  - 'gdpr_records_and_officer_exemption_verdict/2'
+  - 'gdpr_records_and_officer_compliance_verdict/3'
+  - 'gdpr_records_and_officer_obligations/2'
+  # -- fixtures.clausal --
+  - 'gdpr_records_and_officer_subject/1'
+  - 'gdpr_records_and_officer_profile_for/2'
+  - 'gdpr_records_and_officer_assess/2'
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit (formalize_lib), no shared
+# backbone package.
+uses: []
+
+scope: 'Regulation (EU) 2016/679 (GDPR), three entry points over one attribute-list
+  profile. ENTRY 1: whether a controller (Art 30(1)) or a processor (Art 30(2)), or
+  both, owes a record of processing activities for ONE processing activity, given
+  the Art 30(5) exemption below 250 persons employed and its four triggers (a risk,
+  not occasional, special categories, criminal offence data), and which content items
+  of Art 30(1)(a)-(g) and Art 30(2)(a)-(d) the record lacks. ENTRY 2: whether a data
+  protection officer must be designated under the three limbs of Art 37(1) or because
+  Union or Member State law requires it (Art 37(4), an attested outside fact), and
+  which of the Art 39(1) tasks the officer''s mandate lacks. ENTRY 3: whether the
+  position of the officer meets one duty of Art 38(1), (2), (3) or (6), each read
+  from an attested outside fact or, for the conflict of interests, the user''s judgement.
+  Open-textured terms (risk, occasional, core activity, large scale, where possible,
+  conflict of interests) are the user''s judgements and an unsure one is referred to
+  a lawyer; whether an entity is a public authority or body and the content of national
+  law are outside facts. Out of scope: the representative''s own duty, Art 30(3)-(4),
+  Art 37(2), (3), (5)-(7), Art 38(4)-(5), Art 39(2), the scope of Arts 9 and 10, Chapter
+  V transfers, impact assessments and fines (see deferred_set and excluded_set).'
+
+sources:
+  - 'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 on the protection of natural persons with regard to the processing of personal
+    data and on the free movement of such data (General Data Protection Regulation),
+    OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504: Art 4(7), 4(8)
+    and 4(18) (definitions, reasoning only), Art 30(1), 30(2) and 30(5), Art 37(1) and
+    37(4), Art 38(1), (2), (3) and (6), Art 39(1).'
+  - 'Article 29 Working Party, position paper on the derogations from the obligation
+    to maintain records of processing activities pursuant to Article 30(5) GDPR (April
+    2018): authority of the ruling that the exemption is lost per processing activity
+    (Q1).'
+  - 'Article 29 Working Party, Guidelines on Data Protection Officers (WP243 rev.01):
+    authority of the ruling that is_public_authority_or_body is an outside fact classified
+    by national law (Q3).'
+
+query_interface:
+  2: 'gdpr_records_and_officer_exemption_verdict/2'     # eligibility: the Art 30(5) exemption
+  13: 'gdpr_records_and_officer_compliance_verdict/3'   # compliance: operate without a record or an officer
+  14: 'gdpr_records_and_officer_obligations/2'          # obligation surfacing: records and designation
+  16: 'gdpr_records_and_officer_what_if/4'              # what_if: re-evaluate under a replaced key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_030
+  - 02016R0679-20160504#art_037
+  - 02016R0679-20160504#art_038
+  - 02016R0679-20160504#art_039
+  reason: 'The titles of Articles 4, 30, 37, 38 and 39 carry no obligation: document
+    structure. Deferred so every unit of the pinned extracts is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: definitions_not_applied
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: 'Art 4 is pinned whole because the smallest document element containing
+    Art 4(7), (8) and (18) is the article. The other points define terms no limb reads
+    (personal data, processing, recipient, personal data breach, ...): the profile
+    states the facts in those terms already.'
+  consequence: whether the data is personal data and who is a recipient are not tested.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art4_7_8_18_definitions_as_context
+  units:
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_18
+  partial: true
+  reason: Points (7), (8) and (18) are quoted as the context of the two role flags
+    acts_as_controller and acts_as_processor (Art 4(7), (8); open question Q5) and
+    of the words 'an enterprise or an organisation' of Art 30(5) (Art 4(18)), which
+    are read as covering every caller (open question Q28); the order has no enterprise
+    flag. Whether the caller is a controller, a processor or both is stated by the
+    user through the two role flags, not derived.
+  consequence: 'The answers take the two role flags as given: the caller must decide
+    under Art 4(7) and (8) itself whether it is a controller, a processor or both,
+    and is taken to be an enterprise or an organisation within Art 30(5) without being
+    asked.'
+  declaration: exception_modelled
+  open: formalisable as a definition shared by the data-protection orders; to be formalised
+    in a later change to the orders, not in this order's rules; the deferral stands
+    for this run.
+- debt: true
+  what: art30_1_2_representative
+  units:
+  - 02016R0679-20160504#parag_030.001
+  - 02016R0679-20160504#parag_030.002
+  partial: true
+  reason: Art 30(1) and (2) also bind 'where applicable, the controller's representative'
+    and 'the processor's representative' (Art 27). The profile is the controller's
+    or processor's; the representative's own duty to keep the record is not modelled.
+  consequence: a representative runs the order as the entity it represents.
+  declaration: not_an_exception
+- debt: true
+  what: art30_3_form_of_the_record
+  units:
+  - 02016R0679-20160504#parag_030.003
+  reason: The record must be in writing, including in electronic form. A property
+    of the record, not a content item and not a question of whether a record is owed
+    (open question Q14).
+  consequence: 'The checklist does not test the form of the record: the caller must
+    check that it is kept in writing, including in electronic form, under Art 30(3)
+    itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art30_4_availability_on_request
+  units:
+  - 02016R0679-20160504#parag_030.004
+  reason: The record is to be made available to the supervisory authority on request.
+    A duty that follows from having a record; not asked, not modelled (open question
+    Q14).
+  consequence: 'The answers do not cover making the record available: the caller must
+    make it available to the supervisory authority on request under Art 30(4) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art37_2_group_single_officer
+  units:
+  - 02016R0679-20160504#parag_037.002
+  reason: 'A group of undertakings MAY appoint a single officer if easily accessible
+    from each establishment: a permission about how to designate, not whether. Not
+    modelled.'
+  consequence: 'None for whether an officer must be designated: a group of undertakings
+    that wants one officer for all its members must check the accessibility condition
+    of Art 37(2) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art37_3_public_bodies_single_officer
+  units:
+  - 02016R0679-20160504#parag_037.003
+  reason: 'A single officer MAY be designated for several public authorities or bodies:
+    a permission about how to designate, not whether. Not modelled.'
+  consequence: 'None for whether an officer must be designated: public authorities
+    or bodies that want one officer for several of them must check Art 37(3) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art37_5_professional_qualities
+  units:
+  - 02016R0679-20160504#parag_037.005
+  reason: 'The officer is to be designated on the basis of professional qualities
+    and expert knowledge: a standard for choosing the person, evaluative, no crisp
+    item. Not modelled.'
+  consequence: 'The answers do not test who is designated: the caller must check the
+    officer''s professional qualities and expert knowledge under Art 37(5) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art37_6_staff_or_service_contract
+  units:
+  - 02016R0679-20160504#parag_037.006
+  reason: 'The officer may be a staff member or fulfil the tasks under a service contract:
+    a permission about how the officer is engaged, not whether. Not modelled.'
+  consequence: 'None for a caller: the choice between a staff member and a service
+    contract does not change whether an officer must be designated.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art37_7_publish_and_communicate_contact_details
+  units:
+  - 02016R0679-20160504#parag_037.007
+  reason: The controller or processor shall publish the officer's contact details
+    and communicate them to the supervisory authority. A crisp duty that follows designation;
+    the lawyer's question is whether to designate, so it is deferred (open question
+    Q14).
+  consequence: 'A designate answer does not list the follow-on duty: a caller that
+    designates an officer must publish the contact details and communicate them to
+    the supervisory authority under Art 37(7) itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: art38_4_data_subjects_may_contact_the_officer
+  units:
+  - 02016R0679-20160504#parag_038.004
+  reason: 'Art 38(4): data subjects may contact the data protection officer with regard
+    to all issues related to processing of their personal data and to the exercise
+    of their rights. It states a right of data subjects and adds no duty of the controller
+    or processor to check beside the right; no result a query could return.'
+  consequence: 'None for a caller: the answers never say whether a data subject may
+    contact the officer.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: art38_5_officer_secrecy_under_union_or_member_state_law
+  units:
+  - 02016R0679-20160504#parag_038.005
+  reason: 'Art 38(5): the officer is bound by secrecy or confidentiality concerning
+    the performance of the tasks, in accordance with Union or Member State law. The
+    content of the secrecy duty is the law of the Union or of the Member State, which
+    this order does not formalize.'
+  consequence: 'The answers do not say whether the officer is bound by secrecy or
+    what it covers: the caller must read the applicable Union or Member State law
+    itself.'
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- debt: true
+  what: art39_2_risk_based_approach
+  units:
+  - 02016R0679-20160504#parag_039.002
+  reason: 'The officer shall have due regard to the risk associated with processing
+    operations: a standard for the officer''s performance, evaluative, no crisp item.
+    Not modelled.'
+  consequence: 'None for the answers: the officer''s due regard to risk under Art
+    39(2) is not checked, and the caller must assess the officer''s performance itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art30_1_c_two_descriptions
+  units:
+  - 02016R0679-20160504#point_030.001_c
+  partial: true
+  reason: Item (c) asks for a description of the categories of data subjects AND of
+    the categories of personal data; the profile carries one flag for both (open question
+    Q12).
+  consequence: 'One flag stands for both descriptions: the caller must set it false
+    when either the categories of data subjects or the categories of personal data
+    are missing from the record.'
+  declaration: exception_modelled
+- what: national_designation_rules
+  units:
+  - 02016R0679-20160504#parag_037.004
+  partial: true
+  reason: The existence of such a law is the outside fact union_or_member_state_law_requires_data_protection_officer;
+    its content (for example a headcount threshold for persons constantly processing
+    personal data) is not formalized.
+  consequence: The order takes the attested answer to union_or_member_state_law_requires_data_protection_officer
+    as given; whoever attests it must read the national law, including any threshold
+    such as a headcount, and decide whether it requires an officer for this controller
+    or processor.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+
+excluded_set:
+- what: art35_36_impact_assessment_and_prior_consultation
+  instrument: Regulation (EU) 2016/679 Arts 35 and 36
+  cites:
+  - 02016R0679-20160504#art_035
+  - 02016R0679-20160504#art_036
+  reason: Art 39(1)(c) and (e) refer to the data protection impact assessment and
+    the prior consultation. Not pinned; they are tasks the officer has, not conditions
+    this order tests.
+  consequence: The order does not test whether an impact assessment or a prior consultation
+    was required or carried out; a caller uses the sibling order gdpr-impact-assessment
+    for that.
+- what: art32_security_measures
+  instrument: Regulation (EU) 2016/679 Art 32(1)
+  cites:
+  - 02016R0679-20160504#parag_032.001
+  reason: Art 30(1)(g) and 30(2)(d) refer to the security measures of Art 32(1); whether
+    the measures are adequate is a separate question. The checklist asks only whether
+    the record describes them.
+  consequence: The order checks only that the record describes the security measures;
+    a caller judges their adequacy under Art 32(1) itself.
+- what: art49_transfer_derogations
+  instrument: Regulation (EU) 2016/679 Art 49(1), second subparagraph
+  cites:
+  - 02016R0679-20160504#parag_049.001
+  reason: Art 30(1)(e) and 30(2)(c) refer to transfers under the second subparagraph
+    of Art 49(1); the user states whether the transfers rely on it (a crisp flag).
+    Chapter V is the sibling order eu/data-protection/gdpr-chapter-v-transfers.
+  consequence: The order does not test whether a transfer qualifies under the second
+    subparagraph of Art 49(1); the caller states it, using the sibling order gdpr-chapter-v-transfers
+    where needed.
+- what: art9_and_art10_scope
+  instrument: Regulation (EU) 2016/679 Arts 9(1) and 10
+  cites:
+  - 02016R0679-20160504#parag_009.001
+  - 02016R0679-20160504#art_010
+  reason: Art 30(5) and 37(1)(c) refer to special categories and offence data. Whether
+    data falls within them is the sibling order eu/data-protection/gdpr-special-categories;
+    here it is a crisp flag the user states (open question Q7).
+  consequence: The order does not decide whether data are special-category or offence
+    data; the caller states it, using the sibling order gdpr-special-categories where
+    needed.
+- what: art27_representative
+  instrument: Regulation (EU) 2016/679 Art 27
+  cites:
+  - 02016R0679-20160504#art_027
+  reason: The representative of a controller or processor not established in the Union.
+    Not pinned; see the deferral of the representative's own duty.
+  consequence: The order does not test whether a representative must be designated
+    or what it must do; a caller applies Art 27 itself (see the sibling order gdpr-territorial-material-scope).
+- what: art83_fines_for_breach
+  instrument: Regulation (EU) 2016/679 Art 83(4)(a)
+  cites:
+  - 02016R0679-20160504#point_083.004_a
+  reason: Infringing Arts 30, 37, 38 or 39 is in the lower fine tier. The sibling
+    eu/data-protection/gdpr-administrative-fine-maximum owns the cap; whether an infringement
+    occurred is not decided here.
+  consequence: The order does not decide whether an infringement occurred or what
+    fine follows; a caller uses the sibling gdpr-administrative-fine-maximum for the
+    maximum.
+- what: regulatory_guidance
+  instrument: Article 29 Working Party and EDPB guidance on data protection officers
+    and on the Art 30(5) exemption
+  cites:
+  - 02016R0679-20160504#parag_070.001
+  - 02016R0679-20160504#point_070.001_e
+  reason: 'Soft law, not pinned and not quoted. Since AMENDMENT 2026-11-01 two rulings
+    name it as their authority: the WP29 position paper on Art 30(5) (April 2018)
+    for the per-activity reading of the exemption (Q1) and the WP29 Guidelines on
+    Data Protection Officers (WP243) for is_public_authority_or_body as an outside
+    fact (Q3).'
+  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
+    itself. A caller who relies on the guidance beyond the two rulings that name it
+    reads it and applies it itself.

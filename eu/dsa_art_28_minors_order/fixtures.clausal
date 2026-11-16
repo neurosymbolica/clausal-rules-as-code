@@ -1,0 +1,218 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dsa_art_28_minors_order.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC predicate it
+% calls -- that is the whole import list. Profile keys and subject ids are atoms
+% and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract). The order has no numeric threshold and no date, so the near-miss
+% control of each route is the ONE-KEY change that flips its answer:
+%   medium_provider_accessible_platform_measures_adequate      complied
+%   medium_provider_accessible_platform_measures_inadequate    breached (measures false)
+%   medium_provider_platform_not_accessible_to_minors          not engaged
+%   profiled_advertising_to_recipient_known_minor              breached (Art 28(2))
+%   profiled_advertising_recipient_not_known_minor             not engaged (awareness false)
+%   small_enterprise_stated_not_designated                     not engaged (Art 19(1))
+%   small_enterprise_stated_designated                         breached (Art 19(2))
+%   provider_within_twelve_months_stated_not_designated        not engaged (Art 19(1) second sentence)
+%   provider_past_twelve_months_medium_enterprise              complied (run-off false)
+%   small_enterprise_designation_not_shown                     referral (designation absent)
+%   designated_provider_enterprise_facts_absent                complied (designation attested true)
+%   empty_profile                                              indeterminate
+%   enterprise_run_off_fact_absent                             indeterminate
+%   accessibility_judgement_unsure                             legal review (Art 28(1))
+%   measures_judgement_unsure                                  legal review (Art 28(1))
+%   profiling_judgement_unsure                                 legal review (Art 28(2))
+%   awareness_judgement_unsure                                 legal review (Art 28(2))
+%   profile_with_unknown_key / profile_with_wrong_type /
+%   profile_with_duplicate_key                                 input problems
+% =====================================================================
+
+:- module(fixtures, [
+    dsa_art_28_minors_order_subject/1,
+    dsa_art_28_minors_order_profile_for/2,
+    dsa_art_28_minors_order_assess/2
+]).
+
+:- use_module(eu/dsa_art_28_minors_order/dsa_art_28_minors_order, [decide_dsa_art_28_minors_order/2]).
+
+% ---- Subject registry ------------------------------------------------
+dsa_art_28_minors_order_subject(medium_provider_accessible_platform_measures_adequate).
+dsa_art_28_minors_order_subject(medium_provider_accessible_platform_measures_inadequate).
+dsa_art_28_minors_order_subject(medium_provider_platform_not_accessible_to_minors).
+dsa_art_28_minors_order_subject(profiled_advertising_to_recipient_known_minor).
+dsa_art_28_minors_order_subject(profiled_advertising_recipient_not_known_minor).
+dsa_art_28_minors_order_subject(small_enterprise_stated_not_designated).
+dsa_art_28_minors_order_subject(small_enterprise_stated_designated).
+dsa_art_28_minors_order_subject(provider_within_twelve_months_stated_not_designated).
+dsa_art_28_minors_order_subject(provider_past_twelve_months_medium_enterprise).
+dsa_art_28_minors_order_subject(small_enterprise_designation_not_shown).
+dsa_art_28_minors_order_subject(designated_provider_enterprise_facts_absent).
+dsa_art_28_minors_order_subject(empty_profile).
+dsa_art_28_minors_order_subject(enterprise_run_off_fact_absent).
+dsa_art_28_minors_order_subject(accessibility_judgement_unsure).
+dsa_art_28_minors_order_subject(measures_judgement_unsure).
+dsa_art_28_minors_order_subject(profiling_judgement_unsure).
+dsa_art_28_minors_order_subject(awareness_judgement_unsure).
+dsa_art_28_minors_order_subject(profile_with_unknown_key).
+dsa_art_28_minors_order_subject(profile_with_wrong_type).
+dsa_art_28_minors_order_subject(profile_with_duplicate_key).
+
+% ---- Profiles --------------------------------------------------------
+% Art 28(1): medium provider, accessible platform, adequate measures.
+dsa_art_28_minors_order_profile_for(medium_provider_accessible_platform_measures_adequate, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Near miss: the measures judged not appropriate and proportionate.
+dsa_art_28_minors_order_profile_for(medium_provider_accessible_platform_measures_inadequate, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)
+]).
+% Art 28(1): platform judged not accessible to minors.
+dsa_art_28_minors_order_profile_for(medium_provider_platform_not_accessible_to_minors, [
+    attribute(platform_accessible_to_minors, false),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false)
+]).
+% Art 28(2): all three elements hold, Section 3 applies (Q1: accessibility false).
+dsa_art_28_minors_order_profile_for(profiled_advertising_to_recipient_known_minor, [
+    attribute(platform_accessible_to_minors, false),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false)
+]).
+% Near miss: not aware with reasonable certainty that the recipient is a minor.
+dsa_art_28_minors_order_profile_for(profiled_advertising_recipient_not_known_minor, [
+    attribute(platform_accessible_to_minors, false),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false)
+]).
+% Art 19(1): small enterprise stated not to be designated.
+dsa_art_28_minors_order_profile_for(small_enterprise_stated_not_designated, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, true),
+    attribute(designated_as_very_large_online_platform, attested(false, attestation(host_user, recorded_moment, commission_list_checked, none))),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)
+]).
+% Near miss (Art 19(2)): the same provider stated to be designated.
+dsa_art_28_minors_order_profile_for(small_enterprise_stated_designated, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, true),
+    attribute(designated_as_very_large_online_platform, attested(true, attestation(host_user, recorded_moment, commission_list_checked, none))),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, false)
+]).
+% Art 19(1) second sentence: within the 12 months, stated not designated.
+dsa_art_28_minors_order_profile_for(provider_within_twelve_months_stated_not_designated, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, true),
+    attribute(designated_as_very_large_online_platform, attested(false, attestation(host_user, recorded_moment, commission_list_checked, none))),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Near miss: past the 12 months, so Section 3 applies.
+dsa_art_28_minors_order_profile_for(provider_past_twelve_months_medium_enterprise, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false),
+    attribute(designated_as_very_large_online_platform, attested(false, attestation(host_user, recorded_moment, commission_list_checked, none))),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Small enterprise, designation not shown: referred on (cross-reference).
+dsa_art_28_minors_order_profile_for(small_enterprise_designation_not_shown, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, true),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Near miss: designation attested true, enterprise facts absent (step 2).
+dsa_art_28_minors_order_profile_for(designated_provider_enterprise_facts_absent, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(designated_as_very_large_online_platform, attested(true, attestation(host_user, recorded_moment, commission_list_checked, none))),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Nothing supplied.
+dsa_art_28_minors_order_profile_for(empty_profile, []).
+% The run-off fact of Art 19(1) second sentence absent.
+dsa_art_28_minors_order_profile_for(enterprise_run_off_fact_absent, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Accessibility to minors unsure.
+dsa_art_28_minors_order_profile_for(accessibility_judgement_unsure, [
+    attribute(platform_accessible_to_minors, unsure),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, true)
+]).
+% Measures judgement unsure.
+dsa_art_28_minors_order_profile_for(measures_judgement_unsure, [
+    attribute(platform_accessible_to_minors, true),
+    attribute(advertisements_presented_to_recipient_on_interface, false),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false),
+    attribute(measures_appropriate_and_proportionate_for_high_level_of_privacy_safety_and_security_of_minors, unsure)
+]).
+% Profiling judgement unsure.
+dsa_art_28_minors_order_profile_for(profiling_judgement_unsure, [
+    attribute(platform_accessible_to_minors, false),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, unsure),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false)
+]).
+% Awareness judgement unsure.
+dsa_art_28_minors_order_profile_for(awareness_judgement_unsure, [
+    attribute(platform_accessible_to_minors, false),
+    attribute(advertisements_presented_to_recipient_on_interface, true),
+    attribute(advertisements_based_on_profiling_of_recipient, true),
+    attribute(aware_with_reasonable_certainty_recipient_is_minor, unsure),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false),
+    attribute(provider_within_12_months_after_losing_micro_or_small_status, false)
+]).
+% Input problems.
+dsa_art_28_minors_order_profile_for(profile_with_unknown_key, [
+    attribute(colour, true)
+]).
+dsa_art_28_minors_order_profile_for(profile_with_wrong_type, [
+    attribute(platform_accessible_to_minors, maybe)
+]).
+dsa_art_28_minors_order_profile_for(profile_with_duplicate_key, [
+    attribute(provider_qualifies_as_micro_or_small_enterprise, true),
+    attribute(provider_qualifies_as_micro_or_small_enterprise, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+dsa_art_28_minors_order_assess(Subject, Result) :-
+    dsa_art_28_minors_order_profile_for(Subject, Profile),
+    decide_dsa_art_28_minors_order(Profile, Result).
+
+:- end_module(fixtures).

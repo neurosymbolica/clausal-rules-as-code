@@ -1,0 +1,194 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_incident_reporting
+shape_family: temporal
+kit_version: "0.1.0"
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_incident_reporting"
+  - "queries"
+  - "fixtures"
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_incident_reporting.clausal --
+  - "decide_nis2_incident_reporting/2"
+  - "nis2_incident_reporting_status/2"
+  - "nis2_incident_reporting_checklist/2"
+  - "nis2_incident_reporting_decision_resolvable/1"
+  - "nis2_incident_reporting_status_values/1"
+  - "incident_significance/3"
+  - "incident_reporting_steps/2"
+  - "reporting_step_timeliness/4"
+  - "significant/0"
+  - "not_significant/0"
+  - "on_time/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "step_due/3"
+  - "hours_after_awareness/1"
+  - "months_after_notification/1"
+  - "months_after_handling/1"
+  - "late/1"
+  # -- queries.clausal --
+  - "nis2_incident_reporting_profile_keys/1"
+  - "nis2_incident_reporting_input_problems/2"
+  - "nis2_incident_reporting_what_if/4"
+  - "severe_operational_disruption_or_financial_loss/0"
+  - "considerable_damage_to_other_persons/0"
+  - "trust_service_provider_incident_affects_trust_services/0"
+  - "incident_ongoing_at_final_report_due/0"
+  - "early_warning_without_undue_delay/0"
+  - "incident_notification_without_undue_delay/0"
+  - "early_warning/0"
+  - "incident_notification/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "nis2_incident_reporting_subject/1"
+  - "nis2_incident_reporting_profile_for/2"
+  - "nis2_incident_reporting_assess/2"
+
+independence: no_external_scorer
+
+uses: []
+
+scope: "Directive (EU) 2022/2555 (NIS 2) Art 23(1), (3), (4): whether an incident is significant (either of two judgement limbs), which reporting steps are then due (early warning, incident notification, intermediate report, final report, progress report and later final report) and whether the early warning and the incident notification were in time (24 and 72 hour limits, 24 for a trust service provider's notification, no excuse after the limit, plus a without-undue-delay judgement). Out of scope and handed to the lawyer: entity class, recipient authority, definition of incident, sector-specific acts, calendar-month periods, content of the reports, notification of service recipients, Art 23(2), and Implementing Regulation (EU) 2024/2690."
+
+sources:
+  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 23(1), (3), (4) (units 32022L2555#parag_023.001, #parag_023.003, #parag_023.004)"
+
+query_interface:
+  2: "nis2_incident_reporting_status/2"
+  15: "reporting_step_timeliness/4"
+  16: "nis2_incident_reporting_what_if/4"
+
+deferred_set:
+- what: article_heading
+  units:
+  - 32022L2555#art_023
+  reason: 'The title of Article 23 carries no obligation: document structure. Deferred
+    so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: recipient_and_threat_communication
+  units:
+  - 32022L2555#parag_023.002
+  reason: Art 23(2) (communicate to the recipients of services potentially affected
+    by a significant cyber threat the measures they can take, and where appropriate
+    the threat itself) turns on "where applicable" and "where appropriate" and on
+    a significant cyber threat, not an incident; no limb of this order reads it. The
+    same is true of the second sentence of Art 23(1) (notify recipients of services
+    of significant incidents likely to adversely affect them, where appropriate).
+  consequence: The answers do not say whether the entity must inform the recipients
+    of its services; the caller must check Art 23(1) second sentence and Art 23(2)
+    itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: content_of_the_steps
+  units:
+  - 32022L2555#point_023.004_d_i
+  - 32022L2555#point_023.004_d_ii
+  - 32022L2555#point_023.004_d_iii
+  - 32022L2555#point_023.004_d_iv
+  reason: 'The content of the final report (points (d)(i) to (iv)), and of the early
+    warning and incident notification (suspected unlawful or malicious acts, cross-border
+    impact, initial assessment, indicators of compromise, in points (a) and (b)),
+    is not checked: this order lists the steps and their hour limits and judges timeliness
+    only. A content check would have the shape of the content check of the GDPR breach
+    notification order.'
+  consequence: The answers do not say whether a report contains what Art 23(4) requires;
+    the caller must check the content itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: authority_side_of_reporting
+  units:
+  - 32022L2555#parag_023.005
+  - 32022L2555#parag_023.006
+  - 32022L2555#parag_023.007
+  - 32022L2555#parag_023.008
+  - 32022L2555#parag_023.009
+  - 32022L2555#parag_023.010
+  reason: Art 23(5) to (10) bind the CSIRT, the competent authority, the single point
+    of contact and ENISA (response within 24 hours, onward information to other Member
+    States and ENISA, informing the public, forwarding notifications, summary reports,
+    information to the authorities under Directive (EU) 2022/2557); none changes what
+    the entity must report or when.
+  consequence: 'None for an entity caller: these paragraphs bind the authorities.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: implementing_acts_on_significance
+  units:
+  - 32022L2555#parag_023.011
+  reason: Art 23(11) empowers the Commission to adopt implementing acts specifying
+    the cases in which an incident is significant, and required it to do so by 17
+    October 2024 for DNS service providers, TLD name registries, cloud computing,
+    data centre, content delivery network, managed service and managed security service
+    providers, and for online marketplaces, online search engines and social networking
+    services platforms. Implementing Regulation (EU) 2024/2690 is such an act; it
+    is pinned by automated retrieval but is NOT part of this order's extract, so its
+    thresholds are not applied.
+  consequence: For those entity types the significance answer is the Directive's general
+    test only; the caller must apply Implementing Regulation (EU) 2024/2690 itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: entity_class
+  instrument: Directive (EU) 2022/2555 Arts 2, 3 and Annexes I and II
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  reason: Whether the entity is an essential or important entity (scope, size, sector)
+    is decided by the sibling order on scope; this order takes it as given that the
+    entity is one.
+  consequence: The caller establishes the entity class first; an entity that is neither
+    has no Art 23 duty.
+- what: competent_csirt_or_authority
+  instrument: Directive (EU) 2022/2555 Arts 8 and 10
+  cites:
+  - 32022L2555#art_008
+  - 32022L2555#art_010
+  reason: Which CSIRT or competent authority receives the notification is national
+    law; Art 23(1) refers to it as its CSIRT or, where applicable, its competent authority.
+  consequence: The caller picks the recipient.
+- what: definition_of_incident
+  instrument: Directive (EU) 2022/2555 Art 6
+  cites:
+  - 32022L2555#art_006
+  reason: Not pinned in this domain. The order takes it as given that an incident
+    occurred.
+  consequence: The caller first checks that the event meets the Art 6 definition of
+    an incident.
+- what: sector_specific_acts
+  instrument: Directive (EU) 2022/2555 Art 4
+  cites:
+  - 32022L2555#art_004
+  reason: Art 4 lets sector-specific Union acts (for example for financial entities)
+    displace the reporting duties; which act applies is not modelled.
+  consequence: An entity subject to such an act checks that act first; the answers
+    apply only where Art 23 applies.
+- what: calendar_month_period
+  instrument: Regulation (EEC, Euratom) No 1182/71 Art 3
+  cites:
+  - 31971R1182#art_003
+  reason: The one-month limits of Art 23(4)(d) and (e) are calendar-month periods;
+    computing them needs the period rules of Regulation 1182/71, which are not pinned
+    in this domain. The limits are listed (months_after_notification(1), months_after_handling(1))
+    but no date is computed.
+  consequence: The caller computes the end of the one-month period itself.

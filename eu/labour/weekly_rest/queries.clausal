@@ -1,0 +1,131 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/labour/weekly_rest.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% weekly_rest_what_if/4       (#16 what-if): override one profile key of a
+%                             case and re-evaluate weekly_rest_status/2
+% weekly_rest_profile_keys/1: the top-level profile key schema, in the
+%                             order of the typed input contract
+% weekly_rest_input_problems/2: the problems a profile has ([] = none),
+%                             re-exported from the kernel as written there
+%
+% The declared query types are served by the slice weekly_rest.clausal:
+%   #2 eligibility  -- weekly_rest_status/7 (and the facade
+%                      decide_weekly_rest/2, weekly_rest_checklist/2);
+%   #23 calculation -- shortest_weekly_rest_minutes/6;
+%   #6 threshold    -- weekly_rest_threshold/2 (the boundary REQUIRED,
+%                      2100 or 1440 minutes, Art 5 first and second
+%                      subparagraphs).
+%
+% The profile is an attribute list [attribute(Key, Value), ...], not a
+% dict, so the what-if override is written here over that list (the
+% kit's override_key/4 works on dicts).
+%
+% This module also carries the result constructors of the order (a shape
+% clause for each, never called as queries; a name/arity is either a
+% declared constructor or defined by clauses, so they are defined by
+% clauses only) and the five arity-0 result predicates the order names.
+% The bare atoms of root_exports are not exported here (an export list
+% holds only name/arity entries): they are listed under root_atoms in
+% manifest.yaml.
+% =====================================================================
+
+:- module(queries, [
+    weekly_rest_profile_keys/1,
+    weekly_rest_input_problems/2,
+    weekly_rest_what_if/4,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    weekly_rest_given/0,
+    weekly_rest_not_given/0,
+    weekly_rest_not_applied_to_worker/0,
+    weekly_rest_derogation_applies/0,
+    no_period_without_weekly_rest/0
+]).
+
+:- use_module(eu/labour/weekly_rest/kernel, [weekly_rest_input_problems/2]).
+:- use_module(eu/labour/weekly_rest/weekly_rest, [weekly_rest_status/2]).
+
+% The result vocabulary of the order as arity-0 facts (never called as
+% queries; the answers carry the bare atoms).
+weekly_rest_given.
+weekly_rest_not_given.
+weekly_rest_not_applied_to_worker.
+weekly_rest_derogation_applies.
+no_period_without_weekly_rest.
+
+% The result constructors as shape clauses (never called as queries; the
+% answers carry the data terms, which need no predicate to be built).
+date(Year, Month, Day) :-
+    integer(Year),
+    integer(Month),
+    integer(Day).
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    is_list(Context).
+
+open_textured(Input, Citation) :-
+    atom(Input),
+    compound(Citation).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(Clause, Citations) :-
+    nonvar(Clause),
+    is_list(Citations).
+
+input_problems(Problems) :-
+    is_list(Problems).
+
+unknown_key(Key) :-
+    term_variables(Key, _Variables).
+
+wrong_type(Key) :-
+    nonvar(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+weekly_rest_profile_keys([on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, weekly_rest_minimum, weekly_rest_reference_period, worker_category, derogation_from_article_5]).
+
+% #16 what-if: re-evaluate a case with one profile key hypothetically set.
+% Case = weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd).
+weekly_rest_what_if(weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd), OverriddenKey, NewValue, NewStatus) :-
+    weekly_rest_input_problems(Profile, Problems),
+    override_for(Problems, Profile, OverriddenKey, NewValue, Hypothesis),
+    weekly_rest_status(weekly_rest_case(Hypothesis, Worker, Shifts, PeriodStart, PeriodEnd), NewStatus).
+
+% A term that is not an attribute list is left as it is: the status then
+% reports its input problem. An attribute list loses every item of the
+% key and gains the one hypothetical item.
+override_for([wrong_type(profile)], Profile, _, _, Profile).
+override_for([], Profile, OverriddenKey, NewValue, Hypothesis) :-
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis).
+override_for([FirstProblem|OtherProblems], Profile, OverriddenKey, NewValue, Hypothesis) :-
+    dif([FirstProblem|OtherProblems], [wrong_type(profile)]),
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis).
+
+replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_with_key(OverriddenKey), Profile, OtherItems),
+    append(OtherItems, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_with_key(OverriddenKey, attribute(ElementKey, _)) :-
+    ElementKey == OverriddenKey.
+
+:- end_module(queries).

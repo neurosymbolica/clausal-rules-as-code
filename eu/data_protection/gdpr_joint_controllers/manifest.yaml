@@ -1,0 +1,323 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_joint_controllers
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_joint_controllers"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_joint_controllers_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- gdpr_joint_controllers.clausal --
+  - "decide_gdpr_joint_controllers/2"
+  - "gdpr_joint_controllers_status/2"
+  - "gdpr_joint_controllers_checklist/2"
+  - "gdpr_joint_controllers_decision_resolvable/1"
+  - "gdpr_joint_controllers_status_values/1"
+  - "rights_against_each_joint_controller/3"
+  - "liability_for_the_entire_damage/4"
+  - "recourse_after_full_compensation/4"
+  - "not_joint_controllers/0"
+  - "rights_exercisable_against_this_controller/0"
+  - "not_responsible_for_the_damage/0"
+  - "no_other_responsible_party/0"
+  - "liable_for_the_entire_damage/0"
+  - "not_entitled_to_claim_back/0"
+  - "entitled_to_claim_back/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "gdpr_joint_controllers_profile_keys/1"
+  - "gdpr_joint_controllers_input_problems/2"
+  - "gdpr_joint_controllers_what_if/4"
+  - "controllers_jointly_determine_purposes_and_means/0"
+  - "responsible_under_article_82_2_and_3/0"
+  - "other_responsible_parties/0"
+  - "full_compensation_paid/0"
+  - "unsure/0"
+  - "absent/0"
+  - "not_attempted/0"
+  # -- fixtures.clausal --
+  - "gdpr_joint_controllers_subject/1"
+  - "gdpr_joint_controllers_profile_for/2"
+  - "gdpr_joint_controllers_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib,
+# kit/query_combinators), no shared backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2016/679 (GDPR), three rules sibling orders leave open, each
+  answered from the position of one party (the caller) for one processing and,
+  for Art 82, one claim for one damage: (1) Art 26(3) read with Art 28(10),
+  whether the data subject may exercise its rights in respect of and against the
+  caller whatever the joint controllers' arrangement says
+  (rights_against_each_joint_controller/3); (2) Art 82(4), whether the caller,
+  responsible under Art 82(2) and (3), may be held liable for the entire damage
+  (liability_for_the_entire_damage/4); (3) Art 82(5), whether the caller that paid
+  full compensation may claim back from the other responsible parties
+  (recourse_after_full_compensation/4); plus the input check
+  gdpr_joint_controllers_input_problems/2. Whether controllers jointly determine
+  the purposes and means and whether full compensation was paid are tri-state
+  judgements handed to the caller (unsure goes to a lawyer); the caller's own
+  responsibility under Art 82(2) and (3) is an attested outside fact copied into
+  the answer, never decided. Out of scope: Art 26(1) and (2)
+  (gdpr-accountability-security), Art 82(1) to (3)
+  (gdpr-compensation-and-liability), the rest of Art 28 (gdpr-processor-contract),
+  Art 4 (the common-definitions orders), the amount of any compensation or part,
+  the competent court (Art 82(6), Art 79), fines and penalties (Arts 83, 84),
+  which data subject rights exist (Arts 12 to 22) and national rules on
+  contribution between debtors.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504, pinned 2026-11-12"
+  - "GDPR Art 26(3) [02016R0679-20160504#parag_026.003]: rights in respect of and against each of the joint controllers"
+  - "GDPR Art 28(10) [02016R0679-20160504#parag_028.010]: a processor determining the purposes and means is considered a controller"
+  - "GDPR Art 82(4) [02016R0679-20160504#parag_082.004]: each responsible controller or processor liable for the entire damage"
+  - "GDPR Art 82(5) [02016R0679-20160504#parag_082.005]: claim back after paying full compensation"
+  - "GDPR Art 26(1), Art 82(2) and Art 82(3): quoted for readings (2) and (5) only, cited by no limb (deferred)"
+
+query_interface:
+  2: "gdpr_joint_controllers_status/2"      # eligibility verdict: the Art 82(5) claim back (eligible/ineligible/unresolved/referred/malformed)
+  7: "gdpr_joint_controllers_checklist/2"   # justification: one item(Id, Status, cite(Key)) row per Art 82(5) condition
+  16: "gdpr_joint_controllers_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_026
+  - 02016R0679-20160504#art_028
+  - 02016R0679-20160504#art_082
+  reason: 'The titles of Articles 4, 26, 28 and 82 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: joint_controllers_and_their_arrangement
+  units:
+  - 02016R0679-20160504#parag_026.001
+  - 02016R0679-20160504#parag_026.002
+  reason: Art 26(1) (who are joint controllers; the arrangement determining their
+    responsibilities; a contact point) and Art 26(2) (what the arrangement reflects;
+    its essence made available) are decided in gdpr-accountability-security. This
+    order reads only whether the caller jointly determines the purposes and means,
+    as the judgement key controllers_jointly_determine_purposes_and_means with the
+    same meaning as there (reading (2)); Art 26(1) is quoted for that reading and
+    cited by no limb.
+  consequence: The answers never say whether an arrangement is required, in place
+    or adequate; the caller uses gdpr-accountability-security.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-accountability-security
+- what: right_to_compensation_and_one_party_liability
+  units:
+  - 02016R0679-20160504#parag_082.001
+  - 02016R0679-20160504#parag_082.002
+  - 02016R0679-20160504#parag_082.003
+  reason: Art 82(1) to (3) (the right to compensation, the liability of a controller
+    and of a processor, the exemption) are decided for one party and one claim in
+    gdpr-compensation-and-liability. This order reads their outcome only through responsible_under_article_82_2_and_3
+    and other_responsible_parties (reading (5), reading (6)); Art 82(2) and (3) are
+    quoted for those readings and cited by no limb.
+  consequence: The answers never say whether a party is liable under Art 82(1) to
+    (3); the caller uses gdpr-compensation-and-liability for each party.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-compensation-and-liability
+- what: courts_competent_for_the_proceedings
+  units:
+  - 02016R0679-20160504#parag_082.006
+  reason: Art 82(6) says court proceedings are brought before the courts competent
+    under the law of the Member State referred to in Art 79(2). It is a step of procedure
+    with no answer in this order.
+  consequence: The answers never say which court is competent.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: processor_contract_and_processor_duties
+  units:
+  - 02016R0679-20160504#parag_028.001
+  - 02016R0679-20160504#parag_028.002
+  - 02016R0679-20160504#parag_028.003
+  - 02016R0679-20160504#point_028.003_a
+  - 02016R0679-20160504#point_028.003_b
+  - 02016R0679-20160504#point_028.003_c
+  - 02016R0679-20160504#point_028.003_d
+  - 02016R0679-20160504#point_028.003_e
+  - 02016R0679-20160504#point_028.003_f
+  - 02016R0679-20160504#point_028.003_g
+  - 02016R0679-20160504#point_028.003_h
+  - 02016R0679-20160504#parag_028.004
+  - 02016R0679-20160504#parag_028.006
+  - 02016R0679-20160504#parag_028.007
+  - 02016R0679-20160504#parag_028.009
+  reason: Art 28(1) to (4), (6), (7) and (9), with the points of Art 28(3), govern
+    the choice of processor, sub-processors and the processor contract; they are formalised
+    in gdpr-processor-contract (which defers the last sentence of Art 28(4), on the
+    initial processor's liability, as debt). No limb of this order reads them.
+  consequence: The answers never say whether a processor contract is adequate; the
+    caller uses gdpr-processor-contract.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-processor-contract
+- what: art_28_5_codes_of_conduct_and_certification
+  units:
+  - 02016R0679-20160504#parag_028.005
+  reason: Art 28(5) lets adherence to an approved code of conduct or certification
+    mechanism serve as an element to demonstrate sufficient guarantees; gdpr-processor-contract
+    defers it as debt and no limb of this order reads it.
+  consequence: The answers never say what a code of conduct or certification shows.
+  declaration: not_an_exception
+  debt: true
+  open: formalisable in the processor-contract order; the deferral stands for this
+    run.
+- what: art_28_8_adoption_of_standard_clauses
+  units:
+  - 02016R0679-20160504#parag_028.008
+  reason: 'Art 28(8) lets a supervisory authority adopt standard contractual clauses
+    in accordance with the consistency mechanism: an act of an institution, not a
+    rule a caller applies.'
+  consequence: The answers never say whether clauses were adopted.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: definitions_decided_in_the_data_and_processing_order
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: Art 4(1) to (6), (9) to (12), (25) and (26) are formalised in gdpr-common-definitions-data-and-processing;
+    no limb of this order reads them.
+  consequence: This order gives no answer for these points; the caller uses gdpr-common-definitions-data-and-processing.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-data-and-processing
+- what: definitions_decided_in_the_roles_order
+  units:
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  reason: Art 4(7), (8), (13) to (16), (18), (19), (22) to (24), with the lettered
+    parts of 4(16), 4(22) and 4(23), are formalised in gdpr-common-definitions-roles-and-establishments;
+    this order asks no key about the caller's role (reading (1)) and reads none of
+    them.
+  consequence: This order does not decide who is a controller or a processor; the
+    caller uses gdpr-common-definitions-roles-and-establishments.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-common-definitions-roles-and-establishments
+- what: definitions_of_representative_and_binding_corporate_rules
+  units:
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_20
+  reason: Art 4(17) (representative) and Art 4(20) (binding corporate rules) are not
+    read by any limb of this order; no order on main cites them (both are deferred
+    in gdpr-common-definitions-roles-and-establishments), and gdpr-binding-corporate-rules
+    is in draft for Art 4(20).
+  consequence: The answers never say whether a person is a representative or whether
+    rules are binding corporate rules.
+  declaration: not_an_exception
+  debt: true
+  open: formalisable elsewhere; this order does not need them.
+- what: definition_of_supervisory_authority
+  units:
+  - 02016R0679-20160504#point_004_21
+  reason: Whether a body is a supervisory authority turns on its establishment by
+    a Member State pursuant to Article 51; no limb of this order reads it.
+  consequence: The answers never say whether a body is a supervisory authority.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+
+excluded_set:
+- what: administrative_fines_and_penalties
+  instrument: Regulation (EU) 2016/679 Arts 83 and 84
+  cites:
+  - 02016R0679-20160504#art_083
+  - 02016R0679-20160504#art_084
+  reason: Art 28(10) is without prejudice to Arts 83 and 84; fines and penalties are
+    a separate matter and no limb reads them.
+  consequence: The answers never say that a fine or penalty is due, nor that it is
+    not.
+- what: data_subject_rights
+  instrument: Regulation (EU) 2016/679 Arts 12 to 22
+  cites:
+  - 02016R0679-20160504#art_012
+  - 02016R0679-20160504#art_013
+  - 02016R0679-20160504#art_014
+  - 02016R0679-20160504#art_015
+  - 02016R0679-20160504#art_016
+  - 02016R0679-20160504#art_017
+  - 02016R0679-20160504#art_018
+  - 02016R0679-20160504#art_019
+  - 02016R0679-20160504#art_020
+  - 02016R0679-20160504#art_021
+  - 02016R0679-20160504#art_022
+  reason: Art 26(3) speaks of the data subject's 'rights under this Regulation'; which
+    rights exist and how a request is answered is decided by the data-subject-rights
+    orders (reading (3)).
+  consequence: The answers never say whether a given request must be granted or how
+    it is answered.
+- what: judicial_remedy_against_a_controller_or_processor
+  instrument: Regulation (EU) 2016/679 Art 79
+  cites:
+  - 02016R0679-20160504#art_079
+  reason: Art 82(6) points to Art 79(2) for the competent courts; the judicial remedy
+    is not modelled by this order.
+  consequence: The answers never say which court hears a claim.

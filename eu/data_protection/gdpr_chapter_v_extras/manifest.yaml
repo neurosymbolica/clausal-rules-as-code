@@ -1,0 +1,266 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_chapter_v_extras
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_chapter_v_extras"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_chapter_v_extras.clausal --
+  - "second_subparagraph_duty/5"
+  - "foreign_judgment_or_decision_recognition/4"
+  - "onward_transfer_condition/4"
+  - "decide_gdpr_chapter_v_extras/2"
+  - "gdpr_chapter_v_extras_status/2"
+  - "gdpr_chapter_v_extras_checklist/2"
+  - "gdpr_chapter_v_extras_decision_resolvable/1"
+  - "gdpr_chapter_v_extras_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_chapter_v_extras_profile_keys/1"
+  - "gdpr_chapter_v_extras_input_problems/2"
+  - "gdpr_chapter_v_extras_what_if/4"
+  - "no_second_subparagraph_transfer/0"
+  - "not_a_processor_duty/0"
+  - "duty_met/0"
+  - "duty_not_met/0"
+  - "article_48_not_engaged/0"
+  - "not_barred_by_article_48/0"
+  - "not_recognisable_or_enforceable/0"
+  - "not_an_onward_transfer/0"
+  - "onward_transfer_may_take_place/0"
+  - "onward_transfer_may_not_take_place/0"
+  - "inform_supervisory_authority/0"
+  - "inform_data_subject/0"
+  - "document_assessment_and_safeguards/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_chapter_v_extras_subject/1"
+  - "gdpr_chapter_v_extras_profile_for/2"
+  - "gdpr_chapter_v_extras_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only the kit (formalize_lib), no
+# shared backbone package.
+uses: []
+
+scope: >-
+  Beside the GDPR Chapter V cascade (gdpr-chapter-v-transfers), and deciding
+  nothing it decides: for a transfer made under the second subparagraph of
+  Art 49(1) GDPR (supplied as an attested outside fact), whether the controller
+  has met the duty to inform the supervisory authority and the duty to inform
+  the data subject of the transfer and of the compelling legitimate interests
+  pursued (Art 49(1), second subparagraph, second and third sentences; duties
+  of the controller only), and whether the controller or processor has met the
+  duty to document the assessment and the suitable safeguards in its Art 30
+  records (Art 49(6)); whether Art 48 bars the recognition or enforcement of a
+  third-country judgment or decision requiring a transfer or disclosure; and,
+  under Art 44 first sentence, whether an onward transfer may take place, read
+  from the onward transfer's own Chapter V answer supplied as an attested outside
+  fact. Out of scope: whether any transfer has a Chapter V basis (the conditions
+  of the second subparagraph of Art 49(1) included) - gdpr-chapter-v-transfers;
+  whether a record of processing activities is required and what it holds
+  (Art 30) - gdpr-records-and-officer; the information of Articles 13 and 14;
+  the second sentence of Art 44; timing, form and channel of the information
+  given; whether Art 30(5) relieves the Art 49(6) duty (open question Q5).
+
+sources:
+  - 'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504: Art 44 (first sentence read)'
+  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 48 (transfers or disclosures not authorised by Union law)'
+  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 49(1), second subparagraph (second and third sentences formalised; first sentence read only through an attested outside fact)'
+  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 49(6) (documentation of the assessment and the suitable safeguards)'
+  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 30(1) opening words and point (e), Art 30(2) opening words and point (c), Art 30(5) (quoted for reading (6), deferred)'
+
+query_interface:
+  13: "second_subparagraph_duty/5"          # compliance_check: is a duty of the controller or processor met
+  3: "gdpr_chapter_v_extras_status/2"       # status_determination: the facade status over every duty and limb
+  16: "gdpr_chapter_v_extras_what_if/4"     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_030
+  - 02016R0679-20160504#art_045
+  - 02016R0679-20160504#art_046
+  - 02016R0679-20160504#art_049
+  reason: The article units of Articles 30, 45, 46 and 49 hold only the article number
+    and title; their paragraphs and points are separate units. Document structure,
+    not operative law. Deferred so every unit of the pinned extract is accounted for.
+  consequence: 'None for a caller: an article title carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: chapter_v_cascade
+  not_formalized_because: in_sibling
+  decided_in: gdpr-chapter-v-transfers
+  units:
+  - 02016R0679-20160504#parag_045.001
+  - 02016R0679-20160504#parag_045.003
+  - 02016R0679-20160504#parag_045.008
+  - 02016R0679-20160504#parag_046.001
+  - 02016R0679-20160504#parag_046.002
+  - 02016R0679-20160504#point_046.002_b
+  - 02016R0679-20160504#point_049.001_a
+  - 02016R0679-20160504#point_049.001_b
+  - 02016R0679-20160504#point_049.001_c
+  - 02016R0679-20160504#point_049.001_d
+  - 02016R0679-20160504#point_049.001_e
+  - 02016R0679-20160504#point_049.001_f
+  - 02016R0679-20160504#point_049.001_g
+  - 02016R0679-20160504#parag_049.002
+  - 02016R0679-20160504#parag_049.003
+  - 02016R0679-20160504#parag_049.004
+  reason: Art 45(1), (3) and (8), Art 46(1), Art 46(2) opening words and point (b),
+    the points (a) to (g) of Art 49(1) and Art 49(2) to (4) are the units by which
+    gdpr-chapter-v-transfers decides whether a transfer may take place and on which
+    basis. This order reads only that order's answer, through the outside facts transfer_relies_on_article_49_1_second_subparagraph
+    and onward_transfer_has_chapter_v_basis (readings (1), (2) and (9)).
+  consequence: 'No answer of this order says whether a transfer may take place or
+    on which basis: the caller asks gdpr-chapter-v-transfers and supplies its answer
+    as an outside fact.'
+  declaration: not_an_exception
+- what: chapter_v_units_read_by_no_order
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_045.002
+  - 02016R0679-20160504#point_045.002_a
+  - 02016R0679-20160504#point_045.002_b
+  - 02016R0679-20160504#point_045.002_c
+  - 02016R0679-20160504#parag_045.004
+  - 02016R0679-20160504#parag_045.005
+  - 02016R0679-20160504#parag_045.006
+  - 02016R0679-20160504#parag_045.007
+  - 02016R0679-20160504#parag_045.009
+  - 02016R0679-20160504#point_046.002_a
+  - 02016R0679-20160504#point_046.002_c
+  - 02016R0679-20160504#point_046.002_d
+  - 02016R0679-20160504#point_046.002_e
+  - 02016R0679-20160504#point_046.002_f
+  - 02016R0679-20160504#parag_046.003
+  - 02016R0679-20160504#point_046.003_a
+  - 02016R0679-20160504#point_046.003_b
+  - 02016R0679-20160504#parag_046.004
+  - 02016R0679-20160504#parag_046.005
+  - 02016R0679-20160504#parag_049.005
+  reason: Art 45(2), (4) to (7) and (9) (the Commission's assessment, review, repeal
+    and older decisions), Art 46(2) points (a) and (c) to (f), Art 46(3) to (5) (which
+    instrument supplies the safeguards, the consistency mechanism, transitional validity)
+    and Art 49(5) (limits set by Union or Member State law) are read by no limb of
+    this order, and gdpr-chapter-v-transfers defers them too.
+  consequence: 'No answer checks an adequacy decision''s machinery, which safeguard
+    instrument applies, or a limit under Art 49(5): the caller checks them before
+    asking gdpr-chapter-v-transfers.'
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: art_49_1_first_subparagraph_and_conditions
+  debt: true
+  partial: true
+  units:
+  - 02016R0679-20160504#parag_049.001
+  reason: The paragraph unit of Art 49(1) holds the first subparagraph (its opening
+    words) and the second subparagraph. Its last two sentences (the duties to inform)
+    are formalised here (second_subparagraph_duty). The opening words of the first
+    subparagraph and the conditions in the first sentence of the second subparagraph
+    are decided by gdpr-chapter-v-transfers and read here only through the outside
+    fact transfer_relies_on_article_49_1_second_subparagraph (reading (2)).
+  consequence: 'No answer tests whether a transfer meets the conditions of the second
+    subparagraph: the caller supplies transfer_relies_on_article_49_1_second_subparagraph
+    from gdpr-chapter-v-transfers or a human statement.'
+  declaration: answered_with_caveat
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: art_44_level_of_protection
+  debt: true
+  partial: true
+  units:
+  - 02016R0679-20160504#art_044
+  reason: Art 44 is one unit. Its first sentence (the conditions of the Chapter apply,
+    including for onward transfers) is read by onward_transfer_condition; its second
+    sentence (all provisions of the Chapter are applied so that the level of protection
+    of natural persons is not undermined) is a rule of interpretation that gives no
+    answer this order returns (reading (9)).
+  consequence: No answer applies the level-of-protection sentence of Art 44 on its
+    own.
+  declaration: not_an_exception
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: records_of_processing_activities
+  not_formalized_because: in_sibling
+  decided_in: gdpr-records-and-officer
+  units:
+  - 02016R0679-20160504#parag_030.001
+  - 02016R0679-20160504#point_030.001_a
+  - 02016R0679-20160504#point_030.001_b
+  - 02016R0679-20160504#point_030.001_c
+  - 02016R0679-20160504#point_030.001_d
+  - 02016R0679-20160504#point_030.001_e
+  - 02016R0679-20160504#point_030.001_f
+  - 02016R0679-20160504#point_030.001_g
+  - 02016R0679-20160504#parag_030.002
+  - 02016R0679-20160504#point_030.002_a
+  - 02016R0679-20160504#point_030.002_b
+  - 02016R0679-20160504#point_030.002_c
+  - 02016R0679-20160504#point_030.002_d
+  - 02016R0679-20160504#parag_030.005
+  reason: Whether a controller or a processor must keep a record of processing activities
+    (Art 30(1), (2) and (5)) and which items it must hold, the documentation of suitable
+    safeguards for transfers under the second subparagraph of Art 49(1) in point (e)
+    of Art 30(1) and point (c) of Art 30(2) included, is decided by gdpr-records-and-officer.
+    This order reads only the Art 49(6) duty to document the assessment and the safeguards
+    in those records (reading (6)).
+  consequence: 'duty_met for document_assessment_and_safeguards does not say that
+    the record as a whole is complete or required: the caller asks gdpr-records-and-officer.'
+  declaration: not_an_exception
+- what: records_form_and_availability
+  debt: true
+  units:
+  - 02016R0679-20160504#parag_030.003
+  - 02016R0679-20160504#parag_030.004
+  reason: Art 30(3) (the records in writing, including in electronic form) and Art
+    30(4) (the record made available to the supervisory authority on request) are
+    read by no limb of this order; gdpr-records-and-officer defers them too.
+  consequence: No answer checks the form of the record or its availability to the
+    supervisory authority.
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: information_under_articles_13_and_14
+  not_formalized_because: in_sibling
+  decided_in: gdpr-information-duties-items-and-further-processing
+  units: []
+  instrument: Regulation (EU) 2016/679 Arts 13 and 14
+  reason: The duty to inform the data subject under the second subparagraph of Art
+    49(1) applies 'in addition to providing the information referred to in Articles
+    13 and 14'; that information is decided by gdpr-information-duties-items-and-further-processing
+    (reading (4)).
+  consequence: 'duty_met for inform_data_subject does not say that the information
+    of Articles 13 and 14 was given: the caller asks that order.'
+  declaration: not_an_exception

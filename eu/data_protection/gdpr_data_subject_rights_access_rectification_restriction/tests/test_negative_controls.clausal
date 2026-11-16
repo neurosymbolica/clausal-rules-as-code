@@ -1,0 +1,101 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_access_rectification_restriction/request_basis, [
+    request_basis_status/2,
+    request_basis_status_values/1,
+    decide_data_subject_request/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_access_rectification_restriction/fixtures, [
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for/2,
+    gdpr_data_subject_rights_access_rectification_restriction_assess/2
+]).
+
+comply_of(Subject, Comply) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(Subject, gdpr_data_subject_request_verdict(Comply, _, _, _, _)).
+
+basis_of(Subject, Basis) :-
+    gdpr_data_subject_rights_access_rectification_restriction_assess(Subject, gdpr_data_subject_request_verdict(_, Basis, _, _, _)).
+
+test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+    request_basis_status_values(StatusValues),
+    member(art16_inaccurate_data, StatusValues).
+
+test(the_access_profile_is_art15_1) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_plain, Profile),
+    request_basis_status(Profile, art15_1).
+
+test(the_access_profile_is_not_art16_inaccurate_data, fail) :-
+    gdpr_data_subject_rights_access_rectification_restriction_profile_for(access_plain, Profile),
+    request_basis_status(Profile, art16_inaccurate_data).
+
+% Route: Art 12(5) relief. Positive / near miss.
+test(unfounded_true_relieves_the_controller) :-
+    comply_of(access_unfounded, need_not_comply).
+test(unfounded_false_does_not_relieve, fail) :-
+    comply_of(access_not_unfounded, need_not_comply).
+test(unfounded_false_must_comply) :-
+    comply_of(access_not_unfounded, must_comply).
+
+% Route: Art 12(2) relief.
+test(unable_to_identify_relieves_the_controller) :-
+    comply_of(access_unable_to_identify, need_not_comply).
+test(without_the_demonstration_the_controller_must_comply) :-
+    comply_of(access_plain, must_comply).
+test(without_the_demonstration_no_relief, fail) :-
+    comply_of(access_plain, need_not_comply).
+
+% Route: Art 23 relief.
+test(attested_restriction_relieves_the_controller) :-
+    comply_of(access_restricted_by_law, need_not_comply).
+test(attested_false_restriction_does_not_relieve) :-
+    decide_data_subject_request([attribute(request_type, access), attribute(legislative_restriction_applies_to_the_right, attested(false, attestation(host, at_time, legal_register, none)))], gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
+test(attested_false_restriction_is_not_relief, fail) :-
+    decide_data_subject_request([attribute(request_type, access), attribute(legislative_restriction_applies_to_the_right, attested(false, attestation(host, at_time, legal_register, none)))], gdpr_data_subject_request_verdict(need_not_comply, _, _, _, _)).
+
+% Route: Art 12(6) suspension.
+test(doubts_without_confirmation_suspend) :-
+    comply_of(access_identity_suspended, suspended(art12_6_identity_not_confirmed)).
+test(doubts_with_confirmation_do_not_suspend) :-
+    comply_of(access_identity_confirmed, must_comply).
+test(doubts_with_confirmation_are_not_suspended, fail) :-
+    comply_of(access_identity_confirmed, suspended(_)).
+
+% Route: Art 16 engagement.
+test(inaccurate_data_engages_rectification) :-
+    basis_of(rectification_inaccurate, art16_inaccurate_data).
+test(nothing_wrong_does_not_engage_rectification) :-
+    comply_of(rectification_not_engaged, need_not_comply).
+test(nothing_wrong_is_not_must_comply, fail) :-
+    comply_of(rectification_not_engaged, must_comply).
+test(incomplete_data_engages_rectification) :-
+    basis_of(rectification_incomplete, art16_incomplete_data).
+
+% Route: Art 18(1) points.
+test(point_a_accuracy_contested) :-
+    basis_of(restriction_accuracy_contested, art18_1_a).
+test(point_b_unlawful_and_opposed) :-
+    basis_of(restriction_unlawful_opposed, art18_1_b).
+test(point_d_objection_pending) :-
+    basis_of(restriction_objection_pending, art18_1_d).
+test(no_point_met_is_not_engaged) :-
+    comply_of(restriction_not_engaged, need_not_comply).
+test(no_point_met_is_not_must_comply, fail) :-
+    comply_of(restriction_not_engaged, must_comply).
+test(objection_without_pending_verification_is_open) :-
+    comply_of(restriction_verification_unknown, indeterminate([verification_of_overriding_grounds_pending])).
+test(objection_with_pending_verification_is_engaged) :-
+    comply_of(restriction_objection_pending, must_comply).
+
+% Route: open judgement.
+test(an_unsure_judgement_is_referred) :-
+    comply_of(access_unfounded_unsure, needs_legal_review(_, _)).
+test(a_false_judgement_is_not_referred, fail) :-
+    comply_of(access_not_unfounded, needs_legal_review(_, _)).
+
+% Route: input problems.
+test(an_unknown_key_is_an_input_problem) :-
+    comply_of(profile_with_unknown_key, input_problems([unknown_key(not_a_contract_key)])).
+test(a_known_key_is_not_an_input_problem, fail) :-
+    comply_of(access_plain, input_problems(_)).
+
+:- end_module(test_negative_controls).

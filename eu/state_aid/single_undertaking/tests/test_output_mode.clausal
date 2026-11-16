@@ -1,0 +1,170 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: every answer argument unbound and
+% read out; the whole answer list is compared, so a duplicate answer fails.
+% Boundary pairs for point (a): 51 of 100 and 50 of 99 hold, 50 of 100 does
+% not, 1 of 1 holds, 0 held fails without the total.
+% Run: python -m clausal.testing eu/state_aid/single_undertaking/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/state_aid/single_undertaking/single_undertaking, [
+    direct_relationship/3,
+    same_single_undertaking/3,
+    single_undertaking_members/4,
+    decide_single_undertaking/2,
+    single_undertaking_status/2
+]).
+:- use_module(eu/state_aid/single_undertaking/kernel, [single_undertaking_input_problems/2]).
+:- use_module(eu/state_aid/single_undertaking/fixtures, [single_undertaking_profile_for/2]).
+
+direct_answers(Subject, Answers) :-
+    single_undertaking_profile_for(Subject, Profile),
+    findall(Result-Citations, direct_relationship(Profile, Result, Citations), Answers).
+
+same_answers(Subject, Answers) :-
+    single_undertaking_profile_for(Subject, Profile),
+    findall(Result-Citations, same_single_undertaking(Profile, Result, Citations), Answers).
+
+members_answers(Subject, Answers) :-
+    single_undertaking_profile_for(Subject, Profile),
+    findall(answer(Result, Members, Citations), single_undertaking_members(Profile, Result, Members, Citations), Answers).
+
+problems_answers(Subject, Answers) :-
+    single_undertaking_profile_for(Subject, Profile),
+    findall(Problems, single_undertaking_input_problems(Profile, Problems), Answers).
+
+% ---- direct_relationship/3: point (a) boundary ------------------------
+test(fifty_one_of_one_hundred_is_directly_related) :-
+    direct_answers(majority_fifty_one_of_one_hundred, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a)]].
+test(fifty_of_ninety_nine_is_directly_related) :-
+    direct_answers(just_over_half_fifty_of_ninety_nine, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a)]].
+test(exactly_half_is_not_directly_related) :-
+    direct_answers(exactly_half_fifty_of_one_hundred, Answers),
+    Answers == [not_directly_related-[cite(eu_reg_2023_2831_art_2_2)]].
+test(one_of_one_is_directly_related) :-
+    direct_answers(one_of_one_voting_right, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a)]].
+test(no_voting_rights_with_every_point_ruled_out_is_not_related) :-
+    direct_answers(no_voting_rights_held, Answers),
+    Answers == [not_directly_related-[cite(eu_reg_2023_2831_art_2_2)]].
+
+% ---- direct_relationship/3: points (b) to (d) and the judgements -------
+test(the_board_right_is_directly_related_on_point_b) :-
+    direct_answers(board_right_held, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_b)]].
+test(the_board_right_denied_is_not_related) :-
+    direct_answers(board_right_denied, Answers),
+    Answers == [not_directly_related-[cite(eu_reg_2023_2831_art_2_2)]].
+test(a_holder_that_is_not_an_enterprise_is_not_related) :-
+    direct_answers(holder_not_an_enterprise, Answers),
+    Answers == [not_directly_related-[cite(eu_reg_2023_2831_art_2_2)]].
+test(affirmed_dominant_influence_is_related_on_point_c) :-
+    direct_answers(dominant_influence_affirmed, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_c)]].
+test(unsure_dominant_influence_goes_to_a_lawyer) :-
+    direct_answers(dominant_influence_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(dominant_influence_by_contract_or_articles, cite(eu_reg_2023_2831_art_2_2_c)), [inputs_relied_on([holder_is_an_enterprise-true, held_is_an_enterprise-true, dominant_influence_by_contract_or_articles-unsure])])-[]].
+test(sole_control_by_agreement_is_related_on_point_d) :-
+    direct_answers(sole_control_by_agreement, Answers),
+    Answers == [directly_related-[cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_d)]].
+test(a_shareholder_without_agreement_is_not_related) :-
+    direct_answers(shareholder_without_agreement, Answers),
+    Answers == [not_directly_related-[cite(eu_reg_2023_2831_art_2_2)]].
+test(an_unsure_holder_goes_to_a_lawyer) :-
+    direct_answers(holder_enterprise_status_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(holder_is_an_enterprise, cite(eu_reg_2023_2831_art_2_2)), [inputs_relied_on([holder_is_an_enterprise-unsure, held_is_an_enterprise-true])])-[]].
+test(a_missing_held_judgement_is_asked_for) :-
+    direct_answers(held_enterprise_judgement_missing, Answers),
+    Answers == [indeterminate([held_is_an_enterprise])-[]].
+
+% ---- same_single_undertaking/3 -----------------------------------------
+test(sisters_through_a_common_holder_are_one_single_undertaking) :-
+    same_answers(sisters_through_common_holder, [Result-Citations]),
+    Result == single_undertaking,
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a), cite(eu_reg_2023_2831_art_2_2_b), cite(eu_reg_2023_2831_art_2_t1)].
+test(sisters_through_an_unsure_link_go_to_a_lawyer) :-
+    same_answers(sisters_through_unsure_link, Answers),
+    Answers == [needs_legal_review(open_textured(relationships, cite(eu_reg_2023_2831_art_2_2)), [inputs_relied_on([relationships-[relationship(alpha, beta, point_a, true), relationship(alpha, gamma, point_b, unsure)]])])-[]].
+test(sisters_without_a_link_are_separate) :-
+    same_answers(sisters_without_link, Answers),
+    Answers == [not_single_undertaking-[cite(eu_reg_2023_2831_art_2_2)]].
+test(two_holders_of_one_enterprise_are_one_single_undertaking) :-
+    same_answers(two_holders_of_one_enterprise, [Result-Citations]),
+    Result == single_undertaking,
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a), cite(eu_reg_2023_2831_art_2_2_d), cite(eu_reg_2023_2831_art_2_t1)].
+test(a_direct_join_cites_no_closing_sentence) :-
+    same_answers(parent_and_subsidiary_direct, [Result-Citations]),
+    Result == single_undertaking,
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_d)].
+test(the_same_enterprise_twice_is_one_single_undertaking) :-
+    same_answers(same_enterprise_twice, Answers),
+    Answers == [single_undertaking-[cite(eu_reg_2023_2831_art_2_2)]].
+test(an_incomplete_list_asks_for_completeness) :-
+    same_answers(relationship_list_incomplete, Answers),
+    Answers == [indeterminate([relationships_complete])-[]].
+test(a_missing_list_is_asked_for) :-
+    same_answers(relationship_list_missing, Answers),
+    Answers == [indeterminate([relationships])-[]].
+
+% ---- single_undertaking_members/4 --------------------------------------
+test(the_members_through_a_chain) :-
+    members_answers(members_through_chain, [answer(Result, Members, Citations)]),
+    Result == members_settled,
+    Members == [alpha, beta, gamma],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_a), cite(eu_reg_2023_2831_art_2_2_d), cite(eu_reg_2023_2831_art_2_t1)].
+test(the_members_joined_directly_only) :-
+    members_answers(members_direct_only, [answer(Result, Members, Citations)]),
+    Result == members_settled,
+    Members == [alpha, beta],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2023_2831_art_2_2), cite(eu_reg_2023_2831_art_2_2_b)].
+test(a_member_through_an_unsure_link_goes_to_a_lawyer) :-
+    members_answers(members_through_unsure_link, Answers),
+    Answers == [answer(needs_legal_review(open_textured(relationships, cite(eu_reg_2023_2831_art_2_2)), [inputs_relied_on([relationships-[relationship(beta, gamma, point_d, true), relationship(gamma, zeta, point_c, unsure)]])]), [], [])].
+test(members_without_completeness_are_asked_for_it) :-
+    members_answers(members_list_incomplete, Answers),
+    Answers == [answer(indeterminate([relationships_complete]), [], [])].
+
+% ---- the input check ---------------------------------------------------
+test(an_unknown_key_is_reported) :-
+    problems_answers(unknown_key_given, Answers),
+    Answers == [[unknown_key(colour)]].
+test(a_duplicate_key_is_reported) :-
+    problems_answers(duplicate_key_given, Answers),
+    Answers == [[duplicate_key(first_enterprise)]].
+test(a_total_of_zero_is_reported) :-
+    problems_answers(zero_total_voting_rights, Answers),
+    Answers == [[wrong_type(voting_rights_total)]].
+test(held_above_total_is_reported) :-
+    problems_answers(held_above_total_voting_rights, Answers),
+    Answers == [[wrong_type(voting_rights_held)]].
+test(held_equal_to_total_is_well_formed) :-
+    problems_answers(held_equal_to_total_voting_rights, Answers),
+    Answers == [[]].
+test(an_unbound_profile_is_reported) :-
+    problems_answers(unbound_profile, Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_number_as_key_is_unknown) :-
+    problems_answers(number_as_key, Answers),
+    Answers == [[unknown_key(7)]].
+test(a_problem_profile_answers_input_problems_in_every_query) :-
+    single_undertaking_profile_for(duplicate_key_given, Profile),
+    findall(Result, same_single_undertaking(Profile, Result, []), Answers),
+    Answers == [input_problems([duplicate_key(first_enterprise)])].
+
+% ---- facade -----------------------------------------------------------
+test(the_status_is_read_out_once) :-
+    single_undertaking_profile_for(sisters_without_link, Profile),
+    findall(Status, single_undertaking_status(Profile, Status), Statuses),
+    Statuses == [not_single_undertaking].
+test(the_verdict_carries_a_citation) :-
+    single_undertaking_profile_for(sisters_through_common_holder, Profile),
+    decide_single_undertaking(Profile, single_undertaking_verdict(single_undertaking, [_FirstCitation|_OtherCitations])).
+
+:- end_module(test_output_mode).

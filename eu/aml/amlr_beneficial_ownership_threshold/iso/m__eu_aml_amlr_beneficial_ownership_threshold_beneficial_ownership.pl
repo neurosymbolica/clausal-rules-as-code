@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_aml_amlr_beneficial_ownership_threshold_beneficial_ownership, [bo_threshold/1, amlr_bo_requirement_ids/1, amlr_bo_threshold/1, amlr_bo_effective_holding/2, amlr_bo_status/2, amlr_bo_minimum_holding_bps/1, amlr_bo_effective_holding_bps/2, requirement/4, amlr_bo_checklist/2, amlr_bo_decision/2, assess_amlr_bo/3, amlr_bo_input_problem/2, amlr_bo_input_complete/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

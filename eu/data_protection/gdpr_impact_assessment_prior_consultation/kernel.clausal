@@ -1,0 +1,463 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_impact_assessment_prior_consultation (deontic family).
+% Source: Regulation (EU) 2016/679 (GDPR) Art 36(1) [unit 02016R0679-20160504#parag_036.001]
+% (the duty of prior consultation) and Art 36(5) [unit 02016R0679-20160504#parag_036.005]
+% (Member State law may require consultation and prior authorisation); the typed input
+% contract of split order SPLIT 2026-11-03 (identical to the original order
+% eu/data-protection/gdpr-impact-assessment, input check G1 ruled 2026-11-01).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% The scaffold writes the order's input check gdpr_impact_assessment_prior_consultation_input_problems/2 here, exported, for every slice to import.
+% deontic family: STATUS is a modal vocabulary (an obligation to consult binds the controller or it does not).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them alike.
+%
+% Result term built by the one determination slice (prior_consultation_duty.clausal):
+%   prior_consultation_verdict(Status, Bases, Context, Citations)
+%     Status    -- exactly one of:
+%                  required                               (bare atom, final)
+%                  not_required                           (bare atom, final)
+%                  indeterminate(MissingKeys)             (never the bare atom indeterminate;
+%                                                          MissingKeys every absent crisp or
+%                                                          judgement key among the open leaves,
+%                                                          root_exports order)
+%                  needs_legal_review(Reason, ReviewContext)
+%                  input_problems(Problems)
+%     Bases     -- for a final Status a list of one atom:
+%                  [art36_1_residual_high_risk] | [art36_5_member_state_prior_authorisation]
+%                  | [art36_1_condition_not_met]; [] otherwise.
+%     Context   -- for a final Status:
+%                  [outside_fact(member_state_requires_prior_authorisation, Attested)] when
+%                  that fact is present, then inputs_relied_on(Pairs); [] otherwise.
+%     Citations -- for a final Status [cite(eu_reg_2016_679_art_36_1)] (art36_1_* bases) or
+%                  [cite(eu_reg_2016_679_art_36_5)] (art36_5_* basis); [] otherwise.
+%   Reason of needs_legal_review/2:
+%     open_textured(Input, cite(eu_reg_2016_679_art_36_1))           ReviewContext [inputs_relied_on(Pairs)]
+%     cross_reference_unresolved(cite(eu_reg_2016_679_art_36_5), cite(Target))
+%                                ReviewContext [resolution(cite(Target), not_attempted), inputs_relied_on(Pairs)]
+%     not_governed_here([cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_36_1)])
+%                                ReviewContext [inputs_relied_on(Pairs)]
+%   Problems: duplicate_key(Key) | wrong_type(Key) | unknown_key(Key); [wrong_type(profile)]
+%   for a term that is not an attribute list.
+%
+% Shared predicates (each called by the slice AND by queries.clausal):
+%   gdpr_impact_assessment_prior_consultation_input_problems/2 -- the INPUT CHECK.
+%   gdpr_impact_assessment_prior_consultation_outside_fact_reading/3 -- an outside fact
+%     as given (attested(...)) or the atom absent; the slice reads
+%     member_state_requires_prior_authorisation with it, queries.clausal builds
+%     impact_assessment_outside_facts/2 with it.
+% Contract plumbing only: nothing here decides a statutory condition, so no
+% implements/1 marker is carried (the kernel is below citations in the DAG).
+% =====================================================================
+
+:- module(kernel, [
+    gdpr_impact_assessment_prior_consultation_input_problems/2,
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading/3
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+% ---- outside facts: as given, or absent ---------------------------
+% gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, Key, Attested):
+% Attested is the attested(...) term the profile gives Key, or the atom absent.
+% Read by presence first and then by value (profile_has/2, profile_lacks/2).
+% Called only on a profile whose input problems are [] (so Key occurs at most once).
+gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, Key, Attested) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Attested).
+gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_impact_assessment_prior_consultation_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
+%   Key in every item gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_impact_assessment_prior_consultation_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [assessment_indicates_high_risk_absent_mitigation, automated_evaluation_including_profiling, criminal_offence_data_processed, datasets_matched_or_combined, decisions_based_on_evaluation, decisions_produce_legal_effects, decisions_similarly_significantly_affect, description_of_processing_and_purposes_present, envisaged_measures_described, highly_personal_data_processed, impact_assessment_carried_out, lawful_basis_is_legal_obligation_or_public_task, legal_basis_with_general_impact_assessment, legitimate_interest_described, legitimate_interest_pursued, likely_high_risk_to_rights_and_freedoms, measures_reduce_residual_risk_below_high, member_state_requires_assessment_despite_general_one, member_state_requires_prior_authorisation, mitigating_measures_taken, monitoring_is_systematic, national_list_exempts_assessment, national_list_exempts_item, national_list_requires_assessment, national_list_requires_item, necessity_and_proportionality_assessed, processing_for_public_interest_task, processing_on_large_scale, processing_prevents_exercise_of_right_or_service, publicly_accessible_area_monitored, risks_to_data_subjects_assessed, route_approvals, special_category_data_processed, systematic_and_extensive_evaluation, uses_new_technologies, vulnerable_data_subjects],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(assessment_indicates_high_risk_absent_mitigation, judgement).
+key_type(automated_evaluation_including_profiling, boolean).
+key_type(criminal_offence_data_processed, boolean).
+key_type(datasets_matched_or_combined, judgement).
+key_type(decisions_based_on_evaluation, boolean).
+key_type(decisions_produce_legal_effects, boolean).
+key_type(decisions_similarly_significantly_affect, judgement).
+key_type(description_of_processing_and_purposes_present, boolean).
+key_type(envisaged_measures_described, boolean).
+key_type(highly_personal_data_processed, judgement).
+key_type(impact_assessment_carried_out, boolean).
+key_type(lawful_basis_is_legal_obligation_or_public_task, boolean).
+key_type(legal_basis_with_general_impact_assessment, outside_fact).
+key_type(legitimate_interest_described, boolean).
+key_type(legitimate_interest_pursued, boolean).
+key_type(likely_high_risk_to_rights_and_freedoms, judgement).
+key_type(measures_reduce_residual_risk_below_high, judgement).
+key_type(member_state_requires_assessment_despite_general_one, outside_fact).
+key_type(member_state_requires_prior_authorisation, outside_fact).
+key_type(mitigating_measures_taken, boolean).
+key_type(monitoring_is_systematic, judgement).
+key_type(national_list_exempts_assessment, outside_fact).
+key_type(national_list_exempts_item, national_list_exempts_item_value).
+key_type(national_list_requires_assessment, outside_fact).
+key_type(national_list_requires_item, national_list_requires_item_value).
+key_type(necessity_and_proportionality_assessed, boolean).
+key_type(processing_for_public_interest_task, boolean).
+key_type(processing_on_large_scale, judgement).
+key_type(processing_prevents_exercise_of_right_or_service, judgement).
+key_type(publicly_accessible_area_monitored, boolean).
+key_type(risks_to_data_subjects_assessed, boolean).
+key_type(route_approvals, route_approvals_value).
+key_type(special_category_data_processed, boolean).
+key_type(systematic_and_extensive_evaluation, judgement).
+key_type(uses_new_technologies, boolean).
+key_type(vulnerable_data_subjects, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, each Key ground; false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, T) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+no_variables_t([], true).
+no_variables_t([_|_], false).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    memberd_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+% national_list_exempts_item: attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(_, _, _, _))
+% and nothing else (INTERFACE - THE OUTSIDE FACTS, NATIONAL LIST ITEM FACTS).
+in_type_t(national_list_exempts_item_value, Value, T) :-
+    in_type_t(attested(exempts_item), Value, T).
+
+% national_list_requires_item: attested(national_list_item(AUTHORITY, ITEM_ID), attestation(_, _, _, _))
+% with ITEM_ID one of the 28 Art 35(4) ids and AUTHORITY the authority its prefix names.
+in_type_t(national_list_requires_item_value, Value, T) :-
+    in_type_t(attested(requires_item), Value, T).
+
+% route_approvals: approvals(viewer(Account), [approval(RouteId, RouteSha256, Status, At, Reason), ...]).
+in_type_t(route_approvals_value, Value, T) :-
+    route_approvals_t(Value, T).
+
+% The item value itself: one listed national_list_item(Authority, ItemId) pair. A wrong
+% shape, an ItemId outside its side, or an Authority that does not match the prefix of
+% its ItemId is no member of the list.
+in_type_t(requires_item, Value, T) :-
+    findall(national_list_item(Authority, ItemId),
+            national_list_requires_item_identifier(Authority, ItemId),
+            Items),
+    memberd_t(Value, Items, T).
+
+in_type_t(exempts_item, Value, T) :-
+    findall(national_list_item(Authority, ItemId),
+            national_list_exempts_item_identifier(Authority, ItemId),
+            Items),
+    memberd_t(Value, Items, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+% ---- the closed item-id sets of the national-list item facts -----
+% Contract vocabulary (the parts of the pinned authority lists), not statutory figures.
+% Art 35(4) side: 17 German Datenschutzkonferenz rows (non-public sector), 10 Irish
+% Data Protection Commission items, and the whole French CNIL Art 35(4) list.
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_1). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_2). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_3). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_4). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_5). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_6). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_7). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_8). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_9). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_10). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_11). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_12). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_13). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_14). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_15). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_16). % lint: order-given atom
+national_list_requires_item_identifier(de_dsk, de_dsk_35_4_nr_17). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_1). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_2). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_3). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_4). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_5). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_6). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_7). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_8). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_9). % lint: order-given atom
+national_list_requires_item_identifier(ie_dpc, ie_dpc_35_4_nr_10). % lint: order-given atom
+national_list_requires_item_identifier(fr_cnil, fr_cnil_35_4_list). % lint: order-given atom
+
+% Art 35(5) side: the whole French CNIL Art 35(5) list, and nothing else.
+national_list_exempts_item_identifier(fr_cnil, fr_cnil_35_5_list). % lint: order-given atom
+
+% ---- route approvals (host-supplied; checked, never read) -------
+% route_approvals_t(Value, T): Value is a ground term (value_in_type_t/3 checked it).
+route_approvals_t(approvals(Viewer, Approvals), T) :-
+    viewer_t(Viewer, ViewerIsWellFormed),
+    approval_list_t(Approvals, ApprovalsAreWellFormed),
+    truth_and(ViewerIsWellFormed, ApprovalsAreWellFormed, T).
+route_approvals_t(Value, false) :-
+    Value \= approvals(_, _).
+
+viewer_t(viewer(_), true).
+viewer_t(Value, false) :-
+    Value \= viewer(_).
+
+approval_list_t([], true).
+approval_list_t([Approval|Approvals], T) :-
+    approval_t(Approval, ApprovalIsWellFormed),
+    approval_list_t(Approvals, RestAreWellFormed),
+    truth_and(ApprovalIsWellFormed, RestAreWellFormed, T).
+approval_list_t(Value, false) :-
+    Value \== [],
+    Value \= [_|_].
+
+% approval(RouteId, RouteSha256, Status, At, Reason): RouteId any atom (not tested against
+% the three route ids), RouteSha256 an atom of 64 lowercase hexadecimal digits, Status
+% approved or rejected; At and Reason are host data and are not inspected.
+approval_t(approval(RouteId, RouteDigest, Status, _, _), T) :-
+    atom_t(RouteId, RouteIdIsAtom),
+    digest_t(RouteDigest, DigestIsWellFormed),
+    memberd_t(Status, [approved, rejected], StatusIsKnown),
+    truth_and(RouteIdIsAtom, DigestIsWellFormed, RouteAndDigest),
+    truth_and(RouteAndDigest, StatusIsKnown, T).
+approval_t(Value, false) :-
+    Value \= approval(_, _, _, _, _).
+
+% atom_t(Term, T): for a ground Term.
+atom_t(Term, true) :-
+    atom(Term).
+atom_t(Term, false) :-
+    compound(Term).
+atom_t(Term, false) :-
+    number(Term).
+
+% digest_t(Term, T): T is true when Term is an atom of 64 lowercase hexadecimal digits.
+digest_t(Term, T) :-
+    atom_t(Term, IsAtom),
+    atom_digest_t(IsAtom, Term, T).
+
+atom_digest_t(false, _, false).
+atom_digest_t(true, Term, T) :-
+    atom_chars(Term, Characters),
+    length(Characters, Length),
+    memberd_t(Length, [64], LengthIsRight),
+    hexadecimal_characters_t(Characters, CharactersAreHexadecimal),
+    truth_and(LengthIsRight, CharactersAreHexadecimal, T).
+
+hexadecimal_characters_t([], true).
+hexadecimal_characters_t([Character|Characters], T) :-
+    memberd_t(Character, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', a, b, c, d, e, f], CharacterIsHexadecimal),
+    hexadecimal_characters_t(Characters, RestAreHexadecimal),
+    truth_and(CharacterIsHexadecimal, RestAreHexadecimal, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+% ---- tests ----------------------------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([], []).
+test(the_input_check_answers_exactly_once) :-
+    findall(Problems,
+            gdpr_impact_assessment_prior_consultation_input_problems([attribute(impact_assessment_carried_out, true)], Problems),
+            Answers),
+    Answers == [[]].
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    gdpr_impact_assessment_prior_consultation_input_problems(profile, [wrong_type(profile)]).
+test(an_unsure_crisp_key_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(impact_assessment_carried_out, unsure)], [wrong_type(impact_assessment_carried_out)]).
+test(an_unsure_judgement_is_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(measures_reduce_residual_risk_below_high, unsure)], []).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(mitigating_measures_taken, maybe), attribute(mitigating_measures_taken, true)], [duplicate_key(mitigating_measures_taken)]).
+test(unknown_keys_follow_contract_problems_once_each) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(foreign_key, 1), attribute(impact_assessment_carried_out, unsure), attribute(foreign_key, 2)], [wrong_type(impact_assessment_carried_out), unknown_key(foreign_key)]).
+test(an_attested_outside_fact_is_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(member_state_requires_prior_authorisation, attested(true, attestation(by, at, reason, none)))], []).
+test(an_outside_fact_with_a_non_boolean_value_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(member_state_requires_prior_authorisation, attested(maybe, attestation(by, at, reason, none)))], [wrong_type(member_state_requires_prior_authorisation)]).
+test(a_listed_requires_item_is_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_requires_item, attested(national_list_item(ie_dpc, ie_dpc_35_4_nr_10), attestation(by, at, reason, none)))], []).
+test(the_whole_french_list_is_a_requires_item) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_requires_item, attested(national_list_item(fr_cnil, fr_cnil_35_4_list), attestation(by, at, reason, none)))], []).
+test(a_mismatched_authority_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_requires_item, attested(national_list_item(de_dsk, ie_dpc_35_4_nr_1), attestation(by, at, reason, none)))], [wrong_type(national_list_requires_item)]).
+test(an_item_beyond_the_closed_set_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_18), attestation(by, at, reason, none)))], [wrong_type(national_list_requires_item)]).
+test(the_exempts_list_is_not_a_requires_item) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_requires_item, attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(by, at, reason, none)))], [wrong_type(national_list_requires_item)]).
+test(the_exempts_list_is_the_exempts_item) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_exempts_item, attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(by, at, reason, none)))], []).
+test(a_requires_list_is_not_an_exempts_item) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(national_list_exempts_item, attested(national_list_item(fr_cnil, fr_cnil_35_4_list), attestation(by, at, reason, none)))], [wrong_type(national_list_exempts_item)]).
+test(empty_route_approvals_are_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(route_approvals, approvals(viewer(account), []))], []).
+test(a_well_formed_approval_is_no_problem) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(some_other_route, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', approved, at, reason)]))], []).
+test(an_uppercase_digest_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route_profiling_with_legal_effects, '710C9AFD08677BC4582523143A02CE5DAD02D58E7D3255BE19B48ACEB3B35A55', approved, at, reason)]))], [wrong_type(route_approvals)]).
+test(an_unknown_approval_status_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route_profiling_with_legal_effects, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', pending, at, reason)]))], [wrong_type(route_approvals)]).
+test(a_route_id_that_is_not_an_atom_is_wrong_type) :-
+    gdpr_impact_assessment_prior_consultation_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route(1), '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', rejected, at, reason)]))], [wrong_type(route_approvals)]).
+test(an_absent_outside_fact_reads_absent) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading([], member_state_requires_prior_authorisation, absent).
+test(a_present_outside_fact_reads_as_given) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading([attribute(member_state_requires_prior_authorisation, attested(false, attestation(by, at, reason, none)))], member_state_requires_prior_authorisation, attested(false, attestation(by, at, reason, none))).
+test(a_present_outside_fact_does_not_read_absent, fail) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading([attribute(member_state_requires_prior_authorisation, attested(false, attestation(by, at, reason, none)))], member_state_requires_prior_authorisation, absent).
+
+:- end_module(kernel).

@@ -1,0 +1,240 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/eprivacy_art_5_3_terminal_equipment (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% eprivacy_art_5_3_terminal_equipment_input_problems/2 here, exported, for every
+% slice to import.
+% deontic family: STATUS is a modal vocabulary (permitted / not_permitted /
+% not_applicable).
+%
+% Source: Directive 2002/58/EC (ePrivacy Directive) Article 5(3), first and
+% second sentences, consolidated text 02002L0058-20091219 (as amended by
+% Directive 2009/136/EC), units 02002L0058-20091219#art5_p3_s1 and
+% 02002L0058-20091219#art5_p3_s2; with Article 2, second paragraph, point (f)
+% ('consent', #art2_f) and point (a) ('user', #art2_a, context only).
+% A Directive binds the Member States: every answer is under the Directive's
+% text only; no national transposing law is read (reading (1)).
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% Result terms built by the slice eprivacy_art_5_3_terminal_equipment:
+%   eprivacy_art_5_3_terminal_equipment_verdict(Status, Citations)
+%     Status    -- the RESULT of the called contract
+%                  terminal_equipment_storage_or_access_permitted/3, exactly one of:
+%                    permitted                 (final; a way of Art 5(3) is met)
+%                    not_permitted             (final; all three ways failed)
+%                    not_applicable            (final; scope judgement false)
+%                    indeterminate([Key])      (one missing key)
+%                    needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                                       [inputs_relied_on(Pairs)])
+%                    input_problems(Problems)  (the input check below)
+%     Citations -- [cite(eu_dir_2002_58_art_5_3)] for every final Status,
+%                  [] for every other.
+%   Pairs: Key-Value of every contract key present in the profile, in the
+%   contract (root_exports) order, the unsure ones included.
+%   Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key), or
+%   [wrong_type(profile)] alone.
+%   The bare atom indeterminate is NEVER written.
+%
+% Shared predicates:
+%   eprivacy_art_5_3_terminal_equipment_contract_keys(Keys) -- the six judgement
+%     keys in root_exports / input_contract order (read by the slice for the
+%     tie-break order and the PAIRS, and by queries for the checklist).
+% =====================================================================
+
+:- module(kernel, [
+    eprivacy_art_5_3_terminal_equipment_input_problems/2,
+    eprivacy_art_5_3_terminal_equipment_contract_keys/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- the contract keys, in root_exports order -----------------------
+% The six judgement keys of the input contract, in the order of root_exports
+% and of input_contract's profile attribute_list.
+eprivacy_art_5_3_terminal_equipment_contract_keys([
+    storage_or_access_in_terminal_equipment,
+    storage_or_access_solely_for_transmission,
+    service_explicitly_requested_by_user,
+    strictly_necessary_to_provide_requested_service,
+    user_consent_given,
+    clear_and_comprehensive_information_provided
+]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% eprivacy_art_5_3_terminal_equipment_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
+%   Key in every item gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+eprivacy_art_5_3_terminal_equipment_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [storage_or_access_in_terminal_equipment, storage_or_access_solely_for_transmission, service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service, user_consent_given, clear_and_comprehensive_information_provided],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(storage_or_access_in_terminal_equipment, judgement).
+key_type(storage_or_access_solely_for_transmission, judgement).
+key_type(service_explicitly_requested_by_user, judgement).
+key_type(strictly_necessary_to_provide_requested_service, judgement).
+key_type(user_consent_given, judgement).
+key_type(clear_and_comprehensive_information_provided, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, each Key ground; false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, T) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+no_variables_t([], true).
+no_variables_t([_|_], false).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    memberd_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+test(contract_keys_are_the_six_in_order) :-
+    eprivacy_art_5_3_terminal_equipment_contract_keys(Keys),
+    Keys == [storage_or_access_in_terminal_equipment, storage_or_access_solely_for_transmission, service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service, user_consent_given, clear_and_comprehensive_information_provided].
+test(empty_profile_has_no_problem) :-
+    eprivacy_art_5_3_terminal_equipment_input_problems([], Problems),
+    Problems == [].
+test(attested_value_is_wrong_type) :-
+    eprivacy_art_5_3_terminal_equipment_input_problems([attribute(storage_or_access_in_terminal_equipment, attested(true))], Problems),
+    Problems == [wrong_type(storage_or_access_in_terminal_equipment)].
+test(duplicate_then_unknown) :-
+    eprivacy_art_5_3_terminal_equipment_input_problems([attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_in_terminal_equipment, oops), attribute(zzz, 1)], Problems),
+    Problems == [duplicate_key(storage_or_access_in_terminal_equipment), unknown_key(zzz)].
+test(not_an_attribute_list) :-
+    eprivacy_art_5_3_terminal_equipment_input_problems([foo], Problems),
+    Problems == [wrong_type(profile)].
+
+:- end_module(kernel).

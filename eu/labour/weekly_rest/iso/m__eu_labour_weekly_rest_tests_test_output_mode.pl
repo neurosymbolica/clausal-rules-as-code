@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_labour_weekly_rest_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_labour_weekly_rest_weekly_rest, [decide_weekly_rest/2, weekly_rest_status/2, weekly_rest_status/7, shortest_weekly_rest_minutes/6, first_period_without_weekly_rest/6]).
+:- use_module(m__eu_labour_weekly_rest_fixtures, [weekly_rest_profile_for/2]).
+
+full_profile([attribute(weekly_rest_minimum, rest_of_24_plus_11_hours), attribute(weekly_rest_reference_period, seven_day_period), attribute(worker_category, other_worker), attribute(derogation_from_article_5, no_derogation)]).
+
+fourteen_day_full_profile([attribute(weekly_rest_minimum, rest_of_24_plus_11_hours), attribute(weekly_rest_reference_period, fourteen_day_reference_period), attribute(worker_category, other_worker), attribute(derogation_from_article_5, no_derogation)]).
+
+article_5_citations([cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_5_second_subpara), cite(eu_dir_2003_88_art_16_a)]).
+
+status_answers(Subject, Answers) :-
+    weekly_rest_profile_for(Subject, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Result - Citations, weekly_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Result, Citations), Answers).
+
+minutes_answers(Subject, Answers) :-
+    weekly_rest_profile_for(Subject, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(Minutes, shortest_weekly_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Minutes), Answers).
+
+day_answers(Subject, Answers) :-
+    weekly_rest_profile_for(Subject, weekly_rest_case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    findall(BlockDay, first_period_without_weekly_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, BlockDay), Answers).
+
+standby_review(needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_standby_counts_as_working_time - unsure])])).
+
+test(exactly_2100_minutes_is_given) :-
+    article_5_citations(Citations),
+    status_answers(rest_of_2100_minutes_given, Answers),
+    Answers == [weekly_rest_given - Citations].
+test(exactly_2100_minutes_measures_2100_and_no_day) :-
+    minutes_answers(rest_of_2100_minutes_given, MinuteAnswers),
+    MinuteAnswers == [2100],
+    day_answers(rest_of_2100_minutes_given, DayAnswers),
+    DayAnswers == [no_period_without_weekly_rest].
+test(rest_of_2099_minutes_is_not_given) :-
+    article_5_citations(Citations),
+    status_answers(rest_of_2099_minutes_not_given, Answers),
+    Answers == [weekly_rest_not_given - Citations].
+test(rest_of_2099_minutes_measures_2099_from_the_first_day) :-
+    minutes_answers(rest_of_2099_minutes_not_given, MinuteAnswers),
+    MinuteAnswers == [2099],
+    day_answers(rest_of_2099_minutes_not_given, DayAnswers),
+    DayAnswers == [date(2026, 3, 2)].
+test(reduced_minimum_1440_is_given) :-
+    status_answers(reduced_rest_of_1440_minutes_given, [weekly_rest_given - _]),
+    minutes_answers(reduced_rest_of_1440_minutes_given, MinuteAnswers),
+    MinuteAnswers == [1440].
+test(reduced_minimum_1439_is_not_given) :-
+    article_5_citations(Citations),
+    status_answers(reduced_rest_of_1439_minutes_not_given, Answers),
+    Answers == [weekly_rest_not_given - Citations],
+    minutes_answers(reduced_rest_of_1439_minutes_not_given, MinuteAnswers),
+    MinuteAnswers == [1439].
+test(one_run_of_4200_holds_two_rests) :-
+    status_answers(fourteen_day_run_of_4200_minutes_given, [weekly_rest_given - _]),
+    minutes_answers(fourteen_day_run_of_4200_minutes_given, MinuteAnswers),
+    MinuteAnswers == [2100].
+test(one_run_of_4199_holds_two_of_2099_only) :-
+    status_answers(fourteen_day_run_of_4199_minutes_not_given, [weekly_rest_not_given - _]),
+    minutes_answers(fourteen_day_run_of_4199_minutes_not_given, MinuteAnswers),
+    MinuteAnswers == [2099],
+    day_answers(fourteen_day_run_of_4199_minutes_not_given, DayAnswers),
+    DayAnswers == [date(2026, 3, 2)].
+test(an_odd_run_of_4201_holds_two_of_2100) :-
+    fourteen_day_full_profile(Profile),
+    findall(Minutes, shortest_weekly_rest_minutes(Profile, worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 13, 1, 59), work)], date(2026, 3, 2), date(2026, 3, 15), Minutes), Answers),
+    Answers == [2100].
+test(a_fourteen_day_block_past_the_period_reads_the_days_after_as_rest) :-
+    fourteen_day_full_profile(Profile),
+    article_5_citations(Citations),
+    findall(Result - Cited, weekly_rest_status(Profile, worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 9, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 8), Result, Cited), Answers),
+    Answers == [weekly_rest_given - Citations].
+test(a_short_second_block_gives_its_first_day) :-
+    full_profile(Profile),
+    findall(BlockDay, first_period_without_weekly_rest(Profile, worker_one, [shift(worker_one, date_time(2026, 3, 9, 0, 0), date_time(2026, 3, 16, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 15), BlockDay), DayAnswers),
+    DayAnswers == [date(2026, 3, 9)],
+    findall(Minutes, shortest_weekly_rest_minutes(Profile, worker_one, [shift(worker_one, date_time(2026, 3, 9, 0, 0), date_time(2026, 3, 16, 0, 0), work)], date(2026, 3, 2), date(2026, 3, 15), Minutes), MinuteAnswers),
+    MinuteAnswers == [0].
+test(a_mobile_worker_short_of_rest_is_not_applied) :-
+    status_answers(mobile_worker_short_rest_not_applied, Answers),
+    Answers == [weekly_rest_not_applied_to_worker - [cite(eu_dir_2003_88_art_2_7), cite(eu_dir_2003_88_art_20_1)]].
+test(a_fishing_vessel_worker_short_of_rest_is_not_applied) :-
+    status_answers(fishing_vessel_worker_short_rest_not_applied, Answers),
+    Answers == [weekly_rest_not_applied_to_worker - [cite(eu_dir_2003_88_art_21_1)]].
+test(the_derogations_cite_their_provisions) :-
+    status_answers(derogation_under_article_17_1_short_rest, FirstAnswers),
+    FirstAnswers == [weekly_rest_derogation_applies - [cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_17_1)]],
+    status_answers(derogation_under_article_17_3_short_rest, ThirdAnswers),
+    ThirdAnswers == [weekly_rest_derogation_applies - [cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_17_3)]],
+    status_answers(derogation_under_article_17_4_short_rest, FourthAnswers),
+    FourthAnswers == [weekly_rest_derogation_applies - [cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_17_4)]],
+    status_answers(derogation_under_article_18_short_rest, EighteenAnswers),
+    EighteenAnswers == [weekly_rest_derogation_applies - [cite(eu_dir_2003_88_art_5_first_subpara), cite(eu_dir_2003_88_art_18_first_subpara), cite(eu_dir_2003_88_art_18_second_subpara)]].
+test(a_missing_worker_category_is_named) :-
+    status_answers(short_rest_without_worker_category, Answers),
+    Answers == [indeterminate([worker_category]) - []].
+test(a_missing_derogation_is_named) :-
+    status_answers(short_rest_without_derogation, Answers),
+    Answers == [indeterminate([derogation_from_article_5]) - []].
+test(an_unsure_standby_goes_to_a_lawyer_in_all_three_queries) :-
+    standby_review(Review),
+    status_answers(unsure_standby_needs_legal_review, StatusAnswers),
+    StatusAnswers == [Review - []],
+    minutes_answers(unsure_standby_needs_legal_review, MinuteAnswers),
+    MinuteAnswers == [Review],
+    day_answers(unsure_standby_needs_legal_review, DayAnswers),
+    DayAnswers == [Review].
+test(an_absent_standby_is_asked_for_in_all_three_queries) :-
+    status_answers(absent_standby_indeterminate, StatusAnswers),
+    StatusAnswers == [indeterminate([on_call_standby_counts_as_working_time]) - []],
+    minutes_answers(absent_standby_indeterminate, MinuteAnswers),
+    MinuteAnswers == [indeterminate([on_call_standby_counts_as_working_time])],
+    day_answers(absent_standby_indeterminate, DayAnswers),
+    DayAnswers == [indeterminate([on_call_standby_counts_as_working_time])].
+test(both_judgement_keys_present_are_both_pairs) :-
+    findall(Result, weekly_rest_status([attribute(on_call_on_site_counts_as_working_time, false), attribute(on_call_standby_counts_as_working_time, unsure), attribute(weekly_rest_minimum, rest_of_24_plus_11_hours), attribute(weekly_rest_reference_period, seven_day_period), attribute(worker_category, other_worker), attribute(derogation_from_article_5, no_derogation)], worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 7, 13, 0), work), shift(worker_one, date_time(2026, 3, 7, 13, 0), date_time(2026, 3, 9, 0, 0), on_call_standby)], date(2026, 3, 2), date(2026, 3, 8), Result, _), Results),
+    Results == [needs_legal_review(open_textured(on_call_standby_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time - false, on_call_standby_counts_as_working_time - unsure])])].
+test(an_unknown_key_refuses_every_query) :-
+    status_answers(unknown_key_input_problems, StatusAnswers),
+    StatusAnswers == [input_problems([unknown_key(audit_note)]) - []],
+    minutes_answers(unknown_key_input_problems, MinuteAnswers),
+    MinuteAnswers == [input_problems([unknown_key(audit_note)])],
+    day_answers(unknown_key_input_problems, DayAnswers),
+    DayAnswers == [input_problems([unknown_key(audit_note)])].
+test(full_rest_is_given_whatever_the_absent_keys) :-
+    article_5_citations(Citations),
+    findall(Result - Cited, weekly_rest_status([], worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 7, 13, 0), work)], date(2026, 3, 2), date(2026, 3, 8), Result, Cited), Answers),
+    Answers == [weekly_rest_given - Citations].
+test(the_figure_turns_on_the_reference_period_never_the_minimum) :-
+    findall(Minutes, shortest_weekly_rest_minutes([], worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 7, 13, 0), work)], date(2026, 3, 2), date(2026, 3, 8), Minutes), Answers),
+    Answers == [indeterminate([weekly_rest_reference_period])].
+test(two_keys_that_each_settle_the_other_name_the_first) :-
+    findall(Result, weekly_rest_status([], worker_one, [shift(worker_one, date_time(2026, 3, 2, 0, 0), date_time(2026, 3, 7, 13, 1), work)], date(2026, 3, 2), date(2026, 3, 8), Result, _), Results),
+    Results == [indeterminate([weekly_rest_minimum])].
+test(the_baseline_profile_yields_exactly_one_status) :-
+    weekly_rest_profile_for(rest_of_2100_minutes_given, WeeklyRestCase),
+    findall(Status, weekly_rest_status(WeeklyRestCase, Status), Statuses),
+    Statuses == [weekly_rest_given].
+test(the_verdict_carries_a_citation) :-
+    weekly_rest_profile_for(rest_of_2099_minutes_not_given, WeeklyRestCase),
+    decide_weekly_rest(WeeklyRestCase, weekly_rest_verdict(weekly_rest_not_given, [_FirstCitation|_OtherCitations])).
+
+cp_test_names([exactly_2100_minutes_is_given, exactly_2100_minutes_measures_2100_and_no_day, rest_of_2099_minutes_is_not_given, rest_of_2099_minutes_measures_2099_from_the_first_day, reduced_minimum_1440_is_given, reduced_minimum_1439_is_not_given, one_run_of_4200_holds_two_rests, one_run_of_4199_holds_two_of_2099_only, an_odd_run_of_4201_holds_two_of_2100, a_fourteen_day_block_past_the_period_reads_the_days_after_as_rest, a_short_second_block_gives_its_first_day, a_mobile_worker_short_of_rest_is_not_applied, a_fishing_vessel_worker_short_of_rest_is_not_applied, the_derogations_cite_their_provisions, a_missing_worker_category_is_named, a_missing_derogation_is_named, an_unsure_standby_goes_to_a_lawyer_in_all_three_queries, an_absent_standby_is_asked_for_in_all_three_queries, both_judgement_keys_present_are_both_pairs, an_unknown_key_refuses_every_query, full_rest_is_given_whatever_the_absent_keys, the_figure_turns_on_the_reference_period_never_the_minimum, two_keys_that_each_settle_the_other_name_the_first, the_baseline_profile_yields_exactly_one_status, the_verdict_carries_a_citation]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

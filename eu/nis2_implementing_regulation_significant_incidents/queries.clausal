@@ -1,0 +1,184 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_implementing_regulation_significant_incidents.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Commission Implementing Regulation (EU) 2024/2690 (CELEX 32024R2690,
+% original act), Art 3 with Arts 4 to 14.
+%
+% Query types served by the package:
+%   #2 eligibility -- significant_incident_criteria/3 and
+%      decide_nis2_implementing_regulation_significant_incidents/2 (verdict
+%      significant | not_significant | status compound) with the cited
+%      checklist nis2_implementing_regulation_significant_incidents_checklist/2,
+%      all owned by the determination slice. Open-textured judgements are
+%      handed to the caller as the tri-state value unsure and, when decisive,
+%      to a lawyer as needs_legal_review/2; no crisp test is invented.
+%   #16 what-if -- nis2_implementing_regulation_significant_incidents_what_if/4:
+%      set one key of the attribute list and re-evaluate.
+%
+% nis2_implementing_regulation_significant_incidents_profile_keys/1: the profile key schema
+% nis2_implementing_regulation_significant_incidents_input_problems/2: the problems a profile has ([] = none)
+%
+% ROOT EXPORTS: the twenty-five profile key atoms, the eleven entity-type
+% atoms and the judgement value unsure are read by the test cases as
+% package-root attributes, so each is served here as a bare zero-arity fact
+% and exported (the two result atoms are served by the kernel). They decide
+% nothing and carry no marker.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if replaces
+% every attribute(Key, _) of the overridden key by one attribute(Key, Value)
+% here (list plumbing; it decides nothing statutory and carries no marker).
+% A term that is not a proper list is passed on unchanged, so the input
+% check answers it with [wrong_type(profile)].
+% =====================================================================
+
+:- module(queries, [
+    nis2_implementing_regulation_significant_incidents_profile_keys/1,
+    nis2_implementing_regulation_significant_incidents_input_problems/2,
+    nis2_implementing_regulation_significant_incidents_what_if/4,
+    scheduled_interruption_or_maintenance/0,
+    relevant_entity_type/0,
+    direct_financial_loss_euro_cents/0,
+    annual_turnover_preceding_financial_year_euro_cents/0,
+    trade_secret_exfiltration/0,
+    death_of_natural_person/0,
+    considerable_damage_to_natural_person_health/0,
+    suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption/0,
+    recurring_incidents_within_six_months/0,
+    same_apparent_root_cause/0,
+    recurring_collective_direct_financial_loss_euro_cents/0,
+    complete_unavailability_seconds/0,
+    average_response_time_above_ten_seconds_seconds/0,
+    limited_availability_seconds/0,
+    weekly_unavailability_seconds/0,
+    complete_unavailability_users/0,
+    limited_availability_users/0,
+    data_compromise_users/0,
+    service_users_in_union/0,
+    data_compromised/0,
+    data_compromise_suspectedly_malicious/0,
+    physical_access_compromised/0,
+    incorrect_data_only_by_misconfiguration/0,
+    incorrect_domain_names/0,
+    managed_domain_names/0,
+    dns_service_provider/0,
+    tld_name_registry/0,
+    cloud_computing_service_provider/0,
+    data_centre_service_provider/0,
+    content_delivery_network_provider/0,
+    managed_service_provider/0,
+    managed_security_service_provider/0,
+    online_marketplace_provider/0,
+    online_search_engine_provider/0,
+    social_networking_services_platform_provider/0,
+    trust_service_provider/0,
+    unsure/0
+]).
+
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/kernel, [nis2_implementing_regulation_significant_incidents_input_problems/2]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/nis2_implementing_regulation_significant_incidents, [nis2_implementing_regulation_significant_incidents_status/2]).
+
+% ---- root-export atoms (data, never decisions) --------------------------
+
+% The twenty-five profile keys, in root_exports order.
+scheduled_interruption_or_maintenance.
+relevant_entity_type.
+direct_financial_loss_euro_cents.
+annual_turnover_preceding_financial_year_euro_cents.
+trade_secret_exfiltration.
+death_of_natural_person.
+considerable_damage_to_natural_person_health.
+suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption.
+recurring_incidents_within_six_months.
+same_apparent_root_cause.
+recurring_collective_direct_financial_loss_euro_cents.
+complete_unavailability_seconds.
+average_response_time_above_ten_seconds_seconds.
+limited_availability_seconds.
+weekly_unavailability_seconds.
+complete_unavailability_users.
+limited_availability_users.
+data_compromise_users.
+service_users_in_union.
+data_compromised.
+data_compromise_suspectedly_malicious.
+physical_access_compromised.
+incorrect_data_only_by_misconfiguration.
+incorrect_domain_names.
+managed_domain_names.
+
+% The eleven entity types of Art 1.
+dns_service_provider.
+tld_name_registry.
+cloud_computing_service_provider.
+data_centre_service_provider.
+content_delivery_network_provider.
+managed_service_provider.
+managed_security_service_provider.
+online_marketplace_provider.
+online_search_engine_provider.
+social_networking_services_platform_provider.
+trust_service_provider.
+
+% The judgement value besides true and false.
+unsure.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+nis2_implementing_regulation_significant_incidents_profile_keys([scheduled_interruption_or_maintenance, relevant_entity_type, direct_financial_loss_euro_cents, annual_turnover_preceding_financial_year_euro_cents, trade_secret_exfiltration, death_of_natural_person, considerable_damage_to_natural_person_health, suspectedly_malicious_unauthorised_access_capable_of_severe_operational_disruption, recurring_incidents_within_six_months, same_apparent_root_cause, recurring_collective_direct_financial_loss_euro_cents, complete_unavailability_seconds, average_response_time_above_ten_seconds_seconds, limited_availability_seconds, weekly_unavailability_seconds, complete_unavailability_users, limited_availability_users, data_compromise_users, service_users_in_union, data_compromised, data_compromise_suspectedly_malicious, physical_access_compromised, incorrect_data_only_by_misconfiguration, incorrect_domain_names, managed_domain_names]).
+
+% #16 what-if: re-evaluate with one key hypothetically set
+nis2_implementing_regulation_significant_incidents_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    nis2_implementing_regulation_significant_incidents_status(Hypothesis, NewStatus).
+
+% ---- attribute-list plumbing ------------------------------------------
+
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    proper_list_t(Profile, IsList),
+    override_by_shape(IsList, Profile, OverriddenKey, NewValue, Hypothesis).
+
+override_by_shape(false, Profile, _, _, Profile).
+override_by_shape(true, Profile, OverriddenKey, NewValue, Hypothesis) :-
+    drop_attribute(Profile, OverriddenKey, KeptElements),
+    append(KeptElements, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+proper_list_t(Term, false) :-
+    var(Term).
+proper_list_t(Term, true) :-
+    Term == [].
+proper_list_t(Term, Truth) :-
+    nonvar(Term),
+    Term = [_|Tail],
+    proper_list_t(Tail, Truth).
+proper_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+drop_attribute([], _, []).
+drop_attribute([Element|Elements], OverriddenKey, KeptElements) :-
+    element_has_key_t(Element, OverriddenKey, HasKey),
+    keep_element(HasKey, Element, Elements, OverriddenKey, KeptElements).
+
+keep_element(true, _, Elements, OverriddenKey, KeptElements) :-
+    drop_attribute(Elements, OverriddenKey, KeptElements).
+keep_element(false, Element, Elements, OverriddenKey, [Element|KeptElements]) :-
+    drop_attribute(Elements, OverriddenKey, KeptElements).
+
+element_has_key_t(Element, _, false) :-
+    var(Element).
+element_has_key_t(Element, OverriddenKey, true) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey.
+element_has_key_t(Element, OverriddenKey, false) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey.
+element_has_key_t(Element, _, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+:- end_module(queries).

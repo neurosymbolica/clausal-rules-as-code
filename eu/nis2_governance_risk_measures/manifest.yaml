@@ -1,0 +1,133 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_governance_risk_measures
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_governance_risk_measures"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  - "nis2_governance_risk_measures_input_problems/2"
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- nis2_governance_risk_measures.clausal --
+  - "management_body_duties/2"
+  - "risk_management_measures/2"
+  - "proportionality_factors/2"
+  - "supply_chain_considerations/2"
+  - "corrective_measures_duty/3"
+  - "essential_entity/0"
+  - "important_entity/0"
+  - "out_of_scope/0"
+  - "must_take_corrective_measures_without_undue_delay/0"
+  - "no_corrective_measures_duty/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "duty/2"
+  - "measure/2"
+  - "factor/2"
+  - "consideration/2"
+  - "decide_nis2_governance_risk_measures/2"
+  - "nis2_governance_risk_measures_status/2"
+  - "nis2_governance_risk_measures_checklist/2"
+  - "nis2_governance_risk_measures_decision_resolvable/1"
+  - "nis2_governance_risk_measures_status_values/1"
+  # -- queries.clausal --
+  - "nis2_governance_risk_measures_profile_keys/1"
+  - "nis2_governance_risk_measures_what_if/4"
+  # -- fixtures.clausal --
+  - "nis2_governance_risk_measures_subject/1"
+  - "nis2_governance_risk_measures_profile_for/2"
+  - "nis2_governance_risk_measures_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. None: only the kit's formalize_lib is used.
+uses: []
+
+scope: "Directive (EU) 2022/2555 (NIS 2) Art 20(1)-(2) and Art 21(1)-(4): a skeleton of the duties of the management bodies and of the cybersecurity risk-management measures of an essential or important entity. It lists the duties, the minimum measure areas (Art 21(2)(a)-(j)), the proportionality factors and the supply chain considerations, and states whether a corrective-measures duty arises on a finding of non-compliance. It never decides whether a measure is appropriate or proportionate, nor whether an entity complies; Art 21(2)(j) 'where appropriate' is handed to the user as a judgement key. Out of scope: entity class (sibling order nis2-scope-entity-class), Art 22(1) coordinated assessments, and the implementing acts under Art 21(5)."
+
+sources:
+  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 20(1) [32022L2555#parag_020.001]"
+  - "Directive (EU) 2022/2555, Art 20(2) [32022L2555#parag_020.002]"
+  - "Directive (EU) 2022/2555, Art 21(1) [32022L2555#parag_021.001]"
+  - "Directive (EU) 2022/2555, Art 21(2)(a)-(j) [32022L2555#parag_021.002, point_021.002_a to point_021.002_j]"
+  - "Directive (EU) 2022/2555, Art 21(3) [32022L2555#parag_021.003]"
+  - "Directive (EU) 2022/2555, Art 21(4) [32022L2555#parag_021.004]"
+
+query_interface:
+  2: "nis2_governance_risk_measures_status/2"      # eligibility: verdict over the management body duties
+  7: "nis2_governance_risk_measures_checklist/2"   # justification: checklist rows, each with cite(...) provenance
+  16: "nis2_governance_risk_measures_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32022L2555#art_020
+  - 32022L2555#art_021
+  reason: 'The titles of Articles 20 and 21 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: implementing_acts_on_the_measures
+  units:
+  - 32022L2555#parag_021.005
+  reason: Art 21(5) requires the Commission to adopt implementing acts laying down
+    the technical and methodological requirements of the Art 21(2) measures for DNS
+    service providers, TLD name registries, cloud computing, data centre, content
+    delivery network, managed service and managed security service providers, online
+    marketplaces, online search engines, social networking services platforms and
+    trust service providers, by 17 October 2024. Implementing Regulation (EU) 2024/2690
+    is such an act; it is pinned by automated retrieval but is NOT part of this order's
+    extract, so its requirements are not applied.
+  consequence: For those provider types the measures of Art 21(2) are further specified
+    by Implementing Regulation (EU) 2024/2690, which the answers do not apply; the
+    caller applies it itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: entity_class_and_scope
+  instrument: Directive (EU) 2022/2555 Arts 2 and 3
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  reason: Whether the entity is an essential or important entity is decided by the
+    sibling order on scope and entity class (nis2-scope-entity-class); this order
+    takes it as given in entity_class.
+  consequence: The caller establishes the class first.
+- what: coordinated_risk_assessments_of_critical_supply_chains
+  instrument: Directive (EU) 2022/2555 Art 22(1)
+  cites:
+  - 32022L2555#art_022
+  reason: Whether and when the Cooperation Group, the Commission and ENISA carried
+    out a coordinated security risk assessment of a critical supply chain (Art 22(1))
+    is not modelled; the caller states it in coordinated_supply_chain_risk_assessment_carried_out.
+  consequence: The caller states whether such an assessment was carried out.

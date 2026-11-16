@@ -1,0 +1,117 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one required condition changed -> different verdict), proving the route
+% is LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`
+% Every near-miss atom is paired with a positive test that it IS one of
+% the slice's verdict atoms, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_response_period/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_period/gdpr_data_subject_rights_response_period, [
+    gdpr_data_subject_rights_response_period_status/2,
+    gdpr_data_subject_rights_response_period_status_values/1,
+    response_deadline/3,
+    request_outside_facts/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_period/fixtures, [gdpr_data_subject_rights_response_period_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    gdpr_data_subject_rights_response_period_profile_for(Subject, Profile),
+    gdpr_data_subject_rights_response_period_status(Profile, Status).
+
+test(the_near_miss_verdicts_are_real_verdict_atoms) :-
+    gdpr_data_subject_rights_response_period_status_values(StatusValues),
+    member(first_period, StatusValues),
+    member(extended_period, StatusValues),
+    member(indeterminate, StatusValues),
+    member(needs_legal_review, StatusValues),
+    member(input_problems, StatusValues).
+
+% extended_period route
+test(claimed_and_necessary_is_extended) :-
+    subject_status(claimed_and_necessary, extended_period).
+test(claimed_not_necessary_is_not_extended, fail) :-
+    subject_status(claimed_not_necessary, extended_period).
+test(necessity_without_claim_is_first_period) :-
+    subject_status(necessity_without_claim, first_period).
+test(necessity_without_claim_is_not_extended, fail) :-
+    subject_status(necessity_without_claim, extended_period).
+test(claim_withdrawn_but_necessary_is_first_period) :-
+    subject_status(claim_withdrawn_but_necessary, first_period).
+test(claim_withdrawn_but_necessary_is_not_extended, fail) :-
+    subject_status(claim_withdrawn_but_necessary, extended_period).
+
+% first_period route
+test(no_extension_claimed_is_first_period) :-
+    subject_status(no_extension_claimed, first_period).
+test(claimed_and_necessary_is_not_first_period, fail) :-
+    subject_status(claimed_and_necessary, first_period).
+
+% indeterminate route
+test(claimed_without_judgement_is_indeterminate) :-
+    subject_status(claimed_without_judgement, indeterminate).
+test(claimed_and_necessary_is_not_indeterminate, fail) :-
+    subject_status(claimed_and_necessary, indeterminate).
+
+% needs_legal_review route
+test(claimed_and_unsure_is_referred) :-
+    subject_status(claimed_and_unsure, needs_legal_review).
+test(claimed_not_necessary_is_not_referred, fail) :-
+    subject_status(claimed_not_necessary, needs_legal_review).
+
+% input_problems route
+test(unknown_key_given_is_input_problems) :-
+    subject_status(unknown_key_given, input_problems).
+test(duplicate_claim_given_is_input_problems) :-
+    subject_status(duplicate_claim_given, input_problems).
+test(claim_given_unsure_is_input_problems) :-
+    subject_status(claim_given_unsure, input_problems).
+test(profile_not_a_list_is_input_problems) :-
+    subject_status(profile_not_a_list, input_problems).
+test(claimed_and_necessary_is_not_input_problems, fail) :-
+    subject_status(claimed_and_necessary, input_problems).
+test(unread_keys_present_is_extended) :-
+    subject_status(unread_keys_present, extended_period).
+test(unread_keys_present_is_not_input_problems, fail) :-
+    subject_status(unread_keys_present, input_problems).
+
+% deadline: weekend shift
+test(sunday_last_day_moves_to_monday) :-
+    response_deadline(date(2026, 10, 29), first_period, date(2026, 11, 30)).
+test(sunday_last_day_is_not_kept, fail) :-
+    response_deadline(date(2026, 10, 29), first_period, date(2026, 11, 29)).
+test(friday_last_day_is_kept) :-
+    response_deadline(date(2026, 10, 27), first_period, date(2026, 11, 27)).
+test(friday_last_day_is_not_moved, fail) :-
+    response_deadline(date(2026, 10, 27), first_period, date(2026, 11, 30)).
+
+% deadline: last day of a shorter month and the leap year
+test(leap_year_clip_is_twenty_ninth) :-
+    response_deadline(date(2028, 1, 31), first_period, date(2028, 2, 29)).
+test(leap_year_clip_is_not_twenty_eighth, fail) :-
+    response_deadline(date(2028, 1, 31), first_period, date(2028, 2, 28)).
+
+% deadline: the extension counted from receipt
+test(extended_from_receipt_is_thirtieth_april) :-
+    response_deadline(date(2026, 1, 31), extended_period, date(2026, 4, 30)).
+test(extended_is_not_step_by_step, fail) :-
+    response_deadline(date(2026, 1, 31), extended_period, date(2026, 4, 28)).
+
+% deadline: argument check
+test(unknown_period_is_an_input_problem) :-
+    response_deadline(date(2026, 1, 31), second_period, input_problems([wrong_type(response_period)])).
+test(a_valid_period_is_not_an_input_problem, fail) :-
+    response_deadline(date(2026, 1, 31), first_period, input_problems(_Problems)).
+
+% outside facts: absent versus attested
+test(an_absent_holiday_list_is_recorded_absent) :-
+    request_outside_facts([], OutsideFacts),
+    member(outside_fact(public_holidays, absent), OutsideFacts).
+test(an_attested_holiday_list_is_not_recorded_absent, fail) :-
+    request_outside_facts([attribute(public_holidays, attested([], attestation(by, at, reason, none)))], OutsideFacts),
+    member(outside_fact(public_holidays, absent), OutsideFacts).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,524 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/labour/daily_rest (deontic family).
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003, the original act (CELEX 32003L0088). The provisions are:
+%   - Art 3 (daily rest: 11 consecutive hours per 24-hour period);
+%   - Art 2(1) (working time), read with Art 3;
+%   - Art 2(2) (rest period), read with Art 3.
+%
+% WHAT THIS FILE HOLDS. It decides NOTHING statutory, so it carries no
+% implements/1 marker (it is also the DAG root, below citations). It holds
+% two things, each called by more than one file:
+%   - the minute arithmetic over local wall-clock times (reading (6)),
+%     called by the determination slice daily_rest.clausal and by
+%     queries.clausal;
+%   - the step-0 input check: the scaffold's daily_rest_input_problems/2
+%     for the PROFILE, extended by daily_rest_argument_problems/6 for
+%     WORKER, SHIFTS, PERIOD_START and PERIOD_END.
+% The statutory figures (660 minutes of daily rest, the 1440-minute
+% window) are declared in daily_rest.clausal, never here.
+% minutes_per_day and minutes_per_hour below are calendar units, not law.
+%
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms, so every file spells them alike.
+%
+% THE RESULT TERMS
+%   daily_rest_verdict(Status, Citations), the slice's verdict term:
+%     - Status is one of daily_rest_given, daily_rest_not_given,
+%       daily_rest_not_applied_to_worker or daily_rest_derogation_applies,
+%       or a not-final status compound (below);
+%     - Citations is a flat set-like list of cite(Key), and [] when the
+%       answer is not final.
+%   shortest_daily_rest_minutes/6 answer: one of
+%     - a bare integer of minutes, 0..1439;
+%     - the atom no_work_start_in_period;
+%     - a status compound.
+%   first_window_without_daily_rest/6 answer: one of
+%     - date_time(Year, Month, Day, Hour, Minute);
+%     - the atom no_window_without_daily_rest;
+%     - a status compound.
+%   Not-final status compounds are the answer ITSELF, never in a list:
+%     - indeterminate([Key]): exactly one bare key atom;
+%     - needs_legal_review(open_textured(Key, cite(eu_dir_2003_88_art_2_1)),
+%       [inputs_relied_on(Pairs)]): Pairs are Key-Value terms;
+%     - input_problems(Problems).
+%   Problem items: duplicate_key(Key), wrong_type(Key), unknown_key(Key).
+%
+% THE SHARED PREDICATES
+%   date_time_absolute_minute(DateTime, AbsoluteMinute)
+%     Takes a real date_time(Y, M, D, H, MIN) and gives the minutes since
+%     00:00 on 1 January of year 1. The day count is the Gregorian count of
+%     library(datetime) days_between/3, times 1440, plus H x 60 + MIN.
+%   absolute_minute_date_time(AbsoluteMinute, DateTime)
+%     The inverse: date_add/3 with timedelta/3, then the hour and minute.
+%   period_bounds(PeriodStart, PeriodEnd, StartOfPeriodMinute, EndOfPeriodMinute)
+%     StartOfPeriodMinute is 00:00 on PeriodStart. EndOfPeriodMinute is
+%     00:00 on the day after PeriodEnd.
+%   daily_rest_input_problems(Profile, Problems)
+%     The PROFILE check, as the scaffold wrote it.
+%   daily_rest_argument_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems)
+%     The step-0 problems, in this order:
+%       1. the profile's problems;
+%       2. wrong_type(worker);
+%       3. wrong_type(shifts), for a malformed row or two overlapping
+%          rows of Worker;
+%       4. wrong_type(period_start);
+%       5. wrong_type(period_end).
+%     It never fails, never raises, and yields exactly one solution.
+% =====================================================================
+
+:- module(kernel, [
+    daily_rest_input_problems/2,
+    daily_rest_argument_problems/6,
+    date_time_absolute_minute/2,
+    absolute_minute_date_time/2,
+    period_bounds/4
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(library(clpz)).
+:- use_module(library(datetime), [days_between/3, timedelta/3, date_add/3]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
+
+% Calendar units (not statutory figures).
+:- constant_value(minutes_per_day, 1440).
+:- constant_value(minutes_per_hour, 60).
+
+% ---- input checks: the problems a profile has, if any -----------
+% daily_rest_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first. It gives its normal answer only when
+% Problems = []. When Problems is not [], it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
+%   Key in every item gives [wrong_type(profile)];
+% - otherwise, for each contract key in the contract's key order:
+%   - duplicate_key(Key) when the key occurs more than once in Profile, whatever its
+%     values (none of them is read, so it is never also wrong_type(Key));
+%   - else wrong_type(Key) when its one value is outside its type;
+% - then unknown_key(Key) for each key outside the contract, in the order of its first
+%   occurrence in Profile.
+% Each key is named once. An absent key is not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+daily_rest_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, worker_category, derogation_from_article_3],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(on_call_on_site_counts_as_working_time, judgement).
+key_type(on_call_standby_counts_as_working_time, judgement).
+key_type(worker_category, worker_category_atom).
+key_type(derogation_from_article_3, derogation_from_article_3_atom).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, each Key ground. T is false for anything else, an unbound Term included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, T) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+no_variables_t([], true).
+no_variables_t([_|_], false).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    memberd_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order:
+% - duplicate_key(Key) when the key occurs more than once (none of its values is read);
+% - else wrong_type(Key) when its one value is outside the key's type.
+% An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key
+% is in Type. T is also true when Elements gives Key no value.
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(worker_category_atom, Value, T) :-
+    in_type_t(enum([other_worker, mobile_worker, seagoing_fishing_vessel_worker]), Value, T).
+
+in_type_t(derogation_from_article_3_atom, Value, T) :-
+    in_type_t(enum([no_derogation, derogation_under_article_17_1, derogation_under_article_17_3, derogation_under_article_17_4, derogation_under_article_18]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% ---- step 0: the arguments WORKER, SHIFTS, PERIOD_START, PERIOD_END ----
+% (INTERFACE - THE INPUT CHECK, THE ARGUMENTS.)
+% The problems come in this order:
+%   1. the PROFILE's problems;
+%   2. wrong_type(worker);
+%   3. wrong_type(shifts);
+%   4. wrong_type(period_start);
+%   5. wrong_type(period_end).
+% Every step is complementary clauses on a reified truth value, so the check yields
+% exactly one solution for every term and never raises. A date is handed to
+% library(datetime) only once it is known to be a real Gregorian day.
+daily_rest_argument_problems(Profile, Worker, Shifts, PeriodStart, PeriodEnd, Problems) :-
+    daily_rest_input_problems(Profile, ProfileProblems),
+    worker_valid_t(Worker, WorkerValid),
+    worker_problems(WorkerValid, WorkerProblems),
+    shift_list_t(Shifts, ShiftListValid),
+    shifts_problems(ShiftListValid, WorkerValid, Worker, Shifts, ShiftsProblems),
+    real_calendar_date_t(PeriodStart, PeriodStartValid),
+    period_start_problems(PeriodStartValid, PeriodStartProblems),
+    real_calendar_date_t(PeriodEnd, PeriodEndValid),
+    period_end_problems(PeriodStartValid, PeriodEndValid, PeriodStart, PeriodEnd, PeriodEndProblems),
+    append([ProfileProblems, WorkerProblems, ShiftsProblems, PeriodStartProblems, PeriodEndProblems], Problems).
+
+worker_problems(true, []).
+worker_problems(false, [wrong_type(worker)]).
+
+% satisfies_t(Test, Term, Truth): Truth is true when the type test Test holds of Term.
+% Test is atom or integer here: the two tests are disjoint, so the collected list holds
+% at most one entry. An unbound Term satisfies neither.
+satisfies_t(Test, Term, Truth) :-
+    findall(Test, call(Test, Term), Satisfied),
+    satisfied_truth(Satisfied, Truth).
+
+satisfied_truth([], false).
+satisfied_truth([_|_], true).
+
+% A worker (WORKER, or a row's WORKER_ID) is an atom or an integer.
+worker_valid_t(Worker, Truth) :-
+    satisfies_t(atom, Worker, IsAtom),
+    satisfies_t(integer, Worker, IsInteger),
+    truth_or(IsAtom, IsInteger, Truth).
+
+% The five shift kinds of INTERFACE - THE PROFILE AND THE ATOMS.
+shift_kind_values([work, on_call_on_site, on_call_standby, paid_annual_leave, sick_leave]).
+
+% shift_list_t(Term, Truth): Truth is true when Term is a proper list of well-formed
+% shift rows. An unbound Term, a partial list, or an unbound element gives false.
+shift_list_t(Term, false) :-
+    var(Term).
+shift_list_t(Term, true) :-
+    Term == [].
+shift_list_t(Term, Truth) :-
+    nonvar(Term),
+    Term = [Shift|Shifts],
+    shift_t(Shift, ShiftValid),
+    shift_list_t(Shifts, ShiftsValid),
+    truth_and(ShiftValid, ShiftsValid, Truth).
+shift_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+shift_t(Shift, false) :-
+    term_variables(Shift, [_|_]).
+shift_t(Shift, Truth) :-
+    term_variables(Shift, []),
+    shift_shape_t(Shift, Truth).
+
+shift_shape_t(Shift, false) :-
+    Shift \= shift(_, _, _, _).
+shift_shape_t(shift(WorkerIdentifier, Start, End, Kind), Truth) :-
+    worker_valid_t(WorkerIdentifier, IdentifierValid),
+    real_date_time_t(Start, StartValid),
+    real_date_time_t(End, EndValid),
+    shift_kind_values(Kinds),
+    memberd_t(Kind, Kinds, KindValid),
+    truth_and(StartValid, EndValid, TimesValid),
+    times_in_order_t(TimesValid, Start, End, TimesInOrder),
+    truth_and(IdentifierValid, KindValid, LabelsValid),
+    truth_and(LabelsValid, TimesInOrder, Truth).
+
+% START strictly before END, checked only for two real date_time terms.
+times_in_order_t(false, _, _, false).
+times_in_order_t(true, Start, End, Truth) :-
+    date_time_absolute_minute(Start, StartMinute),
+    date_time_absolute_minute(End, EndMinute),
+    zcompare(Order, StartMinute, EndMinute),
+    before_order_truth(Order, Truth).
+
+before_order_truth(<, true).
+before_order_truth(=, false).
+before_order_truth(>, false).
+
+% SHIFTS is wrong when it is not a proper list of well-formed rows, or (only when
+% WORKER is an atom or an integer) when two rows of WORKER overlap. Two rows that
+% touch (one ends at the minute the next starts) do not overlap.
+shifts_problems(false, _, _, _, [wrong_type(shifts)]).
+shifts_problems(true, false, _, _, []).
+shifts_problems(true, true, Worker, Shifts, Problems) :-
+    worker_intervals(Worker, Shifts, Intervals),
+    overlap_t(Intervals, Overlap),
+    overlap_problems(Overlap, Problems).
+
+overlap_problems(true, [wrong_type(shifts)]).
+overlap_problems(false, []).
+
+% worker_intervals(Worker, Shifts, Intervals): the StartMinute-EndMinute pairs of the
+% rows of Worker (WORKER_ID compared as a term), sorted by start, duplicates kept.
+worker_intervals(Worker, Shifts, Intervals) :-
+    findall(StartMinute-EndMinute,
+            ( member(shift(WorkerIdentifier, Start, End, _), Shifts),
+              WorkerIdentifier == Worker,
+              date_time_absolute_minute(Start, StartMinute),
+              date_time_absolute_minute(End, EndMinute) ),
+            Unsorted),
+    msort(Unsorted, Intervals).
+
+% Sorted by start, rows overlap exactly when some row starts before the row just
+% before it ends.
+overlap_t([], false).
+overlap_t([_], false).
+overlap_t([_-FirstEnd, SecondStart-SecondEnd|Rest], Truth) :-
+    zcompare(Order, SecondStart, FirstEnd),
+    overlap_order_truth(Order, [SecondStart-SecondEnd|Rest], Truth).
+
+overlap_order_truth(<, _, true).
+overlap_order_truth(=, Rest, Truth) :-
+    overlap_t(Rest, Truth).
+overlap_order_truth(>, Rest, Truth) :-
+    overlap_t(Rest, Truth).
+
+period_start_problems(true, []).
+period_start_problems(false, [wrong_type(period_start)]).
+
+% PERIOD_END must be a real day, and not before PERIOD_START. When PERIOD_START is
+% itself wrong, PERIOD_END is checked only as a date.
+period_end_problems(_, false, _, _, [wrong_type(period_end)]).
+period_end_problems(false, true, _, _, []).
+period_end_problems(true, true, PeriodStart, PeriodEnd, Problems) :-
+    days_between(PeriodEnd, PeriodStart, DaysFromStartToEnd),
+    at_most_t(0, DaysFromStartToEnd, InOrder),
+    period_order_problems(InOrder, Problems).
+
+period_order_problems(true, []).
+period_order_problems(false, [wrong_type(period_end)]).
+
+% ---- real calendar days and real minutes ----------------------------
+% real_calendar_date_t(Term, Truth): a ground date(Year, Month, Day) of integers naming
+% a real Gregorian day (years 1 to 9999, the range library(datetime) can carry).
+real_calendar_date_t(Term, false) :-
+    term_variables(Term, [_|_]).
+real_calendar_date_t(Term, Truth) :-
+    term_variables(Term, []),
+    calendar_date_shape_t(Term, Truth).
+
+calendar_date_shape_t(Term, false) :-
+    Term \= date(_, _, _).
+calendar_date_shape_t(date(Year, Month, DayOfMonth), Truth) :-
+    integers_t([Year, Month, DayOfMonth], AreIntegers),
+    calendar_fields_t(AreIntegers, Year, Month, DayOfMonth, Truth).
+
+calendar_fields_t(false, _, _, _, false).
+calendar_fields_t(true, Year, Month, DayOfMonth, Truth) :-
+    real_day_t(Year, Month, DayOfMonth, Truth).
+
+% real_date_time_t(Term, Truth): a ground date_time(Year, Month, Day, Hour, Minute) of
+% integers naming a real Gregorian day, Hour 0..23 and Minute 0..59.
+real_date_time_t(Term, false) :-
+    term_variables(Term, [_|_]).
+real_date_time_t(Term, Truth) :-
+    term_variables(Term, []),
+    date_time_shape_t(Term, Truth).
+
+date_time_shape_t(Term, false) :-
+    Term \= date_time(_, _, _, _, _).
+date_time_shape_t(date_time(Year, Month, DayOfMonth, HourOfDay, MinuteOfHour), Truth) :-
+    integers_t([Year, Month, DayOfMonth, HourOfDay, MinuteOfHour], AreIntegers),
+    date_time_fields_t(AreIntegers, Year, Month, DayOfMonth, HourOfDay, MinuteOfHour, Truth).
+
+date_time_fields_t(false, _, _, _, _, _, false).
+date_time_fields_t(true, Year, Month, DayOfMonth, HourOfDay, MinuteOfHour, Truth) :-
+    real_day_t(Year, Month, DayOfMonth, RealDay),
+    in_range_t(0, 23, HourOfDay, RealHour),
+    in_range_t(0, 59, MinuteOfHour, RealMinute),
+    truth_and(RealHour, RealMinute, RealClock),
+    truth_and(RealDay, RealClock, Truth).
+
+integers_t([], true).
+integers_t([Value|Values], Truth) :-
+    satisfies_t(integer, Value, IsInteger),
+    integers_t(Values, RestAreIntegers),
+    truth_and(IsInteger, RestAreIntegers, Truth).
+
+% A real day, for integer fields: the year and month are checked first, and only then
+% is the last day of the month asked for.
+real_day_t(Year, Month, DayOfMonth, Truth) :-
+    in_range_t(1, 9999, Year, RealYear),
+    in_range_t(1, 12, Month, RealMonth),
+    truth_and(RealYear, RealMonth, RealYearAndMonth),
+    day_of_month_t(RealYearAndMonth, Year, Month, DayOfMonth, Truth).
+
+day_of_month_t(false, _, _, _, false).
+day_of_month_t(true, Year, Month, DayOfMonth, Truth) :-
+    month_last_day(Year, Month, LastDayOfMonth),
+    in_range_t(1, LastDayOfMonth, DayOfMonth, Truth).
+
+% in_range_t(Low, High, Value, Truth): Low =< Value =< High, for integers.
+in_range_t(Low, High, Value, Truth) :-
+    at_most_t(Low, Value, AboveLow),
+    at_most_t(Value, High, BelowHigh),
+    truth_and(AboveLow, BelowHigh, Truth).
+
+at_most_t(Smaller, Larger, Truth) :-
+    zcompare(Order, Smaller, Larger),
+    at_most_order_truth(Order, Truth).
+
+at_most_order_truth(<, true).
+at_most_order_truth(=, true).
+at_most_order_truth(>, false).
+
+% ---- minute arithmetic (reading (6)) --------------------------------
+% Local wall-clock times, read to the minute, with no time zone or summer time.
+% The minutes between two date_time terms are the whole Gregorian days between their
+% dates times 1440, plus the difference of Hour x 60 + Minute. Each time is counted
+% from 00:00 on 1 January of year 1, so every absolute minute is a non-negative
+% integer. Call these only with real date_time terms (the input check comes first).
+calendar_epoch(date(1, 1, 1)).
+
+date_time_absolute_minute(date_time(Year, Month, DayOfMonth, HourOfDay, MinuteOfHour), AbsoluteMinute) :-
+    calendar_epoch(Epoch),
+    days_between(date(Year, Month, DayOfMonth), Epoch, DaysSinceEpoch),
+    AbsoluteMinute #= DaysSinceEpoch * constant(minutes_per_day) + HourOfDay * constant(minutes_per_hour) + MinuteOfHour.
+
+absolute_minute_date_time(AbsoluteMinute, date_time(Year, Month, DayOfMonth, HourOfDay, MinuteOfHour)) :-
+    DaysSinceEpoch #= AbsoluteMinute // constant(minutes_per_day),
+    MinuteOfDay #= AbsoluteMinute mod constant(minutes_per_day),
+    HourOfDay #= MinuteOfDay // constant(minutes_per_hour),
+    MinuteOfHour #= MinuteOfDay mod constant(minutes_per_hour),
+    calendar_epoch(Epoch),
+    timedelta(DaysSinceEpoch, 0, OffsetFromEpoch),
+    date_add(Epoch, OffsetFromEpoch, Date),
+    Date = date(Year, Month, DayOfMonth).
+
+% period_bounds: START_OF_PERIOD is 00:00 on PERIOD_START, and END_OF_PERIOD is 00:00
+% on the day after PERIOD_END (both days belong to the period, reading (6)).
+period_bounds(date(StartYear, StartMonth, StartDayOfMonth), date(EndYear, EndMonth, EndDayOfMonth), StartOfPeriodMinute, EndOfPeriodMinute) :-
+    date_time_absolute_minute(date_time(StartYear, StartMonth, StartDayOfMonth, 0, 0), StartOfPeriodMinute),
+    date_time_absolute_minute(date_time(EndYear, EndMonth, EndDayOfMonth, 0, 0), EndDayMinute),
+    EndOfPeriodMinute #= EndDayMinute + constant(minutes_per_day).
+
+% ---- tests ----------------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    daily_rest_input_problems([attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], []).
+test(the_problems_come_in_contract_order_then_unknown_keys) :-
+    daily_rest_input_problems([attribute(worker_category, pilot), attribute(derogation_from_article_3, no_derogation), attribute(derogation_from_article_3, no_derogation), attribute(colour, red)], Problems),
+    Problems == [wrong_type(worker_category), duplicate_key(derogation_from_article_3), unknown_key(colour)].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    daily_rest_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(unsure_is_a_judgement_value) :-
+    daily_rest_input_problems([attribute(on_call_on_site_counts_as_working_time, unsure)], []).
+test(unsure_is_not_a_worker_category, fail) :-
+    daily_rest_input_problems([attribute(worker_category, unsure)], []).
+test(unsure_as_worker_category_is_a_wrong_type) :-
+    daily_rest_input_problems([attribute(worker_category, unsure)], [wrong_type(worker_category)]).
+test(an_unbound_worker_is_a_wrong_type) :-
+    daily_rest_argument_problems([], _, [], date(2026, 3, 2), date(2026, 3, 2), Problems),
+    Problems == [wrong_type(worker)].
+test(an_unbound_shift_list_is_a_wrong_type) :-
+    daily_rest_argument_problems([], w1, _, date(2026, 3, 2), date(2026, 3, 2), Problems),
+    Problems == [wrong_type(shifts)].
+
+:- end_module(kernel).

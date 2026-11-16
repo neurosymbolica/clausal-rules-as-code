@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_state_aid_de_minimis_cumulation_citations, [implements/1, citation/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

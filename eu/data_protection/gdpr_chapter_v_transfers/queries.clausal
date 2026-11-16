@@ -1,0 +1,146 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_chapter_v_transfers.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% gdpr_chapter_v_transfers_what_if/4      (#16 what-if): override one key -> re-evaluate
+% gdpr_chapter_v_transfers_profile_keys/1: top-level profile key schema
+% gdpr_chapter_v_transfers_input_problems/2: the problems a profile has ([] = none)
+%
+% The declared query types are served by the determination slices and
+% reached through the package facade:
+%   #13 compliance_check     transfer_permitted/2 (transfer.clausal): may
+%                            the proposed transfer take place (true/false,
+%                            else the non-final status)
+%   #3  status_determination transfer_status/2, decide_transfer/2
+%   #2  eligibility          decide_transfer/2 with transfer_checklist/2
+%                            and transfer_basis_checklist/2
+%   #7  justification        transfer_basis_checklist/2: one
+%                            item(RequirementId, Status, cite(Key)) per
+%                            ending stage; referral REASONs carry cite(Key)
+%
+% WHAT-IF ON AN ATTRIBUTE LIST: the profile of this order is an attribute
+% list [attribute(Key, Value), ...], not a dict, so kit/query_combinators'
+% override_key/4 (a dict override) does not apply. The override here drops
+% every entry of the key (compared by identity) and adds the new entry.
+% The modified profile passes the input check first (inside
+% transfer_status/2); a malformed original profile answers its own input
+% problems. Exactly one solution per call.
+%
+% RESULT CONSTRUCTORS: the order exports the data shapes of its answers
+% (input_problems/1 ... document/2). Those with a shape to recognise are
+% defined below as shape recognisers; unknown_key/1, attestation/4, url/2
+% and document/2 are pure data (declared with constructors/1, no clauses).
+% None is called as a query and none decides anything statutory.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_chapter_v_transfers_profile_keys/1,
+    gdpr_chapter_v_transfers_input_problems/2,
+    gdpr_chapter_v_transfers_what_if/4,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
+]).
+
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/kernel, [gdpr_chapter_v_transfers_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_chapter_v_transfers/transfer, [transfer_status/2]).
+:- constructors([unknown_key(key), attestation(by, at, reason, evidence), url(url, retrieved_at), document(upload_id, sha256)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_chapter_v_transfers_profile_keys([adequacy_decision_in_force, safeguard_in_place, derogation_claimed, public_authority_public_powers, explicit_consent_obtained, contract_necessity, data_subject_interest_contract_necessity, important_public_interest, legal_claims_necessity, vital_interests_necessity, register_public_by_law, register_consultation_conditions_fulfilled, register_not_entire, register_requester_condition_met, legitimate_interests_derogation, transfer_is_onward_transfer, binding_corporate_rules_approved, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% A malformed original profile: its own input problems come first.
+gdpr_chapter_v_transfers_what_if(Profile, _, _, input_problems([Problem|Problems])) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, [Problem|Problems]).
+% A well-formed profile: replace the key's entry and decide again.
+gdpr_chapter_v_transfers_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    gdpr_chapter_v_transfers_input_problems(Profile, []),
+    attributes_without(Profile, OverriddenKey, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis),
+    transfer_status(Hypothesis, NewStatus).
+
+% attributes_without(Attributes, RemovedKey, Kept): list plumbing, no marker.
+attributes_without([], _, []).
+attributes_without([attribute(Key, _)|Attributes], RemovedKey, Kept) :-
+    Key == RemovedKey,
+    attributes_without(Attributes, RemovedKey, Kept).
+attributes_without([attribute(Key, Value)|Attributes], RemovedKey, [attribute(Key, Value)|Kept]) :-
+    Key \== RemovedKey,
+    attributes_without(Attributes, RemovedKey, Kept).
+
+% ---- result constructors (data shapes, never called as queries) -------
+input_problems(Problems) :-
+    is_list(Problems).
+
+wrong_type(ContractKey) :-
+    atom(ContractKey).
+
+duplicate_key(ContractKey) :-
+    atom(ContractKey).
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(_Reason, Context) :-
+    is_list(Context).
+
+open_textured(InputKey, cite(_CitationKey)) :-
+    atom(InputKey).
+
+cross_reference_unresolved(cite(_CitationKey), cite(_TargetKey)).
+
+resolution(cite(_TargetKey), not_attempted).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(_DecidingClause, Citations) :-
+    is_list(Citations).
+
+outside_fact(OutsideKey, _Arrival) :-
+    atom(OutsideKey).
+
+attested(true, attestation(_AttestingHost, _AttestedTime, _AttestationReason, _EvidenceTerm)).
+attested(false, attestation(_AttestingHost, _AttestedTime, _AttestationReason, _EvidenceTerm)).
+
+% ---- tests -------------------------------------------------------------
+test(what_if_supplies_the_missing_safeguard) :-
+    findall(Status, gdpr_chapter_v_transfers_what_if([], safeguard_in_place, true, Status), Statuses),
+    Statuses == [eligible].
+test(what_if_supplied_safeguard_is_not_ineligible, fail) :-
+    gdpr_chapter_v_transfers_what_if([], safeguard_in_place, true, ineligible).
+test(what_if_replaces_an_existing_entry_once) :-
+    findall(Status, gdpr_chapter_v_transfers_what_if([attribute(safeguard_in_place, false)], safeguard_in_place, true, Status), Statuses),
+    Statuses == [eligible].
+test(what_if_on_a_malformed_profile_reports_its_problems) :-
+    findall(Status, gdpr_chapter_v_transfers_what_if(not_a_list, safeguard_in_place, true, Status), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+test(what_if_with_a_wrong_value_reports_the_wrong_type) :-
+    findall(Status, gdpr_chapter_v_transfers_what_if([], safeguard_in_place, yes, Status), Statuses),
+    Statuses == [input_problems([wrong_type(safeguard_in_place)])].
+test(the_profile_keys_are_nineteen) :-
+    gdpr_chapter_v_transfers_profile_keys(Keys),
+    length(Keys, 19).
+test(an_attested_value_is_true_or_false) :-
+    attested(true, attestation(query_host, query_time, query_reason, none)),
+    attested(false, attestation(query_host, query_time, query_reason, none)).
+test(an_unsure_attested_value_is_not_a_shape, fail) :-
+    attested(unsure, attestation(query_host, query_time, query_reason, none)).
+
+:- end_module(queries).

@@ -1,0 +1,164 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed by one unit -> a different verdict), proving the
+% route is LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`
+%
+% A `fail` test cannot tell a wrong verdict from a MISSPELT one, so every
+% atom a near-miss is denied is also asserted positively (here or in
+% test_output_mode.clausal) and checked to be one of the slice's verdict atoms.
+% Run: python -m clausal.testing eu/state_aid/sme_definition/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/state_aid/sme_definition/sme_definition, [
+    sme_definition_status/2,
+    sme_definition_status_values/1
+]).
+:- use_module(eu/state_aid/sme_definition/fixtures, [sme_definition_profile_for/2]).
+
+status_of(Subject, Status) :-
+    sme_definition_profile_for(Subject, Request),
+    sme_definition_status(Request, Status).
+
+test(the_denied_atoms_are_real_verdict_atoms) :-
+    sme_definition_status_values(StatusValues),
+    member(micro_enterprise, StatusValues),
+    member(small_enterprise, StatusValues),
+    member(medium_sized_enterprise, StatusValues),
+    member(not_an_enterprise, StatusValues),
+    member(not_sme_public_control, StatusValues),
+    member(sme, StatusValues),
+    member(at_least_medium, StatusValues),
+    member(below_medium, StatusValues),
+    member(linked_enterprise, StatusValues),
+    member(partner_enterprise, StatusValues),
+    member(neither_partner_nor_linked, StatusValues).
+
+% Article 2(3): staff ceiling.
+test(micro_staff_route_positive) :-
+    status_of(micro_staff_just_below_ceiling, micro_enterprise).
+test(micro_staff_route_near_miss, fail) :-
+    status_of(micro_staff_at_ceiling, micro_enterprise).
+% Article 2(3): turnover ceiling.
+test(micro_turnover_route_positive) :-
+    status_of(micro_turnover_at_ceiling, micro_enterprise).
+test(micro_turnover_route_near_miss, fail) :-
+    status_of(micro_turnover_one_cent_above_ceiling, micro_enterprise).
+% Article 2(3): balance sheet ceiling (and/or).
+test(micro_balance_sheet_route_positive) :-
+    status_of(micro_balance_sheet_at_ceiling, micro_enterprise).
+test(micro_balance_sheet_route_near_miss, fail) :-
+    status_of(micro_balance_sheet_one_cent_above_ceiling, micro_enterprise).
+% Article 2(2).
+test(small_staff_route_positive) :-
+    status_of(small_staff_just_below_ceiling, small_enterprise).
+test(small_staff_route_near_miss, fail) :-
+    status_of(small_staff_at_ceiling, small_enterprise).
+test(small_turnover_route_positive) :-
+    status_of(small_turnover_at_ceiling, small_enterprise).
+test(small_turnover_route_near_miss, fail) :-
+    status_of(small_turnover_one_cent_above_ceiling, small_enterprise).
+test(small_balance_sheet_route_positive) :-
+    status_of(small_balance_sheet_at_ceiling, small_enterprise).
+test(small_balance_sheet_route_near_miss, fail) :-
+    status_of(small_balance_sheet_one_cent_above_ceiling, small_enterprise).
+% Article 2(1).
+test(medium_staff_route_positive) :-
+    status_of(medium_staff_just_below_ceiling, medium_sized_enterprise).
+test(medium_staff_route_near_miss, fail) :-
+    status_of(medium_staff_at_ceiling, medium_sized_enterprise).
+test(medium_turnover_route_positive) :-
+    status_of(medium_turnover_at_ceiling, medium_sized_enterprise).
+test(medium_turnover_route_near_miss, fail) :-
+    status_of(medium_turnover_one_cent_above_ceiling, medium_sized_enterprise).
+test(medium_balance_sheet_route_positive) :-
+    status_of(medium_balance_sheet_at_ceiling, medium_sized_enterprise).
+test(medium_balance_sheet_route_near_miss, fail) :-
+    status_of(medium_balance_sheet_one_cent_above_ceiling, medium_sized_enterprise).
+% Article 6(2) second subparagraph: partner data pro rata.
+test(partner_aggregation_route_positive) :-
+    status_of(partner_share_lifts_staff_to_ceiling, small_enterprise).
+test(partner_aggregation_route_near_miss, fail) :-
+    status_of(partner_share_one_point_below, small_enterprise).
+% Article 6(2) third subparagraph: linked data at 100 %.
+test(linked_aggregation_route_positive) :-
+    status_of(linked_staff_lifts_to_ceiling, small_enterprise).
+test(linked_aggregation_route_near_miss, fail) :-
+    status_of(linked_staff_one_hundredth_below, small_enterprise).
+% Article 1.
+test(not_an_enterprise_route_positive) :-
+    status_of(entity_not_an_enterprise, not_an_enterprise).
+test(not_an_enterprise_route_near_miss, fail) :-
+    status_of(public_body_control_reached, not_an_enterprise).
+% Article 3(4).
+test(public_control_route_positive) :-
+    status_of(public_body_control_reached, not_sme_public_control).
+test(public_control_route_near_miss, fail) :-
+    status_of(public_body_control_not_reached, not_sme_public_control).
+% Article 4(2): the two-period rule.
+test(two_period_route_positive) :-
+    status_of(two_periods_held_micro_kept, micro_enterprise).
+test(two_period_route_near_miss, fail) :-
+    status_of(two_periods_held_small_kept, micro_enterprise).
+% SME status.
+test(sme_route_positive) :-
+    status_of(sme_staff_just_below_medium_ceiling, sme).
+test(sme_route_near_miss, fail) :-
+    status_of(sme_staff_at_medium_ceiling, sme).
+test(sme_public_control_near_miss, fail) :-
+    status_of(sme_under_public_control, sme).
+% At least medium.
+test(at_least_medium_route_positive) :-
+    status_of(staff_at_small_ceiling_is_at_least_medium, at_least_medium).
+test(at_least_medium_route_near_miss, fail) :-
+    status_of(staff_just_below_small_ceiling_is_below_medium, at_least_medium).
+test(below_medium_route_positive) :-
+    status_of(staff_just_below_small_ceiling_is_below_medium, below_medium).
+test(below_medium_route_near_miss, fail) :-
+    status_of(staff_at_small_ceiling_is_at_least_medium, below_medium).
+% Article 3(3) point (c) and the presumption.
+test(linked_route_positive) :-
+    status_of(investor_involved_in_management_links, linked_enterprise).
+test(linked_route_near_miss, fail) :-
+    status_of(presumed_investor_not_involved_in_management, linked_enterprise).
+% Article 3(2): the 25 % holding.
+test(partner_route_positive) :-
+    status_of(holding_at_partner_threshold, partner_enterprise).
+test(partner_route_near_miss, fail) :-
+    status_of(holding_one_point_below_partner_threshold, partner_enterprise).
+% Article 3(2) second subparagraph point (a): business angels.
+test(business_angel_exception_positive) :-
+    status_of(business_angels_one_cent_below_limit, neither_partner_nor_linked).
+test(business_angel_exception_near_miss, fail) :-
+    status_of(business_angels_at_limit, neither_partner_nor_linked).
+% Article 3(2) second subparagraph point (d): local authorities.
+test(local_authority_exception_positive) :-
+    status_of(local_authority_within_limits, neither_partner_nor_linked).
+test(local_authority_inhabitants_near_miss, fail) :-
+    status_of(local_authority_inhabitants_at_limit, neither_partner_nor_linked).
+test(local_authority_budget_near_miss, fail) :-
+    status_of(local_authority_budget_at_limit, neither_partner_nor_linked).
+% Article 3(3) fourth subparagraph: natural persons and markets.
+test(natural_persons_route_positive) :-
+    status_of(natural_persons_in_same_market, linked_enterprise).
+test(natural_persons_route_near_miss, fail) :-
+    status_of(natural_persons_in_other_market, linked_enterprise).
+% Step 3: referral of an unsure judgement.
+test(referral_route_positive) :-
+    status_of(dominant_influence_unsure, needs_legal_review(open_textured(dominant_influence_by_contract_or_articles, cite(eu_reg_651_2014_annex_i_art_3_3_c)), _)).
+test(referral_route_near_miss, fail) :-
+    status_of(holding_at_partner_threshold, needs_legal_review(_, _)).
+% Step 2: a missing key.
+test(missing_key_route_positive) :-
+    status_of(linked_list_not_given, indeterminate([linked_enterprises])).
+test(missing_key_route_near_miss, fail) :-
+    status_of(linked_staff_one_hundredth_below, indeterminate(_)).
+% Step 0: input problems.
+test(input_problem_route_positive) :-
+    status_of(unknown_text, input_problems([wrong_type(text)])).
+test(input_problem_route_near_miss, fail) :-
+    status_of(entity_not_an_enterprise, input_problems(_)).
+
+:- end_module(test_negative_controls).

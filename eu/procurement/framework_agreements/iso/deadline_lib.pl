@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(deadline_lib, [deadline/4, date_before/2, date_after/2, date_on_or_before/2, date_on_or_after/2, within_deadline/2, deadline_status/6, days_until_deadline/5, next_day/2, prev_day/2, month_last_day/3, add_business_days/3, business_day_step/3, deadline_months_after/3, deadline_months_result/5]).
 :- use_module(library(dif), [dif/2]).
 
@@ -73,7 +74,7 @@ prev_day(DATE, PREVIOUS_DATE) :-
 
 month_last_day(YEAR, MONTH, LAST_DAY) :-
     #=(NEXT_MONTH, MONTH mod 12 + 1),
-    #=(NEXT_YEAR, YEAR + div(MONTH, 12)),
+    #=(NEXT_YEAR, YEAR + MONTH div 12),
     FIRST_OF_NEXT = date(NEXT_YEAR, NEXT_MONTH, 1),
     prev_day(FIRST_OF_NEXT, LAST_OF_THIS),
     date(_, _, LAST_DAY) = LAST_OF_THIS.
@@ -100,7 +101,7 @@ deadline_months_after(ANCHOR_DATE, MONTHS, DEADLINE_DATE) :-
     next_day(ANCHOR_DATE, START),
     date(START_YEAR, START_MONTH, START_DAY) = START,
     #=(TOTAL, START_MONTH - 1 + MONTHS),
-    #=(TARGET_YEAR, START_YEAR + div(TOTAL, 12)),
+    #=(TARGET_YEAR, START_YEAR + TOTAL div 12),
     #=(TARGET_MONTH, TOTAL mod 12 + 1),
     month_last_day(TARGET_YEAR, TARGET_MONTH, LAST_DAY),
     deadline_months_result(TARGET_YEAR, TARGET_MONTH, START_DAY, LAST_DAY, DEADLINE_DATE).

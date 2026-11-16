@@ -1,0 +1,273 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_scope_entity_class
+shape_family: eligibility
+kit_version: '0.1.0'
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - kernel
+  - citations
+  - parameters
+  - nis2_scope_entity_class
+  - queries
+  - fixtures
+# public_interface: name/arity PREDICATES, kept in sync with the :- module(...) export lists.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - citation/2
+  # -- nis2_scope_entity_class.clausal --
+  - size_class/3
+  - scope_decision/3
+  - entity_class/3
+  - decide_nis2_scope_entity_class/2
+  - nis2_scope_entity_class_status/2
+  - nis2_scope_entity_class_checklist/2
+  - nis2_scope_entity_class_decision_resolvable/1
+  - nis2_scope_entity_class_status_values/1
+  # -- queries.clausal --
+  - nis2_scope_entity_class_profile_keys/1
+  - nis2_scope_entity_class_input_problems/2
+  - nis2_scope_entity_class_what_if/4
+  - annex_i_type/0
+  - annex_ii_type/0
+  - services_or_activities_in_union/0
+  - staff_headcount/0
+  - annual_turnover_eur/0
+  - annual_balance_sheet_total_eur/0
+  - public_electronic_communications_provider/0
+  - trust_service_provider_status/0
+  - tld_name_registry/0
+  - dns_service_provider/0
+  - sole_provider_of_an_essential_service_in_a_member_state/0
+  - disruption_could_significantly_impact_public_safety_security_or_health/0
+  - disruption_could_induce_a_significant_systemic_risk/0
+  - critical_by_specific_national_or_regional_importance/0
+  - public_administration_kind/0
+  - public_administration_in_national_security_defence_or_law_enforcement/0
+  - critical_entity_under_directive_2022_2557/0
+  - domain_name_registration_service_entity/0
+  - exempted_from_dora_scope_by_member_state/0
+  - identified_by_member_state_as_essential_entity/0
+  - former_operator_of_essential_services_kept_essential_by_member_state/0
+  - not_a_trust_service_provider/0
+  - non_qualified_trust_service_provider/0
+  - qualified_trust_service_provider/0
+  - not_public_administration/0
+  - central_government/0
+  - regional_with_risk_assessed_services/0
+  - other_public_administration/0
+  - microenterprise/0
+  - small_enterprise/0
+  - medium_sized_enterprise/0
+  - large_enterprise/0
+  - in_scope/0
+  - out_of_scope/0
+  - essential_entity/0
+  - important_entity/0
+  - unsure/0
+  - indeterminate/1
+  - needs_legal_review/2
+  - open_textured/2
+  - inputs_relied_on/1
+  - provenance/2
+  - input_problems/1
+  - unknown_key/1
+  - wrong_type/1
+  - duplicate_key/1
+  # -- fixtures.clausal --
+  - nis2_scope_entity_class_subject/1
+  - nis2_scope_entity_class_profile_for/2
+  - nis2_scope_entity_class_assess/2
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one.
+independence: no_external_scorer
+
+uses: []
+
+scope: 'Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Art 2 of the Annex to Recommendation 2003/361/EC as Art 2(1) refers to it. Decides three questions for one entity from a profile of final figures and judgements: its size category (size_class/3), whether the Directive applies to it (scope_decision/3: the exclusions of Art 2(7), 2(9) and 2(10) first, then the thirteen grounds of Art 2(1) to 2(4)) and whether it is an essential or an important entity (entity_class/3, Art 3(1) and 3(2)). The Annex I or II type, and the open-textured points of Art 2(2)(b) to (e), are judgements of the caller: an unsure judgement that decides is handed back as needs_legal_review. Out of scope: how a Member State applies the Directive to an entity (country orders), the aggregation rules of Arts 3 to 6 of the Annex, national definitions of public administration, the Annex lists, and the obligations of Arts 21 and 23.'
+
+sources:
+  - 'Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022: Art 2(1) to 2(4), 2(7), 2(9), 2(10); Art 3(1), 3(2)'
+  - 'Commission Recommendation 2003/361/EC, Annex Title I Article 2 (read from the raw pin, not a pinned unit)'
+
+query_interface:
+  2: nis2_scope_entity_class_status/2
+  7: nis2_scope_entity_class_checklist/2
+  16: nis2_scope_entity_class_what_if/4
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  reason: 'The titles of Articles 2 and 3 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: member_state_extensions_and_exemptions
+  units:
+  - 32022L2555#parag_002.005
+  - 32022L2555#point_002.005_a
+  - 32022L2555#point_002.005_b
+  - 32022L2555#parag_002.008
+  reason: Art 2(5) (a Member State may apply the Directive to public administration
+    entities at local level and to education institutions) and Art 2(8) (a Member
+    State may exempt specific entities in the areas of national security, public security,
+    defence or law enforcement from Articles 21 and 23, and in some cases from Articles
+    3 and 27) are decisions of national law; whether a Member State made them is a
+    fact for the country orders.
+  consequence: The answers apply the Directive's own rules; they do not say whether
+    a Member State extended the scope to local public administration or education
+    institutions, or exempted an entity.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: national_security_reservations
+  units:
+  - 32022L2555#parag_002.006
+  - 32022L2555#parag_002.011
+  reason: Art 2(6) (the Directive is without prejudice to the Member States' responsibility
+    for national security) and Art 2(11) (obligations do not entail supplying information
+    contrary to essential interests of national security, public security or defence)
+    are safeguards that yield no answer a query of this order could return.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: relation_to_other_law_and_data_processing
+  units:
+  - 32022L2555#parag_002.012
+  - 32022L2555#parag_002.014
+  reason: Art 2(12) (the Directive applies without prejudice to the GDPR and other
+    Union acts) and Art 2(14) (personal data are processed as necessary and in accordance
+    with the GDPR) are rules of relation and of processing that change neither the
+    scope nor the class.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: confidential_information_exchange
+  units:
+  - 32022L2555#parag_002.013
+  reason: Art 2(13) binds the exchange of confidential information between the Commission
+    and the authorities.
+  consequence: 'None for an entity caller: it binds the authorities.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: lists_and_registers
+  units:
+  - 32022L2555#parag_003.003
+  - 32022L2555#parag_003.005
+  - 32022L2555#point_003.005_a
+  - 32022L2555#point_003.005_b
+  - 32022L2555#parag_003.006
+  reason: Art 3(3) (Member States establish and review the list of entities), Art
+    3(5) and (6) (notifications to the Commission and the Cooperation Group) bind
+    the Member States and their authorities, not the entity.
+  consequence: 'None for an entity caller: these paragraphs bind the authorities.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: information_to_submit_for_the_list
+  units:
+  - 32022L2555#parag_003.004
+  - 32022L2555#point_003.004_a
+  - 32022L2555#point_003.004_b
+  - 32022L2555#point_003.004_c
+  - 32022L2555#point_003.004_d
+  reason: Art 3(4) (the information an entity submits for the list, and the two-week
+    change limit) is formalized in the sibling order on jurisdiction and registration
+    (nis2-jurisdiction-registration), which cites it.
+  consequence: 'None for a caller of this order: see the sibling order.'
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: nis2-jurisdiction-registration
+- what: annex_types
+  instrument: Directive (EU) 2022/2555 Annex I and Annex II (not pinned in this domain)
+  units: []
+  reason: 'Annex I (sectors of high criticality) and Annex II (other critical sectors)
+    list the types of entity to which the Directive applies. This order takes whether
+    the entity is of a type in Annex I or II as the two judgement keys annex_i_type
+    and annex_ii_type; the Annex lists are formalisable (as sector and type enumerations)
+    but no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex is
+    not implemented for xhtml; the Recommendation fails 404 through the celex route);
+    an extension of the pinning tool has been requested; the debt is replaced by
+    a pin, keys and bound units when it does.'
+  consequence: The answers do not say which activities are of an Annex type; the caller
+    judges that itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex
+    is not implemented for xhtml; the Recommendation fails 404 through the celex route);
+    an extension of the pinning tool has been requested; the debt is replaced by
+    a pin, keys and bound units when it does.'
+- what: sme_ceilings_pin
+  instrument: Commission Recommendation 2003/361/EC, Annex Title I Article 2 (not
+    pinned in this domain)
+  units: []
+  reason: 'Art 2 of the Annex to Recommendation 2003/361/EC (the staff and financial
+    ceilings of the size categories) is read in this order from the raw pin quoted
+    in sources, and no citation key names it; no pinnable text yet: tools/pin_statute.py
+    cannot cut this text (--annex is not implemented for xhtml; the Recommendation
+    fails 404 through the celex route); an extension of the pinning tool has been requested; the debt is replaced by a pin, keys and bound units when it does.'
+  consequence: The size answers cite the Directive Art 2(1) that refers to the Recommendation,
+    not the Recommendation itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex
+    is not implemented for xhtml; the Recommendation fails 404 through the celex route);
+    an extension of the pinning tool has been requested; the debt is replaced by
+    a pin, keys and bound units when it does.'
+- what: essential_entities_chapeau
+  units:
+  - 32022L2555#parag_003.001
+  reason: 'Art 3(1) is the introductory sentence (the chapeau) of the list of essential
+    entities: it carries no condition of its own. Its points (a) to (g) are formalized
+    as the essential grounds E1 to E9 and are cited through the keys of points (a)
+    to (g).'
+  consequence: 'None for a caller: every condition of Art 3(1) is decided by the cited
+    points.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: sme_aggregation_rules
+  instrument: Commission Recommendation 2003/361/EC, Annex Title I Articles 3 to 6
+  cites:
+  - 32003H0361#art_003
+  - 32003H0361#art_004
+  - 32003H0361#art_005
+  - 32003H0361#art_006
+  reason: Whether an enterprise is autonomous, a partner or a linked enterprise, which
+    reference period applies and how persons employed are counted (Arts 3 to 6 of
+    the Annex) decide the final staff, turnover and balance sheet figures; Art 2(1)
+    of the Directive disapplies Art 3(4) of the Annex. The caller applies these rules
+    and gives the final figures.
+  consequence: The size answers are only as good as the figures given; the order does
+    not aggregate the figures of partner or linked enterprises.
+- what: national_definitions_of_public_administration
+  instrument: national law of the Member States (Art 2(2)(f); the definition of a
+    public administration entity is Directive Art 6, point (35))
+  cites:
+  - 32022L2555#art_006
+  reason: Which bodies are public administration entities of central government or
+    of regional level, and which regional entities provide risk-assessed services,
+    is defined by each Member State in accordance with national law (Art 2(2)(f)).
+  consequence: The caller states public_administration_kind; the country orders give
+    the national definition.
+- what: critical_entities_identification
+  instrument: Directive (EU) 2022/2557 (Art 6, identification of critical entities)
+  cites:
+  - 32022L2557#art_006
+  reason: Whether an entity is identified as a critical entity under Directive (EU)
+    2022/2557 (Art 2(3) of this Directive, Art 3(1)(f)) is decided under that Directive;
+    this order takes it as the crisp key critical_entity_under_directive_2022_2557.
+  consequence: The caller states whether the entity was identified.
+- what: entity_definitions_in_article_6
+  instrument: Directive (EU) 2022/2555 Art 6
+  cites:
+  - 32022L2555#art_006
+  reason: The definitions of a TLD name registry, a DNS service provider, a trust
+    service provider, a qualified trust service provider and an entity providing domain
+    name registration services are in Art 6 and in other Union acts and are not pinned
+    in this domain; the caller states the crisp keys.
+  consequence: The caller establishes the provider type under the definitions.

@@ -1,0 +1,205 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_jurisdiction_registration
+shape_family: classification
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_jurisdiction_registration"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES (and the exported root atoms), grouped
+# per submodule -- in sync with the :- module(...) export lists.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_jurisdiction_registration.clausal --
+  - "decide_nis2_jurisdiction_registration/2"
+  - "nis2_jurisdiction_registration_status/2"
+  - "nis2_jurisdiction_registration_checklist/2"
+  - "nis2_jurisdiction_registration_decision_resolvable/1"
+  - "nis2_jurisdiction_registration_status_values/1"
+  - "jurisdiction_basis/3"
+  - "main_establishment_rule/3"
+  - "registry_submission_items/2"
+  - "entity_list_submission_items/2"
+  - "change_notification_limits/2"
+  - "entity_category/0"
+  - "established_in_union/0"
+  - "offers_services_in_union/0"
+  - "representative_designated_in_union/0"
+  - "decisions_predominantly_taken_in_one_union_member_state/0"
+  - "cybersecurity_operations_carried_out_in_one_union_member_state/0"
+  - "sector_and_subsector_applicable/0"
+  - "member_states_list_applicable/0"
+  - "general_entity/0"
+  - "public_electronic_communications_provider/0"
+  - "main_establishment_provider/0"
+  - "public_administration_entity/0"
+  - "state_of_establishment/0"
+  - "state_where_services_are_provided/0"
+  - "state_of_main_establishment/0"
+  - "state_that_established_the_entity/0"
+  - "state_of_representative/0"
+  - "any_member_state_where_services_are_provided_may_take_legal_action/0"
+  - "no_rule_in_article_26/0"
+  - "state_where_cybersecurity_risk_management_decisions_are_taken/0"
+  - "state_where_cybersecurity_operations_are_carried_out/0"
+  - "state_of_establishment_with_most_employees_in_the_union/0"
+  - "unsure/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "item/2"
+  - "limit/3"
+  - "months_after_change/1"
+  - "weeks_after_change/1"
+  # -- queries.clausal --
+  - "nis2_jurisdiction_registration_profile_keys/1"
+  - "nis2_jurisdiction_registration_input_problems/2"
+  - "nis2_jurisdiction_registration_what_if/4"
+  - "nis2_jurisdiction_registration_status_by_category/2"
+  # -- fixtures.clausal --
+  - "nis2_jurisdiction_registration_subject/1"
+  - "nis2_jurisdiction_registration_profile_for/2"
+  - "nis2_jurisdiction_registration_assess/2"
+  - "nis2_jurisdiction_registration_fixtures/1"
+
+# Independence classification: no external scorer yet.
+independence: no_external_scorer
+
+uses: []
+
+scope: "Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/2555 Art 26(1)-(3)), where the main establishment of a Union provider is (Art 26(2)), what the entity must submit to the registry (Art 27(2)) and for the Member States' list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4)). The Directive binds the Member States; this domain states what it requires. Out of scope (handed to the lawyer or a sibling domain): whether the entity is in scope and its category (sibling order on scope), calendar computation of the periods, national registers, forms and channels."
+
+sources:
+  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 3(3)-(4), Art 26(1)-(3), Art 27(1)-(3), Art 27(5)"
+
+query_interface:
+  2: "nis2_jurisdiction_registration_status/2"      # eligibility verdict (eligible / ineligible / indeterminate)
+  7: "nis2_jurisdiction_registration_checklist/2"   # justification: checklist row carries cite(...) per item
+  16: "nis2_jurisdiction_registration_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 32022L2555#art_003
+  - 32022L2555#art_026
+  - 32022L2555#art_027
+  reason: 'The titles of Articles 3, 26 and 27 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: essential_and_important_entities
+  units:
+  - 32022L2555#parag_003.001
+  - 32022L2555#point_003.001_a
+  - 32022L2555#point_003.001_b
+  - 32022L2555#point_003.001_c
+  - 32022L2555#point_003.001_d
+  - 32022L2555#point_003.001_e
+  - 32022L2555#point_003.001_f
+  - 32022L2555#point_003.001_g
+  - 32022L2555#parag_003.002
+  reason: Art 3(1) and (2) say which entities are essential and which important. They
+    are to be formalized by the sibling order on scope and entity class (eu/nis2-scope-entity-class,
+    package P1), whose ledger must formalize these units; this order takes the entity
+    as given.
+  consequence: 'None for a caller of this order: the caller establishes the entity
+    class first.'
+  declaration: answered_with_caveat
+  not_formalized_because: in_sibling
+  decided_in: nis2-scope-entity-class
+- what: authority_side_of_lists_and_registry
+  units:
+  - 32022L2555#parag_003.003
+  - 32022L2555#parag_003.005
+  - 32022L2555#point_003.005_a
+  - 32022L2555#point_003.005_b
+  - 32022L2555#parag_003.006
+  - 32022L2555#parag_026.005
+  - 32022L2555#parag_027.001
+  - 32022L2555#parag_027.004
+  reason: 'Art 3(3) (Member States establish and review the list), Art 3(5) and (6)
+    (notifications to the Commission and the Cooperation Group), Art 26(5) (supervisory
+    and enforcement measures after a request for mutual assistance), Art 27(1) (ENISA
+    keeps the registry: this unit is read in one respect only, for the list of entity
+    types it names, which defines the entities Art 27(2) addresses, reading (6); the
+    ENISA registry duty itself is deferred) and Art 27(4) (the single point of contact
+    forwards the information to ENISA) bind the Member States, their authorities and
+    ENISA, not the entity; none changes what an entity must submit or when.'
+  consequence: 'None for an entity caller: these paragraphs bind the authorities.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: designation_without_prejudice_to_legal_actions
+  units:
+  - 32022L2555#parag_026.004
+  reason: Art 26(4) says that designating a representative does not prevent legal
+    actions against the entity itself. It adds no condition to any answer of this
+    order and yields no result a query could return.
+  consequence: The answers do not say what legal action may be brought; the caller
+    must not read state_of_representative as excluding action against the entity.
+  declaration: answered_with_caveat
+  not_formalized_because: procedural_no_output
+- what: national_registration_mechanism
+  units:
+  - 32022L2555#parag_027.005
+  reason: Art 27(5) says the information is submitted through the national mechanism
+    referred to in Art 3(4) fourth subparagraph, where applicable. Whether a national
+    mechanism exists, and what it is, is national law.
+  consequence: The answers say what is to be submitted, not where; the country orders
+    give the channel.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: registry_initial_submission_date
+  units:
+  - 32022L2555#parag_027.002
+  reason: The opening words of Art 27(2) require Member States to have entities submit
+    the information of points (a) to (f) by 17 January 2025. The items themselves
+    are formalized through points (a) to (f) of Art 27(2) (registry_submission_items/2,
+    each item carrying its cite(eu_dir_2022_2555_art_27_2_x)); the date has passed
+    and no query gives or checks a date (reading (6)), so the opening words add no
+    result of their own.
+  consequence: The answers list what is to be submitted, not whether an initial submission
+    was on time; the caller judges the date.
+  declaration: answered_with_caveat
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: entity_class_and_scope
+  instrument: Directive (EU) 2022/2555 Arts 2, 3 and 6 and Annexes I and II
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_006
+  reason: Whether an entity is in scope, which category of Art 26(1) it falls in and
+    whether it is essential or important is decided by the sibling order on scope;
+    this order takes entity_category as given.
+  consequence: The caller establishes the category first.
+- what: calendar_periods
+  instrument: Regulation (EEC, Euratom) No 1182/71 Art 3
+  cites:
+  - 31971R1182#art_003
+  reason: The three-month and two-week limits are calendar periods; computing them
+    needs the period rules of Regulation 1182/71, which are not pinned in this domain.
+    The limits are listed (months_after_change(3), weeks_after_change(2)) but no date
+    is computed.
+  consequence: The caller computes the end of each period itself.
+- what: national_registers
+  instrument: national law of the Member States implementing Arts 3(3), 3(4) and 27
+  cites:
+  - 32022L2555#art_036
+  reason: The national register, the form of submission, the competent authority and
+    the national mechanism are for each Member State.
+  consequence: The answers give the Union requirement only; the country orders give
+    the register.

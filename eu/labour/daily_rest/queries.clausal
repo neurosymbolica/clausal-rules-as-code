@@ -1,0 +1,282 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/labour/daily_rest.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003, the original act (CELEX 32003L0088): Art 3 read with
+% Art 2(1) and Art 2(2); Art 2(7) with Art 20(1); Art 21(1); Art 17(1),
+% 17(3), 17(4); Art 18, first and second subparagraphs.
+%
+% The query types of the order are served by the slice:
+%   #2  eligibility  daily_rest_status/7 (verdict with citations) and
+%                    daily_rest_checklist/6 (the cited checklist);
+%   #23 calculation  shortest_daily_rest_minutes/6 (exact integer minutes);
+%   #6  threshold    daily_rest_threshold/1 (the 660-minute boundary at
+%                    which a window turns from held to short) and
+%                    first_window_without_daily_rest/6 (the first window
+%                    below it).
+% This file adds:
+%   daily_rest_what_if/4        (#16 what-if): override one profile key of a
+%                               case and re-evaluate daily_rest_status/7
+%   daily_rest_profile_keys/1:  top-level profile key schema
+%   daily_rest_input_problems/2: the problems a profile has ([] = none),
+%                               re-exported from the kernel as written
+%   the ROOT EXPORTS: the result atoms, the profile key atoms, the atoms of
+%   worker_category and derogation_from_article_3, the five shift kinds and
+%   the judgement value unsure, each served as a name/0 fact, and the ten
+%   result constructors. Each constructor has a clause below that holds
+%   exactly for a well-shaped term of the order (a shape check, no
+%   statutory decision).
+%   They decide nothing statutory and carry no marker.
+%
+% A CASE is case(Profile, Worker, Shifts, PeriodStart, PeriodEnd), the five
+% inputs of daily_rest_status/7, in that order.
+% The profile is an attribute list, not a dict, so the what-if override is
+% attribute-list plumbing here (query_combinators override_key/4 works on
+% dicts). It decides nothing statutory and carries no marker.
+% =====================================================================
+
+:- module(queries, [
+    daily_rest_profile_keys/1,
+    daily_rest_input_problems/2,
+    daily_rest_what_if/4,
+    daily_rest_given/0,
+    daily_rest_not_given/0,
+    daily_rest_not_applied_to_worker/0,
+    daily_rest_derogation_applies/0,
+    no_work_start_in_period/0,
+    no_window_without_daily_rest/0,
+    date_time/5,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    on_call_on_site_counts_as_working_time/0,
+    on_call_standby_counts_as_working_time/0,
+    worker_category/0,
+    derogation_from_article_3/0,
+    other_worker/0,
+    mobile_worker/0,
+    seagoing_fishing_vessel_worker/0,
+    no_derogation/0,
+    derogation_under_article_17_1/0,
+    derogation_under_article_17_3/0,
+    derogation_under_article_17_4/0,
+    derogation_under_article_18/0,
+    work/0,
+    on_call_on_site/0,
+    on_call_standby/0,
+    paid_annual_leave/0,
+    sick_leave/0,
+    unsure/0
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [not_member/2]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
+:- use_module(eu/labour/daily_rest/kernel, [daily_rest_input_problems/2]).
+:- use_module(eu/labour/daily_rest/daily_rest, [daily_rest_status/7]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+daily_rest_profile_keys([on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, worker_category, derogation_from_article_3]).
+
+% ---- result constructors: shape checks (no statutory decision) ------
+% date_time(Y, M, D, H, MIN): a real Gregorian day and a real minute.
+date_time(Year, Month, DayOfMonth, HourOfDay, MinuteOfHour) :-
+    integer(Year),
+    integer(Month),
+    integer(DayOfMonth),
+    integer(HourOfDay),
+    integer(MinuteOfHour),
+    Year #>= 1,
+    Year #=< 9999,
+    Month #>= 1,
+    Month #=< 12,
+    month_last_day(Year, Month, LastDayOfMonth),
+    DayOfMonth #>= 1,
+    DayOfMonth #=< LastDayOfMonth,
+    HourOfDay #>= 0,
+    HourOfDay #=< 23,
+    MinuteOfHour #>= 0,
+    MinuteOfHour #=< 59.
+
+% indeterminate([Key]): exactly one missing key the limbs can name.
+indeterminate([Key]) :-
+    daily_rest_profile_keys(Keys),
+    memberd_t(Key, Keys, true).
+
+% open_textured(Key, cite(eu_dir_2003_88_art_2_1)): the reason of a referral,
+% an on-call judgement key under Art 2(1).
+open_textured(Key, cite(eu_dir_2003_88_art_2_1)) :-
+    memberd_t(Key, [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time], true).
+
+% inputs_relied_on(Pairs): a list of Key-Value pairs.
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+% needs_legal_review: the referral of an on-call judgement under Art 2(1),
+% with an optional trailing provenance marker.
+needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]) :-
+    open_textured(Key, Citation),
+    inputs_relied_on(Pairs).
+needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs), provenance(Clause, Citations)]) :-
+    open_textured(Key, Citation),
+    inputs_relied_on(Pairs),
+    provenance(Clause, Citations).
+
+% provenance(Clause, Citations): a clause name and a list of citations.
+provenance(Clause, Citations) :-
+    atom(Clause),
+    is_list(Citations).
+
+% input_problems(Problems): a non-empty list of problems.
+input_problems([Problem|Problems]) :-
+    nonvar(Problem),
+    is_list(Problems).
+
+% unknown_key(Key): a key outside the four of the contract.
+unknown_key(Key) :-
+    daily_rest_profile_keys(Keys),
+    not_member(Key, Keys).
+
+% wrong_type(Key): a contract key or one of the checked arguments.
+wrong_type(Key) :-
+    daily_rest_profile_keys(ProfileKeys),
+    append([profile, worker, shifts, period_start, period_end], ProfileKeys, CheckedNames),
+    memberd_t(Key, CheckedNames, true).
+
+% duplicate_key(Key): a contract key.
+duplicate_key(Key) :-
+    daily_rest_profile_keys(Keys),
+    memberd_t(Key, Keys, true).
+
+% #16 what-if: re-evaluate a case with one profile key hypothetically overridden.
+% NewStatus is daily_rest_verdict(Result, Citations).
+daily_rest_what_if(case(Profile, Worker, Shifts, PeriodStart, PeriodEnd), OverriddenKey, NewValue, daily_rest_verdict(Result, Citations)) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    daily_rest_status(Hypothesis, Worker, Shifts, PeriodStart, PeriodEnd, Result, Citations).
+
+% Attribute-list plumbing: drop every attribute of Key, then add the new one.
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    exclude(attribute_has_key(Key), Profile, Kept),
+    append(Kept, [attribute(Key, Value)], Hypothesis).
+
+attribute_has_key(Key, attribute(ElementKey, _)) :-
+    ElementKey == Key.
+
+% ---- root exports: the result atoms ---------------------------------
+daily_rest_given.
+daily_rest_not_given.
+daily_rest_not_applied_to_worker.
+daily_rest_derogation_applies.
+no_work_start_in_period.
+no_window_without_daily_rest.
+
+% ---- root exports: the profile key atoms ----------------------------
+on_call_on_site_counts_as_working_time.
+on_call_standby_counts_as_working_time.
+worker_category.
+derogation_from_article_3.
+
+% ---- root exports: the atoms of worker_category ---------------------
+other_worker.
+mobile_worker.
+seagoing_fishing_vessel_worker.
+
+% ---- root exports: the atoms of derogation_from_article_3 -----------
+no_derogation.
+derogation_under_article_17_1.
+derogation_under_article_17_3.
+derogation_under_article_17_4.
+derogation_under_article_18.
+
+% ---- root exports: the five shift kinds -----------------------------
+work.
+on_call_on_site.
+on_call_standby.
+paid_annual_leave.
+sick_leave.
+
+% ---- root exports: the judgement value besides true and false -------
+unsure.
+
+% ---- tests ----------------------------------------------------------
+ordinary_profile([attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)]).
+
+short_rest_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 20, 0), work), shift(w1, date_time(2026, 3, 3, 4, 0), date_time(2026, 3, 3, 12, 0), work)]).
+
+on_call_on_site_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 22, 0), on_call_on_site), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+test(the_profile_keys_are_in_contract_order) :-
+    daily_rest_profile_keys([on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, worker_category, derogation_from_article_3]).
+
+test(what_if_a_derogation_is_stated) :-
+    ordinary_profile(Profile),
+    short_rest_shifts(Shifts),
+    daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), derogation_from_article_3, derogation_under_article_17_4, daily_rest_verdict(daily_rest_derogation_applies, [cite(eu_dir_2003_88_art_3), cite(eu_dir_2003_88_art_17_4)])).
+
+test(what_if_no_derogation_is_stated_the_rest_is_not_given) :-
+    ordinary_profile(Profile),
+    short_rest_shifts(Shifts),
+    daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), derogation_from_article_3, no_derogation, daily_rest_verdict(daily_rest_not_given, _)).
+
+test(what_if_the_worker_is_mobile) :-
+    ordinary_profile(Profile),
+    short_rest_shifts(Shifts),
+    findall(Verdict, daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), worker_category, mobile_worker, Verdict), Verdicts),
+    Verdicts == [daily_rest_verdict(daily_rest_not_applied_to_worker, [cite(eu_dir_2003_88_art_2_7), cite(eu_dir_2003_88_art_20_1)])].
+
+test(what_if_on_call_on_site_counts) :-
+    ordinary_profile(Profile),
+    on_call_on_site_shifts(Shifts),
+    daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), on_call_on_site_counts_as_working_time, true, daily_rest_verdict(daily_rest_not_given, _)).
+
+test(what_if_on_call_on_site_does_not_count) :-
+    ordinary_profile(Profile),
+    on_call_on_site_shifts(Shifts),
+    daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), on_call_on_site_counts_as_working_time, false, daily_rest_verdict(daily_rest_given, _)).
+
+test(what_if_on_call_on_site_does_not_count_is_not_short, fail) :-
+    ordinary_profile(Profile),
+    on_call_on_site_shifts(Shifts),
+    daily_rest_what_if(case(Profile, w1, Shifts, date(2026, 3, 2), date(2026, 3, 3)), on_call_on_site_counts_as_working_time, false, daily_rest_verdict(daily_rest_not_given, _)).
+
+test(the_override_replaces_every_attribute_of_the_key) :-
+    override_attribute([attribute(worker_category, other_worker), attribute(derogation_from_article_3, no_derogation)], worker_category, mobile_worker, Hypothesis),
+    Hypothesis == [attribute(derogation_from_article_3, no_derogation), attribute(worker_category, mobile_worker)].
+
+test(the_result_atoms_are_served) :-
+    daily_rest_given,
+    daily_rest_not_given,
+    daily_rest_not_applied_to_worker,
+    daily_rest_derogation_applies,
+    no_work_start_in_period,
+    no_window_without_daily_rest.
+
+test(the_result_constructors_are_served) :-
+    date_time(2026, 3, 2, 8, 0),
+    indeterminate([worker_category]),
+    open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)),
+    inputs_relied_on([on_call_on_site_counts_as_working_time-unsure]),
+    needs_legal_review(open_textured(on_call_on_site_counts_as_working_time, cite(eu_dir_2003_88_art_2_1)), [inputs_relied_on([on_call_on_site_counts_as_working_time-unsure])]),
+    provenance(daily_rest_status_step_2c, [cite(eu_dir_2003_88_art_2_1)]),
+    input_problems([wrong_type(worker)]),
+    unknown_key(colour),
+    wrong_type(period_end),
+    duplicate_key(derogation_from_article_3).
+
+test(an_unreal_day_is_not_a_date_time, fail) :-
+    date_time(2026, 2, 30, 8, 0).
+
+test(an_open_texture_of_a_category_key_is_not_well_shaped, fail) :-
+    open_textured(worker_category, cite(eu_dir_2003_88_art_2_1)).
+
+:- end_module(queries).

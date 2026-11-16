@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one key changed -> a different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`
+%
+% A `fail` test cannot tell a wrong verdict from a MISSPELT one, so every
+% near-miss atom is also checked to be one of the slice's verdict atoms,
+% and every near-miss profile is shown to get its own answer.
+% Run: python -m clausal.testing eu/data_protection/gdpr_compensation_and_liability/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_compensation_and_liability/gdpr_compensation_and_liability, [
+    gdpr_compensation_and_liability_status/2,
+    gdpr_compensation_and_liability_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_compensation_and_liability/fixtures, [gdpr_compensation_and_liability_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    gdpr_compensation_and_liability_profile_for(Subject, Profile),
+    gdpr_compensation_and_liability_status(Profile, Status).
+
+% ---- the verdict atoms are real -------------------------------------
+test(the_four_verdict_atoms_are_real) :-
+    gdpr_compensation_and_liability_status_values(StatusValues),
+    member(liable_for_damage, StatusValues),
+    member(exempt_from_liability, StatusValues),
+    member(not_liable_for_damage, StatusValues),
+    member(right_not_established, StatusValues).
+
+% ---- step 11: liable_for_damage (controller) ------------------------
+test(controller_liable_is_liable) :-
+    subject_status(controller_liable, liable_for_damage).
+test(controller_exempt_is_not_liable, fail) :-
+    subject_status(controller_exempt, liable_for_damage).
+
+% ---- step 10: exempt_from_liability -----------------------------------
+test(controller_exempt_is_exempt) :-
+    subject_status(controller_exempt, exempt_from_liability).
+test(controller_liable_is_not_exempt, fail) :-
+    subject_status(controller_liable, exempt_from_liability).
+
+% ---- step 6: not_liable_for_damage (controller not involved) ----------
+test(controller_not_involved_is_not_liable) :-
+    subject_status(controller_not_involved, not_liable_for_damage).
+test(an_involved_controller_is_not_outside, fail) :-
+    subject_status(controller_liable, not_liable_for_damage).
+
+% ---- step 6: not_liable_for_damage (processor with neither breach) ----
+test(processor_with_neither_breach_is_not_liable) :-
+    subject_status(processor_outside_both_false, not_liable_for_damage).
+test(processor_with_one_breach_is_not_outside, fail) :-
+    subject_status(processor_liable_by_instructions, not_liable_for_damage).
+
+% ---- step 11: liable_for_damage (processor) ----------------------------
+test(processor_acting_outside_instructions_is_liable) :-
+    subject_status(processor_liable_by_instructions, liable_for_damage).
+test(processor_with_neither_breach_is_not_liable_for_damage, fail) :-
+    subject_status(processor_outside_both_false, liable_for_damage).
+test(processor_breaching_obligations_is_liable) :-
+    subject_status(processor_liable_by_breach, liable_for_damage).
+
+% ---- step 1: damage false ---------------------------------------------
+test(damage_false_refutes_the_right) :-
+    subject_status(damage_false_role_absent, right_not_established).
+test(damage_true_does_not_refute_the_right, fail) :-
+    subject_status(judgement_absent, right_not_established).
+
+% ---- step 2: infringement false beats an outside caller (Q8) ----------
+test(infringement_false_refutes_the_right_for_an_outside_caller) :-
+    subject_status(infringement_false_outside_caller, right_not_established).
+test(infringement_true_outside_caller_is_not_refuted, fail) :-
+    subject_status(controller_not_involved, right_not_established).
+
+% ---- step 3: causation false ------------------------------------------
+test(causation_false_refutes_the_right) :-
+    subject_status(causation_false, right_not_established).
+test(causation_true_is_not_refuted, fail) :-
+    subject_status(controller_liable, right_not_established).
+
+% ---- step 4: a judgement key absent ------------------------------------
+test(an_absent_judgement_is_named) :-
+    subject_status(judgement_absent, indeterminate([damage_resulted_from_the_infringement])).
+test(a_false_judgement_is_not_indeterminate, fail) :-
+    subject_status(damage_false_role_absent, indeterminate(_)).
+
+% ---- step 5: the caller's position undecided ----------------------------
+test(an_absent_role_is_named) :-
+    subject_status(role_absent, indeterminate([party_role])).
+test(a_complete_controller_profile_is_not_indeterminate, fail) :-
+    subject_status(controller_statement_absent, indeterminate(_)).
+test(a_controller_needs_its_involvement) :-
+    subject_status(controller_involvement_absent, indeterminate([involved_in_the_processing])).
+test(a_controller_never_needs_the_processor_keys, fail) :-
+    subject_status(controller_involvement_absent, indeterminate([processor_breached_obligations_directed_to_processors])).
+test(a_processor_needs_the_second_key_after_a_false_first) :-
+    subject_status(processor_second_key_absent, indeterminate([processor_acted_outside_or_contrary_to_lawful_instructions])).
+test(a_processor_never_needs_the_involvement_key, fail) :-
+    subject_status(processor_keys_absent, indeterminate([involved_in_the_processing])).
+
+% ---- step 7: outside caller, a judgement unsure ------------------------
+test(an_outside_caller_with_an_unsure_judgement_is_referred) :-
+    subject_status(outside_caller_unsure, needs_legal_review(open_textured(damage_suffered, cite(eu_reg_2016_679_art_82_1)), _)).
+test(an_outside_caller_with_true_judgements_is_not_referred, fail) :-
+    subject_status(controller_not_involved, needs_legal_review(_, _)).
+test(an_outside_caller_never_refers_on_the_statement, fail) :-
+    subject_status(outside_caller_unsure, needs_legal_review(cross_reference_unresolved(_, _), _)).
+
+% ---- step 8: inside, the statement absent -------------------------------
+test(an_absent_statement_is_referred) :-
+    subject_status(controller_statement_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3), cite(non_responsibility_statement)), _)).
+test(a_present_statement_is_not_referred, fail) :-
+    subject_status(controller_liable, needs_legal_review(_, _)).
+test(an_absent_statement_refers_before_an_unsure_judgement) :-
+    subject_status(inside_statement_absent_with_unsure, needs_legal_review(cross_reference_unresolved(_, _), _)).
+test(an_absent_statement_is_not_referred_as_open_textured, fail) :-
+    subject_status(inside_statement_absent_with_unsure, needs_legal_review(open_textured(_, _), _)).
+
+% ---- step 9: inside, statement present, a judgement unsure -------------
+test(an_inside_unsure_judgement_is_referred) :-
+    subject_status(inside_unsure, needs_legal_review(open_textured(damage_resulted_from_the_infringement, cite(eu_reg_2016_679_art_82_1)), _)).
+test(an_inside_unsure_judgement_is_not_liable, fail) :-
+    subject_status(inside_unsure, liable_for_damage).
+
+% ---- step 0: input problems ---------------------------------------------
+test(an_unknown_key_is_an_input_problem) :-
+    subject_status(input_unknown_key, input_problems([unknown_key(colour)])).
+test(the_same_profile_without_the_unknown_key_has_no_problem, fail) :-
+    gdpr_compensation_and_liability_status([attribute(damage_suffered, true)], input_problems(_)).
+test(the_same_profile_without_the_unknown_key_names_the_next_judgement) :-
+    gdpr_compensation_and_liability_status([attribute(damage_suffered, true)], indeterminate([infringement_of_the_regulation_occurred])).
+test(a_crisp_key_given_unsure_is_an_input_problem) :-
+    subject_status(input_wrong_type_crisp_unsure, input_problems([wrong_type(involved_in_the_processing)])).
+
+:- end_module(test_negative_controls).

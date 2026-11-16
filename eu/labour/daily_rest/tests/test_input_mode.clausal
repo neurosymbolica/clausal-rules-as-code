@@ -1,0 +1,122 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input tolerance:
+% malformed profiles and arguments answered with input problems first.
+% Run: python -m clausal.testing eu/labour/daily_rest/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/labour/daily_rest/daily_rest, [
+    daily_rest_status/7,
+    shortest_daily_rest_minutes/6,
+    first_window_without_daily_rest/6
+]).
+:- use_module(eu/labour/daily_rest/kernel, [daily_rest_input_problems/2]).
+:- use_module(eu/labour/daily_rest/fixtures, [daily_rest_profile_for/2]).
+
+day_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 3, 8, 0), date_time(2026, 3, 3, 16, 0), work)]).
+
+overlapping_shifts([shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w1, date_time(2026, 3, 2, 15, 0), date_time(2026, 3, 2, 20, 0), work)]).
+
+another_worker_overlapping_shifts([shift(w2, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work), shift(w2, date_time(2026, 3, 2, 15, 0), date_time(2026, 3, 2, 20, 0), work)]).
+
+% ---- bound verdicts ---------------------------------------------------
+test(status_holds_with_the_verdict_bound) :-
+    daily_rest_profile_for(day_shift_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    daily_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, daily_rest_given, _).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    daily_rest_profile_for(day_shift_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    daily_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, daily_rest_not_given, _).
+
+test(status_and_citations_hold_bound) :-
+    daily_rest_profile_for(short_rest_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    daily_rest_status(Profile, Worker, Shifts, PeriodStart, PeriodEnd, daily_rest_not_given, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_2), cite(eu_dir_2003_88_art_3)]).
+
+test(the_shortest_rest_holds_bound) :-
+    daily_rest_profile_for(short_rest_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    shortest_daily_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, 480).
+
+test(a_wrong_bound_shortest_rest_is_rejected, fail) :-
+    daily_rest_profile_for(short_rest_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    shortest_daily_rest_minutes(Profile, Worker, Shifts, PeriodStart, PeriodEnd, 481).
+
+test(the_first_short_window_holds_bound) :-
+    daily_rest_profile_for(short_rest_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    first_window_without_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, date_time(2026, 3, 2, 8, 0)).
+
+test(day_shifts_have_no_window_without_rest_bound) :-
+    daily_rest_profile_for(day_shift_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    first_window_without_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, no_window_without_daily_rest).
+
+test(day_shifts_have_no_date_time_start, fail) :-
+    daily_rest_profile_for(day_shift_worker, case(Profile, Worker, Shifts, PeriodStart, PeriodEnd)),
+    first_window_without_daily_rest(Profile, Worker, Shifts, PeriodStart, PeriodEnd, date_time(_, _, _, _, _)).
+
+% ---- input tolerance: the profile -------------------------------------
+test(a_non_list_profile_is_a_wrong_type) :-
+    daily_rest_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+
+test(a_non_attribute_element_is_a_wrong_type) :-
+    daily_rest_input_problems([attribute(worker_category, other_worker), worker_category], Problems),
+    Problems == [wrong_type(profile)].
+
+test(a_number_key_is_an_unknown_key) :-
+    daily_rest_input_problems([attribute(7, other_worker)], Problems),
+    Problems == [unknown_key(7)].
+
+test(a_repeated_unknown_key_is_named_once) :-
+    daily_rest_input_problems([attribute(colour, red), attribute(colour, blue)], Problems),
+    Problems == [unknown_key(colour)].
+
+test(a_duplicate_key_is_never_also_a_wrong_type) :-
+    daily_rest_input_problems([attribute(worker_category, pilot), attribute(worker_category, pilot)], Problems),
+    Problems == [duplicate_key(worker_category)].
+
+test(a_boolean_is_not_a_worker_category) :-
+    daily_rest_input_problems([attribute(worker_category, true)], Problems),
+    Problems == [wrong_type(worker_category)].
+
+test(an_absent_key_is_not_a_problem) :-
+    daily_rest_input_problems([], Problems),
+    Problems == [].
+
+% ---- input tolerance: the arguments ------------------------------------
+test(profile_problems_come_before_argument_problems) :-
+    findall(Result-Citations, daily_rest_status([attribute(colour, red)], 3.5, [], date(2026, 3, 2), date(2026, 3, 2), Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour), wrong_type(worker)])-[]].
+
+test(overlapping_rows_of_the_worker_are_a_wrong_type) :-
+    overlapping_shifts(Shifts),
+    findall(Minutes, shortest_daily_rest_minutes([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 2), Minutes), Answers),
+    Answers == [input_problems([wrong_type(shifts)])].
+
+test(overlapping_rows_of_another_worker_are_not_read) :-
+    another_worker_overlapping_shifts(Shifts),
+    findall(Minutes, shortest_daily_rest_minutes([], w1, Shifts, date(2026, 3, 2), date(2026, 3, 2), Minutes), Answers),
+    Answers == [no_work_start_in_period].
+
+test(a_partial_shift_list_is_a_wrong_type) :-
+    findall(Start, first_window_without_daily_rest([], w1, [shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), work)|_], date(2026, 3, 2), date(2026, 3, 2), Start), Answers),
+    Answers == [input_problems([wrong_type(shifts)])].
+
+test(a_shift_ending_before_it_starts_is_a_wrong_type) :-
+    findall(Result, daily_rest_status([], w1, [shift(w1, date_time(2026, 3, 2, 16, 0), date_time(2026, 3, 2, 8, 0), work)], date(2026, 3, 2), date(2026, 3, 2), Result, _), Answers),
+    Answers == [input_problems([wrong_type(shifts)])].
+
+test(an_unknown_shift_kind_is_a_wrong_type) :-
+    findall(Result, daily_rest_status([], w1, [shift(w1, date_time(2026, 3, 2, 8, 0), date_time(2026, 3, 2, 16, 0), training)], date(2026, 3, 2), date(2026, 3, 2), Result, _), Answers),
+    Answers == [input_problems([wrong_type(shifts)])].
+
+test(a_reversed_period_is_a_wrong_period_end) :-
+    day_shifts(Shifts),
+    findall(Result-Citations, daily_rest_status([], w1, Shifts, date(2026, 3, 3), date(2026, 3, 2), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(period_end)])-[]].
+
+test(an_atom_worker_and_an_integer_worker_differ) :-
+    day_shifts(Shifts),
+    findall(Minutes, shortest_daily_rest_minutes([], 1, Shifts, date(2026, 3, 2), date(2026, 3, 3), Minutes), Answers),
+    Answers == [no_work_start_in_period].
+
+:- end_module(test_input_mode).

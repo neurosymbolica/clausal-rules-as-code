@@ -1,0 +1,219 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_arts33_34_breach_notification
+shape_family: temporal
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "breach_notification_verdict"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  - "implements/1"
+  # -- breach_notification_verdict.clausal --
+  - "breach_notification_verdict/4"
+  - "notification_obligation/2"
+  - "authority_notification_deadline/3"
+  - "authority_notification_period_end/3"
+  - "authority_notification_content_check/2"
+  - "data_subject_communication_check/2"
+  - "decide_breach_notification_verdict/2"
+  - "breach_notification_verdict_status/2"
+  - "breach_notification_verdict_checklist/2"
+  - "breach_notification_verdict_decision_resolvable/1"
+  - "breach_notification_verdict_status_values/1"
+  - "no_notification_required/1"
+  - "notify_supervisory_authority/1"
+  - "notify_controller/1"
+  - "document_breach/1"
+  - "communicate_to_data_subject/1"
+  - "no_communication_required/1"
+  - "public_communication_or_similar_measure/1"
+  - "notification_requirement_not_met/1"
+  - "period_end/2"
+  - "requirements_not_met/1"
+  - "information_to_follow_in_phases/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "contradictory_inputs/1"
+  # -- queries.clausal --
+  - "gdpr_arts33_34_breach_notification_profile_keys/1"
+  - "gdpr_arts33_34_breach_notification_input_problems/2"
+  - "gdpr_arts33_34_breach_notification_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_arts33_34_breach_notification_subject/1"
+  - "gdpr_arts33_34_breach_notification_profile_for/2"
+  - "gdpr_arts33_34_breach_notification_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib) and
+# library(datetime), no shared backbone package.
+uses: []
+
+scope: >-
+  The personal data breach duties of Regulation (EU) 2016/679 Articles 33 and 34
+  (pinned consolidated text 02016R0679-20160504): whether the controller's
+  notification to the supervisory authority under Art 33(1) was in order (timing,
+  undue delay, reasons for a delay beyond 72 hours); which duties arise for the
+  controller (Art 33(1) notification, Art 33(5) documentation, Art 34(1)
+  communication to the data subject, the Art 34(3) exemptions and the Art 34(4)
+  decision of the supervisory authority) or for the processor (Art 33(2)); the
+  calendar day and the full UTC hour at which the 72-hour period ends, applying
+  Regulation (EEC, Euratom) No 1182/71 Art 3 by analogy; and whether a notification
+  meets Art 33(3) and 33(4) and a communication meets Art 34(1) timing and Art 34(2).
+  Every open-textured assessment (risk, high risk, undue delay, justified reasons,
+  appropriate measures, possible, disproportionate effort, clear and plain language)
+  is stated by the caller as a tri-state judgement and an unsure one is referred to
+  a lawyer. Out of scope: which supervisory authority is competent (Art 55), whether
+  an incident is a personal data breach (Art 4(12)), the adequacy of security
+  measures (Arts 24, 25, 32) and soft-law guidance.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504, Articles 33(1) to 33(5) and 34(1) to 34(4)"
+  - "Regulation (EEC, Euratom) No 1182/71 of the Council determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971, p. 1 (CELEX 31971R1182), Article 3(1), 3(2)(a), 3(3) and 3(4), applied by analogy"
+
+query_interface:
+  2: "breach_notification_verdict/4"      # eligibility: the Art 33(1) notification verdict with its citations
+  14: "notification_obligation/2"         # obligation surfacing: the duties of Arts 33 and 34
+  15: "authority_notification_deadline/3" # deadline: the day the 72-hour period ends (period_end via authority_notification_period_end/3)
+  16: "gdpr_arts33_34_breach_notification_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_033
+  - 02016R0679-20160504#art_034
+  reason: 'The titles of Articles 33 and 34 carry no obligation: document structure.
+    Deferred so every unit of the pinned extracts is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: regulation_1182_71_article_headings
+  units:
+  - 31971R1182#art_002
+  - 31971R1182#art_003
+  - 31971R1182#art_004
+  - 31971R1182#art_005
+  reason: 'The titles of Articles 2 to 5 of Regulation (EEC, Euratom) No 1182/71 carry
+    no rule: document structure, not operative law. Deferred so every unit of the
+    pinned extracts is accounted for.'
+  consequence: 'None for a caller: an article title carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: regulation_1182_71_article_1_scope
+  units:
+  - 31971R1182#art_001
+  reason: Article 1 limits Regulation (EEC, Euratom) No 1182/71 to acts of the Council
+    or Commission; Regulation (EU) 2016/679 is an act of the European Parliament and
+    of the Council. This order applies Article 3 to the periods of Regulation (EU)
+    2016/679 by analogy (a point for legal review, see PERIODS), so no rule reads
+    Article 1.
+  consequence: 'None for a caller: the 72 hours from any moment of the day of awareness
+    end on the third calendar day after it whether or not Article 3 applies, so the
+    date this order gives does not depend on that reading.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: regulation_1182_71_article_2_public_holidays_and_working_days
+  units:
+  - 31971R1182#parag_002.001
+  - 31971R1182#parag_002.002
+  reason: Article 2 defines public holidays and working days for the shift of Article
+    3(4), which does not apply to a period expressed in hours (PERIODS); this order
+    reads no public holiday.
+  consequence: 'None for a caller: the 72-hour period is never moved for a Saturday,
+    a Sunday or a public holiday.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: regulation_1182_71_article_3_rules_for_other_periods
+  units:
+  - 31971R1182#point_003.002_b
+  - 31971R1182#point_003.002_c
+  - 31971R1182#point_003.002_d
+  - 31971R1182#parag_003.005
+  reason: Points (b), (c) and (d) of Article 3(2) govern periods expressed in days,
+    weeks, months or years or including parts of months; Article 3(5) is read as governing
+    periods expressed in days (reading (13)). The only period of this order is expressed
+    in hours (PERIODS).
+  consequence: 'None for a caller: no period of this order is expressed in days, weeks,
+    months or years, so no answer depends on these rules (reading (13) states the
+    one reading open for legal review).'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: regulation_1182_71_articles_4_and_5_acts_and_specified_dates
+  units:
+  - 31971R1182#parag_004.001
+  - 31971R1182#parag_004.002
+  - 31971R1182#parag_004.003
+  - 31971R1182#parag_005.001
+  - 31971R1182#parag_005.002
+  reason: 'Article 4 governs the entry into force, taking effect, application and
+    expiry of acts of the Council or Commission; Article 5 governs an action to be
+    effected at a specified moment or date in implementation of such an act. No period
+    of this order is either: each runs from an event (PERIODS).'
+  consequence: 'None for a caller: no answer of this order concerns the entry into
+    force or expiry of an act, or an action fixed at a specified moment or date.'
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: competent_supervisory_authority
+  instrument: Regulation (EU) 2016/679 Art 55
+  cites:
+  - 02016R0679-20160504#art_055
+  reason: Art 33(1) refers to the authority competent under Art 55; which authority
+    that is, is not modelled.
+  consequence: The caller picks the authority.
+- what: definition_of_personal_data_breach
+  instrument: Regulation (EU) 2016/679 Art 4(12)
+  cites:
+  - 02016R0679-20160504#point_004_12
+  reason: Not pinned in this domain. The order takes it as given that a personal data
+    breach occurred.
+  consequence: The order assumes a personal data breach occurred; a caller first checks
+    that the incident meets the Art 4(12) definition.
+- what: regulatory_guidance
+  instrument: EDPB Guidelines 9/2022 on personal data breach notification
+  cites:
+  - 02016R0679-20160504#parag_070.001
+  - 02016R0679-20160504#point_070.001_g
+  - 02016R0679-20160504#point_070.001_h
+  reason: Soft law, not pinned, not quoted and relied on by no reading here.
+  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
+    itself. A caller who wants the Board's view of the undue delay, of when to notify
+    or of a high risk reads the Guidelines and applies them itself.
+- what: security_measures_adequacy
+  instrument: Regulation (EU) 2016/679 Arts 24, 25 and 32
+  cites:
+  - 02016R0679-20160504#art_024
+  - 02016R0679-20160504#art_025
+  - 02016R0679-20160504#art_032
+  reason: Whether the controller's technical and organisational measures met Arts
+    24, 25 and 32 is a different question, not pinned here (moved from deferred_set
+    by the amendment of 2026-11-05). Where Art 34(3)(a) turns on appropriate protection
+    measures, the caller states it as the judgement appropriate_protection_measures_applied_to_affected_data.
+  consequence: The answers say nothing about compliance with Arts 24, 25 and 32; the
+    caller checks those itself.

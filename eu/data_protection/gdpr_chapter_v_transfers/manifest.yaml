@@ -1,0 +1,301 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_chapter_v_transfers
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "transfer"
+  - "transfer_basis"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_chapter_v_transfers_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- transfer.clausal --
+  - "decide_transfer/2"
+  - "transfer_status/2"
+  - "transfer_permitted/2"
+  - "transfer_verdict/3"
+  - "transfer_checklist/2"
+  - "transfer_requirement/4"
+  - "transfer_requirement_ids/1"
+  - "transfer_outside_facts/2"
+  - "transfer_decision_resolvable/1"
+  - "transfer_status_values/1"
+  # -- transfer_basis.clausal --
+  - "transfer_basis/2"
+  - "decide_transfer_basis/2"
+  - "transfer_basis_status/2"
+  - "transfer_basis_checklist/2"
+  - "transfer_basis_decision_resolvable/1"
+  - "transfer_basis_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_chapter_v_transfers_profile_keys/1"
+  - "gdpr_chapter_v_transfers_input_problems/2"
+  - "gdpr_chapter_v_transfers_what_if/4"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_chapter_v_transfers_subject/1"
+  - "gdpr_chapter_v_transfers_profile_for/2"
+  - "gdpr_chapter_v_transfers_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit (formalize_lib), no shared
+# domain package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2016/679 (GDPR), Chapter V, Articles 44, 45(1), 45(3), 45(8),
+  46(1), 46(2)(b), 47(1), 48 and 49(1) to 49(4). Decided here: given a transfer
+  profile, whether a transfer of personal data to a third country or an
+  international organisation may take place and on which basis of the cascade
+  (Art 45 adequacy decision as an attested outside fact, then Art 46 appropriate
+  safeguards including approved binding corporate rules, then the claimed Art 49
+  derogation with the subsidiarity of the second subparagraph, the Art 49(3)
+  public-authority carve-out and the Art 49(2) register limits). Open-textured
+  judgements are handed to the user and referred to a lawyer when unsure. Out of
+  scope: the Art 6 lawful basis (sibling gdpr-art6-lawfulness), the content of
+  adequacy decisions and of Art 46(2) and (3) instruments, the content of binding
+  corporate rules under Art 47(2), recognition of third-country judgments under
+  Art 48 (recorded only), onward transfers as separate assessments (recorded
+  only), and Art 49(5) and (6) (see deferred_set).
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; pinned consolidated text 02016R0679-20160504 (in force from 2016-05-04)"
+  - "Art 44 [02016R0679-20160504#art_044]"
+  - "Art 45(1), 45(3), 45(8) [02016R0679-20160504#parag_045.001, parag_045.003, parag_045.008]"
+  - "Art 46(1), 46(2) lead-in and point (b) [02016R0679-20160504#parag_046.001, parag_046.002, point_046.002_b]"
+  - "Art 47(1) points (a) to (c) [02016R0679-20160504#parag_047.001, point_047.001_a to point_047.001_c]"
+  - "Art 48 [02016R0679-20160504#art_048]"
+  - "Art 49(1) first and second subparagraphs, 49(2), 49(3), 49(4) [02016R0679-20160504#parag_049.001 to parag_049.004]"
+
+query_interface:
+  2: "decide_transfer/2"      # eligibility verdict; transfer_checklist/2 holds the met basis
+  3: "transfer_status/2"      # status determination
+  7: "transfer_basis_checklist/2"    # justification: item(RequirementId, Status, cite(Key))
+  13: "transfer_permitted/2"  # compliance check: may the proposed transfer take place
+  16: "gdpr_chapter_v_transfers_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_045
+  - 02016R0679-20160504#art_046
+  - 02016R0679-20160504#art_047
+  - 02016R0679-20160504#art_049
+  reason: 'The titles of Articles 45, 46, 47 and 49 carry no obligation: document
+    structure. Deferred so every unit of the pinned extracts is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: adequacy_decision_content
+  units:
+  - 02016R0679-20160504#parag_045.002
+  - 02016R0679-20160504#point_045.002_a
+  - 02016R0679-20160504#point_045.002_b
+  - 02016R0679-20160504#point_045.002_c
+  - 02016R0679-20160504#parag_045.004
+  - 02016R0679-20160504#parag_045.005
+  - 02016R0679-20160504#parag_045.006
+  - 02016R0679-20160504#parag_045.007
+  - 02016R0679-20160504#parag_045.009
+  reason: 'Art 45(2) (what the Commission assesses), (4)-(7) (monitoring, repeal and
+    consultation) and (9) (decisions under the former Directive): whether a given
+    country is covered by a decision is the OUTSIDE FACT adequacy_decision_in_force,
+    not derived here.'
+  consequence: the caller or the host states, with evidence, that a decision is in
+    force; the order does not check the review, repeal or suspension machinery.
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_46_instrument_mechanics
+  units:
+  - 02016R0679-20160504#point_046.002_a
+  - 02016R0679-20160504#point_046.002_c
+  - 02016R0679-20160504#point_046.002_d
+  - 02016R0679-20160504#point_046.002_e
+  - 02016R0679-20160504#point_046.002_f
+  - 02016R0679-20160504#parag_046.003
+  - 02016R0679-20160504#point_046.003_a
+  - 02016R0679-20160504#point_046.003_b
+  reason: 'Art 46(2) points (a) and (c) to (f) and Art 46(3) (point (b), binding corporate
+    rules, is read by stage two through the outside fact binding_corporate_rules_approved):
+    which instrument supplies the appropriate safeguards (public-authority instrument,
+    binding corporate rules, standard clauses, code of conduct, certification, authorised
+    contractual clauses, administrative arrangements) arrives inside the judgement
+    safeguard_in_place; the sub-conditions and authorisations are out of scope.'
+  consequence: 'The answer takes safeguard_in_place as given: the caller must check
+    which Art 46(2) or (3) instrument applies and that its conditions and any authorisation
+    are met itself.'
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_46_consistency_and_transitional
+  units:
+  - 02016R0679-20160504#parag_046.004
+  - 02016R0679-20160504#parag_046.005
+  reason: Art 46(4) (consistency mechanism) and (5) (transitional validity of older
+    authorisations) are procedure and transition, not conditions scored here.
+  consequence: 'The answer does not check the consistency mechanism or whether an
+    older authorisation is still valid: the caller must check Art 46(4) and (5) itself
+    before setting safeguard_in_place.'
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_47_binding_corporate_rules_approval
+  units:
+  - 02016R0679-20160504#parag_047.002
+  - 02016R0679-20160504#point_047.002_a
+  - 02016R0679-20160504#point_047.002_b
+  - 02016R0679-20160504#point_047.002_c
+  - 02016R0679-20160504#point_047.002_d
+  - 02016R0679-20160504#point_047.002_e
+  - 02016R0679-20160504#point_047.002_f
+  - 02016R0679-20160504#point_047.002_g
+  - 02016R0679-20160504#point_047.002_h
+  - 02016R0679-20160504#point_047.002_i
+  - 02016R0679-20160504#point_047.002_j
+  - 02016R0679-20160504#point_047.002_k
+  - 02016R0679-20160504#point_047.002_l
+  - 02016R0679-20160504#point_047.002_m
+  - 02016R0679-20160504#point_047.002_n
+  - 02016R0679-20160504#parag_047.003
+  reason: Art 47(2) lists the content binding corporate rules must have (points (a)
+    to (n)) and Art 47(3) the implementing acts on the exchange of information. The
+    approval under Art 47(1) is read as the attested outside fact binding_corporate_rules_approved;
+    the content and the procedure stay out of scope.
+  consequence: 'The answer does not check the content of binding corporate rules under
+    Art 47(2): it takes the approval under Art 47(1) as attested.'
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_49_5_and_6_limits_and_records
+  units:
+  - 02016R0679-20160504#parag_049.005
+  - 02016R0679-20160504#parag_049.006
+  reason: Art 49(5) (Union or Member State law may limit transfers of specific categories
+    where there is no adequacy decision) and Art 49(6) (the controller documents the
+    assessment and safeguards) are a power and a record-keeping duty, not conditions
+    scored here.
+  consequence: the order does not check a national limit under Art 49(5). The caller
+    must check any such limit, and document the assessment and safeguards under Art
+    49(6), itself.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_49_1_second_subparagraph_notification_duties
+  units:
+  - 02016R0679-20160504#parag_049.001/2
+  partial: true
+  reason: The last two sentences of the second subparagraph (inform the supervisory
+    authority of the transfer; inform the data subject of the transfer and of the
+    compelling legitimate interests) are procedural consequences, not conditions scored
+    here; the conditions of the same run are in scope.
+  consequence: 'An eligible answer on the second subparagraph does not list the follow-on
+    duties: the controller must inform the supervisory authority and the data subject
+    of the transfer under the second subparagraph of Art 49(1) itself.'
+  declaration: not_an_exception
+- not_formalized_because: in_sibling
+  decided_in: gdpr-art6-lawfulness
+  what: art_6_lawfulness
+  instrument: Regulation (EU) 2016/679 Art 6
+  reason: Chapter V is additional to, not a substitute for, the Art 6 lawful basis;
+    the sibling eu/data-protection/gdpr-art6-lawfulness owns that determination
+  consequence: 'An eligible answer does not mean the processing has a lawful basis:
+    the caller must check Art 6 separately.'
+  declaration: not_an_exception
+- debt: true
+  what: onward_transfers
+  instrument: Regulation (EU) 2016/679 Art 44
+  reason: successive transfers by the recipient to a further third country are a distinct
+    assessment (Art 44 applies Chapter V to onward transfers too); the order only
+    RECORDS, through the outside fact transfer_is_onward_transfer, that the transfer
+    it assesses is an onward one
+  consequence: 'The answer covers this transfer only: each onward transfer by the
+    recipient to a further third country or international organisation needs its own
+    Chapter V assessment, which the caller must ask for separately; a recorded onward
+    transfer is assessed by the same cascade and the record changes no verdict.'
+  declaration: not_an_exception
+- debt: true
+  what: art_48_foreign_judgments_and_decisions
+  units:
+  - 02016R0679-20160504#art_048
+  partial: true
+  reason: 'Art 48: a third-country court judgment or administrative decision requiring
+    a transfer is recognised or enforceable only on the basis of an international
+    agreement, without prejudice to other Chapter V grounds. A different question
+    from whether a given transfer has a Chapter V basis; the profile only RECORDS,
+    through the outside facts third_country_judgment_or_decision_requires_transfer
+    and international_agreement_basis_for_judgment_or_decision, that a judgment or
+    decision requires this transfer and whether it rests on an international agreement;
+    the order does not decide recognition or enforceability.'
+  consequence: the caller must check Art 48 itself. The answer does not say whether
+    a judgment or decision of a third-country court, tribunal or administrative authority
+    requiring the transfer is recognised or enforceable; the Chapter V basis the answer
+    gives stands without prejudice to it.
+  declaration: not_an_exception
+- debt: true
+  what: units_read_under_package_keys_without_an_order_key
+  units:
+  - 02016R0679-20160504#art_044
+  - 02016R0679-20160504#parag_047.001
+  - 02016R0679-20160504#point_047.001_a
+  - 02016R0679-20160504#point_047.001_b
+  - 02016R0679-20160504#point_047.001_c
+  - 02016R0679-20160504#point_049.001_a
+  - 02016R0679-20160504#point_049.001_g
+  - 02016R0679-20160504#parag_049.002
+  - 02016R0679-20160504#parag_049.003
+  - 02016R0679-20160504#parag_049.004
+  reason: 'The order''s citation lexicon carries no key for these units, so the provision
+    ledger cannot count them as formalized. The rules read them through package-local
+    markers (implements(eu_reg_2016_679_art_44), _art_47_1, _art_49_1_a, _art_49_1_g,
+    _art_49_2, _art_49_3, _art_49_4 in kernel.clausal): the Art 44 frame of the cascade,
+    the Art 47(1) approval as the attested outside fact binding_corporate_rules_approved
+    (points (a) to (c) taken as attested, Q7), points (a) and (g) of Art 49(1), the Art
+    49(2) register limits, the Art 49(3) carve-out and the Art 49(4) recognised public
+    interest (bundled in important_public_interest).'
+  consequence: 'None for a caller beyond the readings stated in the order: the verdicts
+    apply these provisions as read above; the content of approved binding corporate
+    rules under Art 47(1)(a) to (c) is not checked and must be checked by the caller.'
+  declaration: not_an_exception
+  open: formalisable; a lexicon key for each unit would let the ledger count the existing
+    markers; to be added in a later change to the orders.

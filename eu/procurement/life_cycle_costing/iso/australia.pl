@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 % australia — vendored so an exported domain's `-import_from(australia, [aud, aud_cent])` resolves.
 %
 % EMPTY EXPORT LIST, ON PURPOSE. Same shape and same reason as

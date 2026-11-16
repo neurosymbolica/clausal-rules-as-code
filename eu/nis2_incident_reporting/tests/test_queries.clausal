@@ -1,0 +1,44 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(test_queries, []).
+:- use_module(eu/nis2_incident_reporting/queries, [
+    nis2_incident_reporting_profile_keys/1,
+    nis2_incident_reporting_what_if/4,
+    early_warning/0,
+    unsure/0
+]).
+:- use_module(eu/nis2_incident_reporting/nis2_incident_reporting, [nis2_incident_reporting_checklist/2]).
+:- use_module(eu/nis2_incident_reporting/fixtures, [nis2_incident_reporting_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    nis2_incident_reporting_profile_keys(ProfileKeys),
+    ProfileKeys == [severe_operational_disruption_or_financial_loss, considerable_damage_to_other_persons, trust_service_provider_incident_affects_trust_services, incident_ongoing_at_final_report_due, early_warning_without_undue_delay, incident_notification_without_undue_delay].
+
+test(what_if_flips_limb_a_to_not_significant) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    nis2_incident_reporting_what_if(Profile, severe_operational_disruption_or_financial_loss, false, not_significant).
+
+test(what_if_does_not_keep_the_old_status, fail) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    nis2_incident_reporting_what_if(Profile, severe_operational_disruption_or_financial_loss, false, significant).
+
+test(what_if_resolves_unsure_limb) :-
+    nis2_incident_reporting_profile_for(limb_a_unsure, Profile),
+    nis2_incident_reporting_what_if(Profile, severe_operational_disruption_or_financial_loss, true, significant).
+
+test(what_if_adds_an_absent_key) :-
+    nis2_incident_reporting_what_if([], considerable_damage_to_other_persons, true, significant).
+
+test(what_if_single_answer) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    findall(Status, nis2_incident_reporting_what_if(Profile, considerable_damage_to_other_persons, true, Status), Statuses),
+    Statuses == [significant].
+
+test(checklist_rows_for_limb_a) :-
+    nis2_incident_reporting_profile_for(limb_a_met, Profile),
+    nis2_incident_reporting_checklist(Profile, [item(significance_operational_or_financial, met, cite(eu_dir_2022_2555_art_23_3_a)), item(significance_damage_to_others, unmet(limb_not_met), cite(eu_dir_2022_2555_art_23_3_b))]).
+
+test(root_atoms_are_exported) :-
+    early_warning,
+    unsure.
+
+:- end_module(test_queries).

@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input tolerance
+% of THE INPUT CHECK and of step (0) of each query.
+% Run: python -m clausal.testing eu/ai_act/deployer_duties_fria/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/ai_act/deployer_duties_fria/deployer_duties_fria, [
+    deployer_obligation_status/5,
+    log_retention_period_status/5,
+    deployer_duties_fria_status/2
+]).
+:- use_module(eu/ai_act/deployer_duties_fria/kernel, [deployer_duties_fria_input_problems/2]).
+:- use_module(eu/ai_act/deployer_duties_fria/fixtures, [deployer_duties_fria_profile_for/2]).
+
+% ---- bound verdicts ----------------------------------------------------
+test(the_applying_status_holds_with_the_verdict_bound) :-
+    deployer_duties_fria_profile_for(log_retention_applies, Request),
+    deployer_duties_fria_status(Request, obligation_applies).
+
+test(another_bound_status_is_rejected, fail) :-
+    deployer_duties_fria_profile_for(log_retention_applies, Request),
+    deployer_duties_fria_status(Request, obligation_does_not_apply).
+
+test(the_full_answer_holds_with_both_outputs_bound) :-
+    deployer_obligation_status([attribute(deployer_of_the_system, false)], log_retention, date(2028, 1, 1), not_a_deployer, [cite(eu_reg_2024_1689_art_3_4)]).
+
+test(a_wrong_bound_citation_is_rejected, fail) :-
+    deployer_obligation_status([attribute(deployer_of_the_system, false)], log_retention, date(2028, 1, 1), not_a_deployer, [cite(eu_reg_2024_1689_art_26_6)]).
+
+test(a_bound_missing_key_status_holds) :-
+    deployer_obligation_status([], log_retention, date(2028, 1, 1), indeterminate([deployer_of_the_system]), []).
+
+test(a_bound_retention_answer_holds) :-
+    deployer_duties_fria_profile_for(retention_of_six_months, Request),
+    deployer_duties_fria_status(Request, retention_period_of_at_least_six_months).
+
+test(a_bound_retention_near_miss_is_rejected, fail) :-
+    deployer_duties_fria_profile_for(retention_of_six_months, Request),
+    deployer_duties_fria_status(Request, retention_period_shorter_than_six_months).
+
+% ---- THE INPUT CHECK: input tolerance ----------------------------------
+test(a_well_formed_empty_profile_has_no_problem) :-
+    deployer_duties_fria_input_problems([], Problems),
+    Problems == [].
+
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, deployer_duties_fria_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, deployer_duties_fria_input_problems([attribute(deployer_of_the_system, true)|_], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_foreign_element_makes_the_whole_profile_wrong) :-
+    deployer_duties_fria_input_problems([attribute(colour, blue), foo], Problems),
+    Problems == [wrong_type(profile)].
+
+test(an_unbound_element_makes_the_whole_profile_wrong) :-
+    findall(Problems, deployer_duties_fria_input_problems([attribute(deployer_of_the_system, true), _], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_duplicate_key_is_named_once_and_its_values_are_not_read) :-
+    deployer_duties_fria_input_problems([attribute(deployer_of_the_system, true), attribute(deployer_of_the_system, maybe)], Problems),
+    Problems == [duplicate_key(deployer_of_the_system)].
+
+test(an_unbound_value_is_a_wrong_type) :-
+    findall(Problems, deployer_duties_fria_input_problems([attribute(deployer_of_the_system, _)], Problems), Answers),
+    Answers == [[wrong_type(deployer_of_the_system)]].
+
+test(a_crisp_key_does_not_take_unsure) :-
+    deployer_duties_fria_input_problems([attribute(deployer_of_the_system, unsure)], Problems),
+    Problems == [wrong_type(deployer_of_the_system)].
+
+test(a_judgement_key_takes_unsure) :-
+    deployer_duties_fria_input_problems([attribute(body_governed_by_public_law, unsure)], Problems),
+    Problems == [].
+
+test(a_number_key_is_an_unknown_key_as_given) :-
+    deployer_duties_fria_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+
+test(contract_problems_come_before_unknown_keys) :-
+    deployer_duties_fria_input_problems([attribute(colour, blue), attribute(deployer_of_the_system, maybe), attribute(colour, red)], Problems),
+    Problems == [wrong_type(deployer_of_the_system), unknown_key(colour)].
+
+test(the_input_check_yields_exactly_one_solution) :-
+    findall(Problems, deployer_duties_fria_input_problems([attribute(colour, blue)], Problems), Solutions),
+    Solutions == [[unknown_key(colour)]].
+
+% ---- step (0) of each query ---------------------------------------------
+test(a_float_retention_period_is_a_wrong_type) :-
+    log_retention_period_status([], 6.0, date(2028, 1, 1), Result, Citations),
+    Result == input_problems([wrong_type(retention_months)]),
+    Citations == [].
+
+test(an_unbound_retention_period_is_a_wrong_type) :-
+    findall(Result-Citations, log_retention_period_status([], _, date(2028, 1, 1), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(retention_months)])-[]].
+
+test(retention_argument_problems_follow_the_profile_problems) :-
+    log_retention_period_status(foo, six, nodate, Result, Citations),
+    Result == input_problems([wrong_type(profile), wrong_type(retention_months), wrong_type(assessment_date)]),
+    Citations == [].
+
+test(an_unbound_assessment_date_is_a_wrong_type) :-
+    findall(Result-Citations, deployer_obligation_status([], log_retention, _, Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(assessment_date)])-[]].
+
+test(year_zero_is_not_a_calendar_day) :-
+    deployer_obligation_status([], log_retention, date(0, 1, 1), Result, _),
+    Result == input_problems([wrong_type(assessment_date)]).
+
+test(the_last_day_of_february_in_a_leap_year_is_a_calendar_day) :-
+    deployer_obligation_status([attribute(deployer_of_the_system, false)], log_retention, date(2028, 2, 29), Result, _),
+    Result == not_a_deployer.
+
+test(the_twenty_ninth_of_february_2100_is_not_a_calendar_day) :-
+    deployer_obligation_status([], log_retention, date(2100, 2, 29), Result, _),
+    Result == input_problems([wrong_type(assessment_date)]).
+
+test(a_profile_problem_gives_input_problems_whatever_the_date) :-
+    deployer_obligation_status([attribute(colour, blue)], log_retention, date(2027, 1, 1), Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+
+:- end_module(test_input_mode).

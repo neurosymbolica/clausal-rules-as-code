@@ -1,3 +1,4 @@
+% SPDX-License-Identifier: EUPL-1.2
 :- module(m__eu_state_aid_de_minimis_cumulation_cumulation, [de_minimis_ceiling/1, de_minimis_ceiling_amount/1, sum_cents/2, is_feb_29/2, lookback_years/1, de_minimis_aid_in_window/3, de_minimis_verdict/3, de_minimis_input_problem/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).

@@ -1,0 +1,198 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_impact_assessment_prior_consultation.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, the kernel's shared readings, and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 36(1) [unit 02016R0679-20160504#parag_036.001]
+% and Art 36(5) [unit 02016R0679-20160504#parag_036.005].
+%
+% The order's relations (INTERFACE - THE RELATIONS):
+%   decide_prior_consultation/2      -- the whole verdict of entry B
+%   prior_consultation_duty/2        -- the STATUS field of entry B
+%   impact_assessment_outside_facts/2 -- the five boolean outside facts, as given or absent
+%   gdpr_impact_assessment_prior_consultation_input_problems/2 -- THE INPUT CHECK (re-exported
+%     from the kernel as the scaffold wrote it)
+% Facade queries:
+%   gdpr_impact_assessment_prior_consultation_profile_keys/1 -- the 36 contract keys
+%   gdpr_impact_assessment_prior_consultation_what_if/4 (#16 what-if): replace every
+%     attribute(Key, _) of the profile by one attribute(Key, Value) and give the verdict
+%     of the edited profile
+%   gdpr_impact_assessment_prior_consultation_compliance_check/3 (#13 compliance check):
+%     is a proposed processing action allowed in the current state
+% Justification (#7) is the slice's prior_consultation_duty_checklist/2: every item
+% carries cite(...).
+% Result constructors (INPUT CONTRACT, RESULT CONSTRUCTORS): exported, never called as
+% queries; a constructor is data and has no clauses. Each one is declared in the
+% constructors/1 directive below.
+% Each query passes through the input check first and has exactly one solution.
+% =====================================================================
+
+:- module(queries, [
+    decide_prior_consultation/2,
+    prior_consultation_duty/2,
+    impact_assessment_outside_facts/2,
+    gdpr_impact_assessment_prior_consultation_profile_keys/1,
+    gdpr_impact_assessment_prior_consultation_input_problems/2,
+    gdpr_impact_assessment_prior_consultation_what_if/4,
+    gdpr_impact_assessment_prior_consultation_compliance_check/3,
+    prior_consultation_verdict/4,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    not_governed_here/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    approvals/2,
+    approval/5,
+    viewer/1,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
+]).
+
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/kernel, [gdpr_impact_assessment_prior_consultation_input_problems/2, gdpr_impact_assessment_prior_consultation_outside_fact_reading/3]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/prior_consultation_duty, [decide_prior_consultation_duty/2, prior_consultation_duty_status/2]).
+
+:- constructors([prior_consultation_verdict(status, bases, context, citations), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(input, citation), cross_reference_unresolved(citation, target), not_governed_here(citations), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key), approvals(viewer, approvals), approval(route_identifier, route_digest, status, at, reason), viewer(account), resolution(target, outcome), inputs_relied_on(pairs), provenance(clause, citations), outside_fact(key, attested), attested(value, attestation), attestation(by, at, reason, evidence), url(address, retrieved_at), document(upload_identifier, digest)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_impact_assessment_prior_consultation_profile_keys([assessment_indicates_high_risk_absent_mitigation, automated_evaluation_including_profiling, criminal_offence_data_processed, datasets_matched_or_combined, decisions_based_on_evaluation, decisions_produce_legal_effects, decisions_similarly_significantly_affect, description_of_processing_and_purposes_present, envisaged_measures_described, highly_personal_data_processed, impact_assessment_carried_out, lawful_basis_is_legal_obligation_or_public_task, legal_basis_with_general_impact_assessment, legitimate_interest_described, legitimate_interest_pursued, likely_high_risk_to_rights_and_freedoms, measures_reduce_residual_risk_below_high, member_state_requires_assessment_despite_general_one, member_state_requires_prior_authorisation, mitigating_measures_taken, monitoring_is_systematic, national_list_exempts_assessment, national_list_exempts_item, national_list_requires_assessment, national_list_requires_item, necessity_and_proportionality_assessed, processing_for_public_interest_task, processing_on_large_scale, processing_prevents_exercise_of_right_or_service, publicly_accessible_area_monitored, risks_to_data_subjects_assessed, route_approvals, special_category_data_processed, systematic_and_extensive_evaluation, uses_new_technologies, vulnerable_data_subjects]).
+
+% ---- the order's relations ------------------------------------------
+% decide_prior_consultation(Profile, Verdict): the whole verdict of entry B.
+decide_prior_consultation(Profile, Verdict) :-
+    decide_prior_consultation_duty(Profile, Verdict).
+
+% prior_consultation_duty(Profile, Status): the STATUS field of entry B
+% (input_problems(Problems) when the input check finds problems).
+prior_consultation_duty(Profile, Status) :-
+    prior_consultation_duty_status(Profile, Status).
+
+% The five boolean outside-fact keys, in root_exports (alphabetical) order.
+outside_fact_keys([
+    legal_basis_with_general_impact_assessment,
+    member_state_requires_assessment_despite_general_one,
+    member_state_requires_prior_authorisation,
+    national_list_exempts_assessment,
+    national_list_requires_assessment
+]).
+
+% impact_assessment_outside_facts(Profile, OutsideFacts): [outside_fact(Key, Attested)]
+% for each of the five keys, Attested as given or the atom absent; with input problems,
+% input_problems(Problems).
+impact_assessment_outside_facts(Profile, OutsideFacts) :-
+    gdpr_impact_assessment_prior_consultation_input_problems(Profile, Problems),
+    outside_facts_for_problems(Problems, Profile, OutsideFacts).
+
+outside_facts_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+outside_facts_for_problems([], Profile, OutsideFacts) :-
+    outside_fact_keys(FactKeys),
+    maplist(outside_fact_item(Profile), FactKeys, OutsideFacts).
+
+outside_fact_item(Profile, FactKey, outside_fact(FactKey, Attested)) :-
+    gdpr_impact_assessment_prior_consultation_outside_fact_reading(Profile, FactKey, Attested).
+
+% ---- #16 what-if ------------------------------------------------------
+% Replace every attribute(Key, _) of the profile by one attribute(Key, Value) and give the
+% verdict of the edited profile; an unknown or ill-typed edit surfaces as
+% input_problems(...) through the input check.
+% Side chosen: (a) THE LOGIC IS WRONG -- profile_set/3 did not replace the entry by its
+% key (it dropped assessment_indicates_high_risk_absent_mitigation), so the edit is now
+% made by key here; the test (Art 36(1): C1 true, JB true, MT false -> required) stands.
+gdpr_impact_assessment_prior_consultation_what_if(Profile, OverriddenKey, NewValue, NewVerdict) :-
+    edited_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_prior_consultation_duty(Hypothesis, NewVerdict).
+
+% edited_profile(Term, Key, Value, Edited): profile plumbing, complementary clauses.
+% A term that is not a list is left as it is (the input check then names it).
+edited_profile(Term, _, _, Term) :-
+    var(Term).
+edited_profile(Term, Key, Value, [attribute(Key, Value)]) :-
+    Term == [].
+edited_profile(Term, Key, Value, Edited) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    kept_element(Element, Key, Kept),
+    edited_profile(Elements, Key, Value, EditedRest),
+    append(Kept, EditedRest, Edited).
+edited_profile(Term, _, _, Term) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+kept_element(Element, _, [Element]) :-
+    var(Element).
+kept_element(Element, Key, []) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == Key.
+kept_element(Element, Key, [Element]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== Key.
+kept_element(Element, _, [Element]) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% ---- #13 compliance check ---------------------------------------------
+% May the controller take the proposed processing action now? Art 36(1): consultation
+% PRIOR to processing; Art 36(5): consultation AND prior authorisation (Q17). An open or
+% referred answer decides nothing: not_decided(Status), no permission is inferred.
+gdpr_impact_assessment_prior_consultation_compliance_check(Profile, Action, Verdict) :-
+    compliance_action(Action),
+    decide_prior_consultation_duty(Profile, prior_consultation_verdict(Status, Bases, _, _)),
+    action_modality(Status, Bases, Action, Verdict).
+
+compliance_action(begin_processing_without_prior_consultation).
+compliance_action(begin_processing_after_prior_consultation).
+compliance_action(begin_processing_after_prior_authorisation).
+
+action_modality(required, [art36_1_residual_high_risk], begin_processing_without_prior_consultation, prohibited) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_1). % lint: order-given atom
+action_modality(required, [art36_1_residual_high_risk], begin_processing_after_prior_consultation, permitted) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_1). % lint: order-given atom
+action_modality(required, [art36_1_residual_high_risk], begin_processing_after_prior_authorisation, permitted) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_1). % lint: order-given atom
+action_modality(required, [art36_5_member_state_prior_authorisation], begin_processing_without_prior_consultation, prohibited) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_5). % lint: order-given atom
+action_modality(required, [art36_5_member_state_prior_authorisation], begin_processing_after_prior_consultation, prohibited) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_5). % lint: order-given atom
+action_modality(required, [art36_5_member_state_prior_authorisation], begin_processing_after_prior_authorisation, permitted) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_5). % lint: order-given atom
+action_modality(not_required, [art36_1_condition_not_met], _, permitted) :- % lint: order-given atom
+    implements(eu_reg_2016_679_art_36_1). % lint: order-given atom
+action_modality(indeterminate(MissingKeys), [], _, not_decided(indeterminate(MissingKeys))).
+action_modality(needs_legal_review(Reason, ReviewContext), [], _, not_decided(needs_legal_review(Reason, ReviewContext))).
+action_modality(input_problems(Problems), [], _, not_decided(input_problems(Problems))).
+
+% ---- tests ----------------------------------------------------------
+test(the_outside_facts_of_an_empty_profile_are_all_absent) :-
+    findall(OutsideFacts, impact_assessment_outside_facts([], OutsideFacts), Answers),
+    Answers == [[outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(member_state_requires_assessment_despite_general_one, absent), outside_fact(member_state_requires_prior_authorisation, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent)]].
+test(the_outside_facts_of_a_problem_profile_are_its_problems) :-
+    impact_assessment_outside_facts([attribute(stray_key, 1)], input_problems([unknown_key(stray_key)])).
+test(required_consultation_prohibits_processing_without_it) :-
+    gdpr_impact_assessment_prior_consultation_compliance_check([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false), attribute(processing_for_public_interest_task, false)], begin_processing_without_prior_consultation, prohibited).
+test(required_consultation_does_not_permit_processing_without_it, fail) :-
+    gdpr_impact_assessment_prior_consultation_compliance_check([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, true), attribute(mitigating_measures_taken, false), attribute(processing_for_public_interest_task, false)], begin_processing_without_prior_consultation, permitted).
+test(an_open_answer_decides_no_action) :-
+    gdpr_impact_assessment_prior_consultation_compliance_check([], begin_processing_without_prior_consultation, not_decided(indeterminate(_))).
+test(the_edit_replaces_the_key_and_keeps_the_others) :-
+    edited_profile([attribute(a_key, 1), attribute(b_key, 2)], b_key, 3, Edited),
+    Edited == [attribute(a_key, 1), attribute(b_key, 3)].
+test(the_whole_verdict_and_the_status_agree) :-
+    decide_prior_consultation([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, false)], prior_consultation_verdict(Status, _, _, _)),
+    prior_consultation_duty([attribute(impact_assessment_carried_out, true), attribute(assessment_indicates_high_risk_absent_mitigation, false)], DutyStatus),
+    Status == DutyStatus.
+
+:- end_module(queries).

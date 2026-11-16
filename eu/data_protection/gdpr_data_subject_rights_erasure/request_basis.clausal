@@ -1,0 +1,320 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% request_basis.clausal -- the "request_basis" DETERMINATION for
+% eu/data_protection/gdpr_data_subject_rights_erasure, self-contained top to
+% bottom: its statutory VALUE facts (the Art 17(1) grounds (a)-(f), each with a
+% READY-MADE cite(Key)), its point limbs, its per-rule tests, its checklist and
+% its verdict assembly.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
+% 02016R0679-20160504, Art 17(1) chapeau and points (a)-(f): the right to
+% erasure is ENGAGED when ANY of the points is met; BASIS is the first met
+% point in the order (a)-(f) (operative reading (9); INTERFACE - THE
+% ENGAGEMENT OF EACH RIGHT). The Art 17(1)(e) outside fact is ENABLING
+% (ruling A2): absent is OPEN BY OUTSIDE FACT.
+%
+% Verdict (shape recorded in kernel.clausal):
+%   request_basis_verdict(Status, Basis, Citations)
+%     Status engaged | not_engaged | open_by_absence(Keys)
+%            | open_by_outside_fact(Keys) | open_by_judgement(Keys)
+%            | outside_this_order(request_type) | indeterminate(Keys)
+%            | input_problems(Problems)
+%     Basis  art17_1_a .. art17_1_f | none
+%     Citations cite(Key) terms in citation-vocabulary order
+% Verdict family pinned by the order: request_basis/2 -> {art17_1_a,
+% art17_1_b, art17_1_c, art17_1_d, art17_1_e, art17_1_f, none}.
+%
+% Defeasible logic, cut-free: the grounds are an ordered table; the first
+% met row wins through the kernel's first-met search (no once/1, no cut).
+% Judgements are the user's: data_no_longer_necessary_for_purposes,
+% overriding_legitimate_grounds_exist and personal_data_unlawfully_processed
+% are read as given (true, false or unsure), never derived.
+% =====================================================================
+
+:- module(request_basis, [
+    decide_request_basis/2,
+    request_basis_status/2,
+    request_basis/2,
+    request_basis_engagement/3,
+    request_basis_judgement_keys/1,
+    request_basis_checklist/2,
+    request_basis_decision_resolvable/1,
+    request_basis_status_values/1
+]).
+
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure/kernel, [
+    gdpr_data_subject_rights_erasure_input_problems/2,
+    gdpr_data_subject_rights_erasure_request_type_route/2,
+    gdpr_data_subject_rights_erasure_required_limb/3,
+    gdpr_data_subject_rights_erasure_outside_fact_limb/4,
+    gdpr_data_subject_rights_erasure_negated_limb/2,
+    gdpr_data_subject_rights_erasure_conjunction/2,
+    gdpr_data_subject_rights_erasure_disjunction/2,
+    gdpr_data_subject_rights_erasure_first_met/2
+]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_erasure/citations, [
+    implements/1,
+    gdpr_data_subject_rights_erasure_citations_in_order/2
+]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The verdict vocabulary of request_basis/2 as a ground table.
+request_basis_status_values([art17_1_a, art17_1_b, art17_1_c, art17_1_d, art17_1_e, art17_1_f, none]).
+
+% The Art 17(1) grounds, one row per point, with its ready-made citation.
+erasure_ground(art17_1_a, cite(eu_reg_2016_679_art_17_1_a)).
+erasure_ground(art17_1_b, cite(eu_reg_2016_679_art_17_1_b)).
+erasure_ground(art17_1_c, cite(eu_reg_2016_679_art_17_1_c)).
+erasure_ground(art17_1_d, cite(eu_reg_2016_679_art_17_1_d)).
+erasure_ground(art17_1_e, cite(eu_reg_2016_679_art_17_1_e)).
+erasure_ground(art17_1_f, cite(eu_reg_2016_679_art_17_1_f)).
+
+% The order in which the grounds are tested (BASIS is the first met).
+erasure_ground_order([art17_1_a, art17_1_b, art17_1_c, art17_1_d, art17_1_e, art17_1_f]).
+
+% The judgement keys the engagement reads (for the PAIRS rule of the
+% queries module), in root_exports order.
+request_basis_judgement_keys([
+    data_no_longer_necessary_for_purposes,
+    overriding_legitimate_grounds_exist,
+    personal_data_unlawfully_processed
+]).
+
+% ---- the point limbs: one operative clause per Art 17(1) point --------
+% (a) the personal data are no longer necessary for the purposes (judgement).
+ground_limb(art17_1_a, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_a),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, data_no_longer_necessary_for_purposes, PointLimb).
+% (b) consent is the basis AND it is withdrawn AND NOT another legal ground.
+ground_limb(art17_1_b, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_b),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, consent_is_the_basis_of_processing, ConsentBasisLimb),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, consent_withdrawn, WithdrawalLimb),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, other_legal_ground_for_processing_exists, OtherGroundLimb),
+    gdpr_data_subject_rights_erasure_negated_limb(OtherGroundLimb, NoOtherGroundLimb),
+    gdpr_data_subject_rights_erasure_conjunction([ConsentBasisLimb, WithdrawalLimb, NoOtherGroundLimb], PointLimb).
+% (c) (an Art 21(1) objection AND NOT overriding legitimate grounds) OR an
+% Art 21(2) objection.
+ground_limb(art17_1_c, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_c),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, objection_under_art21_1_made, GeneralObjectionLimb),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, overriding_legitimate_grounds_exist, OverridingLimb),
+    gdpr_data_subject_rights_erasure_negated_limb(OverridingLimb, NoOverridingLimb),
+    gdpr_data_subject_rights_erasure_conjunction([GeneralObjectionLimb, NoOverridingLimb], GeneralObjectionPointLimb),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, objection_under_art21_2_made, MarketingObjectionLimb),
+    gdpr_data_subject_rights_erasure_disjunction([GeneralObjectionPointLimb, MarketingObjectionLimb], PointLimb).
+% (d) the personal data have been unlawfully processed (judgement).
+ground_limb(art17_1_d, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_d),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, personal_data_unlawfully_processed, PointLimb).
+% (e) erasure required by Union or Member State law: an ENABLING outside fact.
+ground_limb(art17_1_e, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_e),
+    gdpr_data_subject_rights_erasure_outside_fact_limb(Profile, erasure_required_by_union_or_member_state_law, enabling, PointLimb).
+% (f) collected in relation to the offer of information society services.
+ground_limb(art17_1_f, Profile, PointLimb) :-
+    implements(eu_reg_2016_679_art_17_1_f),
+    gdpr_data_subject_rights_erasure_required_limb(Profile, collected_in_relation_to_information_society_services_offer, PointLimb).
+
+% The rows GroundIdentifier-PointLimb, in the order of the table.
+ground_rows([], _, []).
+ground_rows([GroundIdentifier|GroundIdentifiers], Profile, [GroundIdentifier-PointLimb|GroundRows]) :-
+    ground_limb(GroundIdentifier, Profile, PointLimb),
+    ground_rows(GroundIdentifiers, Profile, GroundRows).
+
+% ---- the engagement E (Art 17(1) chapeau: 'where one of the following
+% grounds applies'): an OR of the six points; BASIS the first met point.
+request_basis_engagement(Profile, EngagementLimb, Basis) :-
+    implements(eu_reg_2016_679_art_17_1),
+    erasure_ground_order(GroundIdentifiers),
+    ground_rows(GroundIdentifiers, Profile, GroundRows),
+    pairs_values(GroundRows, PointLimbs),
+    gdpr_data_subject_rights_erasure_disjunction(PointLimbs, EngagementLimb),
+    gdpr_data_subject_rights_erasure_first_met(GroundRows, Basis).
+
+% ---- decision routes: disjoint guards, the status in the head ---------
+% (0) input problems first.
+decide_request_basis(Profile, request_basis_verdict(input_problems([Problem|Problems]), none, [])) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, [Problem|Problems]).
+% (i) request_type absent.
+decide_request_basis(Profile, request_basis_verdict(indeterminate([request_type]), none, [])) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, absent).
+% A well-formed type of a sibling order is outside this order.
+decide_request_basis(Profile, request_basis_verdict(outside_this_order(request_type), none, [])) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, outside_this_order(_)).
+% E MET: engaged, BASIS the first met point, cites the article and the point.
+decide_request_basis(Profile, request_basis_verdict(engaged, Basis, Citations)) :-
+    implements(eu_reg_2016_679_art_17_1),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    request_basis_engagement(Profile, met, Basis),
+    erasure_ground(Basis, cite(BasisKey)),
+    gdpr_data_subject_rights_erasure_citations_in_order([eu_reg_2016_679_art_17_1, BasisKey], Citations).
+% E UNMET: not engaged, the article-level cite alone.
+decide_request_basis(Profile, request_basis_verdict(not_engaged, none, [cite(eu_reg_2016_679_art_17_1)])) :-
+    implements(eu_reg_2016_679_art_17_1),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    request_basis_engagement(Profile, unmet, _).
+% E OPEN: absence first, then the outside fact, then the judgement.
+decide_request_basis(Profile, request_basis_verdict(open_by_absence([MissingKey|MissingKeys]), none, [])) :-
+    implements(eu_reg_2016_679_art_17_1),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    request_basis_engagement(Profile, open([MissingKey|MissingKeys], _, _), _).
+decide_request_basis(Profile, request_basis_verdict(open_by_outside_fact([OutsideKey|OutsideKeys]), none, [])) :-
+    implements(eu_reg_2016_679_art_17_1_e),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    request_basis_engagement(Profile, open([], _, [OutsideKey|OutsideKeys]), _).
+decide_request_basis(Profile, request_basis_verdict(open_by_judgement([UnsureKey|UnsureKeys]), none, [])) :-
+    implements(eu_reg_2016_679_art_17_1),
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    request_basis_engagement(Profile, open([], [UnsureKey|UnsureKeys], []), _).
+
+% ---- projections ------------------------------------------------------
+request_basis_status(Profile, Status) :-
+    decide_request_basis(Profile, request_basis_verdict(Status, _, _)).
+
+% request_basis/2: the BASIS atom (art17_1_a .. art17_1_f or none).
+request_basis(Profile, Basis) :-
+    decide_request_basis(Profile, request_basis_verdict(_, Basis, _)).
+
+request_basis_decision_resolvable(Profile) :-
+    decide_request_basis(Profile, _).
+
+% ---- checklist: one row per Art 17(1) ground, each with its cite ------
+request_basis_checklist(Profile, Items) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, in_order),
+    erasure_ground_order(GroundIdentifiers),
+    checklist_items(GroundIdentifiers, Profile, Items).
+request_basis_checklist(Profile, []) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, [_|_]).
+request_basis_checklist(Profile, []) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, absent).
+request_basis_checklist(Profile, []) :-
+    gdpr_data_subject_rights_erasure_input_problems(Profile, []),
+    gdpr_data_subject_rights_erasure_request_type_route(Profile, outside_this_order(_)).
+
+checklist_items([], _, []).
+checklist_items([GroundIdentifier|GroundIdentifiers], Profile, [item(GroundIdentifier, ItemStatus, Citation)|Items]) :-
+    erasure_ground(GroundIdentifier, Citation),
+    ground_limb(GroundIdentifier, Profile, PointLimb),
+    limb_item_status(PointLimb, ItemStatus),
+    checklist_items(GroundIdentifiers, Profile, Items).
+
+limb_item_status(met, met).
+limb_item_status(unmet, unmet(ground_not_met)).
+limb_item_status(open(AbsentKeys, UnsureKeys, OutsideKeys), unknown(OpenKeys)) :-
+    append(AbsentKeys, UnsureKeys, FirstKeys),
+    append(FirstKeys, OutsideKeys, OpenKeys).
+
+% ---- test profiles (internal) ----------------------------------------
+example_profile(every_ground_ruled_out, [
+    attribute(request_type, erasure),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, false),
+    attribute(collected_in_relation_to_information_society_services_offer, false),
+    attribute(data_no_longer_necessary_for_purposes, false),
+    attribute(personal_data_unlawfully_processed, false),
+    attribute(erasure_required_by_union_or_member_state_law, attested(false, attestation(by, at, reason, none)))
+]).
+example_profile(legal_obligation_not_attested, [
+    attribute(request_type, erasure),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, false),
+    attribute(collected_in_relation_to_information_society_services_offer, false),
+    attribute(data_no_longer_necessary_for_purposes, false),
+    attribute(personal_data_unlawfully_processed, false)
+]).
+example_profile(unlawfulness_unsure, [
+    attribute(request_type, erasure),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, false),
+    attribute(collected_in_relation_to_information_society_services_offer, false),
+    attribute(data_no_longer_necessary_for_purposes, false),
+    attribute(personal_data_unlawfully_processed, unsure),
+    attribute(erasure_required_by_union_or_member_state_law, attested(false, attestation(by, at, reason, none)))
+]).
+example_profile(marketing_objection, [
+    attribute(request_type, erasure),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, true),
+    attribute(data_no_longer_necessary_for_purposes, false)
+]).
+example_profile(consent_withdrawn_without_other_ground, [
+    attribute(request_type, erasure),
+    attribute(consent_is_the_basis_of_processing, true),
+    attribute(consent_withdrawn, true),
+    attribute(other_legal_ground_for_processing_exists, false),
+    attribute(data_no_longer_necessary_for_purposes, false)
+]).
+
+% ---- tests -------------------------------------------------------------
+test(no_longer_necessary_engages_point_a) :-
+    findall(Verdict, decide_request_basis([attribute(request_type, erasure), attribute(data_no_longer_necessary_for_purposes, true)], Verdict), Verdicts),
+    Verdicts == [request_basis_verdict(engaged, art17_1_a, [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_a)])].
+test(no_longer_necessary_is_not_open, fail) :-
+    decide_request_basis([attribute(request_type, erasure), attribute(data_no_longer_necessary_for_purposes, true)], request_basis_verdict(open_by_absence(_), _, _)).
+test(consent_withdrawn_engages_point_b) :-
+    example_profile(consent_withdrawn_without_other_ground, Profile),
+    findall(Basis, request_basis(Profile, Basis), Bases),
+    Bases == [art17_1_b].
+test(an_other_legal_ground_defeats_point_b, fail) :-
+    decide_request_basis([attribute(request_type, erasure), attribute(consent_is_the_basis_of_processing, true), attribute(consent_withdrawn, true), attribute(other_legal_ground_for_processing_exists, true), attribute(data_no_longer_necessary_for_purposes, false)], request_basis_verdict(engaged, art17_1_b, _)).
+test(marketing_objection_engages_point_c) :-
+    example_profile(marketing_objection, Profile),
+    findall(Verdict, decide_request_basis(Profile, Verdict), Verdicts),
+    Verdicts == [request_basis_verdict(engaged, art17_1_c, [cite(eu_reg_2016_679_art_17_1), cite(eu_reg_2016_679_art_17_1_c)])].
+test(every_ground_ruled_out_is_not_engaged) :-
+    example_profile(every_ground_ruled_out, Profile),
+    findall(Verdict, decide_request_basis(Profile, Verdict), Verdicts),
+    Verdicts == [request_basis_verdict(not_engaged, none, [cite(eu_reg_2016_679_art_17_1)])].
+test(every_ground_ruled_out_is_not_engaged_positively, fail) :-
+    example_profile(every_ground_ruled_out, Profile),
+    decide_request_basis(Profile, request_basis_verdict(engaged, _, _)).
+test(a_bare_erasure_request_names_every_missing_key) :-
+    findall(Status, request_basis_status([attribute(request_type, erasure)], Status), Statuses),
+    Statuses == [open_by_absence([consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed])].
+test(an_absent_legal_obligation_is_open_by_outside_fact) :-
+    example_profile(legal_obligation_not_attested, Profile),
+    findall(Status, request_basis_status(Profile, Status), Statuses),
+    Statuses == [open_by_outside_fact([erasure_required_by_union_or_member_state_law])].
+test(an_absent_legal_obligation_is_not_unmet, fail) :-
+    example_profile(legal_obligation_not_attested, Profile),
+    request_basis_status(Profile, not_engaged).
+test(an_unsure_unlawfulness_is_open_by_judgement) :-
+    example_profile(unlawfulness_unsure, Profile),
+    findall(Status, request_basis_status(Profile, Status), Statuses),
+    Statuses == [open_by_judgement([personal_data_unlawfully_processed])].
+test(an_attested_legal_obligation_engages_point_e) :-
+    request_basis([attribute(request_type, erasure), attribute(data_no_longer_necessary_for_purposes, false), attribute(consent_is_the_basis_of_processing, false), attribute(erasure_required_by_union_or_member_state_law, attested(true, attestation(by, at, reason, none)))], art17_1_e).
+test(an_access_request_is_outside_this_order) :-
+    findall(Verdict, decide_request_basis([attribute(request_type, access)], Verdict), Verdicts),
+    Verdicts == [request_basis_verdict(outside_this_order(request_type), none, [])].
+test(an_absent_request_type_is_indeterminate) :-
+    findall(Verdict, decide_request_basis([], Verdict), Verdicts),
+    Verdicts == [request_basis_verdict(indeterminate([request_type]), none, [])].
+test(an_unsure_crisp_flag_is_an_input_problem) :-
+    findall(Status, request_basis_status([attribute(request_type, erasure), attribute(consent_withdrawn, unsure)], Status), Statuses),
+    Statuses == [input_problems([wrong_type(consent_withdrawn)])].
+test(the_checklist_carries_a_cite_per_ground) :-
+    example_profile(marketing_objection, Profile),
+    request_basis_checklist(Profile, Items),
+    length(Items, 6),
+    member(item(art17_1_c, met, cite(eu_reg_2016_679_art_17_1_c)), Items),
+    member(item(art17_1_a, unmet(ground_not_met), cite(eu_reg_2016_679_art_17_1_a)), Items).
+test(the_checklist_of_an_outside_type_is_empty) :-
+    findall(Items, request_basis_checklist([attribute(request_type, access)], Items), Checklists),
+    Checklists == [[]].
+
+:- end_module(request_basis).

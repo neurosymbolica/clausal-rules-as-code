@@ -1,0 +1,123 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/deployer_duties_fria.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% deployer_duties_fria_profile_keys/1     the top-level profile key schema
+% deployer_duties_fria_input_problems/2   THE INPUT CHECK (re-exported from
+%                                          the kernel, as the scaffold wrote it)
+% deployer_duties_fria_what_if/4          (#16 what-if) override one profile
+%                                          key of a REQUEST, re-evaluate
+% deployer_duties_fria_obligation_status/2 (#14 obligation_surfacing) the
+%                                          RESULT of an obligation request
+% deployer_duties_fria_compliance_check/2 (#13 compliance_check) the RESULT
+%                                          of a proposed log retention period
+% deployer_duties_fria_chapter_iii_date/2 (#15 deadline) the day from which
+%                                          Arts 26 and 27 apply to the system
+% Justification (#7) is the slice's deployer_duties_fria_checklist/2: each
+% item carries its cite(...) provenance.
+%
+% REQUEST terms (the slice's facade):
+%   deployer_obligation_request(Profile, Obligation, AssessmentDate)
+%   log_retention_period_request(Profile, RetentionMonths, AssessmentDate)
+% =====================================================================
+
+:- module(queries, [
+    deployer_duties_fria_profile_keys/1,
+    deployer_duties_fria_input_problems/2,
+    deployer_duties_fria_what_if/4,
+    deployer_duties_fria_obligation_status/2,
+    deployer_duties_fria_compliance_check/2,
+    deployer_duties_fria_chapter_iii_date/2
+]).
+
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(eu/ai_act/deployer_duties_fria/kernel, [deployer_duties_fria_input_problems/2]).
+:- use_module(eu/ai_act/deployer_duties_fria/citations, [implements/1]).
+:- use_module(eu/ai_act/deployer_duties_fria/deployer_duties_fria, [deployer_duties_fria_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+deployer_duties_fria_profile_keys([deployer_of_the_system, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, logs_automatically_generated_by_the_system_under_the_deployers_control, union_or_national_law_provides_otherwise_on_the_log_retention_period, deployer_is_an_employer, put_into_service_or_used_at_the_workplace, makes_or_assists_in_making_decisions_related_to_natural_persons, used_for_law_enforcement_purposes, system_listed_under_point_2_of_annex_iii, body_governed_by_public_law, private_entity_providing_public_services, system_listed_under_point_5_b_of_annex_iii, system_listed_under_point_5_c_of_annex_iii, exempt_from_notification_in_the_case_of_article_46_1, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, significant_changes_in_design_as_from_the_chapter_iii_date, intended_to_be_used_by_public_authorities]).
+
+% ---- #16 what-if: one profile key hypothetically overridden -----------
+% The overridden value passes through the input check like any other: an
+% ill-typed override answers input_problems(...).
+deployer_duties_fria_what_if(deployer_obligation_request(Profile, Obligation, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    deployer_duties_fria_status(deployer_obligation_request(Hypothesis, Obligation, AssessmentDate), NewStatus).
+deployer_duties_fria_what_if(log_retention_period_request(Profile, RetentionMonths, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    deployer_duties_fria_status(log_retention_period_request(Hypothesis, RetentionMonths, AssessmentDate), NewStatus).
+
+% Profile plumbing (no provision): every attribute(OverriddenKey, _) is
+% removed, then attribute(OverriddenKey, NewValue) is added once.
+overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    without_key(Profile, OverriddenKey, RemainingProfile),
+    append(RemainingProfile, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+without_key([], _, []).
+without_key([attribute(ElementKey, ElementValue)|Elements], ProfileKey, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== ProfileKey,
+    without_key(Elements, ProfileKey, Remaining).
+without_key([attribute(ElementKey, _)|Elements], ProfileKey, Remaining) :-
+    ElementKey == ProfileKey,
+    without_key(Elements, ProfileKey, Remaining).
+
+% ---- #14 obligation surfacing -----------------------------------------
+% The RESULT of one of the five obligations for the deployer on the day;
+% the caller surfaces all five by asking once per OBLIGATION atom.
+deployer_duties_fria_obligation_status(deployer_obligation_request(Profile, Obligation, AssessmentDate), Result) :-
+    deployer_duties_fria_status(deployer_obligation_request(Profile, Obligation, AssessmentDate), Result).
+
+% ---- #13 compliance check ---------------------------------------------
+% Is the proposed retention period (whole months) allowed by Art 26(6)?
+deployer_duties_fria_compliance_check(log_retention_period_request(Profile, RetentionMonths, AssessmentDate), Result) :-
+    deployer_duties_fria_status(log_retention_period_request(Profile, RetentionMonths, AssessmentDate), Result).
+
+% ---- #15 deadline: THE CHAPTER III DATE of the system -----------------
+% Art 113, third paragraph, point (c): 2 December 2027 for a system
+% classified high-risk under Art 6(2) and Annex III (point (c)(i)),
+% otherwise 2 August 2028 (point (c)(ii)). Reading (2): a system under both
+% routes takes the earlier date.
+chapter_iii_date_row(true, date(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
+chapter_iii_date_row(false, date(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
+
+deployer_duties_fria_chapter_iii_date(Profile, ChapterThreeDate) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    deployer_duties_fria_input_problems(Profile, []),
+    profile_get(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, ListedInAnnexThree),
+    chapter_iii_date_row(ListedInAnnexThree, ChapterThreeDate, _).
+
+% ---- tests -------------------------------------------------------------
+test(what_if_the_actor_is_not_the_deployer) :-
+    deployer_duties_fria_what_if(deployer_obligation_request([attribute(deployer_of_the_system, true)], log_retention, date(2028, 1, 1)), deployer_of_the_system, false, Status),
+    Status == not_a_deployer.
+
+test(the_unchanged_deployer_is_not_answered_not_a_deployer, fail) :-
+    deployer_duties_fria_status(deployer_obligation_request([attribute(deployer_of_the_system, true)], log_retention, date(2028, 1, 1)), not_a_deployer).
+
+test(an_ill_typed_override_is_an_input_problem) :-
+    deployer_duties_fria_what_if(log_retention_period_request([], 6, date(2028, 1, 1)), deployer_of_the_system, maybe, Status),
+    Status == input_problems([wrong_type(deployer_of_the_system)]).
+
+test(an_annex_iii_system_takes_the_december_2027_date) :-
+    deployer_duties_fria_chapter_iii_date([attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true)], ChapterThreeDate),
+    ChapterThreeDate == date(2027, 12, 2).
+
+test(another_system_takes_the_august_2028_date) :-
+    deployer_duties_fria_chapter_iii_date([attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, false)], ChapterThreeDate),
+    ChapterThreeDate == date(2028, 8, 2).
+
+test(an_unclassified_system_has_no_chapter_iii_date, fail) :-
+    deployer_duties_fria_chapter_iii_date([], _).
+
+test(the_compliance_check_answers_the_retention_query) :-
+    deployer_duties_fria_compliance_check(log_retention_period_request([attribute(deployer_of_the_system, false)], 6, date(2028, 1, 1)), Result),
+    Result == not_a_deployer.
+
+test(the_obligation_status_answers_before_the_first_date) :-
+    deployer_duties_fria_obligation_status(deployer_obligation_request([], fundamental_rights_impact_assessment, date(2027, 12, 1)), Result),
+    Result == not_applicable_on_date.
+
+:- end_module(queries).

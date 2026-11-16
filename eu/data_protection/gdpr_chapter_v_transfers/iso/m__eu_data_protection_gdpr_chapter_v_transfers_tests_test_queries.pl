@@ -1,0 +1,82 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_chapter_v_transfers_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_queries, [gdpr_chapter_v_transfers_profile_keys/1, gdpr_chapter_v_transfers_what_if/4, input_problems/1, wrong_type/1, duplicate_key/1, indeterminate/1, needs_legal_review/2, open_textured/2, cross_reference_unresolved/2, resolution/2, inputs_relied_on/1, provenance/2, outside_fact/2, attested/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_kernel, [gdpr_chapter_v_transfers_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_transfers_fixtures, [gdpr_chapter_v_transfers_profile_for/2]).
+
+query_attested(Value, attested(Value, attestation(query_host, query_time, query_reason, none))).
+
+what_if_answers(Subject, Key, Value, Statuses) :-
+    gdpr_chapter_v_transfers_profile_for(Subject, Profile),
+    findall(Status, gdpr_chapter_v_transfers_what_if(Profile, Key, Value, Status), Statuses).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_chapter_v_transfers_profile_keys(ProfileKeys),
+    ProfileKeys == [adequacy_decision_in_force, safeguard_in_place, derogation_claimed, public_authority_public_powers, explicit_consent_obtained, contract_necessity, data_subject_interest_contract_necessity, important_public_interest, legal_claims_necessity, vital_interests_necessity, register_public_by_law, register_consultation_conditions_fulfilled, register_not_entire, register_requester_condition_met, legitimate_interests_derogation, transfer_is_onward_transfer, binding_corporate_rules_approved, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision].
+test(the_reexported_input_check_answers_once) :-
+    findall(Problems, gdpr_chapter_v_transfers_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(what_if_supplies_the_missing_safeguard) :-
+    what_if_answers(empty_profile, safeguard_in_place, true, Statuses),
+    Statuses == [eligible].
+test(what_if_public_powers_defeat_the_contract_derogation) :-
+    what_if_answers(contract_derogation, public_authority_public_powers, true, Statuses),
+    Statuses == [ineligible].
+test(what_if_an_attested_adequacy_decision_resolves_the_cross_reference) :-
+    query_attested(true, Attested),
+    what_if_answers(refused_safeguard_without_adequacy_fact, adequacy_decision_in_force, Attested, Statuses),
+    Statuses == [eligible].
+test(what_if_approved_binding_corporate_rules_replace_a_refusal) :-
+    query_attested(true, Attested),
+    what_if_answers(binding_corporate_rules_refused, binding_corporate_rules_approved, Attested, Statuses),
+    Statuses == [eligible].
+test(what_if_a_met_point_defeats_the_second_subparagraph) :-
+    what_if_answers(second_subparagraph_derogation, important_public_interest, true, Statuses),
+    Statuses == [ineligible].
+test(what_if_the_missing_contract_key_is_supplied_the_safeguard_refers) :-
+    what_if_answers(unsure_safeguard_contract_not_stated, contract_necessity, true, Statuses),
+    Statuses == [needs_legal_review(open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)), [inputs_relied_on([derogation_claimed - art49_1_b, safeguard_in_place - unsure])])].
+test(what_if_a_recorded_onward_transfer_changes_nothing) :-
+    query_attested(true, Attested),
+    what_if_answers(safeguard_without_adequacy_fact, transfer_is_onward_transfer, Attested, Statuses),
+    Statuses == [eligible].
+test(what_if_on_a_duplicate_profile_reports_its_own_problems) :-
+    what_if_answers(duplicate_safeguard_and_unknown_key, safeguard_in_place, true, Statuses),
+    Statuses == [input_problems([duplicate_key(safeguard_in_place), unknown_key(foo)])].
+test(what_if_an_unknown_key_is_reported) :-
+    what_if_answers(empty_profile, colour, blue, Statuses),
+    Statuses == [input_problems([unknown_key(colour)])].
+test(the_result_constructors_recognise_their_shapes) :-
+    input_problems([unknown_key(colour)]),
+    wrong_type(profile),
+    duplicate_key(safeguard_in_place),
+    indeterminate([safeguard_in_place]),
+    needs_legal_review(open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)), [inputs_relied_on([safeguard_in_place - unsure])]),
+    open_textured(safeguard_in_place, cite(eu_reg_2016_679_art_46)),
+    cross_reference_unresolved(cite(eu_reg_2016_679_art_45), cite(eu_reg_2016_679_art_45_3)),
+    resolution(cite(eu_reg_2016_679_art_45_3), not_attempted),
+    inputs_relied_on([derogation_claimed - art49_1_a]),
+    provenance(stage_one, [cite(eu_reg_2016_679_art_45)]),
+    outside_fact(adequacy_decision_in_force, absent),
+    attested(true, attestation(query_host, query_time, query_reason, url(commission_list, query_time))),
+    attested(false, attestation(query_host, query_time, query_reason, document(upload_one, digest_one))).
+
+test(what_if_the_supplied_safeguard_is_not_ineligible, fail) :-
+    gdpr_chapter_v_transfers_what_if([], safeguard_in_place, true, ineligible).
+test(an_unsure_attested_value_is_not_a_constructor_shape, fail) :-
+    attested(unsure, attestation(query_host, query_time, query_reason, none)).
+test(a_resolution_other_than_not_attempted_is_not_produced, fail) :-
+    resolution(cite(eu_reg_2016_679_art_45_3), resolved).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_reexported_input_check_answers_once, what_if_supplies_the_missing_safeguard, what_if_public_powers_defeat_the_contract_derogation, what_if_an_attested_adequacy_decision_resolves_the_cross_reference, what_if_approved_binding_corporate_rules_replace_a_refusal, what_if_a_met_point_defeats_the_second_subparagraph, what_if_the_missing_contract_key_is_supplied_the_safeguard_refers, what_if_a_recorded_onward_transfer_changes_nothing, what_if_on_a_duplicate_profile_reports_its_own_problems, what_if_an_unknown_key_is_reported, the_result_constructors_recognise_their_shapes]).
+cp_test_fail_names([what_if_the_supplied_safeguard_is_not_ineligible, an_unsure_attested_value_is_not_a_constructor_shape, a_resolution_other_than_not_attempted_is_not_produced]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

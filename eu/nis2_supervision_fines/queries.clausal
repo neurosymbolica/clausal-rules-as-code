@@ -1,0 +1,115 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_supervision_fines.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types of this order are served as follows:
+%   #2 eligibility   -- decide_nis2_supervision_fines/2 and
+%                       nis2_supervision_fines_status/2 (slice), a verdict
+%                       eligible | ineligible | indeterminate(Keys) |
+%                       needs_legal_review(Reason, Context) | input_problems(P)
+%                       on the Art 32(5) escalation powers;
+%   #7 justification -- nis2_supervision_fines_checklist/2 (slice), one
+%                       item(Id, Status, cite(Key)) per Art 32(5) condition,
+%                       every item cited, met items included.
+% This layer adds:
+%   nis2_supervision_fines_profile_keys/1  -- the twelve contract keys, in order;
+%   nis2_supervision_fines_input_problems/2 -- the input check (kernel), re-exported;
+%   nis2_supervision_fines_what_if/4        -- #16 what-if: set one attribute of the
+%       attribute-list profile and re-decide.
+%
+% ROOT EXPORTS: the twelve profile key atoms, the five enumeration atoms and the
+% judgement value unsure are read by the scorer as package-root attributes, so
+% each is declared here as an arity-0 fact and exported (plumbing, no statutory
+% condition: no implements/1 marker).
+%
+% The profile is an attribute list [attribute(Key, Value), ...], so the
+% hypothetical edit REPLACES every attribute of the overridden key with the one
+% new attribute (the attribute-list counterpart of query_combinators' dict
+% override_key/4); appending would create a duplicate key.
+% Open-textured judgements are never crisped here: an unsure value is passed
+% through to the slice, which hands it back as needs_legal_review.
+% =====================================================================
+
+:- module(queries, [
+    nis2_supervision_fines_profile_keys/1,
+    nis2_supervision_fines_input_problems/2,
+    nis2_supervision_fines_what_if/4,
+    entity_class/0,
+    infringed_provision/0,
+    worldwide_annual_turnover_eur/0,
+    entity_is_public_administration/0,
+    earlier_measures_ineffective/0,
+    deadline_set_for_necessary_action/0,
+    required_action_taken_within_deadline/0,
+    infringement_may_entail_notifiable_personal_data_breach/0,
+    authority_became_aware_in_supervision_or_enforcement/0,
+    data_protection_authority_in_other_member_state/0,
+    gdpr_fine_imposed_under_art_58_2_i/0,
+    gdpr_fine_for_same_conduct/0,
+    essential/0,
+    important/0,
+    art_21/0,
+    art_23/0,
+    other/0,
+    unsure/0
+]).
+
+:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2]).
+:- use_module(eu/nis2_supervision_fines/nis2_supervision_fines, [nis2_supervision_fines_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+nis2_supervision_fines_profile_keys([entity_class, infringed_provision, worldwide_annual_turnover_eur, entity_is_public_administration, earlier_measures_ineffective, deadline_set_for_necessary_action, required_action_taken_within_deadline, infringement_may_entail_notifiable_personal_data_breach, authority_became_aware_in_supervision_or_enforcement, data_protection_authority_in_other_member_state, gdpr_fine_imposed_under_art_58_2_i, gdpr_fine_for_same_conduct]).
+
+% #16 what-if: re-evaluate with one key hypothetically set to a new value.
+% (a) THE LOGIC WAS WRONG: profile_set/3 appended a second attribute for the
+% key, so the input check reported duplicate_key; the override now replaces it.
+nis2_supervision_fines_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    without_key(Profile, OverriddenKey, RemainingAttributes),
+    nis2_supervision_fines_status([attribute(OverriddenKey, NewValue)|RemainingAttributes], NewStatus).
+
+% without_key(Attributes, Key, Remaining): Attributes with every attribute of Key
+% dropped, the others kept in order. Complementary clauses on the element key.
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], OverriddenKey, RemainingAttributes) :-
+    ElementKey == OverriddenKey,
+    without_key(Elements, OverriddenKey, RemainingAttributes).
+without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|RemainingAttributes]) :-
+    ElementKey \== OverriddenKey,
+    without_key(Elements, OverriddenKey, RemainingAttributes).
+
+% ---- root exports: the profile key atoms, in root_exports order ----------
+entity_class.
+infringed_provision.
+worldwide_annual_turnover_eur.
+entity_is_public_administration.
+earlier_measures_ineffective.
+deadline_set_for_necessary_action.
+required_action_taken_within_deadline.
+infringement_may_entail_notifiable_personal_data_breach.
+authority_became_aware_in_supervision_or_enforcement.
+data_protection_authority_in_other_member_state.
+gdpr_fine_imposed_under_art_58_2_i.
+gdpr_fine_for_same_conduct.
+
+% ---- root exports: the enumeration atoms and the judgement value ----------
+essential.
+important.
+art_21.
+art_23.
+other.
+unsure.
+
+% ---- tests -----------------------------------------------------------
+test(twelve_profile_keys) :-
+    nis2_supervision_fines_profile_keys(Keys),
+    length(Keys, 12).
+test(what_if_flips_the_last_condition) :-
+    nis2_supervision_fines_what_if([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, true)], required_action_taken_within_deadline, false, eligible).
+test(root_atoms_are_callable) :-
+    entity_class,
+    unsure,
+    other.
+
+:- end_module(queries).

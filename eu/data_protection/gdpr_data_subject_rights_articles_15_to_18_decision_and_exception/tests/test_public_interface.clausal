@@ -1,0 +1,296 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Each fixture subject resolves to EXACTLY its expected decision, exception
+% and citations; every near-miss control gets a different decision.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_articles_15_to_18_decision_and_exception/tests/test_public_interface.clausal
+% lint: allow C6 contract-atom (art12_5_..., art17_3_a and the like are contract atoms)
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_15_to_18_decision_and_exception, [
+    decide_request_exception/2,
+    request_exception_status/2,
+    request_exception_checklist/2,
+    request_exception_decision_resolvable/1,
+    request_exception_status_values/1,
+    request_decision/2,
+    request_exception/2,
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems/2,
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_subject/1,
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for/2,
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_assess/2,
+    provenance/2
+]).
+
+% ---- plumbing ----------------------------------------------------------
+fixture_profile(Subject, Profile) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_profile_for(Subject, Profile).
+
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_subject(Subject), Subjects).
+
+% ---- expected outcomes: expected_outcome(Subject, Comply, Exception, Citations)
+expected_outcome(access_request, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(access_request_manifestly_unfounded, need_not_comply, art12_5_manifestly_unfounded_or_excessive, [cite(eu_reg_2016_679_art_12_5), cite(eu_reg_2016_679_art_12_5_a)]).
+expected_outcome(access_request_not_manifestly_unfounded, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(access_request_controller_cannot_identify, need_not_comply, art12_2_unable_to_identify, [cite(eu_reg_2016_679_art_12_2)]).
+expected_outcome(access_request_controller_can_identify, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(access_request_legislative_restriction, need_not_comply, art23_legislative_restriction, [cite(eu_reg_2016_679_art_23_1)]).
+expected_outcome(access_request_no_legislative_restriction, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(access_request_identity_unconfirmed, suspended(art12_6_identity_not_confirmed), none, []).
+expected_outcome(access_request_identity_confirmed, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(access_request_identity_doubts_unsure, needs_legal_review(open_textured(reasonable_doubts_about_identity, cite(eu_reg_2016_679_art_12_6)), [inputs_relied_on([request_type-access, reasonable_doubts_about_identity-unsure])]), none, []).
+expected_outcome(access_request_identity_not_confirmed_without_doubts, must_comply, none, [cite(eu_reg_2016_679_art_15_1)]).
+expected_outcome(request_type_not_given, indeterminate([request_type]), none, []).
+expected_outcome(access_request_unknown_key, input_problems([unknown_key(favourite_colour)]), none, []).
+expected_outcome(access_request_wrong_type, input_problems([wrong_type(identity_confirmed)]), none, []).
+expected_outcome(access_request_duplicate_key, input_problems([duplicate_key(request_type)]), none, []).
+expected_outcome(profile_not_an_attribute_list, input_problems([wrong_type(profile)]), none, []).
+expected_outcome(rectification_inaccurate_data, must_comply, none, [cite(eu_reg_2016_679_art_16)]).
+expected_outcome(rectification_incomplete_data, must_comply, none, [cite(eu_reg_2016_679_art_16)]).
+expected_outcome(rectification_accurate_and_complete_data, need_not_comply, none, [cite(eu_reg_2016_679_art_16)]).
+expected_outcome(rectification_completeness_unsure, needs_legal_review(open_textured(personal_data_incomplete_in_light_of_purposes, cite(eu_reg_2016_679_art_16)), [inputs_relied_on([request_type-rectification, personal_data_incomplete_in_light_of_purposes-unsure])]), none, []).
+expected_outcome(erasure_facts_missing, indeterminate([consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed]), none, []).
+expected_outcome(erasure_data_no_longer_necessary, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_no_ground, need_not_comply, none, [cite(eu_reg_2016_679_art_17_1)]).
+expected_outcome(erasure_no_ground_law_not_attested, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), cite(union_or_member_state_law_requiring_erasure)), [resolution(cite(union_or_member_state_law_requiring_erasure), not_attempted), inputs_relied_on([request_type-erasure, data_no_longer_necessary_for_purposes-false, personal_data_unlawfully_processed-false, erasure_required_by_union_or_member_state_law-absent])]), none, []).
+expected_outcome(erasure_required_by_law, must_comply, none, [cite(eu_reg_2016_679_art_17_1_e)]).
+expected_outcome(erasure_consent_withdrawn, must_comply, none, [cite(eu_reg_2016_679_art_17_1_b)]).
+expected_outcome(erasure_consent_withdrawn_other_ground, need_not_comply, none, [cite(eu_reg_2016_679_art_17_1)]).
+expected_outcome(erasure_objection_direct_marketing, must_comply, none, [cite(eu_reg_2016_679_art_17_1_c)]).
+expected_outcome(erasure_ground_unsure, needs_legal_review(open_textured(data_no_longer_necessary_for_purposes, cite(eu_reg_2016_679_art_17_1_a)), [inputs_relied_on([request_type-erasure, data_no_longer_necessary_for_purposes-unsure, personal_data_unlawfully_processed-false])]), none, []).
+expected_outcome(erasure_freedom_of_expression, need_not_comply, art17_3_a, [cite(eu_reg_2016_679_art_17_3_a)]).
+expected_outcome(erasure_freedom_of_expression_not_necessary, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_public_task, need_not_comply, art17_3_b, [cite(eu_reg_2016_679_art_17_3_b)]).
+expected_outcome(erasure_public_task_not_necessary, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_law_requires_processing, need_not_comply, art17_3_b, [cite(eu_reg_2016_679_art_17_3_b)]).
+expected_outcome(erasure_law_does_not_require_processing, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_public_health, need_not_comply, art17_3_c, [cite(eu_reg_2016_679_art_17_3_c)]).
+expected_outcome(erasure_public_health_not_necessary, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_archiving_impairs_objectives, need_not_comply, art17_3_d, [cite(eu_reg_2016_679_art_17_3_d)]).
+expected_outcome(erasure_archiving_without_impairment, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(erasure_legal_claims, need_not_comply, art17_3_e, [cite(eu_reg_2016_679_art_17_3_e)]).
+expected_outcome(erasure_legal_claims_not_necessary, must_comply, none, [cite(eu_reg_2016_679_art_17_1_a)]).
+expected_outcome(restriction_accuracy_contested, must_comply, none, [cite(eu_reg_2016_679_art_18_1_a)]).
+expected_outcome(restriction_no_situation, need_not_comply, none, [cite(eu_reg_2016_679_art_18_1)]).
+expected_outcome(restriction_legal_claims, must_comply, none, [cite(eu_reg_2016_679_art_18_1_c)]).
+expected_outcome(restriction_legal_claims_not_required, need_not_comply, none, [cite(eu_reg_2016_679_art_18_1)]).
+expected_outcome(restriction_objection_pending_verification, must_comply, none, [cite(eu_reg_2016_679_art_18_1_d)]).
+expected_outcome(restriction_objection_verification_done, need_not_comply, none, [cite(eu_reg_2016_679_art_18_1)]).
+expected_outcome(restriction_unlawfulness_unsure, needs_legal_review(open_textured(personal_data_unlawfully_processed, cite(eu_reg_2016_679_art_18_1_b)), [inputs_relied_on([request_type-restriction, personal_data_unlawfully_processed-unsure, controller_no_longer_needs_data_for_processing_purposes-false])]), none, []).
+expected_outcome(restriction_lawful_processing, need_not_comply, none, [cite(eu_reg_2016_679_art_18_1)]).
+
+% ---- one-unit near-miss controls: near_miss(Positive, Control) ----------
+near_miss(access_request_manifestly_unfounded, access_request_not_manifestly_unfounded).
+near_miss(access_request_controller_cannot_identify, access_request_controller_can_identify).
+near_miss(access_request_legislative_restriction, access_request_no_legislative_restriction).
+near_miss(access_request_identity_unconfirmed, access_request_identity_confirmed).
+near_miss(access_request_identity_doubts_unsure, access_request_identity_unconfirmed).
+near_miss(access_request_wrong_type, access_request_identity_not_confirmed_without_doubts).
+near_miss(access_request_unknown_key, access_request).
+near_miss(access_request_duplicate_key, access_request).
+near_miss(request_type_not_given, access_request).
+near_miss(profile_not_an_attribute_list, request_type_not_given).
+near_miss(rectification_inaccurate_data, rectification_accurate_and_complete_data).
+near_miss(rectification_incomplete_data, rectification_accurate_and_complete_data).
+near_miss(rectification_completeness_unsure, rectification_accurate_and_complete_data).
+near_miss(erasure_data_no_longer_necessary, erasure_facts_missing).
+near_miss(erasure_required_by_law, erasure_no_ground).
+near_miss(erasure_no_ground_law_not_attested, erasure_no_ground).
+near_miss(erasure_consent_withdrawn, erasure_consent_withdrawn_other_ground).
+near_miss(erasure_objection_direct_marketing, erasure_no_ground).
+near_miss(erasure_ground_unsure, erasure_no_ground).
+near_miss(erasure_freedom_of_expression, erasure_freedom_of_expression_not_necessary).
+near_miss(erasure_public_task, erasure_public_task_not_necessary).
+near_miss(erasure_law_requires_processing, erasure_law_does_not_require_processing).
+near_miss(erasure_public_health, erasure_public_health_not_necessary).
+near_miss(erasure_archiving_impairs_objectives, erasure_archiving_without_impairment).
+near_miss(erasure_legal_claims, erasure_legal_claims_not_necessary).
+near_miss(restriction_accuracy_contested, restriction_no_situation).
+near_miss(restriction_legal_claims, restriction_legal_claims_not_required).
+near_miss(restriction_objection_pending_verification, restriction_objection_verification_done).
+near_miss(restriction_unlawfulness_unsure, restriction_lawful_processing).
+
+% ---- the subjects whose checklist exists (well formed, decided type) ----
+checklist_subjects([access_request, access_request_manifestly_unfounded, access_request_identity_unconfirmed, access_request_identity_doubts_unsure, rectification_inaccurate_data, rectification_accurate_and_complete_data, rectification_completeness_unsure, erasure_facts_missing, erasure_data_no_longer_necessary, erasure_no_ground_law_not_attested, erasure_freedom_of_expression, erasure_archiving_impairs_objectives, restriction_accuracy_contested, restriction_no_situation, restriction_unlawfulness_unsure]).
+
+% ---- helpers over the tables --------------------------------------------
+has_expected_outcome(Subject) :-
+    expected_outcome(Subject, _, _, _).
+
+decision_matches(Subject) :-
+    expected_outcome(Subject, Comply, _, _),
+    fixture_profile(Subject, Profile),
+    findall(Answer, request_decision(Profile, Answer), Answers),
+    Answers == [Comply].
+
+exception_matches(Subject) :-
+    expected_outcome(Subject, _, Exception, _),
+    fixture_profile(Subject, Profile),
+    findall(Answer, request_exception(Profile, Answer), Answers),
+    Answers == [Exception].
+
+verdict_matches(Subject) :-
+    expected_outcome(Subject, Comply, _, Citations),
+    findall(Verdict, gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_assess(Subject, Verdict), Verdicts),
+    Verdicts == [request_exception_verdict(Comply, Citations)].
+
+status_matches(Subject) :-
+    expected_outcome(Subject, Comply, _, _),
+    fixture_profile(Subject, Profile),
+    findall(Status, request_exception_status(Profile, Status), Statuses),
+    Statuses == [Comply].
+
+resolvable(Subject) :-
+    fixture_profile(Subject, Profile),
+    request_exception_decision_resolvable(Profile).
+
+exception_in_vocabulary(Subject) :-
+    expected_outcome(Subject, _, Exception, _),
+    request_exception_status_values(Values),
+    member(Exception, Values).
+
+near_miss_differs(Positive-Control) :-
+    fixture_profile(Positive, PositiveProfile),
+    fixture_profile(Control, ControlProfile),
+    request_decision(PositiveProfile, PositiveComply),
+    request_decision(ControlProfile, ControlComply),
+    dif(PositiveComply, ControlComply).
+
+checklist_cited(Subject) :-
+    fixture_profile(Subject, Profile),
+    request_exception_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(item_cited, [FirstItem|OtherItems]).
+
+item_cited(item(_, _, cite(Key))) :-
+    atom(Key).
+
+% ---- table-driven tests ---------------------------------------------------
+test(every_fixture_has_an_expected_outcome) :-
+    all_subjects(Subjects),
+    length(Subjects, Count),
+    Count > 0,
+    maplist(has_expected_outcome, Subjects).
+test(every_fixture_resolves_to_exactly_its_expected_decision) :-
+    all_subjects(Subjects),
+    maplist(decision_matches, Subjects).
+test(every_fixture_resolves_to_exactly_its_expected_exception) :-
+    all_subjects(Subjects),
+    maplist(exception_matches, Subjects).
+test(every_fixture_resolves_to_exactly_its_expected_verdict_and_citations) :-
+    all_subjects(Subjects),
+    maplist(verdict_matches, Subjects).
+test(every_fixture_compliance_status_is_its_decision) :-
+    all_subjects(Subjects),
+    maplist(status_matches, Subjects).
+test(every_fixture_is_resolvable) :-
+    all_subjects(Subjects),
+    maplist(resolvable, Subjects).
+test(every_expected_exception_is_in_the_vocabulary) :-
+    all_subjects(Subjects),
+    maplist(exception_in_vocabulary, Subjects).
+test(every_near_miss_control_gets_a_different_decision) :-
+    findall(Positive-Control, near_miss(Positive, Control), Pairs),
+    length(Pairs, Count),
+    Count > 0,
+    maplist(near_miss_differs, Pairs).
+test(every_decided_checklist_is_non_empty_and_cited) :-
+    checklist_subjects(Subjects),
+    maplist(checklist_cited, Subjects).
+
+% ---- concrete per-route assertions, each negative paired with a positive --
+test(an_access_request_must_be_complied_with) :-
+    fixture_profile(access_request, Profile),
+    request_decision(Profile, must_comply).
+test(an_access_request_is_not_need_not_comply, fail) :-
+    fixture_profile(access_request, Profile),
+    request_decision(Profile, need_not_comply).
+test(a_manifestly_unfounded_request_need_not_be_complied_with) :-
+    fixture_profile(access_request_manifestly_unfounded, Profile),
+    request_decision(Profile, need_not_comply),
+    request_exception(Profile, art12_5_manifestly_unfounded_or_excessive).
+test(a_manifestly_unfounded_request_is_not_must_comply, fail) :-
+    fixture_profile(access_request_manifestly_unfounded, Profile),
+    request_decision(Profile, must_comply).
+test(an_unconfirmed_identity_suspends) :-
+    fixture_profile(access_request_identity_unconfirmed, Profile),
+    request_decision(Profile, suspended(art12_6_identity_not_confirmed)),
+    request_exception(Profile, none).
+test(an_unconfirmed_identity_is_not_need_not_comply, fail) :-
+    fixture_profile(access_request_identity_unconfirmed, Profile),
+    request_decision(Profile, need_not_comply).
+test(a_confirmed_identity_must_comply) :-
+    fixture_profile(access_request_identity_confirmed, Profile),
+    request_decision(Profile, must_comply).
+test(an_erasure_for_freedom_of_expression_is_excepted) :-
+    fixture_profile(erasure_freedom_of_expression, Profile),
+    request_exception(Profile, art17_3_a).
+test(an_erasure_without_the_freedom_exception_has_no_exception) :-
+    fixture_profile(erasure_freedom_of_expression_not_necessary, Profile),
+    request_exception(Profile, none).
+test(an_erasure_without_the_freedom_exception_is_not_excepted, fail) :-
+    fixture_profile(erasure_freedom_of_expression_not_necessary, Profile),
+    request_exception(Profile, art17_3_a).
+test(an_erasure_waiting_on_an_unattested_law_is_not_final, fail) :-
+    fixture_profile(erasure_no_ground_law_not_attested, Profile),
+    request_decision(Profile, need_not_comply).
+test(an_erasure_with_the_law_attested_false_is_not_engaged) :-
+    fixture_profile(erasure_no_ground, Profile),
+    request_decision(Profile, need_not_comply).
+test(a_bare_erasure_request_names_missing_keys) :-
+    fixture_profile(erasure_facts_missing, Profile),
+    request_decision(Profile, indeterminate([consent_is_the_basis_of_processing|_])).
+test(a_restriction_pending_verification_must_comply) :-
+    fixture_profile(restriction_objection_pending_verification, Profile),
+    request_decision(Profile, must_comply).
+test(a_restriction_after_verification_is_not_must_comply, fail) :-
+    fixture_profile(restriction_objection_verification_done, Profile),
+    request_decision(Profile, must_comply).
+test(a_well_formed_profile_has_no_input_problem) :-
+    fixture_profile(access_request, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems(Profile, []).
+test(an_unknown_key_is_an_input_problem) :-
+    fixture_profile(access_request_unknown_key, Profile),
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems(Profile, [unknown_key(favourite_colour)]).
+test(an_input_problem_is_never_must_comply, fail) :-
+    fixture_profile(access_request_unknown_key, Profile),
+    request_decision(Profile, must_comply).
+test(the_erasure_checklist_shows_the_met_exception_with_its_citation) :-
+    fixture_profile(erasure_freedom_of_expression, Profile),
+    request_exception_checklist(Profile, Items),
+    member(item(right_engaged, met, cite(eu_reg_2016_679_art_17_1)), Items),
+    member(item(art17_3_a, met, cite(eu_reg_2016_679_art_17_3_a)), Items).
+test(the_access_checklist_shows_an_unmet_suspension) :-
+    fixture_profile(access_request, Profile),
+    request_exception_checklist(Profile, [item(right_engaged, met, cite(eu_reg_2016_679_art_15_1)), item(identity_suspension, unmet(identity_suspension), cite(eu_reg_2016_679_art_12_6))|_]).
+test(a_profile_with_an_input_problem_has_no_checklist, fail) :-
+    fixture_profile(access_request_unknown_key, Profile),
+    request_exception_checklist(Profile, _).
+test(the_verdict_of_an_excepted_erasure_cites_the_exception) :-
+    fixture_profile(erasure_legal_claims, Profile),
+    decide_request_exception(Profile, request_exception_verdict(need_not_comply, [cite(eu_reg_2016_679_art_17_3_e)])).
+
+% ---- result constructors: provenance/2, url/2, document/2 ----------------
+test(a_provenance_item_with_a_citation_list_is_recognised) :-
+    provenance(step_iv, [cite(eu_reg_2016_679_art_12_6)]).
+test(a_provenance_item_with_an_empty_citation_list_is_recognised) :-
+    provenance(step_iv, []).
+test(a_provenance_item_without_a_citation_list_is_refused, fail) :-
+    provenance(step_iv, not_a_list).
+test(a_url_evidence_term_destructures) :-
+    Evidence = url(source_address, retrieved_at),
+    Evidence = url(Address, RetrievedAt),
+    Address == source_address,
+    RetrievedAt == retrieved_at.
+test(a_document_evidence_term_destructures) :-
+    Evidence = document(upload_identifier, sha_digest),
+    Evidence = document(UploadIdentifier, Digest),
+    UploadIdentifier == upload_identifier,
+    Digest == sha_digest.
+test(an_attestation_with_url_evidence_is_well_formed) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems([attribute(request_type, access), attribute(legislative_restriction_applies_to_the_right, attested(false, attestation(by, at, reason, url(source_address, retrieved_at))))], []).
+test(an_attestation_with_document_evidence_is_well_formed) :-
+    gdpr_data_subject_rights_articles_15_to_18_decision_and_exception_input_problems([attribute(request_type, access), attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(by, at, reason, document(upload_identifier, sha_digest))))], []).
+
+:- end_module(test_public_interface).

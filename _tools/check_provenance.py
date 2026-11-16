@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: EUPL-1.2
 """check_provenance.py -- the unified provenance checker (formalization standard).
 
 STRUCTURAL plane (gate-blocking): a cite-using domain has a complete citation/2

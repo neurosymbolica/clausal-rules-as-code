@@ -1,0 +1,92 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one fact
+% changed -> different verdict), proving the route is LOAD-BEARING, and a
+% `fail` test that the wrong answer is NOT produced. Every near-miss atom is
+% checked positively as a real verdict atom, so a misspelling cannot pass.
+% Run: python -m clausal.testing eu/data_protection/gdpr_impact_assessment_prior_consultation/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/prior_consultation_duty, [
+    prior_consultation_duty_status/2,
+    prior_consultation_duty_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_prior_consultation/fixtures, [gdpr_impact_assessment_prior_consultation_profile_for/2]).
+
+fixture_status(Subject, Status) :-
+    gdpr_impact_assessment_prior_consultation_profile_for(Subject, Profile),
+    prior_consultation_duty_status(Profile, Status).
+
+test(the_near_miss_verdicts_are_real_verdict_atoms) :-
+    prior_consultation_duty_status_values(StatusValues),
+    member(required, StatusValues),
+    member(not_required, StatusValues).
+
+% Route 1: Art 36(1), no mitigating measures. Near miss: measures bring the risk below high.
+test(route_no_measures_positive) :-
+    fixture_status(residual_high_risk_no_measures, required).
+test(route_no_measures_positive_is_not_not_required, fail) :-
+    fixture_status(residual_high_risk_no_measures, not_required).
+test(route_no_measures_near_miss) :-
+    fixture_status(measures_bring_risk_below_high, not_required).
+test(route_no_measures_near_miss_is_not_required, fail) :-
+    fixture_status(measures_bring_risk_below_high, required).
+
+% Route 2: Art 36(1), measures leave the risk high. Near miss: no high risk indicated.
+test(route_measures_insufficient_positive) :-
+    fixture_status(residual_high_risk_measures_insufficient, required).
+test(route_measures_insufficient_near_miss) :-
+    fixture_status(no_high_risk_indicated, not_required).
+test(route_measures_insufficient_near_miss_is_not_required, fail) :-
+    fixture_status(no_high_risk_indicated, required).
+
+% Route 3: Art 36(5). Near miss: the attested Member State law requires no authorisation.
+test(route_member_state_positive) :-
+    fixture_status(member_state_prior_authorisation, required).
+test(route_member_state_near_miss) :-
+    fixture_status(member_state_law_does_not_require_authorisation, not_required).
+test(route_member_state_near_miss_is_not_required, fail) :-
+    fixture_status(member_state_law_does_not_require_authorisation, required).
+
+% Route 4: no assessment, Art 36(5) unmet refers (Q5). Near miss: Art 36(5) met.
+test(route_not_governed_here_positive) :-
+    fixture_status(no_assessment_public_interest_unmet, needs_legal_review(not_governed_here(_), _)).
+test(route_not_governed_here_is_not_not_required, fail) :-
+    fixture_status(no_assessment_public_interest_unmet, not_required).
+test(route_not_governed_here_near_miss) :-
+    fixture_status(no_assessment_member_state_authorisation, required).
+test(route_not_governed_here_near_miss_does_not_refer, fail) :-
+    fixture_status(no_assessment_member_state_authorisation, needs_legal_review(_, _)).
+
+% Route 5: absent Member State fact refers as a cross-reference. Near miss: it is attested.
+test(route_cross_reference_positive) :-
+    fixture_status(no_assessment_member_state_fact_absent, needs_legal_review(cross_reference_unresolved(_, _), _)).
+test(route_cross_reference_is_not_indeterminate, fail) :-
+    fixture_status(no_assessment_member_state_fact_absent, indeterminate(_)).
+
+% Route 6: reading (13). Near miss: a high risk indicated makes the absent status decide.
+test(route_reading_13_positive) :-
+    fixture_status(assessment_status_absent_no_way_open, not_required).
+test(route_reading_13_near_miss) :-
+    fixture_status(assessment_status_absent_way_open, indeterminate([impact_assessment_carried_out])).
+test(route_reading_13_near_miss_is_not_not_required, fail) :-
+    fixture_status(assessment_status_absent_way_open, not_required).
+
+% Route 7: unsure judgement refers open_textured. Near miss: the judgement is given false.
+test(route_open_textured_positive) :-
+    fixture_status(residual_risk_unsure, needs_legal_review(open_textured(measures_reduce_residual_risk_below_high, _), _)).
+test(route_open_textured_near_miss) :-
+    fixture_status(residual_high_risk_measures_insufficient, required).
+test(route_open_textured_is_not_required, fail) :-
+    fixture_status(residual_risk_unsure, required).
+
+% Route 8: input problems come first. Near miss: the same keys well typed.
+test(route_input_problems_positive) :-
+    fixture_status(duplicate_and_unknown_keys, input_problems([_|_])).
+test(route_input_problems_near_miss) :-
+    prior_consultation_duty_status([attribute(impact_assessment_carried_out, true), attribute(mitigating_measures_taken, true)], indeterminate(_)).
+test(route_input_problems_near_miss_has_no_problems, fail) :-
+    prior_consultation_duty_status([attribute(impact_assessment_carried_out, true), attribute(mitigating_measures_taken, true)], input_problems(_)).
+
+:- end_module(test_negative_controls).

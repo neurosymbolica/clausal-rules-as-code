@@ -1,0 +1,267 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_processor_contract
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "processor_contract_status"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- processor_contract_status.clausal --
+  - "decide_processor_contract/2"
+  - "processor_contract_status/2"
+  - "contract_missing_stipulations/2"
+  - "contract_checklist/2"
+  - "processor_contract_outside_facts/2"
+  - "decide_processor_contract_status/2"
+  - "processor_contract_status_status/2"
+  - "processor_contract_status_checklist/2"
+  - "processor_contract_status_decision_resolvable/1"
+  - "processor_contract_status_status_values/1"
+  # -- result constructors --
+  - "processor_contract_verdict/3"
+  - "checklist_item/3"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "deferred_provision/1"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- queries.clausal --
+  - "gdpr_processor_contract_profile_keys/1"
+  - "gdpr_processor_contract_input_problems/2"
+  - "gdpr_processor_contract_what_if/4"
+  # -- fixtures.clausal --
+  - "gdpr_processor_contract_subject/1"
+  - "gdpr_processor_contract_profile_for/2"
+  - "gdpr_processor_contract_assess/2"
+
+# Independence classification: no external scorer yet.
+independence: no_external_scorer
+
+uses: []
+
+scope: "Whether the contract or other legal act between a controller and a processor meets Article 28 of Regulation (EU) 2016/679, as a checklist: sufficient guarantees (Art 28(1)); binding, Union or Member State law and writing (Art 28(3), (9)); the seven content elements and the eight stipulations (a) to (h) of Art 28(3) plus the notice of an infringing instruction (second subparagraph); and, when another processor is engaged, the conditions of Art 28(2) and (4). The role gates (Art 4(8) processor, Art 28(10) processor that becomes a controller) are evaluated first. Out of scope and deferred: Art 29 conduct, the Art 28(4) liability sentence, Art 28(5) codes and certification as a limb, the content of standard clauses (Art 28(6) to (8), recorded only as the outside fact standard_clauses_adopted), Art 6 lawfulness and Chapter V transfers."
+
+sources:
+  - "Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, Art 28(1) to (10)"
+  - "Regulation (EU) 2016/679 Art 29"
+  - "Regulation (EU) 2016/679 Art 4(1), (2), (7), (8)"
+
+query_interface:
+  3: "processor_contract_status/2"             # status_determination
+  7: "contract_checklist/2"                   # justification: checklist with cite(...) per item
+  13: "gdpr_processor_contract_what_if/4"     # compliance_check: is the arrangement allowed if this key changes
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_028
+  reason: 'The titles of Articles 4 and 28 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for. (Art 29 is a single unit whose operative text is quoted; see art_29_processing_on_instructions.)'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: definitions_not_applied
+  units:
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_4
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: 'The Art 4 definitions other than (1) personal data, (2) processing, (7)
+    controller and (8) processor are not applied: the limbs read no other defined
+    term (for example consent, recipient, third party, personal data breach, supervisory
+    authority). Deferred so every unit of the Art 4 extract is accounted for.'
+  consequence: 'None for a caller: no limb turns on these definitions.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- debt: true
+  what: art_28_5_code_of_conduct_and_certification
+  units:
+  - 02016R0679-20160504#parag_028.005
+  reason: 'Art 28(5) says adherence to an approved code of conduct (Art 40) or certification
+    (Art 42) MAY be used as an element to demonstrate sufficient guarantees. It informs
+    the judgement processor_provides_sufficient_guarantees and is not a condition:
+    no crisp test is invented. Quoted to tie reading (7).'
+  consequence: 'The answer does not weigh a code of conduct or a certification: the
+    caller must take Art 28(5) into account itself when setting processor_provides_sufficient_guarantees.'
+  declaration: exception_modelled
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: art_28_8_adoption_power
+  units:
+  - 02016R0679-20160504#parag_028.008
+  reason: 'Art 28(8) (a supervisory authority, consistency mechanism of Art 63) is
+    a power to adopt standard clauses; the procedure and the content of the clauses
+    are not formalized (see standard_clause_content). Quoted to tie reading (9). Art
+    28(7) is not deferred here: it is the cited target of the outside fact standard_clauses_adopted
+    (eu_reg_2016_679_art_28_7).'
+  consequence: 'None for a caller: this is a power of a supervisory authority; whether
+    clauses adopted under it are used is the outside fact standard_clauses_adopted.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- debt: true
+  what: art_28_4_liability_sentence
+  units:
+  - 02016R0679-20160504#parag_028.004
+  partial: true
+  reason: The last sentence of Art 28(4) (the initial processor remains fully liable
+    to the controller for the other processor) is a consequence of a failure, not
+    a condition scored here; the first sentence (the flow-down) is in scope. The paragraph
+    is one run, so the partial cut is by sentence, not by run.
+  consequence: 'The answers do not say who is liable when another processor fails:
+    the initial processor must check its liability to the controller under the last
+    sentence of Art 28(4) itself.'
+  declaration: not_an_exception
+- debt: true
+  what: art_29_processing_on_instructions
+  units:
+  - 02016R0679-20160504#art_029
+  reason: Art 29 (the processor and any person acting under its authority process
+    the data only on the controller's instructions, unless Union or Member State law
+    requires) is a duty of CONDUCT. The order tests the arrangement; the contract
+    term that carries the duty is point (a) of Art 28(3), which is a limb. A conduct
+    limb would read a fact the profile cannot observe from the document (reading 10;
+    open question Q12). Quoted to tie reading (10).
+  consequence: 'An eligible answer says the contract carries the instruction term,
+    not that the processing follows the controller''s instructions: the caller must
+    check that conduct under Art 29 itself.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- not_formalized_because: institutional
+  what: standard_clause_content
+  instrument: Standard contractual clauses laid down under Art 28(7) or adopted under
+    Art 28(8)
+  reason: 'Whether the contract adopts such clauses is the outside fact standard_clauses_adopted
+    (attested; fetcher none); the content of the clauses, their annexes and the effect
+    of adopting them on Art 28(3) are not formalized (Q1, RULED 2026-11-01: adoption
+    does not replace the checklist).'
+  consequence: 'Adopting standard clauses does not settle the checklist: the caller
+    must set each stipulation flag from the signed document, annexes included, and
+    check the content of the clauses itself.'
+  declaration: exception_modelled
+- debt: true
+  what: art_28_10_consequences
+  instrument: Regulation (EU) 2016/679 Art 26 and Arts 82 to 84
+  reason: When processor_determines_purposes_and_means is true the party is a controller
+    for that processing (Art 28(10)); whether it is a joint controller (Art 26) and
+    the liability and penalty consequences (Arts 82, 83, 84, to which Art 28(10) is
+    expressly without prejudice) are not pinned and not formalized. The answer is
+    needs_legal_review(deferred_provision(...)).
+  consequence: When the answer refers because the processor determines the purposes
+    and means, the caller must work out its position as a controller, any joint control
+    under Art 26 and liability and penalties under Arts 82 to 84 itself.
+  declaration: exception_modelled
+- debt: true
+  what: referenced_content_provisions
+  instrument: Regulation (EU) 2016/679 Arts 32 to 36 and Chapter III; Arts 13 and
+    14
+  reason: Points (c), (e) and (f) of Art 28(3) refer to Article 32, to Chapter III
+    and to Articles 32 to 36. The order tests that the contract STIPULATES the assistance;
+    it does not test what those Articles require, which is not pinned.
+  consequence: 'The answer tests that the assistance is stipulated, not what Art 32,
+    Chapter III or Arts 32 to 36 require: the caller must check those requirements
+    itself.'
+  declaration: not_an_exception
+- not_formalized_because: in_sibling
+  decided_in: gdpr-art6-lawfulness
+  what: art_6_lawfulness_and_chapter_v
+  instrument: Regulation (EU) 2016/679 Art 6 and Chapter V
+  reason: Eligible here means the arrangement has the content Art 28 requires (reading
+    11), not that the processing has a lawful basis (sibling eu/data-protection/gdpr-art6-lawfulness)
+    or that a transfer named in the instructions is permitted (sibling eu/data-protection/gdpr-chapter-v-transfers).
+  consequence: 'An eligible answer does not mean the processing is lawful or that
+    a transfer is permitted: the caller must check Art 6 and Chapter V separately.'
+  declaration: not_an_exception
+- what: art_28_6_and_28_7_standard_clauses_basis
+  units:
+  - 02016R0679-20160504#parag_028.006
+  - 02016R0679-20160504#parag_028.007
+  reason: Art 28(6) (the contract may be based, in whole or in part, on standard contractual
+    clauses) and Art 28(7) (the Commission may lay down such clauses) are permissive
+    and are not conditions of the checklist. Whether the contract adopts such clauses
+    is the outside fact standard_clauses_adopted, recorded only and never deciding
+    the status (reading 9, RULED Q1); the content and the procedure are not formalized.
+  consequence: 'Adopting standard clauses does not settle the checklist: the caller
+    must set each stipulation flag from the signed document, annexes included.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: art_4_definitions_quoted_for_context
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_7
+  reason: The Art 4 definitions of personal data (1), processing (2) and controller
+    (7) are quoted to give the vocabulary of Art 28(3) and the role gates; no limb
+    reads them as a condition. The role gate itself rests on Art 4(8) and the judgement
+    processing_on_behalf_of_controller.
+  consequence: 'None for a caller: the definitions are context for the user''s judgements,
+    not tests applied by the answer.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: processor_performance_of_the_contract
+  instrument: Regulation (EU) 2016/679 Art 28(3), Art 29 and Art 83(4)(a)
+  cites:
+  - 02016R0679-20160504#point_083.004_a
+  reason: Whether the processor in fact complies with the contract, and the administrative
+    fine for an Art 28 infringement, are different questions from whether the contract
+    has the required content. The profile carries no conduct.
+  consequence: A caller must check performance itself.
+- what: records_of_processing_by_the_processor
+  instrument: Regulation (EU) 2016/679 Art 30(2)
+  cites:
+  - 02016R0679-20160504#parag_030.002
+  reason: The processor's own record of processing activities is a separate duty of
+    the processor, not a term of the contract; not pinned.
+  consequence: The order does not test the processor's own record of processing activities;
+    a caller checks Art 30(2) itself (see the sibling order gdpr-records-and-officer).

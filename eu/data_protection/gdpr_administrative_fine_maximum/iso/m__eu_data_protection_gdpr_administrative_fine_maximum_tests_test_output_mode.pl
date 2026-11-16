@@ -1,0 +1,109 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_administrative_fine_maximum_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_gdpr_administrative_fine_maximum, [administrative_fine_maximum/3, decide_gdpr_administrative_fine_maximum/2, gdpr_administrative_fine_maximum_status/2, gdpr_administrative_fine_maximum_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_fixtures, [gdpr_administrative_fine_maximum_profile_for/2]).
+
+answers_of(Subject, Answers) :-
+    gdpr_administrative_fine_maximum_profile_for(Subject, Profile),
+    findall(Verdict - Citations, administrative_fine_maximum(Profile, Verdict, Citations), Answers).
+
+test(lower_percentage_is_one_answer) :-
+    answers_of(lower_percentage_basis, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, percentage_of_turnover, 2000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]].
+test(lower_tie_is_one_answer) :-
+    answers_of(lower_tie_at_fixed, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, fixed_amount, 1000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]].
+test(lower_one_euro_above_the_tie_is_percentage) :-
+    answers_of(lower_one_euro_above_tie, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, percentage_of_turnover, 1000000002) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]].
+test(lower_one_euro_below_the_tie_is_fixed) :-
+    answers_of(lower_one_euro_below_tie, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, fixed_amount, 1000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]].
+test(higher_tie_is_one_answer) :-
+    answers_of(higher_tie_at_fixed, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, fixed_amount, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]].
+test(higher_one_euro_above_the_tie_is_percentage) :-
+    answers_of(higher_one_euro_above_tie, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, percentage_of_turnover, 2000000004) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]].
+test(non_undertaking_ignores_a_huge_turnover) :-
+    answers_of(higher_non_undertaking_ignores_turnover, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]].
+test(lower_non_undertaking_is_fixed_alone) :-
+    answers_of(lower_non_undertaking, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, fixed_amount_for_non_undertaking, 1000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]].
+test(monitoring_body_cites_point_c) :-
+    answers_of(monitoring_body_article_41_paragraph_4, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, fixed_amount_for_non_undertaking, 1000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_c)]].
+test(chapter_ix_law_cites_point_d) :-
+    answers_of(member_state_law_chapter_ix, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_d)]].
+test(access_failure_cites_point_e_without_paragraph_six) :-
+    answers_of(access_failure, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_e)]].
+test(a_provision_named_twice_is_one_infringement) :-
+    answers_of(provision_named_twice, Answers),
+    Answers == [fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]].
+test(combined_all_lower_stays_lower) :-
+    answers_of(combined_all_lower, Answers),
+    Answers == [fine_maximum(lower_maximum_tier, percentage_of_turnover, 2000000000) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_3)]].
+test(separate_not_negligent_never_cites_art_83_3) :-
+    answers_of(separate_not_negligent, Answers),
+    Answers == [separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_5, higher_maximum_tier, percentage_of_turnover, 4000000000)]) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)]].
+test(one_false_key_settles_separate_over_an_unsure_one) :-
+    answers_of(separate_one_unsure_one_false, Answers),
+    Answers == [separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_5, higher_maximum_tier, percentage_of_turnover, 4000000000)]) - [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)]].
+test(unsure_first_art_83_3_key_refers) :-
+    answers_of(unsure_first_art_83_3_key, Answers),
+    Answers == [needs_legal_review(open_textured(infringements_concern_same_or_linked_processing_operations, cite(eu_reg_2016_679_art_83_3)), [inputs_relied_on([infringer_is_undertaking - true, infringements_concern_same_or_linked_processing_operations - unsure, infringements_intentional_or_negligent - true])]) - []].
+test(unsure_second_art_83_3_key_refers) :-
+    answers_of(unsure_second_art_83_3_key, Answers),
+    Answers == [needs_legal_review(open_textured(infringements_intentional_or_negligent, cite(eu_reg_2016_679_art_83_3)), [inputs_relied_on([infringer_is_undertaking - true, infringements_concern_same_or_linked_processing_operations - true, infringements_intentional_or_negligent - unsure])]) - []].
+test(unsure_undertaking_refers_even_in_separate_mode) :-
+    answers_of(unsure_undertaking_in_separate_mode, Answers),
+    Answers == [needs_legal_review(open_textured(infringer_is_undertaking, cite(eu_reg_2016_679_art_83_4)), [inputs_relied_on([infringer_is_undertaking - unsure, infringements_concern_same_or_linked_processing_operations - false, infringements_intentional_or_negligent - true])]) - []].
+test(missing_art_83_3_keys_are_named_in_order) :-
+    answers_of(missing_art_83_3_keys, Answers),
+    Answers == [indeterminate([infringements_concern_same_or_linked_processing_operations, infringements_intentional_or_negligent]) - []].
+test(missing_provisions_never_names_art_83_3_keys) :-
+    answers_of(missing_provisions, Answers),
+    Answers == [indeterminate([infringed_provisions]) - []].
+test(unlisted_with_duplicates_keeps_the_list_as_given) :-
+    answers_of(unlisted_with_duplicates, Answers),
+    Answers == [needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6)]), [inputs_relied_on([infringed_provisions - [article_5, article_24, article_24]])]) - []].
+test(an_unknown_key_is_an_input_problem) :-
+    answers_of(input_unknown_key, Answers),
+    Answers == [input_problems([unknown_key(surprise_key)]) - []].
+test(a_duplicate_key_is_an_input_problem) :-
+    answers_of(input_duplicate_key, Answers),
+    Answers == [input_problems([duplicate_key(infringer_is_undertaking)]) - []].
+test(an_unread_bad_judgement_is_still_checked) :-
+    answers_of(input_wrong_judgement_unread, Answers),
+    Answers == [input_problems([wrong_type(infringements_intentional_or_negligent)]) - []].
+test(the_decision_wrapper_carries_a_citation) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
+    decide_gdpr_administrative_fine_maximum(Profile, gdpr_administrative_fine_maximum_verdict(fine_maximum(_, _, _), [_FirstCitation|_OtherCitations])).
+test(the_status_is_exactly_one) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
+    findall(Status, gdpr_administrative_fine_maximum_status(Profile, Status), Statuses),
+    Statuses == [fine_maximum].
+test(the_checklist_carries_cite_per_item) :-
+    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
+    findall(Items, gdpr_administrative_fine_maximum_checklist(Profile, Items), Lists),
+    Lists == [[item(eu_reg_2016_679_art_83_4, met, cite(eu_reg_2016_679_art_83_4)), item(eu_reg_2016_679_art_83_4_a, met, cite(eu_reg_2016_679_art_83_4_a))]].
+test(a_referral_checklist_is_unknown_with_a_citation) :-
+    gdpr_administrative_fine_maximum_profile_for(unsure_undertaking, Profile),
+    findall(Items, gdpr_administrative_fine_maximum_checklist(Profile, Items), Lists),
+    Lists == [[item(overall, unknown([infringer_is_undertaking]), cite(eu_reg_2016_679_art_83_4))]].
+
+cp_test_names([lower_percentage_is_one_answer, lower_tie_is_one_answer, lower_one_euro_above_the_tie_is_percentage, lower_one_euro_below_the_tie_is_fixed, higher_tie_is_one_answer, higher_one_euro_above_the_tie_is_percentage, non_undertaking_ignores_a_huge_turnover, lower_non_undertaking_is_fixed_alone, monitoring_body_cites_point_c, chapter_ix_law_cites_point_d, access_failure_cites_point_e_without_paragraph_six, a_provision_named_twice_is_one_infringement, combined_all_lower_stays_lower, separate_not_negligent_never_cites_art_83_3, one_false_key_settles_separate_over_an_unsure_one, unsure_first_art_83_3_key_refers, unsure_second_art_83_3_key_refers, unsure_undertaking_refers_even_in_separate_mode, missing_art_83_3_keys_are_named_in_order, missing_provisions_never_names_art_83_3_keys, unlisted_with_duplicates_keeps_the_list_as_given, an_unknown_key_is_an_input_problem, a_duplicate_key_is_an_input_problem, an_unread_bad_judgement_is_still_checked, the_decision_wrapper_carries_a_citation, the_status_is_exactly_one, the_checklist_carries_cite_per_item, a_referral_checklist_is_unknown_with_a_citation]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,111 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality: every registered subject yields a verdict.
+% Determinism: every registered subject yields EXACTLY ONE verdict, and the
+% input check exactly one problem list.
+% Citation consistency: a final RESULT carries its fixed CITATIONS, a status
+% carries [].
+% Art 3(2) invariant: setting the scheduled key to true makes every
+% well-formed profile not_significant, whatever the criteria say.
+% Each property is falsifiable: test_negative_controls.clausal holds the
+% near-miss pairs that a broken route would fail.
+% Run: python -m clausal.testing eu/nis2_implementing_regulation_significant_incidents/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/nis2_implementing_regulation_significant_incidents, [
+    decide_nis2_implementing_regulation_significant_incidents/2,
+    nis2_implementing_regulation_significant_incidents_status_values/1
+]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/kernel, [nis2_implementing_regulation_significant_incidents_input_problems/2]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/queries, [nis2_implementing_regulation_significant_incidents_what_if/4]).
+:- use_module(eu/nis2_implementing_regulation_significant_incidents/fixtures, [
+    nis2_implementing_regulation_significant_incidents_subject/1,
+    nis2_implementing_regulation_significant_incidents_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    nis2_implementing_regulation_significant_incidents_subject(Subject),
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    decide_nis2_implementing_regulation_significant_incidents(Profile, _Verdict).
+
+subject_verdict_count(Subject, Count) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    findall(Verdict, decide_nis2_implementing_regulation_significant_incidents(Profile, Verdict), Verdicts),
+    length(Verdicts, Count).
+
+subject_problem_list_count(Subject, Count) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    findall(Problems, nis2_implementing_regulation_significant_incidents_input_problems(Profile, Problems), ProblemLists),
+    length(ProblemLists, Count).
+
+fixed_citations(significant, [cite(eu_reg_2024_2690_art_3_1)]).
+fixed_citations(not_significant, [cite(eu_reg_2024_2690_art_3_1), cite(eu_reg_2024_2690_art_3_2)]).
+fixed_citations(indeterminate(_), []).
+fixed_citations(needs_legal_review(_, _), []).
+fixed_citations(input_problems(_), []).
+
+subject_citations_consistent(Subject) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    decide_nis2_implementing_regulation_significant_incidents(Profile, nis2_implementing_regulation_significant_incidents_verdict(Result, Citations)),
+    fixed_citations(Result, ExpectedCitations),
+    Citations == ExpectedCitations.
+
+judgeable_subject(Subject) :-
+    nis2_implementing_regulation_significant_incidents_subject(Subject),
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    nis2_implementing_regulation_significant_incidents_input_problems(Profile, []).
+
+scheduled_override_is_not_significant(Subject) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    nis2_implementing_regulation_significant_incidents_input_problems(Profile, []),
+    nis2_implementing_regulation_significant_incidents_what_if(Profile, scheduled_interruption_or_maintenance, true, not_significant).
+
+final_result_in_table(Subject) :-
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    decide_nis2_implementing_regulation_significant_incidents(Profile, nis2_implementing_regulation_significant_incidents_verdict(Result, _Citations)),
+    atom(Result),
+    nis2_implementing_regulation_significant_incidents_status_values(StatusValues),
+    member(Result, StatusValues).
+
+final_subject(Subject) :-
+    nis2_implementing_regulation_significant_incidents_subject(Subject),
+    nis2_implementing_regulation_significant_incidents_profile_for(Subject, Profile),
+    decide_nis2_implementing_regulation_significant_incidents(Profile, nis2_implementing_regulation_significant_incidents_verdict(Result, _Citations)),
+    atom(Result).
+
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    findall(Subject, nis2_implementing_regulation_significant_incidents_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+test(determinism_every_subject_yields_exactly_one_verdict) :-
+    findall(Subject, nis2_implementing_regulation_significant_incidents_subject(Subject), Subjects),
+    findall(Subject, (nis2_implementing_regulation_significant_incidents_subject(Subject), subject_verdict_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+
+test(determinism_the_input_check_yields_exactly_one_list) :-
+    findall(Subject, nis2_implementing_regulation_significant_incidents_subject(Subject), Subjects),
+    findall(Subject, (nis2_implementing_regulation_significant_incidents_subject(Subject), subject_problem_list_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+
+test(citations_are_fixed_per_result) :-
+    findall(Subject, nis2_implementing_regulation_significant_incidents_subject(Subject), Subjects),
+    findall(Subject, (nis2_implementing_regulation_significant_incidents_subject(Subject), subject_citations_consistent(Subject)), ConsistentSubjects),
+    ConsistentSubjects == Subjects.
+
+test(final_results_are_atoms_of_the_status_table) :-
+    findall(Subject, final_subject(Subject), FinalSubjects),
+    findall(Subject, (final_subject(Subject), final_result_in_table(Subject)), TableSubjects),
+    TableSubjects == FinalSubjects,
+    FinalSubjects = [_|_].
+
+test(scheduled_interruption_overrides_every_criterion) :-
+    findall(Subject, judgeable_subject(Subject), JudgeableSubjects),
+    findall(Subject, (judgeable_subject(Subject), scheduled_override_is_not_significant(Subject)), OverriddenSubjects),
+    OverriddenSubjects == JudgeableSubjects,
+    JudgeableSubjects = [_|_].
+
+:- end_module(test_properties).

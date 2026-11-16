@@ -1,0 +1,256 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_art15_access_copy.
+% A TOP-LAYER consumer: import the determination slice's PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The domain has no numeric threshold, so every
+% route is paired with a ONE-KEY near-miss control instead of an
+% at-boundary / just-below pair:
+%   complete (no_item_missing)        <-> incomplete (one owed item not given)
+%   awaiting input (a key absent)     <-> its key supplied
+%   referred (absent outside fact)    <-> the outside fact attested
+%   input rejected (bad key or type)  <-> the same profile well-formed
+%   copy judgement unsure / true / false (copy_scope routes)
+%   further copy / first copy (copy_fee routes)
+%   electronic / other form / not electronic (information_form routes)
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_art15_access_copy_subject/1,
+    gdpr_art15_access_copy_profile_for/2,
+    gdpr_art15_access_copy_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_art15_access_copy/gdpr_art15_access_copy, [decide_gdpr_art15_access_copy/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_art15_access_copy_subject(no_personal_data_confirmation_given).
+gdpr_art15_access_copy_subject(no_personal_data_confirmation_not_given).
+gdpr_art15_access_copy_subject(items_provided_not_stated).
+gdpr_art15_access_copy_subject(processing_not_stated).
+gdpr_art15_access_copy_subject(full_answer_all_items_given).
+gdpr_art15_access_copy_subject(full_answer_copy_not_given).
+gdpr_art15_access_copy_subject(minimal_processing_all_owed_items_given).
+gdpr_art15_access_copy_subject(minimal_processing_recipients_not_named).
+gdpr_art15_access_copy_subject(article_22_statement_absent).
+gdpr_art15_access_copy_subject(article_46_statement_absent).
+gdpr_art15_access_copy_subject(article_46_statement_attested_false).
+gdpr_art15_access_copy_subject(outside_fact_given_attested).
+gdpr_art15_access_copy_subject(outside_fact_given_bare).
+gdpr_art15_access_copy_subject(duplicate_and_unknown_keys).
+gdpr_art15_access_copy_subject(copy_judgement_unsure).
+gdpr_art15_access_copy_subject(copy_judgement_true).
+gdpr_art15_access_copy_subject(copy_judgement_false).
+
+% ---- Profiles --------------------------------------------------------
+% No personal data processed; the confirmation was given: complete.
+gdpr_art15_access_copy_profile_for(no_personal_data_confirmation_given, [
+    attribute(items_provided, [confirmation_of_processing]),
+    attribute(personal_data_concerning_data_subject_processed, false)
+]).
+
+% Near miss: the confirmation was not given: incomplete.
+gdpr_art15_access_copy_profile_for(no_personal_data_confirmation_not_given, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, false)
+]).
+
+% Near miss of the first: items_provided absent: awaiting input.
+gdpr_art15_access_copy_profile_for(items_provided_not_stated, [
+    attribute(personal_data_concerning_data_subject_processed, false)
+]).
+
+% Near miss of the second: processing not stated: awaiting input.
+gdpr_art15_access_copy_profile_for(processing_not_stated, [
+    attribute(items_provided, [])
+]).
+
+% Every condition true, every item given: complete.
+gdpr_art15_access_copy_profile_for(full_answer_all_items_given, [
+    attribute(items_provided, [
+        confirmation_of_processing,
+        access_to_personal_data,
+        purposes_of_processing,
+        categories_of_personal_data,
+        recipients_or_categories_of_recipients,
+        storage_period_or_criteria,
+        rights_to_rectification_erasure_restriction_and_objection,
+        right_to_lodge_complaint,
+        source_of_personal_data,
+        automated_decision_making_information,
+        transfer_safeguards_information,
+        copy_of_personal_data
+    ]),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, true),
+    attribute(some_personal_data_not_collected_from_data_subject, true),
+    attribute(source_information_available, true),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(true, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, true),
+    attribute(transfer_subject_to_article_46_safeguards, attested(true, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, false),
+    attribute(further_copy_requested, false),
+    attribute(request_made_by_electronic_means, true),
+    attribute(other_form_requested_by_data_subject, false)
+]).
+
+% Near miss: the copy was not given: incomplete. Also the limited copy,
+% the further-copy fee and another form requested.
+gdpr_art15_access_copy_profile_for(full_answer_copy_not_given, [
+    attribute(items_provided, [
+        confirmation_of_processing,
+        access_to_personal_data,
+        purposes_of_processing,
+        categories_of_personal_data,
+        recipients_or_categories_of_recipients,
+        storage_period_or_criteria,
+        rights_to_rectification_erasure_restriction_and_objection,
+        right_to_lodge_complaint,
+        source_of_personal_data,
+        automated_decision_making_information,
+        transfer_safeguards_information
+    ]),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, true),
+    attribute(some_personal_data_not_collected_from_data_subject, true),
+    attribute(source_information_available, true),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(true, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, true),
+    attribute(transfer_subject_to_article_46_safeguards, attested(true, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, true),
+    attribute(further_copy_requested, true),
+    attribute(request_made_by_electronic_means, true),
+    attribute(other_form_requested_by_data_subject, true)
+]).
+
+% Only the unconditional items owed, all given: complete. The safeguards
+% statement is absent but does not matter (no transfer).
+gdpr_art15_access_copy_profile_for(minimal_processing_all_owed_items_given, [
+    attribute(items_provided, [
+        confirmation_of_processing,
+        access_to_personal_data,
+        purposes_of_processing,
+        categories_of_personal_data,
+        storage_period_or_criteria,
+        rights_to_rectification_erasure_restriction_and_objection,
+        right_to_lodge_complaint,
+        copy_of_personal_data
+    ]),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, false),
+    attribute(some_personal_data_not_collected_from_data_subject, false),
+    attribute(source_information_available, false),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(false, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, false),
+    attribute(request_made_by_electronic_means, false)
+]).
+
+% Near miss: a disclosure to recipients is made, the recipients not named: incomplete.
+gdpr_art15_access_copy_profile_for(minimal_processing_recipients_not_named, [
+    attribute(items_provided, [
+        confirmation_of_processing,
+        access_to_personal_data,
+        purposes_of_processing,
+        categories_of_personal_data,
+        storage_period_or_criteria,
+        rights_to_rectification_erasure_restriction_and_objection,
+        right_to_lodge_complaint,
+        copy_of_personal_data
+    ]),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, true),
+    attribute(some_personal_data_not_collected_from_data_subject, false),
+    attribute(source_information_available, false),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(false, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, false),
+    attribute(request_made_by_electronic_means, false)
+]).
+
+% The Article 22 statement is absent and matters: referred.
+gdpr_art15_access_copy_profile_for(article_22_statement_absent, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, false),
+    attribute(some_personal_data_not_collected_from_data_subject, false),
+    attribute(source_information_available, false),
+    attribute(transfer_to_third_country_or_international_organisation, false)
+]).
+
+% A transfer with the Article 46 statement absent: referred.
+gdpr_art15_access_copy_profile_for(article_46_statement_absent, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, false),
+    attribute(some_personal_data_not_collected_from_data_subject, false),
+    attribute(source_information_available, false),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(false, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, true)
+]).
+
+% Near miss: the Article 46 statement attested false: incomplete.
+gdpr_art15_access_copy_profile_for(article_46_statement_attested_false, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(disclosure_to_recipients_made_or_envisaged, false),
+    attribute(some_personal_data_not_collected_from_data_subject, false),
+    attribute(source_information_available, false),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(false, attestation(host, recorded_at, attested_by_caller, none))),
+    attribute(transfer_to_third_country_or_international_organisation, true),
+    attribute(transfer_subject_to_article_46_safeguards, attested(false, attestation(host, recorded_at, attested_by_caller, none)))
+]).
+
+% A well-formed attested outside fact; recipients still unknown: awaiting input.
+gdpr_art15_access_copy_profile_for(outside_fact_given_attested, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(automated_decision_making_referred_to_in_article_22, attested(true, attestation(host, recorded_at, attested_by_caller, none)))
+]).
+
+% Near miss: the outside fact given bare: input rejected.
+gdpr_art15_access_copy_profile_for(outside_fact_given_bare, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(automated_decision_making_referred_to_in_article_22, true)
+]).
+
+% A duplicated contract key and a key outside the contract: input rejected.
+gdpr_art15_access_copy_profile_for(duplicate_and_unknown_keys, [
+    attribute(items_provided, []),
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(personal_data_concerning_data_subject_processed, false),
+    attribute(colour, blue)
+]).
+
+% The Art 15(4) judgement unsure: copy_scope goes to a lawyer.
+gdpr_art15_access_copy_profile_for(copy_judgement_unsure, [
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, unsure),
+    attribute(further_copy_requested, false),
+    attribute(request_made_by_electronic_means, true)
+]).
+
+% The judgement true: the copy is limited; a further copy may bear a fee.
+gdpr_art15_access_copy_profile_for(copy_judgement_true, [
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, true),
+    attribute(further_copy_requested, true)
+]).
+
+% Near miss: the judgement false: the full copy; the first copy: no fee.
+gdpr_art15_access_copy_profile_for(copy_judgement_false, [
+    attribute(personal_data_concerning_data_subject_processed, true),
+    attribute(copy_would_adversely_affect_rights_and_freedoms_of_others, false),
+    attribute(further_copy_requested, false),
+    attribute(request_made_by_electronic_means, true),
+    attribute(other_form_requested_by_data_subject, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_art15_access_copy_assess(Subject, Result) :-
+    gdpr_art15_access_copy_profile_for(Subject, Profile),
+    decide_gdpr_art15_access_copy(Profile, Result).
+
+:- end_module(fixtures).

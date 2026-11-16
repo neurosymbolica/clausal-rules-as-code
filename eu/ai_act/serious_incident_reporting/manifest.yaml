@@ -1,0 +1,309 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/ai_act/serious_incident_reporting
+shape_family: temporal
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "serious_incident_reporting"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade.
+# The bare /0 entries are the contract atoms and root_exports (profile keys,
+# enumeration atoms, unsure) that queries.clausal exports as facts.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- serious_incident_reporting.clausal --
+  - "decide_serious_incident_reporting/2"
+  - "serious_incident_reporting_status/2"
+  - "serious_incident_reporting_checklist/2"
+  - "serious_incident_reporting_decision_resolvable/1"
+  - "serious_incident_reporting_status_values/1"
+  # -- queries.clausal --
+  - "serious_incident_reporting_profile_keys/1"
+  - "serious_incident_reporting_input_problems/2"
+  - "serious_incident_reporting_what_if/4"
+  - "serious_incident_report_duty/4"
+  - "serious_incident_report_timeliness/5"
+  - "not_applicable_on_date/0"
+  - "not_a_high_risk_ai_system/0"
+  - "not_covered_placed_before_application_date/0"
+  - "not_a_serious_incident/0"
+  - "not_a_reportable_incident/0"
+  - "report_in_time/0"
+  - "report_after_time_limit/0"
+  - "report_not_immediate/0"
+  - "market_surveillance_authority_of_member_state_where_incident_occurred/0"
+  - "national_competent_authority_chosen_by_member_state_where_incident_occurred/0"
+  - "perform_necessary_investigations_without_delay/0"
+  - "risk_assessment_of_the_incident/0"
+  - "corrective_action/0"
+  - "cooperate_with_competent_authorities/0"
+  - "inform_authorities_before_altering_the_system/0"
+  - "report_due/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "high_risk_classification/0"
+  - "placed_before_chapter_iii_application_date/0"
+  - "significant_change_in_design_since_that_date/0"
+  - "intended_to_be_used_by_public_authorities/0"
+  - "medical_device_or_safety_component_of_one/0"
+  - "provider_subject_to_equivalent_union_reporting_obligations/0"
+  - "harm_to_health/0"
+  - "critical_infrastructure_disruption/0"
+  - "fundamental_rights_obligations_infringed/0"
+  - "serious_harm_to_property_or_environment/0"
+  - "widespread_infringement/0"
+  - "report_made_immediately/0"
+  - "annex_iii_high_risk/0"
+  - "annex_i_high_risk/0"
+  - "not_high_risk/0"
+  - "death_of_a_person/0"
+  - "serious_harm_to_health_without_death/0"
+  - "no_death_or_serious_harm_to_health/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "serious_incident_reporting_subject/1"
+  - "serious_incident_reporting_profile_for/2"
+  - "serious_incident_reporting_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: shared backbone packages this domain imports. It
+# imports only kit modules (formalize_lib, kit/deadline_lib), none of which is a
+# shared domain backbone package.
+uses: []
+
+scope: >-
+  For one incident or malfunctioning of an AI system whose provider (or the caller
+  acting for it) is the provider of a system placed on the Union market: whether the
+  provider must report it as a serious incident under Article 73 of Regulation (EU)
+  2024/1689 (Artificial Intelligence Act, consolidated text 02024R1689-20260727 as
+  amended by Regulation (EU) 2026/1744), to which authority (Art 73(1) and (10)), by
+  which last calendar day (2, 10 or 15 days after awareness, Art 73(2) to (4)), with
+  the follow-up duties of Art 73(6) listed; and whether a first report made on a given
+  day was in time. Decided here are the dates of application read from Art 113 third
+  paragraph point (c)(i) and (ii), the systems already on the market of Art 111(2),
+  the definition of serious incident of Art 3(49), the point (c) limitation of Art
+  73(9) and (10), and the widespread infringement of Art 3(61) as a judgement. Out of
+  scope and handed to the caller or a lawyer: high-risk classification under Art 6 and
+  the Annexes, whether the event is an incident of a provider's system placed on the
+  market, open-textured judgements (significant change in design, equivalent Union
+  reporting obligations, widespread infringement, immediacy), the severity rule of the
+  second subparagraph of Art 73(2), the content of reports and follow-up, the duties
+  of authorities, deployers and the Commission, and the period rules of Regulation
+  (EEC, Euratom) No 1182/71.
+
+sources:
+  - "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024; consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744 (Formex CL2024R1689EN0010010.0001.xml, sha256 dfeac37ec03557cfe751427429c6314c11792f88bf654a381484e5c7239f7893)"
+  - "Regulation (EU) 2024/1689 Art 3 point (49) points (a) to (d) (serious incident) and point (61) (widespread infringement)"
+  - "Regulation (EU) 2024/1689 Art 73(1) to (6), (9) and (10) (reporting of serious incidents)"
+  - "Regulation (EU) 2024/1689 Art 111(2) (AI systems already placed on the market or put into service)"
+  - "Regulation (EU) 2024/1689 Art 113 first and second paragraphs and third paragraph point (c)(i) and (ii) (entry into force and application)"
+
+query_interface:
+  2: "serious_incident_reporting_status/2"       # status verdict of a checked query term
+  14: "serious_incident_report_duty/4"           # obligation_surfacing: what the provider must report, to whom, by when
+  15: "serious_incident_report_timeliness/5"     # deadline: was the first report in time, consequence of missing
+  16: "serious_incident_reporting_what_if/4"     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02024R1689-20260727#art_073
+  - 02024R1689-20260727#art_111
+  reason: 'The titles of Articles 73 and 111 carry no obligation: document structure.
+    Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: authority_side_of_reporting
+  units:
+  - 02024R1689-20260727#parag_073.007
+  - 02024R1689-20260727#parag_073.008
+  - 02024R1689-20260727#parag_073.011
+  reason: Art 73(7) (the market surveillance authority informs the national public
+    authorities or bodies of Art 77(1) of a point (c) incident; the Commission develops
+    guidance on the obligations of paragraph 1, to be issued by 2 August 2025 and
+    assessed regularly), Art 73(8) (the market surveillance authority takes measures
+    under Art 19 of Regulation (EU) 2019/1020 within seven days of the notification)
+    and Art 73(11) (national competent authorities notify the Commission under Art
+    20 of Regulation (EU) 2019/1020) bind the authorities and the Commission; none
+    changes what the provider must report, to whom or by when.
+  consequence: 'None for a provider caller: these paragraphs bind the authorities
+    and the Commission; the answers do not say what an authority must do after a report.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: severity_of_the_serious_incident
+  units:
+  - 02024R1689-20260727#parag_073.002
+  partial: true
+  reason: The second subparagraph of Art 73(2) ('The period for the reporting referred
+    to in the first subparagraph shall take account of the severity of the serious
+    incident') sits in the same unit as the 15-day limit, which the order reads; it
+    gives no measure of severity and no shorter period, so it is not formalised.
+  consequence: The answers give the outer limit only; for a severe incident the caller
+    must consider whether a shorter period is required.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: content_of_reports_and_follow_up
+  units:
+  - 02024R1689-20260727#parag_073.005
+  - 02024R1689-20260727#parag_073.006
+  partial: true
+  reason: Art 73(5) allows an incomplete initial report followed by a complete report,
+    and Art 73(6) lists the follow-up duties (investigations without delay, risk assessment,
+    corrective action, cooperation, no altering investigation before informing the
+    authorities). The order reads REPORT_DATE as the day of the first report and lists
+    the five follow-up duties in the answer; it does not check the content of a report,
+    whether a complete report followed, or how the follow-up duties are met.
+  consequence: The answers do not say whether a report or its follow-up was adequate;
+    the caller must check the content itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: application_dates_of_other_provisions
+  units:
+  - 02024R1689-20260727#point_113_a
+  - 02024R1689-20260727#point_113_b
+  - 02024R1689-20260727#point_113_d
+  reason: Art 113 third paragraph points (a) (Chapters I and II from 2 February 2025,
+    with later dates for some Art 5 points), (b) (Chapter III Section 4, Chapters
+    V, VII and XII and Art 78 from 2 August 2025, except Art 101) and (d) (Arts 102
+    to 110 from 27 July 2026) date provisions outside this order; no limb reads them.
+  consequence: 'None for these answers: no limb of this order depends on those dates.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: entry_into_force_and_general_date_of_application
+  units:
+  - 02024R1689-20260727#art_113
+  partial: true
+  reason: >-
+    The first and second paragraphs of Art 113 (entry into force on the twentieth day
+    following publication; application from 2 August 2026, the date of Chapter IX)
+    decide no answer under reading (2): the duty of Art 73 is read as binding a
+    provider only from the date of application of Chapter III for its class, Art 113
+    third paragraph point (c)(i) and (ii), which is formalised (open question Q1).
+  consequence: >-
+    An awareness date from 2 August 2026 to 1 December 2027 is answered
+    not_applicable_on_date; a caller who holds that the duty runs from 2 August 2026
+    must apply Art 73 to such an incident itself.
+- what: points_a_b_and_d_of_the_serious_incident_definition
+  units:
+  - 02024R1689-20260727#point_003_49_a
+  - 02024R1689-20260727#point_003_49_b
+  - 02024R1689-20260727#point_003_49_d
+  reason: >-
+    Points (a), (b) and (d) of Art 3(49) are read only as the caller's classification
+    given in the keys harm_to_health, critical_infrastructure_disruption and
+    serious_harm_to_property_or_environment (open question Q6); the order defines
+    neither serious harm, nor a serious and irreversible disruption, nor directly or
+    indirectly leading to it. The answers cite the lead of point (49) and point
+    (49)(c), never points (a), (b) or (d).
+  consequence: >-
+    The caller classifies each harm itself; the answers take that classification as
+    given.
+- what: limbs_of_the_widespread_infringement_definition
+  units:
+  - 02024R1689-20260727#point_003_61_a
+  - 02024R1689-20260727#point_003_61_a_i
+  - 02024R1689-20260727#point_003_61_a_ii
+  - 02024R1689-20260727#point_003_61_a_iii
+  - 02024R1689-20260727#point_003_61_b
+  reason: >-
+    Whether there is a widespread infringement is the judgement widespread_infringement
+    (reading (6)): the limbs count Member States, but whether an act has harmed or is
+    likely to harm the collective interests of individuals is open-textured, so no
+    crisp test is built; an unsure value goes to a lawyer under the referral row that
+    cites Art 3(61).
+  consequence: >-
+    The caller judges the limbs of Art 3(61) itself and gives true, false or unsure.
+
+excluded_set:
+- what: classification_as_high_risk
+  instrument: Regulation (EU) 2024/1689 Art 6 and Annexes I and III
+  cites:
+  - 02024R1689-20260727#art_006
+  reason: Whether a system is high-risk, and under which of Art 6(1) and Annex I or
+    Art 6(2) and Annex III, is decided by Art 6 and the Annexes (the order on high-risk
+    classification); this order takes the class as the caller's input.
+  consequence: The caller establishes the class first.
+- what: incident_provider_and_placing_on_the_market
+  instrument: Regulation (EU) 2024/1689 Art 3 points (3), (9) and (44) (not in this
+    extract)
+  cites:
+  - 02024R1689-20260727#point_003_3
+  - 02024R1689-20260727#point_003_9
+  - 02024R1689-20260727#point_003_44
+  reason: That the event is an incident or malfunctioning of an AI system, that the
+    caller is its provider, and that the system is placed on the Union market are
+    taken as given; the definitions of provider, placing on the market and incident
+    are not pinned in this domain.
+  consequence: The caller first checks that the provider of a high-risk AI system
+    placed on the Union market faces an incident or malfunctioning of it.
+- what: medical_device_regulations_and_equivalent_instruments
+  instrument: Regulation (EU) 2017/745 (medical devices) Art 87 and Regulation (EU)
+    2017/746 (in vitro diagnostic medical devices) Art 82 (vigilance reporting), and
+    the Union legislative instruments with reporting obligations of Art 73(9)
+  cites:
+  - 32017R0745#art_087
+  - 32017R0746#art_082
+  reason: Whether a system is a device or a safety component of one under the device
+    Regulations, and which Union instruments lay down equivalent reporting obligations,
+    are not modelled; the first is a crisp input and the second a judgement of the
+    caller.
+  consequence: The caller establishes the device case, and judges equivalence, first;
+    the reporting duties under those instruments themselves are not given.
+- what: large_scale_it_systems_of_annex_x
+  instrument: Regulation (EU) 2024/1689 Art 111(1) and Annex X
+  cites:
+  - 02024R1689-20260727#parag_111.001
+  reason: Art 111(1) gives AI systems that are components of the large-scale IT systems
+    of Annex X, placed on the market or put into service before 2 August 2027, until
+    31 December 2030 to comply; Art 111(1) and Annex X are not pinned, and this order
+    does not read them.
+  consequence: For a component of an Annex X large-scale IT system the caller must
+    apply Art 111(1) first; the answers do not.
+- what: critical_infrastructure_and_period_rules
+  instrument: Directive (EU) 2022/2557 Art 2 point (4) (through Art 3(62) of the Regulation)
+    and Regulation (EEC, Euratom) No 1182/71 Art 3
+  cites:
+  - 32022L2557#art_002
+  - 31971R1182#art_003
+  reason: What counts as critical infrastructure is defined by reference to Directive
+    (EU) 2022/2557, not pinned; the period rules of Regulation 1182/71 are not pinned
+    either, so the order counts calendar days without a weekend or holiday shift (open
+    question Q9).
+  consequence: The caller classifies the disruption itself and checks whether a period
+    ending on a holiday is extended.
+- what: duties_of_deployers_and_market_surveillance_procedure
+  instrument: Regulation (EU) 2024/1689 Art 26(5) and Regulation (EU) 2019/1020 Arts
+    19 and 20
+  cites:
+  - 02024R1689-20260727#art_026
+  reason: The deployer's duty to inform the provider of a serious incident and the
+    procedures of Regulation (EU) 2019/1020 are not modelled; the order answers for
+    the provider's report under Art 73 only.
+  consequence: A deployer caller checks its own duties under Art 26 itself.
