@@ -1,8 +1,10 @@
 # clausal-rules-as-code
 
-Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`, `uk/`, `cn/`, `ind/`, `us/`) is one **domain**: one legal question (for example, *is this person a
-beneficial owner under AMLR Art 52?*, or *does this aid stay under the de minimis
-ceiling?*). For each domain you get:
+Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`,
+`uk/`, `cn/`, `ind/`, `us/`) is one **domain**: one narrowly scoped legal question, drawn from
+one or a few articles (for example, *is this person a beneficial owner under AMLR Art 52?*, or
+*does this aid stay under the de minimis ceiling?*). No domain is a complete formalization of a
+statute. For each domain you get:
 
 - the **rulebase** (`*.clausal`, Clausal Prolog), where every rule carries the provision it
   implements, and under `iso/` the same rules and tests as plain ISO Prolog (`*.pl`),
@@ -11,12 +13,15 @@ ceiling?*). For each domain you get:
 - the **statute text it was written against** (`sources/`), pinned by URL and SHA-256;
 - a **manifest** (`manifest.yaml`) stating the domain's scope, its public interface, and
   every provision it deliberately does not implement, with the reason and the consequence;
-- a **provision-tracking ledger** (`provisions.yaml`), where one exists.
+- a **provision-tracking ledger** (`provisions.yaml`), for the eight domains listed below
+  that have one.
 
-The programs run on [Clausal Prolog](https://github.com/neurosymbolica/clausal-prolog).
+The programs run on [Clausal Prolog](https://github.com/neurosymbolica/clausal-prolog). The
+shared libraries in `kit/` are still written in the engine's earlier syntax (`.seam`); every
+domain's own rules are in `.clausal`.
 
-Documentation, with every domain, its checks and its side-by-side statute reports:
-<https://neurosymbolica.github.io/clausal-rules-as-code/>
+Documentation, with every domain, its checks and, for the eight ledger domains, a
+side-by-side statute report: <https://neurosymbolica.github.io/clausal-rules-as-code/>
 
 ## Disclaimer
 
@@ -24,11 +29,40 @@ These rules are drafted readings derived from the cited statutes. They were gene
 
 Every domain folder added on 2026-11-16 or 2026-11-18 repeats this in its own `README.md`.
 
-## This is a preview
+## What is in it
 
-The first release held the eight EU domains below, chosen because they pass every check in this
-repository (see `_index/STATUS.md`), including robustness tests that feed each decision missing, mistyped and incomplete
-inputs (a bad input must be refused or answered "indeterminate", never guessed):
+93 domains and 18,765 tests (18,734 in the domains, 31 in the shared procurement vocabulary),
+all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
+
+| Area | Domains |
+|---|---|
+| EU: GDPR (including the GDPR Procedural Regulation) | 39 |
+| EU: AI Act | 8 |
+| EU: NIS 2 Directive and its implementing regulation | 8 |
+| EU: public procurement (Directives 2014/24 and 2014/25) | 5, plus the shared vocabulary `eu/procurement/directive_2014_24/` |
+| EU: state aid (de minimis, single undertaking, SME definition) | 3 |
+| EU: working time (daily rest, weekly rest, weekly limit) | 3 |
+| EU: anti-money laundering (AMLR beneficial ownership) | 2 |
+| EU: CBAM (de minimis, origin exclusions) | 2 |
+| EU: ePrivacy Directive | 2 |
+| EU: Cyber Resilience Act Art 14, Data Act, Digital Markets Act Art 3, Digital Services Act Art 28 | 1 each |
+| Switzerland: Federal Act on Data Protection | 5 |
+| United Kingdom: UK GDPR, Data Protection Act 2018, Data (Use and Access) Act 2025, PECR | 5 |
+| China: Personal Information Protection Law | 2 |
+| India: Digital Personal Data Protection Act 2023 and Rules 2025 | 4 |
+| United States: Virginia Consumer Data Protection Act | 1 |
+
+`_index/STATUS.md` lists every domain with its test count and the result of each check.
+
+Not included: proposals that are not yet law, and domains whose source texts are not cleared
+for republication (see `NOTICE`).
+
+### How the domains were made
+
+The first release (2026-11-16) began with eight EU domains, chosen because they pass every check
+in this repository, including robustness tests that feed each decision missing, mistyped and
+incomplete inputs (a bad input must be refused or answered "indeterminate", never guessed).
+They are the only domains with a provision-tracking ledger and a side-by-side report:
 
 | Domain | Question |
 |---|---|
@@ -41,24 +75,12 @@ inputs (a bad input must be refused or answered "indeterminate", never guessed):
 | `eu/procurement/time_limits` | What is the minimum time limit for receipt (Art 27-31)? |
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 
-`eu/procurement/directive_2014_24/` is the shared vocabulary the procurement domains
-import.
-
-On 2026-11-16 sixty-six more domains were added: 64 under EU law (GDPR, the AI Act, NIS 2,
-ePrivacy, the Digital Markets Act, the Data Act, the Cyber Resilience Act, DSA Art 28, CBAM,
-working time, state aid), one under Swiss law (Art 24 of the Federal Act on Data Protection,
-breach notification) and one under UK law (recognised legitimate interests, UK GDPR Art 6(1)(ea)). Each is law in force. Each was produced through the Clausify
+The other 85 domains were added on 2026-11-16 (66) and 2026-11-18 (19); on 2026-11-18 eight of
+the earlier ones were also replaced by amended versions. Each was produced through the Clausify
 harness, and its answers were scored against an independently written, sealed test oracle that
 is not published (the verdicts were recorded after the runs and are not authenticated); its
-tests here pass on all three engines. They differ from the first eight in one respect: they have
-no provision-tracking ledger (`provisions.yaml`), so no check accounts for how much of the
-statute each one covers, and they have no side-by-side report. They are listed in
-`_index/STATUS.md` and on the documentation site. Proposals that are not yet law and
-domains whose source texts are not cleared for republication are not included.
-
-On 2026-11-18 nineteen more domains were added and eight earlier ones were replaced by their amended versions. The new domains are: four under EU law (three on the GDPR: transfers on an adequacy decision under the EU-US Data Privacy Framework, transfers on standard contractual clauses, and the follow-up to an objection, notice and erasure; and one on the CBAM origin exclusions), four under Swiss law (the Federal Act on Data Protection: international transfers, information duties and the data protection impact assessment, the right of access, and the criminal provisions), four under UK law (automated decision-making, complaints to the Commissioner, the PECR cookie exemptions and fines, and subject access requests), two under Chinese law (the Personal Information Protection Law: handler duties and individual rights), four under Indian law (the Digital Personal Data Protection Act 2023 and Rules 2025: notice and consent, security and retention, transfer, and appeal and information) and one under US state law (the Virginia Consumer Data Protection Act). The eight replaced domains are seven GDPR domains (administrative fine maximum, Arts 33 and 34 breach notification, consent conditions, data subject rights response duties, the procedural regulation, and the headline verdict and the timing of the information duties) and the Swiss Art 24 breach notification. These domains were produced and checked in the same way as those of 2026-11-16 and have the same limits: no provision-tracking ledger and no side-by-side report.
-
-The repository now holds 93 domains (76 EU, 5 Swiss, 5 UK, 2 Chinese, 4 Indian, 1 US) and 18,765 tests.
+tests here pass on all three engines. They have no provision-tracking ledger, so no check
+accounts for how much of the statute each one covers, and no side-by-side report.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.
@@ -66,7 +88,7 @@ versions of the law; see `NOTICE`.
 ## Running it
 
 ```sh
-pip install 'clausal>=1.2.0' pyyaml   # the engine (Clausal Prolog), and YAML for the tools
+pip install 'clausal>=1.4.0' pyyaml   # the engine (Clausal Prolog), and YAML for the tools
 python run_tests.py                   # every domain's tests
 python run_tests.py eu/aml            # one jurisdiction or area
 ```
@@ -79,11 +101,14 @@ python run_iso_tests.py scryer /path/to/scryer-prolog
 python run_iso_tests.py trealla /path/to/tpl
 ```
 
+This release was tested with Clausal Prolog 1.4.0, Scryer Prolog v0.10.0-137-g9acba77a and
+Trealla Prolog v2.92.3.
+
 ## How the formalizations are checked
 
 These are the checks the corpus runs. Not every domain has every kind yet: which checks
 each domain has, and passes, is listed in `_index/STATUS.md`, generated at export. You can
-re-run all of them yourself, except the two under "Hidden tests", which are kept private
+re-run all of them yourself, except the three under "Hidden tests", which are kept private
 on purpose.
 
 ### Tests in this repository
@@ -129,10 +154,9 @@ is exactly what the check scored.
 
 - **Public interface**: each domain's public predicates are listed in `manifest.yaml`
   (`public_interface`) and exported by its `__init__.clausal`; `tests/test_public_interface.*`
-  exercises them. At the time of writing (20 October 2026) the corpus's interface catalogue,
-  the per-domain `INTERFACE-SPEC.md` generated from it and the conformance check read only the
-  engine's earlier syntax, so they are not in this release; they return when they read
-  `.clausal`.
+  exercises them. The corpus's interface catalogue, the per-domain `INTERFACE-SPEC.md`
+  generated from it and the conformance check still read only the engine's earlier syntax,
+  so they are not in this release; they return when they read `.clausal`.
 
 ### Hidden tests
 
