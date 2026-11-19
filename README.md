@@ -1,6 +1,6 @@
 # clausal-rules-as-code
 
-Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`, `uk/`) is one **domain**: one legal question (for example, *is this person a
+Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`, `uk/`, `cn/`, `ind/`, `us/`) is one **domain**: one legal question (for example, *is this person a
 beneficial owner under AMLR Art 52?*, or *does this aid stay under the de minimis
 ceiling?*). For each domain you get:
 
@@ -22,7 +22,7 @@ Documentation, with every domain, its checks and its side-by-side statute report
 
 These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-Every domain folder added on 2026-11-16 repeats this in its own `README.md`.
+Every domain folder added on 2026-11-16 or 2026-11-18 repeats this in its own `README.md`.
 
 ## This is a preview
 
@@ -56,7 +56,9 @@ statute each one covers, and they have no side-by-side report. They are listed i
 `_index/STATUS.md` and on the documentation site. Proposals that are not yet law and
 domains whose source texts are not cleared for republication are not included.
 
-The repository now holds 74 domains (72 EU, 1 Swiss, 1 UK) and 14,533 tests.
+On 2026-11-18 nineteen more domains were added and eight earlier ones were replaced by their amended versions. The new domains are: four under EU law (three on the GDPR: transfers on an adequacy decision under the EU-US Data Privacy Framework, transfers on standard contractual clauses, and the follow-up to an objection, notice and erasure; and one on the CBAM origin exclusions), four under Swiss law (the Federal Act on Data Protection: international transfers, information duties and the data protection impact assessment, the right of access, and the criminal provisions), four under UK law (automated decision-making, complaints to the Commissioner, the PECR cookie exemptions and fines, and subject access requests), two under Chinese law (the Personal Information Protection Law: handler duties and individual rights), four under Indian law (the Digital Personal Data Protection Act 2023 and Rules 2025: notice and consent, security and retention, transfer, and appeal and information) and one under US state law (the Virginia Consumer Data Protection Act). The eight replaced domains are seven GDPR domains (administrative fine maximum, Arts 33 and 34 breach notification, consent conditions, data subject rights response duties, the procedural regulation, and the headline verdict and the timing of the information duties) and the Swiss Art 24 breach notification. These domains were produced and checked in the same way as those of 2026-11-16 and have the same limits: no provision-tracking ledger and no side-by-side report.
+
+The repository now holds 93 domains (76 EU, 5 Swiss, 5 UK, 2 Chinese, 4 Indian, 1 US) and 18,765 tests.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.

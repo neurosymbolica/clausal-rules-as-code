@@ -6,7 +6,7 @@ Each domain answers one legal question. Its page shows the scope, the pinned sou
 !!! warning "Disclaimer"
     These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-The eight domains of the first release have a provision-tracking ledger and a side-by-side report. The domains added on 2026-11-16 do not yet have a ledger, so they have no side-by-side report.
+The eight domains of the first release have a provision-tracking ledger and a side-by-side report. The domains added on 2026-11-16 and 2026-11-18 do not yet have a ledger, so they have no side-by-side report.
 
 | Domain | Question |
 |---|---|
