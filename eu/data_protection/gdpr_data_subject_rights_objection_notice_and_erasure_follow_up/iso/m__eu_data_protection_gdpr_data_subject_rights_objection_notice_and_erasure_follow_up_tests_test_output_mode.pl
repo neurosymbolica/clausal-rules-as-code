@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up, [objection_right_notice/4, erasure_follow_up_duty/4, decide_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_fixtures, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_subject/1, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_expected/3]).
+
+notice_answers(Profile, Answers) :-
+    findall(Result - Basis - Citations, objection_right_notice(Profile, Result, Basis, Citations), Answers).
+
+follow_up_answers(Profile, Answers) :-
+    findall(Result - Basis - Citations, erasure_follow_up_duty(Profile, Result, Basis, Citations), Answers).
+
+fixture_results_read_out(Subject) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(Subject, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_expected(Subject, NoticeExpected, FollowUpExpected),
+    findall(Result, objection_right_notice(Profile, Result, _NoticeBasis, _NoticeCitations), NoticeResults),
+    NoticeResults == [NoticeExpected],
+    findall(Result, erasure_follow_up_duty(Profile, Result, _FollowUpBasis, _FollowUpCitations), FollowUpResults),
+    FollowUpResults == [FollowUpExpected].
+
+test(every_fixture_reads_out_exactly_its_expected_results) :-
+    findall(Subject, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_subject(Subject), Subjects),
+    maplist(fixture_results_read_out, Subjects).
+test(the_baseline_profile_yields_exactly_one_status) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    findall(Status, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status(Profile, Status), Statuses),
+    Statuses == [determination(notice_complies, follow_up_duty_met)].
+test(the_verdict_carries_both_citations) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    findall(Verdict, decide_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_verdict(determination(notice_complies, follow_up_duty_met), [cite(eu_reg_2016_679_art_17_2), cite(eu_reg_2016_679_art_21_4)])].
+test(empty_profile_notice_names_the_first_communication) :-
+    notice_answers([], Answers),
+    Answers == [indeterminate([first_communication_with_data_subject_has_taken_place]) - [] - []].
+test(empty_profile_follow_up_names_publication) :-
+    follow_up_answers([], Answers),
+    Answers == [indeterminate([controller_made_personal_data_public]) - [] - []].
+test(not_owed_reads_out_its_basis) :-
+    notice_answers([attribute(right_to_object_applies, attested(false, attestation(host_user, host_time, stated_reason, none)))], Answers),
+    Answers == [notice_not_owed - [outside_fact(right_to_object_applies, attested(false, attestation(host_user, host_time, stated_reason, none)))] - [cite(eu_reg_2016_679_art_21_4)]].
+test(first_communication_named_before_absent_right) :-
+    notice_answers([attribute(right_explicitly_brought_to_attention_by_first_communication, true)], Answers),
+    Answers == [indeterminate([first_communication_with_data_subject_has_taken_place]) - [] - []].
+test(not_yet_due_with_absent_right_is_referred) :-
+    notice_answers([attribute(first_communication_with_data_subject_has_taken_place, false)], Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_21_4), cite(article_21_right_to_object_statement)), [resolution(cite(article_21_right_to_object_statement), not_attempted), inputs_relied_on([right_to_object_applies - absent])]) - [] - []].
+test(failed_requirement_with_absent_right_is_referred) :-
+    notice_answers([attribute(first_communication_with_data_subject_has_taken_place, true), attribute(right_presented_clearly, false)], Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_21_4), cite(article_21_right_to_object_statement)), [resolution(cite(article_21_right_to_object_statement), not_attempted), inputs_relied_on([right_to_object_applies - absent])]) - [] - []].
+test(separation_named_when_explicit_is_true_and_separation_absent) :-
+    notice_answers([attribute(right_to_object_applies, attested(true, attestation(host_user, host_time, stated_reason, none))), attribute(first_communication_with_data_subject_has_taken_place, true), attribute(right_explicitly_brought_to_attention_by_first_communication, true)], Answers),
+    Answers == [indeterminate([right_presented_separately_from_other_information]) - [] - []].
+test(follow_up_final_without_obligation_has_empty_basis) :-
+    follow_up_answers([attribute(controller_made_personal_data_public, false)], Answers),
+    Answers == [follow_up_duty_does_not_apply - [] - [cite(eu_reg_2016_679_art_17_2)]].
+test(follow_up_final_with_obligation_present_shows_it) :-
+    follow_up_answers([attribute(controller_made_personal_data_public, false), attribute(controller_obliged_to_erase_under_article_17_1, attested(true, attestation(host_user, host_time, stated_reason, none)))], Answers),
+    Answers == [follow_up_duty_does_not_apply - [outside_fact(controller_obliged_to_erase_under_article_17_1, attested(true, attestation(host_user, host_time, stated_reason, none)))] - [cite(eu_reg_2016_679_art_17_2)]].
+test(publication_named_before_unsure_steps) :-
+    follow_up_answers([attribute(reasonable_steps_taken_to_inform_other_controllers, unsure)], Answers),
+    Answers == [indeterminate([controller_made_personal_data_public]) - [] - []].
+test(obligation_referred_when_steps_known) :-
+    follow_up_answers([attribute(controller_made_personal_data_public, true), attribute(reasonable_steps_taken_to_inform_other_controllers, false)], Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_2), cite(article_17_1_erasure_obligation_statement)), [resolution(cite(article_17_1_erasure_obligation_statement), not_attempted), inputs_relied_on([controller_obliged_to_erase_under_article_17_1 - absent])]) - [] - []].
+test(the_checklist_of_the_baseline_is_all_met) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_checklist(Profile, Items),
+    length(Items, 8),
+    findall(Status, member(item(_Identifier, Status, _Citation), Items), Statuses),
+    sort(Statuses, StatusSet),
+    StatusSet == [met].
+test(the_checklist_names_an_unsure_judgement_unknown) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(clarity_unsure, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_checklist(Profile, Items),
+    member(item(right_presented_clearly, unknown([right_presented_clearly]), cite(eu_reg_2016_679_art_21_4)), Items).
+
+cp_test_names([every_fixture_reads_out_exactly_its_expected_results, the_baseline_profile_yields_exactly_one_status, the_verdict_carries_both_citations, empty_profile_notice_names_the_first_communication, empty_profile_follow_up_names_publication, not_owed_reads_out_its_basis, first_communication_named_before_absent_right, not_yet_due_with_absent_right_is_referred, failed_requirement_with_absent_right_is_referred, separation_named_when_explicit_is_true_and_separation_absent, follow_up_final_without_obligation_has_empty_basis, follow_up_final_with_obligation_present_shows_it, publication_named_before_unsure_steps, obligation_referred_when_steps_known, the_checklist_of_the_baseline_is_all_met, the_checklist_names_an_unsure_judgement_unknown]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

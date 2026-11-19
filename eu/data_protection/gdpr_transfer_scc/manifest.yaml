@@ -1,0 +1,594 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_transfer_scc
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_transfer_scc"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (gdpr_transfer_scc_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_transfer_scc.clausal --
+  - "standard_contractual_clauses_module/3"
+  - "standard_contractual_clauses_availability/4"
+  - "standard_contractual_clauses_safeguard/4"
+  - "standard_contractual_clauses_appendix/3"
+  - "decide_gdpr_transfer_scc/2"
+  - "gdpr_transfer_scc_status/2"
+  - "gdpr_transfer_scc_checklist/2"
+  - "gdpr_transfer_scc_decision_resolvable/1"
+  - "gdpr_transfer_scc_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_transfer_scc_profile_keys/1"
+  - "gdpr_transfer_scc_input_problems/2"
+  - "gdpr_transfer_scc_what_if/4"
+  - "gdpr_transfer_scc_reliance_check/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_transfer_scc_subject/1"
+  - "gdpr_transfer_scc_profile_for/2"
+  - "gdpr_transfer_scc_assess/2"
+  - "gdpr_transfer_scc_expected/2"
+  - "gdpr_transfer_scc_near_miss/2"
+
+# root_exports: every bare atom the scorer resolves on the package root (atoms
+# need no export; they are listed here as the order requires).
+root_exports:
+  - standard_contractual_clauses_decision_in_force
+  - exporter_processing_subject_to_gdpr
+  - importer_processing_subject_to_gdpr
+  - no_reason_to_believe_local_laws_prevent_compliance
+  - exporter_role
+  - importer_role
+  - standard_contractual_clauses_concluded
+  - module_selected
+  - clauses_modified
+  - added_clauses_contradict_clauses
+  - local_laws_assessment_documented
+  - processor_combines_received_data_with_data_collected_in_union
+  - annex_i_a_list_of_parties_completed
+  - annex_i_b_description_of_transfer_completed
+  - annex_i_c_competent_supervisory_authority_identified
+  - annex_ii_measures_described_in_specific_terms
+  - sub_processor_authorisation_option
+  - annex_iii_list_of_sub_processors_completed
+  - controller
+  - processor
+  - specific_prior_authorisation
+  - general_written_authorisation
+  - module_one
+  - module_two
+  - module_three
+  - module_four
+  - clauses_available
+  - clauses_not_available
+  - appropriate_safeguards_provided
+  - appropriate_safeguards_not_provided
+  - appendix_complete
+  - appendix_incomplete
+  - unsure
+  - absent
+  - not_attempted
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: module paths of shared backbone packages this
+# domain imports. The domain imports only the kit's formalize_lib, which is
+# not a backbone package.
+uses: []
+
+scope: >-
+  Whether one transfer of personal data from a data exporter to a data importer
+  relies validly on the standard contractual clauses of Commission Implementing
+  Decision (EU) 2021/914, so that Article 46(2)(c) of Regulation (EU) 2016/679
+  provides appropriate safeguards: (A) which module of the clauses fits the roles
+  of the Parties (Annex I module headings); (B) whether the clauses are available
+  for the transfer under Article 1(1) of the decision; (C) whether the clauses, as
+  used, provide the safeguards (Article 1(1), Clause 1(b), Clause 2(a), Clause 14
+  (a), (b) and (d) with the Module Four heading words); (D) whether the Appendix
+  (Clause 1(d), Annexes I to III, Clause 9(a) options) is completed as the module
+  requires. Out of scope: whether a transfer takes place and Chapter V as a whole
+  (gdpr-chapter-v-transfers), the material and territorial scope of the GDPR
+  (gdpr-territorial-material-scope, arriving as attested outside facts), the
+  roles of controller and processor (stated by the caller), the assessment of the
+  third country's laws and practices (an attested outside fact), the Parties'
+  performance of the clauses, and Article 4 transitional rules. Open-textured
+  judgements (added clauses contradicting the Clauses; Annex II measures in
+  specific terms) are handed to the user and, when unsure and decisive, to a
+  lawyer.
+
+sources:
+  - "Commission Implementing Decision (EU) 2021/914 of 4 June 2021 on standard contractual clauses for the transfer of personal data to third countries pursuant to Regulation (EU) 2016/679 (OJ L 199, 7.6.2021, p. 31), CELEX 32021D0914, as adopted: Article 1(1)"
+  - "Commission Implementing Decision (EU) 2021/914, Annex (standard contractual clauses): Clause 1(b) with points (i) and (ii), Clause 1(d), Clause 2(a), Clause 9(a) under Modules Two and Three, Clause 14 (Module Four heading words, (a), (b) with (i) to (iii), (d))"
+  - "Commission Implementing Decision (EU) 2021/914, Annex, Appendix: explanatory note, Annex I (A, B, C), Annex II, Annex III"
+  - "Regulation (EU) 2016/679 (General Data Protection Regulation), consolidated text 02016R0679-20160504: Article 46(2)(c); Article 46(1) and (2) opening words quoted only, decided in gdpr-chapter-v-transfers"
+
+query_interface:
+  3: "gdpr_transfer_scc_status/2"           # status determination: the safeguard status
+  7: "gdpr_transfer_scc_checklist/2"        # justification: checklist items with cite(...) provenance
+  13: "gdpr_transfer_scc_reliance_check/2"  # compliance check: may the Parties rely on the clauses
+  16: "gdpr_transfer_scc_what_if/4"         # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings_markers_footnotes_and_signature
+  units:
+  - 32021D0914#final
+  - 32021D0914#fn1
+  - 32021D0914#fn2
+  - 32021D0914#fn3
+  - 32021D0914#fn4
+  - 32021D0914#fn5
+  - 32021D0914#fn6
+  - 32021D0914#fn7
+  - 32021D0914#fn8
+  - 32021D0914#fn9
+  - 32021D0914#fn10
+  - 32021D0914#fn11
+  - 32021D0914#fn12
+  - 32021D0914#annex_title
+  - 32021D0914#annex_secI
+  - 32021D0914#annex_cl1
+  - 32021D0914#annex_cl2
+  - 32021D0914#annex_cl3
+  - 32021D0914#annex_cl4
+  - 32021D0914#annex_cl5
+  - 32021D0914#annex_cl6
+  - 32021D0914#annex_cl7
+  - 32021D0914#annex_secII
+  - 32021D0914#annex_cl8
+  - 32021D0914#annex_cl8_m1
+  - 32021D0914#annex_cl8_m1_s8_1
+  - 32021D0914#annex_cl8_m1_s8_2
+  - 32021D0914#annex_cl8_m1_s8_3
+  - 32021D0914#annex_cl8_m1_s8_4
+  - 32021D0914#annex_cl8_m1_s8_5
+  - 32021D0914#annex_cl8_m1_s8_6
+  - 32021D0914#annex_cl8_m1_s8_7
+  - 32021D0914#annex_cl8_m1_s8_8
+  - 32021D0914#annex_cl8_m1_s8_9
+  - 32021D0914#annex_cl8_m2
+  - 32021D0914#annex_cl8_m2_s8_1
+  - 32021D0914#annex_cl8_m2_s8_2
+  - 32021D0914#annex_cl8_m2_s8_3
+  - 32021D0914#annex_cl8_m2_s8_4
+  - 32021D0914#annex_cl8_m2_s8_5
+  - 32021D0914#annex_cl8_m2_s8_6
+  - 32021D0914#annex_cl8_m2_s8_7
+  - 32021D0914#annex_cl8_m2_s8_8
+  - 32021D0914#annex_cl8_m2_s8_9
+  - 32021D0914#annex_cl8_m3
+  - 32021D0914#annex_cl8_m3_s8_1
+  - 32021D0914#annex_cl8_m3_s8_2
+  - 32021D0914#annex_cl8_m3_s8_3
+  - 32021D0914#annex_cl8_m3_s8_4
+  - 32021D0914#annex_cl8_m3_s8_5
+  - 32021D0914#annex_cl8_m3_s8_6
+  - 32021D0914#annex_cl8_m3_s8_7
+  - 32021D0914#annex_cl8_m3_s8_8
+  - 32021D0914#annex_cl8_m3_s8_9
+  - 32021D0914#annex_cl8_m4
+  - 32021D0914#annex_cl8_m4_s8_1
+  - 32021D0914#annex_cl8_m4_s8_2
+  - 32021D0914#annex_cl8_m4_s8_3
+  - 32021D0914#annex_cl9
+  - 32021D0914#annex_cl9_m2
+  - 32021D0914#annex_cl9_m3
+  - 32021D0914#annex_cl10
+  - 32021D0914#annex_cl10_m1
+  - 32021D0914#annex_cl10_m2
+  - 32021D0914#annex_cl10_m3
+  - 32021D0914#annex_cl10_m4
+  - 32021D0914#annex_cl11
+  - 32021D0914#annex_cl11_m1
+  - 32021D0914#annex_cl11_m2
+  - 32021D0914#annex_cl11_m3
+  - 32021D0914#annex_cl12
+  - 32021D0914#annex_cl12_m1
+  - 32021D0914#annex_cl12_m4
+  - 32021D0914#annex_cl12_m2
+  - 32021D0914#annex_cl12_m3
+  - 32021D0914#annex_cl13
+  - 32021D0914#annex_cl13_m1
+  - 32021D0914#annex_cl13_m2
+  - 32021D0914#annex_cl13_m3
+  - 32021D0914#annex_secIII
+  - 32021D0914#annex_cl14
+  - 32021D0914#annex_cl14_m1
+  - 32021D0914#annex_cl14_m2
+  - 32021D0914#annex_cl14_m3
+  - 32021D0914#annex_cl14_m4
+  - 32021D0914#annex_cl15
+  - 32021D0914#annex_cl15_m1
+  - 32021D0914#annex_cl15_m2
+  - 32021D0914#annex_cl15_m3
+  - 32021D0914#annex_cl15_m4
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_1
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_2
+  - 32021D0914#annex_secIV
+  - 32021D0914#annex_cl16
+  - 32021D0914#annex_cl17
+  - 32021D0914#annex_cl17_m1
+  - 32021D0914#annex_cl17_m2
+  - 32021D0914#annex_cl17_m3
+  - 32021D0914#annex_cl17_m4
+  - 32021D0914#annex_cl18
+  - 32021D0914#annex_cl18_m1
+  - 32021D0914#annex_cl18_m2
+  - 32021D0914#annex_cl18_m3
+  - 32021D0914#annex_cl18_m4
+  - 02016R0679-20160504#art_046
+  reason: 'The units of the decision that hold only a heading or marker (the Annex
+    title, the section headings, the clause and sub-clause headings and the module
+    headings printed above a clause''s text), the footnotes (references to other acts,
+    case law and opinions) and the signature, and the heading of Article 46 of the
+    GDPR, carry no rule of their own: document structure. The module headings of the
+    Appendix are quoted inside the Annex units that hold them (reading (2), reading
+    (9)).'
+  consequence: 'None for a caller: a heading, a footnote reference or a signature
+    carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: art_2_and_3_member_state_information_and_commission_evaluation
+  units:
+  - 32021D0914#art2
+  - 32021D0914#art3
+  reason: Article 2 (a Member State informs the Commission when its authorities suspend
+    or ban transfers under Article 58 of the GDPR because the importer is subject
+    to laws or practices that prevent compliance) and Article 3 (the Commission evaluates
+    the practical application of the clauses) are acts of public authorities, not
+    conditions a transfer must meet.
+  consequence: No answer says whether an authority has suspended or banned a transfer,
+    or what the Commission's evaluation found; a suspension or ban is for the caller
+    to take into account.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: art_4_entry_into_force_repeal_and_transition
+  units:
+  - 32021D0914#art4
+  reason: 'Spent: the transitional periods of Article 4 have run out (27 December
+    2022). Article 4(2) and (3) repealed Decisions 2001/497/EC and 2010/87/EU with
+    effect from 27 September 2021, and that repeal has taken effect, so no transfer
+    after that date can rely on those decisions; Article 4(4) deemed contracts concluded
+    before 27 September 2021 on the old clauses to provide appropriate safeguards
+    only until 27 December 2022. Article 4(1) (entry into force) is a past event;
+    whether the decision is still in force is the outside fact standard_contractual_clauses_decision_in_force.
+    No answer of this order can turn on Article 4 for a transfer after 27 December
+    2022.'
+  consequence: No answer applies the old clauses of Decisions 2001/497/EC or 2010/87/EU
+    or the transitional period; a caller asking about a transfer before 27 December
+    2022 must apply Article 4 itself.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: annex_general_clauses_not_read
+  debt: true
+  units:
+  - 32021D0914#annex_cl1_a
+  - 32021D0914#annex_cl1_c
+  - 32021D0914#annex_cl2_b
+  - 32021D0914#annex_cl3_a
+  - 32021D0914#annex_cl3_a_i
+  - 32021D0914#annex_cl3_a_ii
+  - 32021D0914#annex_cl3_a_iii
+  - 32021D0914#annex_cl3_a_iv
+  - 32021D0914#annex_cl3_a_v
+  - 32021D0914#annex_cl3_a_vi
+  - 32021D0914#annex_cl3_a_vii
+  - 32021D0914#annex_cl3_a_viii
+  - 32021D0914#annex_cl3_b
+  - 32021D0914#annex_cl4_a
+  - 32021D0914#annex_cl4_b
+  - 32021D0914#annex_cl4_c
+  - 32021D0914#annex_cl5_t
+  - 32021D0914#annex_cl6_t
+  reason: 'Clause 1(a) and (c) (purpose; the transfer as specified in Annex I.B),
+    Clause 2(b) (the clauses are without prejudice to the exporter''s own obligations
+    under the GDPR), Clause 3 (third-party beneficiary rights of data subjects), Clause
+    4 (interpretation), Clause 5 (hierarchy over related agreements) and Clause 6
+    (the details of the transfer are in Annex I.B): they state the purpose of the
+    clauses and how they operate between the Parties and towards data subjects once
+    concluded; no condition of the safeguard asked here turns on them beyond Clause
+    2(a), which is read.'
+  consequence: No answer applies these clauses; Annex I.B itself is read by standard_contractual_clauses_appendix.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+- what: annex_clause_7_docking
+  debt: true
+  units:
+  - 32021D0914#annex_cl7_a
+  - 32021D0914#annex_cl7_b
+  - 32021D0914#annex_cl7_c
+  reason: 'Clause 7 is an OPTIONAL docking clause: an entity may accede to the clauses
+    later by completing the Appendix and signing Annex I.A. It is not needed for the
+    safeguard of the original Parties'' transfer; an acceding entity is asked about
+    as a Party in its own profile.'
+  consequence: No answer says whether an accession under Clause 7 is valid.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+- what: annex_obligations_of_the_parties
+  debt: true
+  units:
+  - 32021D0914#annex_cl8_t
+  - 32021D0914#annex_cl8_m1_s8_1_t
+  - 32021D0914#annex_cl8_m1_s8_2_a
+  - 32021D0914#annex_cl8_m1_s8_2_a_i
+  - 32021D0914#annex_cl8_m1_s8_2_a_ii
+  - 32021D0914#annex_cl8_m1_s8_2_a_iii
+  - 32021D0914#annex_cl8_m1_s8_2_a_iv
+  - 32021D0914#annex_cl8_m1_s8_2_b
+  - 32021D0914#annex_cl8_m1_s8_2_c
+  - 32021D0914#annex_cl8_m1_s8_2_d
+  - 32021D0914#annex_cl8_m1_s8_3_a
+  - 32021D0914#annex_cl8_m1_s8_3_b
+  - 32021D0914#annex_cl8_m1_s8_3_c
+  - 32021D0914#annex_cl8_m1_s8_4_t
+  - 32021D0914#annex_cl8_m1_s8_5_a
+  - 32021D0914#annex_cl8_m1_s8_5_b
+  - 32021D0914#annex_cl8_m1_s8_5_c
+  - 32021D0914#annex_cl8_m1_s8_5_d
+  - 32021D0914#annex_cl8_m1_s8_5_e
+  - 32021D0914#annex_cl8_m1_s8_5_f
+  - 32021D0914#annex_cl8_m1_s8_5_g
+  - 32021D0914#annex_cl8_m1_s8_6_t
+  - 32021D0914#annex_cl8_m1_s8_7_t
+  - 32021D0914#annex_cl8_m1_s8_8_t
+  - 32021D0914#annex_cl8_m1_s8_9_a
+  - 32021D0914#annex_cl8_m1_s8_9_b
+  - 32021D0914#annex_cl8_m2_s8_1_a
+  - 32021D0914#annex_cl8_m2_s8_1_b
+  - 32021D0914#annex_cl8_m2_s8_2_t
+  - 32021D0914#annex_cl8_m2_s8_3_t
+  - 32021D0914#annex_cl8_m2_s8_4_t
+  - 32021D0914#annex_cl8_m2_s8_5_t
+  - 32021D0914#annex_cl8_m2_s8_6_a
+  - 32021D0914#annex_cl8_m2_s8_6_b
+  - 32021D0914#annex_cl8_m2_s8_6_c
+  - 32021D0914#annex_cl8_m2_s8_6_d
+  - 32021D0914#annex_cl8_m2_s8_7_t
+  - 32021D0914#annex_cl8_m2_s8_8_t
+  - 32021D0914#annex_cl8_m2_s8_9_a
+  - 32021D0914#annex_cl8_m2_s8_9_b
+  - 32021D0914#annex_cl8_m2_s8_9_c
+  - 32021D0914#annex_cl8_m2_s8_9_d
+  - 32021D0914#annex_cl8_m2_s8_9_e
+  - 32021D0914#annex_cl8_m3_s8_1_a
+  - 32021D0914#annex_cl8_m3_s8_1_b
+  - 32021D0914#annex_cl8_m3_s8_1_c
+  - 32021D0914#annex_cl8_m3_s8_1_d
+  - 32021D0914#annex_cl8_m3_s8_2_t
+  - 32021D0914#annex_cl8_m3_s8_3_t
+  - 32021D0914#annex_cl8_m3_s8_4_t
+  - 32021D0914#annex_cl8_m3_s8_5_t
+  - 32021D0914#annex_cl8_m3_s8_6_a
+  - 32021D0914#annex_cl8_m3_s8_6_b
+  - 32021D0914#annex_cl8_m3_s8_6_c
+  - 32021D0914#annex_cl8_m3_s8_6_d
+  - 32021D0914#annex_cl8_m3_s8_7_t
+  - 32021D0914#annex_cl8_m3_s8_8_t
+  - 32021D0914#annex_cl8_m3_s8_9_a
+  - 32021D0914#annex_cl8_m3_s8_9_b
+  - 32021D0914#annex_cl8_m3_s8_9_c
+  - 32021D0914#annex_cl8_m3_s8_9_d
+  - 32021D0914#annex_cl8_m3_s8_9_e
+  - 32021D0914#annex_cl8_m3_s8_9_f
+  - 32021D0914#annex_cl8_m3_s8_9_g
+  - 32021D0914#annex_cl8_m4_s8_1_a
+  - 32021D0914#annex_cl8_m4_s8_1_b
+  - 32021D0914#annex_cl8_m4_s8_1_c
+  - 32021D0914#annex_cl8_m4_s8_1_d
+  - 32021D0914#annex_cl8_m4_s8_2_a
+  - 32021D0914#annex_cl8_m4_s8_2_b
+  - 32021D0914#annex_cl8_m4_s8_2_c
+  - 32021D0914#annex_cl8_m4_s8_3_a
+  - 32021D0914#annex_cl8_m4_s8_3_b
+  - 32021D0914#annex_cl9_m2_b
+  - 32021D0914#annex_cl9_m2_c
+  - 32021D0914#annex_cl9_m2_d
+  - 32021D0914#annex_cl9_m2_e
+  - 32021D0914#annex_cl9_m3_b
+  - 32021D0914#annex_cl9_m3_c
+  - 32021D0914#annex_cl9_m3_d
+  - 32021D0914#annex_cl9_m3_e
+  - 32021D0914#annex_cl10_m1_a
+  - 32021D0914#annex_cl10_m1_b
+  - 32021D0914#annex_cl10_m1_b_i
+  - 32021D0914#annex_cl10_m1_b_ii
+  - 32021D0914#annex_cl10_m1_b_iii
+  - 32021D0914#annex_cl10_m1_c
+  - 32021D0914#annex_cl10_m1_d
+  - 32021D0914#annex_cl10_m1_d_i
+  - 32021D0914#annex_cl10_m1_d_ii
+  - 32021D0914#annex_cl10_m1_e
+  - 32021D0914#annex_cl10_m1_f
+  - 32021D0914#annex_cl10_m1_g
+  - 32021D0914#annex_cl10_m2_a
+  - 32021D0914#annex_cl10_m2_b
+  - 32021D0914#annex_cl10_m2_c
+  - 32021D0914#annex_cl10_m3_a
+  - 32021D0914#annex_cl10_m3_b
+  - 32021D0914#annex_cl10_m3_c
+  - 32021D0914#annex_cl10_m4_t
+  - 32021D0914#annex_cl11_a
+  - 32021D0914#annex_cl11_m1m2m3_b
+  - 32021D0914#annex_cl11_m1m2m3_c
+  - 32021D0914#annex_cl11_m1m2m3_c_i
+  - 32021D0914#annex_cl11_m1m2m3_c_ii
+  - 32021D0914#annex_cl11_m1m2m3_d
+  - 32021D0914#annex_cl11_m1m2m3_e
+  - 32021D0914#annex_cl11_m1m2m3_f
+  - 32021D0914#annex_cl12_m1m4_a
+  - 32021D0914#annex_cl12_m1m4_b
+  - 32021D0914#annex_cl12_m1m4_c
+  - 32021D0914#annex_cl12_m1m4_d
+  - 32021D0914#annex_cl12_m1m4_e
+  - 32021D0914#annex_cl12_m2m3_a
+  - 32021D0914#annex_cl12_m2m3_b
+  - 32021D0914#annex_cl12_m2m3_c
+  - 32021D0914#annex_cl12_m2m3_d
+  - 32021D0914#annex_cl12_m2m3_e
+  - 32021D0914#annex_cl12_m2m3_f
+  - 32021D0914#annex_cl12_m2m3_g
+  - 32021D0914#annex_cl13_m1m2m3_a
+  - 32021D0914#annex_cl13_m1m2m3_b
+  - 32021D0914#annex_cl15_m1m2m3m4_t
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_1_a
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_1_a_i
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_1_a_ii
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_2_a
+  - 32021D0914#annex_cl15_m1m2m3m4_s15_2_b
+  - 32021D0914#annex_cl16_a
+  - 32021D0914#annex_cl16_b
+  - 32021D0914#annex_cl16_c
+  - 32021D0914#annex_cl16_c_i
+  - 32021D0914#annex_cl16_c_ii
+  - 32021D0914#annex_cl16_c_iii
+  - 32021D0914#annex_cl16_d
+  - 32021D0914#annex_cl16_e
+  reason: Clauses 8 (data protection safeguards, by module), 9 (use of sub-processors,
+    except Clause 9(a) under Modules Two and Three, which is read for the option),
+    10 (data subject rights), 11 (redress), 12 (liability), 13 (supervision), 15 (obligations
+    in case of access by public authorities) and 16 (non-compliance and termination)
+    set the obligations of the Parties under concluded clauses. Whether the Parties
+    comply with them is a question of performance, not a condition of the safeguard
+    asked here (reading (13)).
+  consequence: No answer says whether the Parties comply with these obligations; a
+    breach is for the caller and the competent supervisory authority.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+- what: annex_clause_14_later_duties
+  debt: true
+  units:
+  - 32021D0914#annex_cl14_m1m2m3m4_c
+  - 32021D0914#annex_cl14_m1m2m3m4_e
+  - 32021D0914#annex_cl14_m1m2m3m4_f
+  reason: Clause 14(c) (the importer's warranty of best efforts to give information
+    for the assessment, and its continued cooperation), 14(e) (the importer's notice
+    of laws or practices not in line with paragraph (a)) and 14(f) (the exporter's
+    measures, suspension and termination after such a notice) set duties during the
+    life of the contract. Only the warranty of 14(a), with 14(b), and the documentation
+    of 14(d) are read (reading (8)).
+  consequence: No answer says whether a notice was given, a transfer should be suspended
+    or the contract terminated under Clause 14.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+- what: annex_clauses_17_and_18_governing_law_and_forum
+  debt: true
+  units:
+  - 32021D0914#annex_cl17_m1m2m3_t
+  - 32021D0914#annex_cl17_m4_t
+  - 32021D0914#annex_cl18_m1m2m3_a
+  - 32021D0914#annex_cl18_m1m2m3_b
+  - 32021D0914#annex_cl18_m1m2m3_c
+  - 32021D0914#annex_cl18_m1m2m3_d
+  - 32021D0914#annex_cl18_m4_t
+  reason: 'Clause 17 (governing law: the law of an EU Member State that allows third-party
+    beneficiary rights, or for Module Four a country that does) and Clause 18 (choice
+    of forum and jurisdiction) are options the Parties fill in. A choice the clause
+    does not allow is a modification of the clauses, which the key clauses_modified
+    covers (reading (5)); which law or forum was chosen is not otherwise tested. The
+    pinned unit annex_cl18_m4_t holds Clause 18 under Module Four and, joined to it
+    in the pin, the twelve footnotes of the Annex (references to other acts and opinions);
+    neither is read.'
+  consequence: No answer checks the governing law or the forum chosen beyond what
+    the caller states through clauses_modified.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+- what: gdpr_art_46_safeguards_decided_in_chapter_v
+  units:
+  - 02016R0679-20160504#parag_046.001
+  - 02016R0679-20160504#parag_046.002
+  - 02016R0679-20160504#point_046.002_b
+  reason: Article 46(1) of the GDPR (transfers subject to appropriate safeguards,
+    with enforceable data subject rights and effective legal remedies), the opening
+    words of Article 46(2) and its point (b) (binding corporate rules) are decided
+    in gdpr-chapter-v-transfers, which cites Article 46 and reads the safeguards as
+    its judgement safeguard_in_place and binding corporate rules through its outside
+    fact binding_corporate_rules_approved. This order formalises Article 46(2)(c)
+    only, through the decision.
+  consequence: No answer says whether a transfer may take place under Article 46 as
+    a whole; the caller uses gdpr-chapter-v-transfers.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-chapter-v-transfers
+- what: gdpr_art_46_other_safeguards
+  debt: true
+  units:
+  - 02016R0679-20160504#point_046.002_a
+  - 02016R0679-20160504#point_046.002_d
+  - 02016R0679-20160504#point_046.002_e
+  - 02016R0679-20160504#point_046.002_f
+  - 02016R0679-20160504#parag_046.003
+  - 02016R0679-20160504#point_046.003_a
+  - 02016R0679-20160504#point_046.003_b
+  - 02016R0679-20160504#parag_046.004
+  - 02016R0679-20160504#parag_046.005
+  reason: 'Article 46(2) points (a), (d), (e) and (f), Article 46(3) with its points,
+    Article 46(4) and Article 46(5) of the GDPR: the other appropriate safeguards
+    (a public-authority instrument, clauses adopted by a supervisory authority, codes
+    of conduct, certification, authorised contractual clauses and administrative arrangements),
+    the consistency mechanism and the transitional validity of older authorisations
+    and decisions. None concerns the clauses of Decision (EU) 2021/914; gdpr-chapter-v-transfers
+    also leaves them as debt.'
+  consequence: No answer deals with the other safeguards of Article 46; the caller
+    checks them itself.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this order.
+
+excluded_set:
+- what: gdpr_articles_2_and_3_scope
+  instrument: Regulation (EU) 2016/679 Arts 2 and 3
+  cites:
+  - 02016R0679-20160504#art_002
+  - 02016R0679-20160504#art_003
+  reason: Whether the GDPR applies to the exporter's or the importer's processing
+    (Article 1(1) of the decision) is decided under Articles 2 and 3 of the GDPR,
+    not pinned here, in the order gdpr-territorial-material-scope; it arrives as the
+    outside facts exporter_processing_subject_to_gdpr and importer_processing_subject_to_gdpr
+    (reading (1)).
+  consequence: No answer decides the material or territorial scope of the GDPR.
+- what: gdpr_article_28_processor_terms
+  instrument: Regulation (EU) 2016/679 Art 28
+  cites:
+  - 02016R0679-20160504#art_028
+  reason: Article 1(2) of the decision and Clause 2(a) tie the clauses to Article
+    28(3), (4) and (7) of the GDPR for transfers from a controller to a processor
+    and from a processor to a sub-processor; Article 28 is not pinned here and the
+    processor contract is decided in gdpr-processor-contract (reading (13)).
+  consequence: No answer says whether the clauses meet Article 28 of the GDPR for
+    a processor.

@@ -1,0 +1,315 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: ind/dpdp_appeal_information
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dpdp_appeal_information"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dpdp_appeal_information.clausal --
+  - "appeal_period/3"
+  - "appeal_filing_requirements/3"
+  - "appeal_disposal_target/3"
+  - "information_call_status/3"
+  - "non_disclosure_status/3"
+  - "decide_dpdp_appeal_information/2"
+  - "dpdp_appeal_information_status/2"
+  - "dpdp_appeal_information_checklist/2"
+  - "dpdp_appeal_information_decision_resolvable/1"
+  - "dpdp_appeal_information_status_values/1"
+  # -- queries.clausal --
+  - "dpdp_appeal_information_profile_keys/1"
+  - "dpdp_appeal_information_input_problems/2"
+  - "dpdp_appeal_information_what_if/4"
+  - "in_time/1"
+  - "out_of_time_sufficient_cause_needed/1"
+  - "not_appealable/0"
+  - "not_in_force/0"
+  - "filing_requirements/1"
+  - "not_yet_prescribed/0"
+  - "disposed_within_target/1"
+  - "disposal_target_not_yet_passed/1"
+  - "reasons_in_writing_required/1"
+  - "required_to_furnish_within_specified_period/0"
+  - "required_to_furnish_under_section_36/0"
+  - "not_covered/0"
+  - "disclosure_barred_without_written_permission/0"
+  - "disclosure_permitted_by_written_permission/0"
+  - "not_barred_by_rule_23/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "not_governed_here/1"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "dpdp_appeal_information_subject/1"
+  - "dpdp_appeal_information_profile_for/2"
+  - "dpdp_appeal_information_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The package imports only the kit (formalize_lib), no shared
+# backbone package.
+uses: []
+
+scope: >-
+  Two procedures of the Digital Personal Data Protection Act 2023 with the
+  Digital Personal Data Protection Rules 2025 (drafter's reading, not a
+  lawyer's). (a) The appeal to the Appellate Tribunal against an order or
+  direction of the Data Protection Board of India (s 29(1) to (3), (6) and
+  (7) with rule 22(1) and (2)): whether an appeal lies and is filed within
+  the sixty days of s 29(2) (appeal_period, a late appeal answered as
+  needing sufficient cause, never as barred), what the filing must meet
+  under rule 22 (appeal_filing_requirements) and the six-month target of
+  s 29(6) with the duty of s 29(7) to record reasons
+  (appeal_disposal_target). (b) The Central Government's call for
+  information (s 36 with rule 23(1) and (2) and the Seventh Schedule):
+  whether the recipient must furnish it (information_call_status) and
+  whether rule 23(2) bars disclosure of the furnishing
+  (non_disclosure_status). Rule 1(4) dates rules 22 and 23 (13 May 2027, a
+  calculated date). The commencement of s 29 and s 36, the open-textured
+  judgements and the identity of an intermediary or authorised person are
+  stated by the caller; a call outside the Seventh Schedule and every
+  unsure judgement go to a lawyer. Out of scope: the Board's procedure
+  (s 28), the Tribunal's powers and procedure, the Telecom Regulatory
+  Authority of India Act 1997 (the fee amount), the Information Technology
+  Act 2000, the General Clauses Act 1897, the Limitation Act 1963 and the
+  commencement notifications.
+
+sources:
+  - "Digital Personal Data Protection Act, 2023 (No. 22 of 2023), Gazette of India Extraordinary, MeitY website copy fetched 2026-11-13: s 29(1), (2), (3), (6), (7); s 36; definitions s 2(a), (c), (i), (s), (v), (z) relied on by readings"
+  - "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E), Gazette of India Extraordinary (header dated 13 November 2025), English text, MeitY website copy fetched 2026-11-13: rule 1(4); rule 22(1), (2); rule 23(1), (2), (3); Seventh Schedule rows 1, 2 (i) and (ii), 3"
+
+query_interface:
+  2: "decide_dpdp_appeal_information/2"      # eligibility verdict (eligible | ineligible | indeterminate) from appeal_period/3
+  7: "dpdp_appeal_information_checklist/2"   # justification: one cite(...) per checklist item
+  16: "dpdp_appeal_information_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: definitions_not_read
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_b
+  - in-dpdp-act-2023-meity-pdf#s2_d
+  - in-dpdp-act-2023-meity-pdf#s2_e
+  - in-dpdp-act-2023-meity-pdf#s2_f
+  - in-dpdp-act-2023-meity-pdf#s2_g
+  - in-dpdp-act-2023-meity-pdf#s2_h
+  - in-dpdp-act-2023-meity-pdf#s2_j
+  - in-dpdp-act-2023-meity-pdf#s2_j_i
+  - in-dpdp-act-2023-meity-pdf#s2_j_ii
+  - in-dpdp-act-2023-meity-pdf#s2_k
+  - in-dpdp-act-2023-meity-pdf#s2_l
+  - in-dpdp-act-2023-meity-pdf#s2_m
+  - in-dpdp-act-2023-meity-pdf#s2_n
+  - in-dpdp-act-2023-meity-pdf#s2_o
+  - in-dpdp-act-2023-meity-pdf#s2_o_i
+  - in-dpdp-act-2023-meity-pdf#s2_o_ii
+  - in-dpdp-act-2023-meity-pdf#s2_p
+  - in-dpdp-act-2023-meity-pdf#s2_p_i
+  - in-dpdp-act-2023-meity-pdf#s2_p_ii
+  - in-dpdp-act-2023-meity-pdf#s2_q
+  - in-dpdp-act-2023-meity-pdf#s2_r
+  - in-dpdp-act-2023-meity-pdf#s2_t
+  - in-dpdp-act-2023-meity-pdf#s2_u
+  - in-dpdp-act-2023-meity-pdf#s2_w
+  - in-dpdp-act-2023-meity-pdf#s2_x
+  - in-dpdp-act-2023-meity-pdf#s2_y
+  - in-dpdp-act-2023-meity-pdf#s2_za
+  - in-dpdp-act-2023-meity-pdf#s2_zb
+  reason: The definitions of s 2 other than clauses (a), (c), (i), (s), (v) and (z)
+    are not read by any limb or reading of this order; the words they define, where
+    used, are read in their ordinary sense or by the caller.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: definitions_relied_on_by_readings
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_a
+  - in-dpdp-act-2023-meity-pdf#s2_c
+  - in-dpdp-act-2023-meity-pdf#s2_i
+  - in-dpdp-act-2023-meity-pdf#s2_s
+  - in-dpdp-act-2023-meity-pdf#s2_s_i
+  - in-dpdp-act-2023-meity-pdf#s2_s_ii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iv
+  - in-dpdp-act-2023-meity-pdf#s2_s_v
+  - in-dpdp-act-2023-meity-pdf#s2_s_vi
+  - in-dpdp-act-2023-meity-pdf#s2_s_vii
+  - in-dpdp-act-2023-meity-pdf#s2_v
+  - in-dpdp-act-2023-meity-pdf#s2_z
+  reason: 's 2(a) (Appellate Tribunal), (c) (Board), (i) (Data Fiduciary), (s) with
+    its sub-clauses (person), (v) (prescribed) and (z) (Significant Data Fiduciary)
+    are quoted because readings (4), (7), (9) and (10) rely on them; no limb cites
+    them: the caller states the facts they define (the keys appeal_against_board_order_or_direction,
+    appellant_aggrieved, recipient_kind and call_for_seventh_schedule_purpose).'
+  consequence: 'None for a caller: the keys appeal_against_board_order_or_direction,
+    appellant_aggrieved, recipient_kind and call_for_seventh_schedule_purpose carry
+    them.'
+  declaration: not_an_exception
+  debt: true
+- what: board_orders_given_as_examples
+  units:
+  - in-dpdp-act-2023-meity-pdf#s28_4
+  - in-dpdp-act-2023-meity-pdf#s28_10
+  - in-dpdp-act-2023-meity-pdf#s28_11
+  - in-dpdp-act-2023-meity-pdf#s28_12
+  reason: 's 28(4), (10), (11) and (12) give the Board power to close proceedings,
+    issue interim orders, close or proceed under s 33 after an inquiry and warn or
+    impose costs on a complainant; reading (4) gives them as examples of orders and
+    directions that s 29(1) makes appealable; no limb cites them: whether what is
+    appealed against is such an order or direction is the judgement appeal_against_board_order_or_direction
+    (Q6). s 33, to which s 28(11) points, is not pinned: see the Act.'
+  consequence: 'None for a caller: the judgement appeal_against_board_order_or_direction
+    carries them.'
+  declaration: not_an_exception
+  debt: true
+- what: board_procedure_not_read
+  units:
+  - in-dpdp-act-2023-meity-pdf#s28_1
+  - in-dpdp-act-2023-meity-pdf#s28_2
+  - in-dpdp-act-2023-meity-pdf#s28_3
+  - in-dpdp-act-2023-meity-pdf#s28_5
+  - in-dpdp-act-2023-meity-pdf#s28_6
+  - in-dpdp-act-2023-meity-pdf#s28_7
+  - in-dpdp-act-2023-meity-pdf#s28_7_a
+  - in-dpdp-act-2023-meity-pdf#s28_7_b
+  - in-dpdp-act-2023-meity-pdf#s28_7_c
+  - in-dpdp-act-2023-meity-pdf#s28_7_d
+  - in-dpdp-act-2023-meity-pdf#s28_8
+  - in-dpdp-act-2023-meity-pdf#s28_9
+  reason: 'The rest of s 28 sets the Board''s procedure: a digital office, action
+    on an intimation or complaint, whether to inquire, the inquiry under natural justice,
+    the powers of a civil court under the Code of Civil Procedure, 1908 (not pinned:
+    see that Code), no prevention of access to premises, and the assistance of officers.
+    It decides nothing about an appeal or a call for information and is not read by
+    this order.'
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: tribunal_powers_and_procedure
+  units:
+  - in-dpdp-act-2023-meity-pdf#s29_4
+  - in-dpdp-act-2023-meity-pdf#s29_5
+  - in-dpdp-act-2023-meity-pdf#s29_8
+  - in-dpdp-act-2023-meity-pdf#s29_9
+  - in-dpdp-act-2023-meity-pdf#s29_10
+  - in-dpdp-rules-2025-meity-pdf#r22_3
+  - in-dpdp-rules-2025-meity-pdf#r22_3_a
+  - in-dpdp-rules-2025-meity-pdf#r22_3_b
+  reason: 's 29(4) and (5) give the Appellate Tribunal''s powers on an appeal and
+    its duty to send copies of its orders; s 29(8) sets its procedure without prejudice
+    to sections 14A and 16 of the Telecom Regulatory Authority of India Act, 1997;
+    s 29(9) applies section 18 of that Act to an appeal against the Tribunal''s orders;
+    s 29(10) and rule 22(3) make it a digital office not bound by the Code of Civil
+    Procedure, 1908. None decides whether an appeal lies, its period, its filing or
+    the six-month target; the Telecom Regulatory Authority of India Act, 1997 and
+    the Code of Civil Procedure, 1908 are not pinned: see those instruments.'
+  consequence: 'None for a caller of this order: the order does not say how the Tribunal
+    hears or decides an appeal, or what follows its decision.'
+  declaration: not_an_exception
+  debt: true
+- what: intermediary_definition
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r23_3
+  reason: Rule 23(3) gives 'intermediary' the meaning in the Information Technology
+    Act, 2000, which is not pinned (see that Act); reading (9) relies on it, and whether
+    a recipient is an intermediary is the caller's statement in recipient_kind (Q18).
+    No limb cites it.
+  consequence: 'None for a caller: the key recipient_kind carries it.'
+  declaration: not_an_exception
+  debt: true
+- what: seventh_schedule_heading
+  units:
+  - in-dpdp-rules-2025-meity-pdf#sch7
+  reason: The Seventh Schedule's heading points to rule 23(1) and rule 8(3) and gives
+    the column heads. Rule 8(3) is formalised in another order or not at all and is
+    not read here; the rows the limbs cite carry the purposes and authorised persons.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: headings_and_lead_in
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2
+  - in-dpdp-act-2023-meity-pdf#s28
+  - in-dpdp-act-2023-meity-pdf#s29
+  - in-dpdp-rules-2025-meity-pdf#r1
+  - in-dpdp-rules-2025-meity-pdf#r2
+  - in-dpdp-rules-2025-meity-pdf#r22
+  - in-dpdp-rules-2025-meity-pdf#r23
+  reason: These units hold only the lead-in words of s 2, the number of s 28 and s
+    29, or the heading of rules 1, 2, 22 and 23; every limb cites the sub-section
+    or sub-rule it reads. Document structure.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: short_title_of_the_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r1_1
+  reason: Rule 1(1) gives the short title of the Rules. Document structure.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: commencement_of_other_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r1_2
+  - in-dpdp-rules-2025-meity-pdf#r1_3
+  reason: Rule 1(2) and (3) bring other rules into force (rules 1, 2 and 17 to 21
+    on publication; rule 4 after one year); only rule 1(4), which dates rules 22 and
+    23, is read.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: definitions_of_the_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r2_1
+  - in-dpdp-rules-2025-meity-pdf#r2_1_a
+  - in-dpdp-rules-2025-meity-pdf#r2_1_b
+  - in-dpdp-rules-2025-meity-pdf#r2_1_c
+  - in-dpdp-rules-2025-meity-pdf#r2_1_d
+  - in-dpdp-rules-2025-meity-pdf#r2_2
+  reason: Rule 2 defines terms of the Rules and carries the Act's definitions into
+    the Rules; none of the terms it defines is read by a limb of this order.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: unpinned_instruments_named_by_the_text
+  units: []
+  instrument: Telecom Regulatory Authority of India Act, 1997 (24 of 1997); Code of
+    Civil Procedure, 1908 (5 of 1908); Information Technology Act, 2000 (21 of 2000);
+    General Clauses Act, 1897; Limitation Act, 1963; the Digital Personal Data Protection
+    Act 2023 s 17(2)(a), s 33 and the rule-making section, not pinned in this folder;
+    the notifications bringing the Act into force
+  reason: 'The pinned text points to these instruments (the fee, the Tribunal''s procedure,
+    the meaning of intermediary, the officer of Seventh Schedule row 1, the Board''s
+    penalties) or a reading names them (counting periods, commencement); none is pinned,
+    and the order reads none: see the instrument (readings (2), (5), (7), (9), (15);
+    Q2, Q7, Q11, Q18).'
+  consequence: 'The answers say nothing that rests on these instruments: the fee amount,
+    the Tribunal''s procedure and the identity of an intermediary or authorised person
+    are left to them.'
+  declaration: not_an_exception
+  debt: true

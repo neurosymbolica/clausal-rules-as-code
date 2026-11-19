@@ -1,0 +1,655 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_automated_decision_making_uk_automated_decision_making, [decide_uk_automated_decision_making/2, uk_automated_decision_making_status/2, uk_automated_decision_making_checklist/2, uk_automated_decision_making_decision_resolvable/1, uk_automated_decision_making_status_values/1, uk_significant_automated_decision/3, uk_automated_decision_restriction/3, uk_automated_decision_safeguards/3, eu_automated_decision/3, compare_uk_eu_automated_decision/5, significant_decision_based_solely_on_automated_processing/0, not_a_significant_decision_based_solely_on_automated_processing/0, restrictions_not_engaged/0, decision_permitted/0, decision_prohibited/0, safeguards_not_required/0, required_safeguards_in_place/0, required_safeguards_not_in_place/0, same/0, differs/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [(=)/3]).
+:- use_module(library(reif), [if_/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__uk_uk_automated_decision_making_kernel, [uk_automated_decision_making_input_problems/2]).
+:- use_module(m__uk_uk_automated_decision_making_citations, [implements/1, citation/2]).
+
+significant_decision_based_solely_on_automated_processing.
+
+not_a_significant_decision_based_solely_on_automated_processing.
+
+restrictions_not_engaged.
+
+decision_permitted.
+
+decision_prohibited.
+
+safeguards_not_required.
+
+required_safeguards_in_place.
+
+required_safeguards_not_in_place.
+
+same.
+
+differs.
+
+uk_automated_decision_making_status_values([restrictions_not_engaged, decision_permitted, decision_prohibited]).
+
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_1)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_2)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_3)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_3_a)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_3_b)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_3_c)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_4)).
+deferred_provision(uk_secretary_of_state_powers, cite(uk_gdpr_art_22d_5)).
+deferred_provision(eu_safeguard_duty, cite(eu_reg_2016_679_art_22_3)).
+deferred_provision(commencement, cite(uk_si_2026_82_regulation_2)).
+deferred_provision(commencement, cite(uk_si_2026_82_regulation_2_j)).
+deferred_provision(commencement, cite(uk_si_2026_82_regulation_2_z8)).
+deferred_provision(commencement, cite(uk_si_2026_82_regulation_5)).
+deferred_provision(commencement, cite(uk_data_use_and_access_act_2025_section_142_1)).
+deferred_provision(commencement, cite(uk_data_use_and_access_act_2025_section_142_2)).
+deferred_provision(commencement, cite(uk_data_use_and_access_act_2025_section_142_2_h)).
+
+query_keys(uk_significant_automated_decision, [meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject]).
+query_keys(uk_automated_decision_restriction, [meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject, processing_for_the_decision_relies_on_article_6_1_ea, decision_based_entirely_or_partly_on_special_category_data, decision_based_entirely_on_processing_with_explicit_consent, uk_article_9_2_g_applies, decision_necessary_for_a_contract_with_the_data_subject, decision_required_or_authorised_by_law]).
+query_keys(uk_automated_decision_safeguards, [decision_based_entirely_or_partly_on_personal_data, meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject, safeguards_provide_information_about_decisions, safeguards_enable_representations, safeguards_enable_human_intervention, safeguards_enable_contesting]).
+query_keys(eu_automated_decision, [meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject, decision_based_entirely_or_partly_on_special_category_data, decision_necessary_for_a_contract_with_the_data_subject, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, decision_based_on_explicit_consent, article_9_2_a_applies, eu_article_9_2_g_applies, suitable_measures_for_special_category_data_in_place]).
+query_keys(compare_uk_eu_automated_decision, [meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject, processing_for_the_decision_relies_on_article_6_1_ea, decision_based_entirely_or_partly_on_special_category_data, decision_based_entirely_on_processing_with_explicit_consent, uk_article_9_2_g_applies, decision_necessary_for_a_contract_with_the_data_subject, decision_required_or_authorised_by_law, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, decision_based_on_explicit_consent, article_9_2_a_applies, eu_article_9_2_g_applies, suitable_measures_for_special_category_data_in_place]).
+
+query_route(uk_significant_automated_decision, uk_significance_route).
+query_route(uk_automated_decision_restriction, uk_restriction_route).
+query_route(uk_automated_decision_safeguards, uk_safeguards_route).
+query_route(eu_automated_decision, eu_restriction_route).
+query_route(compare_uk_eu_automated_decision, comparison_route).
+
+result_citations(uk_significant_automated_decision, significant_decision_based_solely_on_automated_processing, [cite(uk_gdpr_art_22a_1), cite(uk_gdpr_art_22a_1_a), cite(uk_gdpr_art_22a_1_b), cite(uk_gdpr_art_22a_1_b_i), cite(uk_gdpr_art_22a_1_b_ii), cite(uk_gdpr_art_22a_2)]).
+result_citations(uk_significant_automated_decision, not_a_significant_decision_based_solely_on_automated_processing, [cite(uk_gdpr_art_22a_1), cite(uk_gdpr_art_22a_1_a), cite(uk_gdpr_art_22a_1_b), cite(uk_gdpr_art_22a_1_b_i), cite(uk_gdpr_art_22a_1_b_ii), cite(uk_gdpr_art_22a_2)]).
+result_citations(uk_automated_decision_restriction, restrictions_not_engaged, [cite(uk_gdpr_art_22a_1), cite(uk_gdpr_art_22a_1_a), cite(uk_gdpr_art_22a_1_b), cite(uk_gdpr_art_22a_1_b_i), cite(uk_gdpr_art_22a_1_b_ii), cite(uk_gdpr_art_22a_2)]).
+result_citations(uk_automated_decision_restriction, decision_permitted, [cite(uk_gdpr_art_22b_1), cite(uk_gdpr_art_22b_2), cite(uk_gdpr_art_22b_3), cite(uk_gdpr_art_22b_3_a), cite(uk_gdpr_art_22b_3_a_i), cite(uk_gdpr_art_22b_3_a_ii), cite(uk_gdpr_art_22b_3_b), cite(uk_gdpr_art_22b_4)]).
+result_citations(uk_automated_decision_restriction, decision_prohibited, [cite(uk_gdpr_art_22b_1), cite(uk_gdpr_art_22b_2), cite(uk_gdpr_art_22b_3), cite(uk_gdpr_art_22b_3_a), cite(uk_gdpr_art_22b_3_a_i), cite(uk_gdpr_art_22b_3_a_ii), cite(uk_gdpr_art_22b_3_b), cite(uk_gdpr_art_22b_4)]).
+result_citations(uk_automated_decision_safeguards, safeguards_not_required, [cite(uk_gdpr_art_22a_1), cite(uk_gdpr_art_22a_1_a), cite(uk_gdpr_art_22a_1_b), cite(uk_gdpr_art_22a_1_b_i), cite(uk_gdpr_art_22a_1_b_ii), cite(uk_gdpr_art_22a_2), cite(uk_gdpr_art_22c_1), cite(uk_gdpr_art_22c_1_a), cite(uk_gdpr_art_22c_1_b)]).
+result_citations(uk_automated_decision_safeguards, required_safeguards_in_place, [cite(uk_gdpr_art_22c_1), cite(uk_gdpr_art_22c_1_a), cite(uk_gdpr_art_22c_1_b), cite(uk_gdpr_art_22c_2), cite(uk_gdpr_art_22c_2_a), cite(uk_gdpr_art_22c_2_b), cite(uk_gdpr_art_22c_2_c), cite(uk_gdpr_art_22c_2_d)]).
+result_citations(uk_automated_decision_safeguards, required_safeguards_not_in_place, [cite(uk_gdpr_art_22c_1), cite(uk_gdpr_art_22c_1_a), cite(uk_gdpr_art_22c_1_b), cite(uk_gdpr_art_22c_2), cite(uk_gdpr_art_22c_2_a), cite(uk_gdpr_art_22c_2_b), cite(uk_gdpr_art_22c_2_c), cite(uk_gdpr_art_22c_2_d)]).
+result_citations(eu_automated_decision, restrictions_not_engaged, [cite(eu_reg_2016_679_art_22_1)]).
+result_citations(eu_automated_decision, decision_permitted, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_2_b), cite(eu_reg_2016_679_art_22_2_c), cite(eu_reg_2016_679_art_22_4)]).
+result_citations(eu_automated_decision, decision_prohibited, [cite(eu_reg_2016_679_art_22_1), cite(eu_reg_2016_679_art_22_2), cite(eu_reg_2016_679_art_22_2_a), cite(eu_reg_2016_679_art_22_2_b), cite(eu_reg_2016_679_art_22_2_c), cite(eu_reg_2016_679_art_22_4)]).
+result_citations(compare_uk_eu_automated_decision, same, []).
+result_citations(compare_uk_eu_automated_decision, differs, []).
+
+referral(uk_significant_automated_decision, meaningful_human_involvement_in_the_decision, cite(uk_gdpr_art_22a_1_a)).
+referral(uk_significant_automated_decision, decision_produces_a_legal_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_i)).
+referral(uk_significant_automated_decision, decision_has_a_similarly_significant_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_ii)).
+referral(uk_automated_decision_restriction, meaningful_human_involvement_in_the_decision, cite(uk_gdpr_art_22a_1_a)).
+referral(uk_automated_decision_restriction, decision_produces_a_legal_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_i)).
+referral(uk_automated_decision_restriction, decision_has_a_similarly_significant_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_ii)).
+referral(uk_automated_decision_restriction, decision_based_entirely_on_processing_with_explicit_consent, cite(uk_gdpr_art_22b_2)).
+referral(uk_automated_decision_restriction, uk_article_9_2_g_applies, cite(uk_gdpr_art_22b_3_b)).
+referral(uk_automated_decision_restriction, decision_necessary_for_a_contract_with_the_data_subject, cite(uk_gdpr_art_22b_3_a_i)).
+referral(uk_automated_decision_restriction, decision_required_or_authorised_by_law, cite(uk_gdpr_art_22b_3_a_ii)).
+referral(uk_automated_decision_safeguards, meaningful_human_involvement_in_the_decision, cite(uk_gdpr_art_22a_1_a)).
+referral(uk_automated_decision_safeguards, decision_produces_a_legal_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_i)).
+referral(uk_automated_decision_safeguards, decision_has_a_similarly_significant_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_ii)).
+referral(uk_automated_decision_safeguards, safeguards_provide_information_about_decisions, cite(uk_gdpr_art_22c_2_a)).
+referral(uk_automated_decision_safeguards, safeguards_enable_representations, cite(uk_gdpr_art_22c_2_b)).
+referral(uk_automated_decision_safeguards, safeguards_enable_human_intervention, cite(uk_gdpr_art_22c_2_c)).
+referral(uk_automated_decision_safeguards, safeguards_enable_contesting, cite(uk_gdpr_art_22c_2_d)).
+referral(eu_automated_decision, meaningful_human_involvement_in_the_decision, cite(eu_reg_2016_679_art_22_1)).
+referral(eu_automated_decision, decision_produces_a_legal_effect_for_the_data_subject, cite(eu_reg_2016_679_art_22_1)).
+referral(eu_automated_decision, decision_has_a_similarly_significant_effect_for_the_data_subject, cite(eu_reg_2016_679_art_22_1)).
+referral(eu_automated_decision, decision_necessary_for_a_contract_with_the_data_subject, cite(eu_reg_2016_679_art_22_2_a)).
+referral(eu_automated_decision, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, cite(eu_reg_2016_679_art_22_2_b)).
+referral(eu_automated_decision, decision_based_on_explicit_consent, cite(eu_reg_2016_679_art_22_2_c)).
+referral(eu_automated_decision, article_9_2_a_applies, cite(eu_reg_2016_679_art_22_4)).
+referral(eu_automated_decision, eu_article_9_2_g_applies, cite(eu_reg_2016_679_art_22_4)).
+referral(eu_automated_decision, suitable_measures_for_special_category_data_in_place, cite(eu_reg_2016_679_art_22_4)).
+referral(compare_uk_eu_automated_decision, meaningful_human_involvement_in_the_decision, cite(uk_gdpr_art_22a_1_a)).
+referral(compare_uk_eu_automated_decision, decision_produces_a_legal_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_i)).
+referral(compare_uk_eu_automated_decision, decision_has_a_similarly_significant_effect_for_the_data_subject, cite(uk_gdpr_art_22a_1_b_ii)).
+referral(compare_uk_eu_automated_decision, decision_based_entirely_on_processing_with_explicit_consent, cite(uk_gdpr_art_22b_2)).
+referral(compare_uk_eu_automated_decision, uk_article_9_2_g_applies, cite(uk_gdpr_art_22b_3_b)).
+referral(compare_uk_eu_automated_decision, decision_necessary_for_a_contract_with_the_data_subject, cite(uk_gdpr_art_22b_3_a_i)).
+referral(compare_uk_eu_automated_decision, decision_required_or_authorised_by_law, cite(uk_gdpr_art_22b_3_a_ii)).
+referral(compare_uk_eu_automated_decision, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, cite(eu_reg_2016_679_art_22_2_b)).
+referral(compare_uk_eu_automated_decision, decision_based_on_explicit_consent, cite(eu_reg_2016_679_art_22_2_c)).
+referral(compare_uk_eu_automated_decision, article_9_2_a_applies, cite(eu_reg_2016_679_art_22_4)).
+referral(compare_uk_eu_automated_decision, eu_article_9_2_g_applies, cite(eu_reg_2016_679_art_22_4)).
+referral(compare_uk_eu_automated_decision, suitable_measures_for_special_category_data_in_place, cite(eu_reg_2016_679_art_22_4)).
+
+uk_safeguard_measure(safeguards_provide_information_about_decisions, cite(uk_gdpr_art_22c_2_a)).
+uk_safeguard_measure(safeguards_enable_representations, cite(uk_gdpr_art_22c_2_b)).
+uk_safeguard_measure(safeguards_enable_human_intervention, cite(uk_gdpr_art_22c_2_c)).
+uk_safeguard_measure(safeguards_enable_contesting, cite(uk_gdpr_art_22c_2_d)).
+
+checklist_row(article_22a_significant_decision, uk_significant_automated_decision, cite(uk_gdpr_art_22a_1)).
+checklist_row(article_22b_restriction, uk_automated_decision_restriction, cite(uk_gdpr_art_22b_1)).
+checklist_row(article_22c_safeguards, uk_automated_decision_safeguards, cite(uk_gdpr_art_22c_1)).
+checklist_row(eu_article_22_restriction, eu_automated_decision, cite(eu_reg_2016_679_art_22_1)).
+
+uk_significant_automated_decision(Profile, Result, Citations) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    query_answer(Problems, uk_significant_automated_decision, Profile, Result, Citations).
+
+uk_automated_decision_restriction(Profile, Result, Citations) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    query_answer(Problems, uk_automated_decision_restriction, Profile, Result, Citations).
+
+uk_automated_decision_safeguards(Profile, Result, Citations) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    query_answer(Problems, uk_automated_decision_safeguards, Profile, Result, Citations).
+
+eu_automated_decision(Profile, Result, Citations) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    query_answer(Problems, eu_automated_decision, Profile, Result, Citations).
+
+compare_uk_eu_automated_decision(Profile, UkResult, EuResult, Difference, ChangedBy) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    comparison_answer(Problems, Profile, UkResult, EuResult, Difference, ChangedBy).
+
+query_answer([], Query, Profile, Result, Citations) :-
+    determine(Query, Profile, Result, Citations).
+query_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+
+comparison_answer([], Profile, UkResult, EuResult, Difference, ChangedBy) :-
+    determine(uk_automated_decision_restriction, Profile, UkResult, UkCitations),
+    determine(eu_automated_decision, Profile, EuResult, _),
+    determine(compare_uk_eu_automated_decision, Profile, Difference, _),
+    changed_by(Difference, UkCitations, ChangedBy).
+comparison_answer([Problem|Problems], _, input_problems([Problem|Problems]), input_problems([Problem|Problems]), input_problems([Problem|Problems]), []).
+
+changed_by(differs, UkCitations, UkCitations).
+changed_by(same, _, []).
+changed_by(indeterminate(_), _, []).
+changed_by(needs_legal_review(_, _), _, []).
+
+determine(Query, Profile, Result, Citations) :-
+    query_keys(Query, Keys),
+    observe(Keys, Profile, Observations),
+    frame_of(Observations, Frame),
+    query_route(Query, Route),
+    possible_results(Route, Frame, Results),
+    settle(Results, Query, Route, Observations, Frame, Result, Citations).
+
+possible_results(Route, Frame, Results) :-
+    findall(Result, call(Route, Frame, [], _, Result), AllResults),
+    sort(AllResults, Results).
+
+settle([Result], Query, _, _, _, Result, Citations) :-
+    result_citations(Query, Result, Citations).
+settle([_, _|_], Query, Route, Observations, Frame, Status, []) :-
+    status_rule(Query, Route, Observations, Frame, Status).
+
+observe([], _, []).
+observe([Key|Keys], Profile, [Key - Observation|Observations]) :-
+    key_observation(Profile, Key, Observation),
+    observe(Keys, Profile, Observations).
+
+key_observation(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_observation(Profile, Key, given(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+frame_of([], []).
+frame_of([Key - Observation|Observations], [Key - State|Frame]) :-
+    observation_state(Observation, State),
+    frame_of(Observations, Frame).
+
+observation_state(absent, open).
+observation_state(given(true), true).
+observation_state(given(false), false).
+observation_state(given(unsure), open).
+
+frame_state(Key, [Key - State|_], State).
+frame_state(Key, [Other - _|Frame], State) :-
+    dif(Key, Other),
+    frame_state(Key, Frame, State).
+
+frame_set([], _, _, []).
+frame_set([Key - _|Frame], Key, Value, [Key - Value|Frame]).
+frame_set([Other - State|Frame], Key, Value, [Other - State|NewFrame]) :-
+    dif(Other, Key),
+    frame_set(Frame, Key, Value, NewFrame).
+
+key_value(Frame, Key, AssignmentIn, AssignmentOut, Value) :-
+    frame_state(Key, Frame, State),
+    state_value(State, Key, AssignmentIn, AssignmentOut, Value).
+
+state_value(true, _, Assignment, Assignment, true).
+state_value(false, _, Assignment, Assignment, false).
+state_value(open, Key, AssignmentIn, AssignmentOut, Value) :-
+    assigned_value(Key, AssignmentIn, Found),
+    open_value(Found, Key, AssignmentIn, AssignmentOut, Value).
+
+assigned_value(_, [], none).
+assigned_value(Key, [Key - Value|_], found(Value)).
+assigned_value(Key, [Other - _|Assignment], Found) :-
+    dif(Key, Other),
+    assigned_value(Key, Assignment, Found).
+
+open_value(found(Value), _, Assignment, Assignment, Value).
+open_value(none, Key, Assignment, [Key - Value|Assignment], Value) :-
+    member(Value, [true, false]).
+
+status_rule(Query, Route, Observations, Frame, Status) :-
+    absent_keys(Observations, AbsentKeys),
+    needed_keys(AbsentKeys, Route, Frame, NeededKeys),
+    status_from_needed(NeededKeys, Query, Route, Observations, Frame, Status).
+
+status_from_needed([First|Others], _, Route, _, Frame, indeterminate([Key])) :-
+    first_not_behind([First|Others], [First|Others], Route, Frame, First, Key).
+status_from_needed([], Query, Route, Observations, Frame, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)])) :-
+    unsure_keys(Observations, UnsureKeys),
+    first_changing(UnsureKeys, Route, Frame, Key),
+    referral(Query, Key, Citation),
+    relied_pairs(Observations, Pairs).
+
+absent_keys([], []).
+absent_keys([Key - absent|Observations], [Key|Keys]) :-
+    absent_keys(Observations, Keys).
+absent_keys([_ - given(_)|Observations], Keys) :-
+    absent_keys(Observations, Keys).
+
+unsure_keys([], []).
+unsure_keys([Key - given(unsure)|Observations], [Key|Keys]) :-
+    unsure_keys(Observations, Keys).
+unsure_keys([_ - given(true)|Observations], Keys) :-
+    unsure_keys(Observations, Keys).
+unsure_keys([_ - given(false)|Observations], Keys) :-
+    unsure_keys(Observations, Keys).
+unsure_keys([_ - absent|Observations], Keys) :-
+    unsure_keys(Observations, Keys).
+
+relied_pairs([], []).
+relied_pairs([Key - given(Value)|Observations], [Key - Value|Pairs]) :-
+    relied_pairs(Observations, Pairs).
+relied_pairs([_ - absent|Observations], Pairs) :-
+    relied_pairs(Observations, Pairs).
+
+needed_keys([], _, _, []).
+needed_keys([Key|Keys], Route, Frame, NeededKeys) :-
+    can_change_t(Route, Frame, Key, Truth),
+    needed_keys(Keys, Route, Frame, LaterKeys),
+    keep_key(Truth, Key, LaterKeys, NeededKeys).
+
+keep_key(true, Key, Keys, [Key|Keys]).
+keep_key(false, _, Keys, Keys).
+
+can_change_t(Route, Frame, Key, Truth) :-
+    frame_set(Frame, Key, true, FrameTrue),
+    frame_set(Frame, Key, false, FrameFalse),
+    findall(ResultTrue - ResultFalse, completion_pair(Route, FrameTrue, FrameFalse, ResultTrue, ResultFalse), Pairs),
+    differing_pair_t(Pairs, Truth).
+
+completion_pair(Route, FrameTrue, FrameFalse, ResultTrue, ResultFalse) :-
+    call(Route, FrameTrue, [], Assignment, ResultTrue),
+    call(Route, FrameFalse, Assignment, _, ResultFalse).
+
+differing_pair_t([], false).
+differing_pair_t([ResultTrue - ResultFalse|Pairs], Truth) :-
+    if_(ResultTrue = ResultFalse, differing_pair_t(Pairs, Truth), Truth = true).
+
+first_changing([Key|Keys], Route, Frame, Found) :-
+    can_change_t(Route, Frame, Key, Truth),
+    first_changing_by(Truth, Key, Keys, Route, Frame, Found).
+
+first_changing_by(true, Key, _, _, _, Key).
+first_changing_by(false, _, Keys, Route, Frame, Found) :-
+    first_changing(Keys, Route, Frame, Found).
+
+first_not_behind([], _, _, _, Fallback, Fallback).
+first_not_behind([Key|Keys], NeededKeys, Route, Frame, Fallback, Found) :-
+    behind_some_t(NeededKeys, Key, Route, Frame, Truth),
+    pick_not_behind(Truth, Key, Keys, NeededKeys, Route, Frame, Fallback, Found).
+
+pick_not_behind(false, Key, _, _, _, _, _, Key).
+pick_not_behind(true, _, Keys, NeededKeys, Route, Frame, Fallback, Found) :-
+    first_not_behind(Keys, NeededKeys, Route, Frame, Fallback, Found).
+
+behind_some_t([], _, _, _, false).
+behind_some_t([Other|Others], Key, Route, Frame, Truth) :-
+    Other == Key,
+    behind_some_t(Others, Key, Route, Frame, Truth).
+behind_some_t([Other|Others], Key, Route, Frame, Truth) :-
+    dif(Other, Key),
+    behind_t(Route, Frame, Key, Other, OtherTruth),
+    behind_or(OtherTruth, Others, Key, Route, Frame, Truth).
+
+behind_or(true, _, _, _, _, true).
+behind_or(false, Others, Key, Route, Frame, Truth) :-
+    behind_some_t(Others, Key, Route, Frame, Truth).
+
+behind_t(Route, Frame, Key, Other, Truth) :-
+    frame_set(Frame, Other, true, FrameOtherTrue),
+    frame_set(Frame, Other, false, FrameOtherFalse),
+    can_change_t(Route, FrameOtherTrue, Key, KeyWithOtherTrue),
+    can_change_t(Route, FrameOtherFalse, Key, KeyWithOtherFalse),
+    frame_set(Frame, Key, true, FrameKeyTrue),
+    frame_set(Frame, Key, false, FrameKeyFalse),
+    can_change_t(Route, FrameKeyTrue, Other, OtherWithKeyTrue),
+    can_change_t(Route, FrameKeyFalse, Other, OtherWithKeyFalse),
+    behind_truth(KeyWithOtherTrue, KeyWithOtherFalse, OtherWithKeyTrue, OtherWithKeyFalse, Truth).
+
+behind_truth(true, false, true, true, true).
+behind_truth(false, true, true, true, true).
+behind_truth(true, true, _, _, false).
+behind_truth(false, false, _, _, false).
+behind_truth(true, false, false, _, false).
+behind_truth(true, false, true, false, false).
+behind_truth(false, true, false, _, false).
+behind_truth(false, true, true, false, false).
+
+solely_significant(Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(uk_gdpr_art_22a_2),
+    key_value(Frame, meaningful_human_involvement_in_the_decision, AssignmentIn, AssignmentMiddle, Involvement),
+    involvement_class(Involvement, Frame, AssignmentMiddle, AssignmentOut, Class).
+
+involvement_class(true, _, Assignment, Assignment, not_solely_significant) :-
+    implements(uk_gdpr_art_22a_1_a).
+involvement_class(false, Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(uk_gdpr_art_22a_1_a),
+    key_value(Frame, decision_produces_a_legal_effect_for_the_data_subject, AssignmentIn, AssignmentMiddle, LegalEffect),
+    legal_effect_class(LegalEffect, Frame, AssignmentMiddle, AssignmentOut, Class).
+
+legal_effect_class(true, _, Assignment, Assignment, solely_significant) :-
+    implements(uk_gdpr_art_22a_1_b_i).
+legal_effect_class(false, Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(uk_gdpr_art_22a_1_b_i),
+    key_value(Frame, decision_has_a_similarly_significant_effect_for_the_data_subject, AssignmentIn, AssignmentOut, SimilarEffect),
+    similar_effect_class(SimilarEffect, Class).
+
+similar_effect_class(true, solely_significant) :-
+    implements(uk_gdpr_art_22a_1_b_ii).
+similar_effect_class(false, not_solely_significant) :-
+    implements(uk_gdpr_art_22a_1_b_ii).
+
+uk_significance_route(Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22a_1),
+    solely_significant(Frame, AssignmentIn, AssignmentOut, Class),
+    significance_result(Class, Result).
+
+significance_result(solely_significant, significant_decision_based_solely_on_automated_processing) :-
+    implements(uk_gdpr_art_22a_1_b).
+significance_result(not_solely_significant, not_a_significant_decision_based_solely_on_automated_processing) :-
+    implements(uk_gdpr_art_22a_1_b).
+
+uk_restriction_route(Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22a_1),
+    solely_significant(Frame, AssignmentIn, AssignmentMiddle, Class),
+    uk_restriction_by_class(Class, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_restriction_by_class(not_solely_significant, _, Assignment, Assignment, restrictions_not_engaged) :-
+    implements(uk_gdpr_art_22a_1).
+uk_restriction_by_class(solely_significant, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22b_4),
+    key_value(Frame, processing_for_the_decision_relies_on_article_6_1_ea, AssignmentIn, AssignmentMiddle, LegitimateInterest),
+    uk_legitimate_interest_route(LegitimateInterest, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_legitimate_interest_route(true, _, Assignment, Assignment, decision_prohibited) :-
+    implements(uk_gdpr_art_22b_4).
+uk_legitimate_interest_route(false, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22b_1),
+    key_value(Frame, decision_based_entirely_or_partly_on_special_category_data, AssignmentIn, AssignmentMiddle, SpecialCategory),
+    uk_special_category_route(SpecialCategory, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_special_category_route(false, _, Assignment, Assignment, decision_permitted) :-
+    implements(uk_gdpr_art_22b_1).
+uk_special_category_route(true, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22b_2),
+    key_value(Frame, decision_based_entirely_on_processing_with_explicit_consent, AssignmentIn, AssignmentMiddle, ExplicitConsent),
+    uk_first_condition_route(ExplicitConsent, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_first_condition_route(true, _, Assignment, Assignment, decision_permitted) :-
+    implements(uk_gdpr_art_22b_2).
+uk_first_condition_route(false, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22b_3),
+    uk_second_condition(Frame, AssignmentIn, AssignmentOut, Condition),
+    uk_second_condition_route(Condition, Result).
+
+uk_second_condition_route(met, decision_permitted) :-
+    implements(uk_gdpr_art_22b_3).
+uk_second_condition_route(failed, decision_prohibited) :-
+    implements(uk_gdpr_art_22b_1).
+
+uk_second_condition(Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(uk_gdpr_art_22b_3_b),
+    key_value(Frame, uk_article_9_2_g_applies, AssignmentIn, AssignmentMiddle, PointG),
+    uk_point_g_route(PointG, Frame, AssignmentMiddle, AssignmentOut, Condition).
+
+uk_point_g_route(false, _, Assignment, Assignment, failed) :-
+    implements(uk_gdpr_art_22b_3_b).
+uk_point_g_route(true, Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(uk_gdpr_art_22b_3_a),
+    key_value(Frame, decision_necessary_for_a_contract_with_the_data_subject, AssignmentIn, AssignmentMiddle, Contract),
+    uk_contract_route(Contract, Frame, AssignmentMiddle, AssignmentOut, Condition).
+
+uk_contract_route(true, _, Assignment, Assignment, met) :-
+    implements(uk_gdpr_art_22b_3_a_i).
+uk_contract_route(false, Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(uk_gdpr_art_22b_3_a_i),
+    key_value(Frame, decision_required_or_authorised_by_law, AssignmentIn, AssignmentOut, Law),
+    uk_law_route(Law, Condition).
+
+uk_law_route(true, met) :-
+    implements(uk_gdpr_art_22b_3_a_ii).
+uk_law_route(false, failed) :-
+    implements(uk_gdpr_art_22b_3_a_ii).
+
+uk_safeguards_route(Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22c_1),
+    solely_significant(Frame, AssignmentIn, AssignmentMiddle, Class),
+    uk_safeguards_by_class(Class, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_safeguards_by_class(not_solely_significant, _, Assignment, Assignment, safeguards_not_required) :-
+    implements(uk_gdpr_art_22c_1_b).
+uk_safeguards_by_class(solely_significant, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22c_1_a),
+    key_value(Frame, decision_based_entirely_or_partly_on_personal_data, AssignmentIn, AssignmentMiddle, PersonalData),
+    uk_personal_data_route(PersonalData, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+uk_personal_data_route(false, _, Assignment, Assignment, safeguards_not_required) :-
+    implements(uk_gdpr_art_22c_1_a).
+uk_personal_data_route(true, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(uk_gdpr_art_22c_2),
+    findall(MeasureKey, uk_safeguard_measure(MeasureKey, _), MeasureKeys),
+    uk_measures_route(MeasureKeys, Frame, AssignmentIn, AssignmentOut, Measures),
+    uk_measures_result(Measures, Result).
+
+uk_measures_route([], _, Assignment, Assignment, in_place) :-
+    implements(uk_gdpr_art_22c_2).
+uk_measures_route([MeasureKey|MeasureKeys], Frame, AssignmentIn, AssignmentOut, Measures) :-
+    implements(uk_gdpr_art_22c_2),
+    key_value(Frame, MeasureKey, AssignmentIn, AssignmentMiddle, Measure),
+    uk_measure_value_route(Measure, MeasureKeys, Frame, AssignmentMiddle, AssignmentOut, Measures).
+
+uk_measure_value_route(false, _, _, Assignment, Assignment, not_in_place) :-
+    implements(uk_gdpr_art_22c_2).
+uk_measure_value_route(true, MeasureKeys, Frame, AssignmentIn, AssignmentOut, Measures) :-
+    implements(uk_gdpr_art_22c_2),
+    uk_measures_route(MeasureKeys, Frame, AssignmentIn, AssignmentOut, Measures).
+
+uk_measures_result(in_place, required_safeguards_in_place) :-
+    implements(uk_gdpr_art_22c_1).
+uk_measures_result(not_in_place, required_safeguards_not_in_place) :-
+    implements(uk_gdpr_art_22c_1).
+
+eu_within_paragraph_1(Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(eu_reg_2016_679_art_22_1),
+    key_value(Frame, meaningful_human_involvement_in_the_decision, AssignmentIn, AssignmentMiddle, Involvement),
+    eu_involvement_class(Involvement, Frame, AssignmentMiddle, AssignmentOut, Class).
+
+eu_involvement_class(true, _, Assignment, Assignment, not_solely_significant) :-
+    implements(eu_reg_2016_679_art_22_1).
+eu_involvement_class(false, Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(eu_reg_2016_679_art_22_1),
+    key_value(Frame, decision_produces_a_legal_effect_for_the_data_subject, AssignmentIn, AssignmentMiddle, LegalEffect),
+    eu_legal_effect_class(LegalEffect, Frame, AssignmentMiddle, AssignmentOut, Class).
+
+eu_legal_effect_class(true, _, Assignment, Assignment, solely_significant) :-
+    implements(eu_reg_2016_679_art_22_1).
+eu_legal_effect_class(false, Frame, AssignmentIn, AssignmentOut, Class) :-
+    implements(eu_reg_2016_679_art_22_1),
+    key_value(Frame, decision_has_a_similarly_significant_effect_for_the_data_subject, AssignmentIn, AssignmentOut, SimilarEffect),
+    eu_similar_effect_class(SimilarEffect, Class).
+
+eu_similar_effect_class(true, solely_significant) :-
+    implements(eu_reg_2016_679_art_22_1).
+eu_similar_effect_class(false, not_solely_significant) :-
+    implements(eu_reg_2016_679_art_22_1).
+
+eu_restriction_route(Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(eu_reg_2016_679_art_22_1),
+    eu_within_paragraph_1(Frame, AssignmentIn, AssignmentMiddle, Class),
+    eu_restriction_by_class(Class, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+eu_restriction_by_class(not_solely_significant, _, Assignment, Assignment, restrictions_not_engaged) :-
+    implements(eu_reg_2016_679_art_22_1).
+eu_restriction_by_class(solely_significant, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(eu_reg_2016_679_art_22_2),
+    eu_exception(Frame, AssignmentIn, AssignmentMiddle, Exception),
+    eu_exception_route(Exception, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+eu_exception(Frame, AssignmentIn, AssignmentOut, Exception) :-
+    implements(eu_reg_2016_679_art_22_2_a),
+    key_value(Frame, decision_necessary_for_a_contract_with_the_data_subject, AssignmentIn, AssignmentMiddle, Contract),
+    eu_contract_route(Contract, Frame, AssignmentMiddle, AssignmentOut, Exception).
+
+eu_contract_route(true, _, Assignment, Assignment, applies) :-
+    implements(eu_reg_2016_679_art_22_2_a).
+eu_contract_route(false, Frame, AssignmentIn, AssignmentOut, Exception) :-
+    implements(eu_reg_2016_679_art_22_2_b),
+    key_value(Frame, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, AssignmentIn, AssignmentMiddle, Law),
+    eu_law_route(Law, Frame, AssignmentMiddle, AssignmentOut, Exception).
+
+eu_law_route(true, _, Assignment, Assignment, applies) :-
+    implements(eu_reg_2016_679_art_22_2_b).
+eu_law_route(false, Frame, AssignmentIn, AssignmentOut, Exception) :-
+    implements(eu_reg_2016_679_art_22_2_c),
+    key_value(Frame, decision_based_on_explicit_consent, AssignmentIn, AssignmentOut, ExplicitConsent),
+    eu_consent_route(ExplicitConsent, Exception).
+
+eu_consent_route(true, applies) :-
+    implements(eu_reg_2016_679_art_22_2_c).
+eu_consent_route(false, none) :-
+    implements(eu_reg_2016_679_art_22_2_c).
+
+eu_exception_route(none, _, Assignment, Assignment, decision_prohibited) :-
+    implements(eu_reg_2016_679_art_22_2).
+eu_exception_route(applies, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(eu_reg_2016_679_art_22_4),
+    key_value(Frame, decision_based_entirely_or_partly_on_special_category_data, AssignmentIn, AssignmentMiddle, SpecialCategory),
+    eu_special_category_route(SpecialCategory, Frame, AssignmentMiddle, AssignmentOut, Result).
+
+eu_special_category_route(false, _, Assignment, Assignment, decision_permitted) :-
+    implements(eu_reg_2016_679_art_22_4).
+eu_special_category_route(true, Frame, AssignmentIn, AssignmentOut, Result) :-
+    implements(eu_reg_2016_679_art_22_4),
+    eu_paragraph_4(Frame, AssignmentIn, AssignmentOut, Condition),
+    eu_paragraph_4_route(Condition, Result).
+
+eu_paragraph_4_route(met, decision_permitted) :-
+    implements(eu_reg_2016_679_art_22_4).
+eu_paragraph_4_route(failed, decision_prohibited) :-
+    implements(eu_reg_2016_679_art_22_4).
+
+eu_paragraph_4(Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(eu_reg_2016_679_art_22_4),
+    key_value(Frame, suitable_measures_for_special_category_data_in_place, AssignmentIn, AssignmentMiddle, SuitableMeasures),
+    eu_suitable_measures_route(SuitableMeasures, Frame, AssignmentMiddle, AssignmentOut, Condition).
+
+eu_suitable_measures_route(false, _, Assignment, Assignment, failed) :-
+    implements(eu_reg_2016_679_art_22_4).
+eu_suitable_measures_route(true, Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(eu_reg_2016_679_art_22_4),
+    key_value(Frame, article_9_2_a_applies, AssignmentIn, AssignmentMiddle, PointA),
+    eu_point_a_route(PointA, Frame, AssignmentMiddle, AssignmentOut, Condition).
+
+eu_point_a_route(true, _, Assignment, Assignment, met) :-
+    implements(eu_reg_2016_679_art_22_4).
+eu_point_a_route(false, Frame, AssignmentIn, AssignmentOut, Condition) :-
+    implements(eu_reg_2016_679_art_22_4),
+    key_value(Frame, eu_article_9_2_g_applies, AssignmentIn, AssignmentOut, PointG),
+    eu_point_g_route(PointG, Condition).
+
+eu_point_g_route(true, met) :-
+    implements(eu_reg_2016_679_art_22_4).
+eu_point_g_route(false, failed) :-
+    implements(eu_reg_2016_679_art_22_4).
+
+comparison_route(Frame, AssignmentIn, AssignmentOut, Difference) :-
+    uk_restriction_route(Frame, AssignmentIn, AssignmentMiddle, UkResult),
+    eu_restriction_route(Frame, AssignmentMiddle, AssignmentOut, EuResult),
+    difference_of(UkResult, EuResult, Difference).
+
+difference_of(Result, Result, same).
+difference_of(UkResult, EuResult, differs) :-
+    dif(UkResult, EuResult).
+
+decide_uk_automated_decision_making(Profile, uk_automated_decision_making_verdict(Status, Citations)) :-
+    uk_automated_decision_restriction(Profile, Status, Citations).
+
+uk_automated_decision_making_status(Profile, Status) :-
+    decide_uk_automated_decision_making(Profile, uk_automated_decision_making_verdict(Status, _)).
+
+uk_automated_decision_making_checklist(Profile, Items) :-
+    findall(row(Identifier, Query, Citation), checklist_row(Identifier, Query, Citation), Rows),
+    maplist(checklist_item(Profile), Rows, Items).
+
+checklist_item(Profile, row(Identifier, Query, Citation), item(Identifier, Status, Citation)) :-
+    uk_automated_decision_making_input_problems(Profile, Problems),
+    query_answer(Problems, Query, Profile, Status, _).
+
+uk_automated_decision_making_decision_resolvable(Profile) :-
+    decide_uk_automated_decision_making(Profile, _).
+
+recorded_deferred_citation(cite(Key)) :-
+    citation(Key, _).
+
+test(every_deferred_provision_is_recorded) :-
+    findall(Citation, deferred_provision(_, Citation), Citations),
+    length(Citations, 16),
+    maplist(recorded_deferred_citation, Citations).
+test(solely_automated_with_legal_effect_is_significant) :-
+    uk_significant_automated_decision([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true)], Result, Citations),
+    Result == significant_decision_based_solely_on_automated_processing,
+    Citations == [cite(uk_gdpr_art_22a_1), cite(uk_gdpr_art_22a_1_a), cite(uk_gdpr_art_22a_1_b), cite(uk_gdpr_art_22a_1_b_i), cite(uk_gdpr_art_22a_1_b_ii), cite(uk_gdpr_art_22a_2)].
+test(human_involvement_is_not_significant) :-
+    uk_significant_automated_decision([attribute(meaningful_human_involvement_in_the_decision, true)], not_a_significant_decision_based_solely_on_automated_processing, _).
+test(empty_profile_names_the_first_missing_key) :-
+    findall(Result - Citations, uk_significant_automated_decision([], Result, Citations), Answers),
+    Answers == [indeterminate([meaningful_human_involvement_in_the_decision]) - []].
+test(unsure_involvement_is_referred) :-
+    uk_significant_automated_decision([attribute(meaningful_human_involvement_in_the_decision, unsure), attribute(decision_produces_a_legal_effect_for_the_data_subject, true)], Result, []),
+    Result == needs_legal_review(open_textured(meaningful_human_involvement_in_the_decision, cite(uk_gdpr_art_22a_1_a)), [inputs_relied_on([meaningful_human_involvement_in_the_decision - unsure, decision_produces_a_legal_effect_for_the_data_subject - true])]).
+test(legitimate_interest_reliance_is_prohibited) :-
+    uk_automated_decision_restriction([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_has_a_similarly_significant_effect_for_the_data_subject, true), attribute(processing_for_the_decision_relies_on_article_6_1_ea, true)], decision_prohibited, _).
+test(special_category_failing_both_conditions_is_prohibited_whatever_6_1_ea) :-
+    findall(Result, uk_automated_decision_restriction([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(decision_based_entirely_or_partly_on_special_category_data, true), attribute(decision_based_entirely_on_processing_with_explicit_consent, false), attribute(uk_article_9_2_g_applies, false)], Result, _), Results),
+    Results == [decision_prohibited].
+test(no_special_category_and_no_6_1_ea_is_permitted) :-
+    uk_automated_decision_restriction([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(processing_for_the_decision_relies_on_article_6_1_ea, false), attribute(decision_based_entirely_or_partly_on_special_category_data, false)], decision_permitted, Citations),
+    Citations == [cite(uk_gdpr_art_22b_1), cite(uk_gdpr_art_22b_2), cite(uk_gdpr_art_22b_3), cite(uk_gdpr_art_22b_3_a), cite(uk_gdpr_art_22b_3_a_i), cite(uk_gdpr_art_22b_3_a_ii), cite(uk_gdpr_art_22b_3_b), cite(uk_gdpr_art_22b_4)].
+test(a_missing_measure_is_not_in_place) :-
+    uk_automated_decision_safeguards([attribute(decision_based_entirely_or_partly_on_personal_data, true), attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(safeguards_provide_information_about_decisions, false)], required_safeguards_not_in_place, _).
+test(eu_without_exception_is_prohibited) :-
+    eu_automated_decision([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(decision_necessary_for_a_contract_with_the_data_subject, false), attribute(decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, false), attribute(decision_based_on_explicit_consent, false)], decision_prohibited, _).
+test(uk_permits_what_eu_prohibits) :-
+    findall(Uk - Eu - Difference - ChangedBy, compare_uk_eu_automated_decision([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(processing_for_the_decision_relies_on_article_6_1_ea, false), attribute(decision_based_entirely_or_partly_on_special_category_data, false), attribute(decision_necessary_for_a_contract_with_the_data_subject, false), attribute(decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, false), attribute(decision_based_on_explicit_consent, false)], Uk, Eu, Difference, ChangedBy), Answers),
+    Answers == [decision_permitted - decision_prohibited - differs - [cite(uk_gdpr_art_22b_1), cite(uk_gdpr_art_22b_2), cite(uk_gdpr_art_22b_3), cite(uk_gdpr_art_22b_3_a), cite(uk_gdpr_art_22b_3_a_i), cite(uk_gdpr_art_22b_3_a_ii), cite(uk_gdpr_art_22b_3_b), cite(uk_gdpr_art_22b_4)]].
+test(comparison_names_the_missing_6_1_ea) :-
+    compare_uk_eu_automated_decision([attribute(meaningful_human_involvement_in_the_decision, false), attribute(decision_produces_a_legal_effect_for_the_data_subject, true), attribute(decision_based_entirely_or_partly_on_special_category_data, false), attribute(decision_necessary_for_a_contract_with_the_data_subject, false), attribute(decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, false), attribute(decision_based_on_explicit_consent, false)], Uk, Eu, Difference, ChangedBy),
+    Uk == indeterminate([processing_for_the_decision_relies_on_article_6_1_ea]),
+    Eu == decision_prohibited,
+    Difference == indeterminate([processing_for_the_decision_relies_on_article_6_1_ea]),
+    ChangedBy == [].
+test(empty_comparison_has_one_answer) :-
+    findall(Uk - Eu - Difference - ChangedBy, compare_uk_eu_automated_decision([], Uk, Eu, Difference, ChangedBy), Answers),
+    length(Answers, 1).
+test(unknown_key_is_an_input_problem) :-
+    uk_automated_decision_restriction([attribute(colour, true)], Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+test(checklist_carries_a_citation_per_item) :-
+    uk_automated_decision_making_checklist([attribute(meaningful_human_involvement_in_the_decision, true)], Items),
+    member(item(article_22b_restriction, restrictions_not_engaged, cite(uk_gdpr_art_22b_1)), Items).
+
+test(human_involvement_is_not_significant_solely_automated, fail) :-
+    uk_significant_automated_decision([attribute(meaningful_human_involvement_in_the_decision, true)], significant_decision_based_solely_on_automated_processing, _).

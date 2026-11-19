@@ -1,0 +1,120 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the public predicates called with
+% the result arguments UNBOUND; every answer is read out with findall/3 and
+% compared whole, so a duplicated answer fails.
+% Run: python -m clausal.testing eu/data_protection/gdpr_transfer_scc/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_transfer_scc/gdpr_transfer_scc, [
+    standard_contractual_clauses_module/3,
+    standard_contractual_clauses_availability/4,
+    standard_contractual_clauses_safeguard/4,
+    standard_contractual_clauses_appendix/3,
+    decide_gdpr_transfer_scc/2,
+    gdpr_transfer_scc_checklist/2
+]).
+:- use_module(eu/data_protection/gdpr_transfer_scc/fixtures, [gdpr_transfer_scc_profile_for/2]).
+
+attested_value(Value, attested(Value, attestation(host_service, received_at, reason, none))).
+
+role_pair(controller, controller).
+role_pair(controller, processor).
+role_pair(processor, processor).
+role_pair(processor, controller).
+
+module_read_out(ExporterRole, ImporterRole, Modules) :-
+    findall(Module, standard_contractual_clauses_module([attribute(exporter_role, ExporterRole), attribute(importer_role, ImporterRole)], Module, _Citations), Modules).
+
+basis_keys(Basis, BasisKeys) :-
+    findall(BasisKey, member(outside_fact(BasisKey, _Attested), Basis), BasisKeys).
+
+test(every_role_pair_reads_out_exactly_its_module) :-
+    findall(ExporterRole-ImporterRole-Modules, (role_pair(ExporterRole, ImporterRole), module_read_out(ExporterRole, ImporterRole, Modules)), Answers),
+    Answers == [controller-controller-[module_one], controller-processor-[module_two], processor-processor-[module_three], processor-controller-[module_four]].
+
+test(the_empty_profile_reads_out_the_exporter_role) :-
+    findall(Result-Citations, standard_contractual_clauses_module([], Result, Citations), Answers),
+    Answers == [indeterminate([exporter_role])-[]].
+
+test(availability_reads_out_three_basis_items_in_order) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    findall(Result-Basis-Citations, standard_contractual_clauses_availability(Profile, Result, Basis, Citations), Answers),
+    Answers = [clauses_available-ReadBasis-[cite(eu_dec_2021_914_art_1)]],
+    basis_keys(ReadBasis, BasisKeys),
+    BasisKeys == [standard_contractual_clauses_decision_in_force, exporter_processing_subject_to_gdpr, importer_processing_subject_to_gdpr].
+
+test(the_safeguard_reads_out_four_basis_items_in_order) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    findall(Result-Basis, standard_contractual_clauses_safeguard(Profile, Result, Basis, _Citations), Answers),
+    Answers = [appropriate_safeguards_provided-ReadBasis],
+    basis_keys(ReadBasis, BasisKeys),
+    BasisKeys == [standard_contractual_clauses_decision_in_force, exporter_processing_subject_to_gdpr, importer_processing_subject_to_gdpr, no_reason_to_believe_local_laws_prevent_compliance].
+
+test(the_safeguard_reads_out_its_thirteen_citations) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    standard_contractual_clauses_safeguard(Profile, _Result, _Basis, Citations),
+    length(Citations, 13),
+    member(cite(eu_reg_2016_679_art_46_2_c), Citations),
+    member(cite(eu_dec_2021_914_annex_cl_14_m1m2m3m4_d), Citations).
+
+test(module_four_without_combination_copies_a_present_clause_14_outcome) :-
+    gdpr_transfer_scc_profile_for(module_four_no_combination, BaseProfile),
+    attested_value(false, NoReason),
+    findall(Result-Basis, standard_contractual_clauses_safeguard([attribute(no_reason_to_believe_local_laws_prevent_compliance, NoReason)|BaseProfile], Result, Basis, _Citations), Answers),
+    Answers = [appropriate_safeguards_provided-ReadBasis],
+    basis_keys(ReadBasis, BasisKeys),
+    BasisKeys == [standard_contractual_clauses_decision_in_force, exporter_processing_subject_to_gdpr, importer_processing_subject_to_gdpr, no_reason_to_believe_local_laws_prevent_compliance].
+
+test(module_four_without_combination_reads_out_three_basis_items) :-
+    gdpr_transfer_scc_profile_for(module_four_no_combination, Profile),
+    findall(Result-Basis, standard_contractual_clauses_safeguard(Profile, Result, Basis, _Citations), Answers),
+    Answers = [appropriate_safeguards_provided-ReadBasis],
+    length(ReadBasis, 3).
+
+test(a_referral_reads_out_empty_basis_and_citations) :-
+    gdpr_transfer_scc_profile_for(decision_in_force_absent, Profile),
+    findall(Result-Basis-Citations, standard_contractual_clauses_safeguard(Profile, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_dec_2021_914_art_1), cite(standard_contractual_clauses_decision_in_force_statement)), [resolution(cite(standard_contractual_clauses_decision_in_force_statement), not_attempted), inputs_relied_on([standard_contractual_clauses_decision_in_force-absent])])-[]-[]].
+
+test(the_unsure_added_clauses_read_out_one_referral) :-
+    gdpr_transfer_scc_profile_for(added_clauses_unsure_decisive, Profile),
+    findall(Result, standard_contractual_clauses_safeguard(Profile, Result, _Basis, _Citations), Results),
+    Results == [needs_legal_review(open_textured(added_clauses_contradict_clauses, cite(eu_dec_2021_914_annex_cl_2_a)), [inputs_relied_on([added_clauses_contradict_clauses-unsure])])].
+
+test(the_specific_option_without_annex_iii_reads_out_incomplete) :-
+    gdpr_transfer_scc_profile_for(module_three_specific_authorisation_without_sub_processor_list, Profile),
+    findall(Result, standard_contractual_clauses_appendix(Profile, Result, _Citations), Results),
+    Results == [appendix_incomplete].
+
+test(the_general_option_without_annex_iii_reads_out_complete) :-
+    gdpr_transfer_scc_profile_for(module_three_general_authorisation_without_sub_processor_list, Profile),
+    findall(Result, standard_contractual_clauses_appendix(Profile, Result, _Citations), Results),
+    Results == [appendix_complete].
+
+test(the_verdict_carries_its_citations) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    findall(Verdict, decide_gdpr_transfer_scc(Profile, Verdict), Verdicts),
+    Verdicts = [gdpr_transfer_scc_verdict(appropriate_safeguards_provided, [_FirstCitation|_OtherCitations])].
+
+test(the_all_met_checklist_reads_out_nine_met_items) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    gdpr_transfer_scc_checklist(Profile, Items),
+    length(Items, 9),
+    findall(Status, member(item(_Identifier, Status, _Citation), Items), Statuses),
+    sort(Statuses, [met]).
+
+test(the_module_four_checklist_marks_clause_14_inapplicable) :-
+    gdpr_transfer_scc_profile_for(module_four_no_combination, Profile),
+    gdpr_transfer_scc_checklist(Profile, Items),
+    member(item(clause_14_warranty_given, inapplicable, cite(eu_dec_2021_914_annex_cl_14_m1m2m3m4_a)), Items),
+    member(item(clause_14_assessment_documented, inapplicable, cite(eu_dec_2021_914_annex_cl_14_m1m2m3m4_d)), Items).
+
+test(every_checklist_item_carries_a_citation) :-
+    gdpr_transfer_scc_profile_for(module_two_documentation_missing, Profile),
+    gdpr_transfer_scc_checklist(Profile, Items),
+    findall(CitationKey, member(item(_Identifier, _Status, cite(CitationKey)), Items), CitationKeys),
+    length(CitationKeys, 9),
+    member(item(clause_14_assessment_documented, unmet(local_laws_assessment_documented), _Citation), Items).
+
+:- end_module(test_output_mode).

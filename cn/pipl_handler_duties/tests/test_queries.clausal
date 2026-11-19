@@ -1,0 +1,98 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for every query registered in manifest.yaml
+% query_interface: #2 eligibility (decide_pipl_handler_duties/2), #7
+% justification (pipl_handler_duties_checklist/2, every item cited) and
+% #16 what-if (pipl_handler_duties_what_if/4), plus the profile key schema.
+% Run: python -m clausal.testing cn/pipl_handler_duties/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(cn/pipl_handler_duties/queries, [
+    pipl_handler_duties_profile_keys/1,
+    pipl_handler_duties_what_if/4
+]).
+:- use_module(cn/pipl_handler_duties/pipl_handler_duties, [
+    decide_pipl_handler_duties/2,
+    pipl_handler_duties_checklist/2,
+    pipl_handler_duties_status/2
+]).
+:- use_module(cn/pipl_handler_duties/fixtures, [pipl_handler_duties_profile_for/2]).
+
+cited_item(item(Duty, _Result, cite(Key))) :-
+    atom(Duty),
+    atom(Key).
+
+checklist_duty(item(Duty, _Result, _Citation), Duty).
+
+% ---- schema -----------------------------------------------------------
+test(profile_keys_are_the_contract_keys) :-
+    pipl_handler_duties_profile_keys(ProfileKeys),
+    ProfileKeys == [reference_date, pinned_articles_unamended_on_reference_date, decides_purposes_and_means, processes_on_entrustment, reaches_officer_quantity, handler_located_outside_china, personal_information_of_individuals_in_china, offers_products_or_services_to_individuals_in_china, analyses_or_evaluates_individuals_in_china, other_case_prescribed_by_law, processes_sensitive_personal_information, uses_automated_decision_making, entrusts_processing, provides_to_another_handler, makes_personal_information_public, provides_outside_china, other_significant_impact_processing, incident_occurred_or_possible, harm_effectively_avoided, department_required_individual_notice, important_platform_handler].
+
+% ---- #2 eligibility ---------------------------------------------------
+test(eligibility_owed_duties) :-
+    pipl_handler_duties_profile_for(entrusted_party, Profile),
+    findall(Status, decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(Status, _)), Statuses),
+    Statuses == [duties_owed].
+test(eligibility_no_duties) :-
+    pipl_handler_duties_profile_for(no_duties_at_all, Profile),
+    decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(no_duties_owed, Checklist)),
+    length(Checklist, 12).
+test(eligibility_pending_on_a_referral) :-
+    pipl_handler_duties_profile_for(reference_date_absent, Profile),
+    decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(duties_pending, _)).
+test(eligibility_not_in_force) :-
+    pipl_handler_duties_profile_for(day_before_entry_into_force, Profile),
+    decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(not_in_force, _)).
+test(eligibility_pinned_text_not_applicable) :-
+    pipl_handler_duties_profile_for(amended_text, Profile),
+    decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(pinned_text_not_applicable, _)).
+
+% ---- #7 justification -------------------------------------------------
+test(justification_every_item_is_cited) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    pipl_handler_duties_checklist(Profile, Checklist),
+    length(Checklist, 12),
+    maplist(cited_item, Checklist).
+test(justification_items_follow_the_duty_order) :-
+    pipl_handler_duties_profile_for(important_platform, Profile),
+    pipl_handler_duties_checklist(Profile, Checklist),
+    maplist(checklist_duty, Checklist, Duties),
+    Duties == [compliance_measures, protection_officer, officer_contact_details, china_representative, compliance_audit, impact_assessment, assessment_record_retention, breach_remedial_measures, breach_notice_to_department, breach_notice_to_individuals, large_platform_obligations, entrusted_party_safeguards].
+test(justification_item_carries_the_duty_result) :-
+    pipl_handler_duties_profile_for(important_platform, Profile),
+    pipl_handler_duties_checklist(Profile, Checklist),
+    member(item(large_platform_obligations, required, cite(_)), Checklist).
+test(justification_of_a_bad_profile_is_empty) :-
+    pipl_handler_duties_profile_for(unknown_key_profile, Profile),
+    pipl_handler_duties_checklist(Profile, []).
+
+% ---- #16 what-if ------------------------------------------------------
+test(what_if_making_the_caller_a_handler_owes_duties) :-
+    pipl_handler_duties_profile_for(not_a_handler, Profile),
+    pipl_handler_duties_status(Profile, duties_pending),
+    pipl_handler_duties_what_if(Profile, decides_purposes_and_means, true, duties_owed).
+test(what_if_the_day_of_entry_into_force) :-
+    pipl_handler_duties_profile_for(day_before_entry_into_force, Profile),
+    pipl_handler_duties_what_if(Profile, reference_date, date(2021, 11, 1), duties_owed).
+test(what_if_an_earlier_day_is_not_in_force) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    pipl_handler_duties_what_if(Profile, reference_date, date(2021, 10, 31), not_in_force).
+test(what_if_an_amendment_takes_effect) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    pipl_handler_duties_what_if(Profile, pinned_articles_unamended_on_reference_date, false, pinned_text_not_applicable).
+test(what_if_answers_once) :-
+    pipl_handler_duties_profile_for(no_duties_at_all, Profile),
+    findall(Status, pipl_handler_duties_what_if(Profile, processes_on_entrustment, true, Status), Statuses),
+    Statuses == [duties_owed].
+test(what_if_removes_a_duplicate) :-
+    pipl_handler_duties_profile_for(repeated_key, Profile),
+    pipl_handler_duties_what_if(Profile, decides_purposes_and_means, true, duties_owed).
+test(what_if_keeps_other_problems) :-
+    pipl_handler_duties_profile_for(unknown_key_profile, Profile),
+    pipl_handler_duties_what_if(Profile, decides_purposes_and_means, true, input_problems([unknown_key(colour)])).
+test(what_if_a_bad_value_is_an_input_problem) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    pipl_handler_duties_what_if(Profile, reaches_officer_quantity, unsure, input_problems([wrong_type(reaches_officer_quantity)])).
+
+:- end_module(test_queries).

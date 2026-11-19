@@ -1,0 +1,149 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for ch/swiss_fadp_s1_international_transfers.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The order's query types are served by the slice's public predicates,
+% which the package facade re-exports:
+%   #2 status               swiss_fadp_s1_international_transfers_status/2
+%   #5 comparison           compare_swiss_eu_transfer_routes/5
+%                           (the Swiss route of DSG Art 16 beside the EU
+%                           route of GDPR Arts 45(1) and 46(1))
+%   #7 justification        swiss_fadp_s1_international_transfers_checklist/2
+%                           (every item carries cite(...))
+%   #14 obligation surfacing swiss_information_of_commissioner_on_request/3
+%                           (the duty of DSG Art 17(2))
+% This layer adds:
+%   swiss_fadp_s1_international_transfers_what_if/4 (#16 what-if): override one key,
+%     re-decide the facade status (swiss_disclosure_abroad/3);
+%   swiss_fadp_s1_international_transfers_profile_keys/1: the profile key schema;
+%   swiss_fadp_s1_international_transfers_input_problems/2: re-exported from the kernel.
+%
+% It also owns the result atoms (name/0) and the result constructors
+% (name/arity, declared below). The twenty-seven profile key atoms and
+% unsure, absent and not_attempted are bare atoms: an export list holds
+% only name/arity, so they are listed under root_atoms in manifest.yaml
+% and the package root carries them from there.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the override is a local
+% list replacement (every attribute(Key, _) is dropped, then
+% attribute(Key, Value) is added): no duplicate key is ever made by a
+% what-if. A profile with input problems is re-decided as given, so its
+% what-if status is its input_problems(...) answer.
+% No clause here decides a statutory condition: no implements/1 marker.
+% =====================================================================
+
+:- module(queries, [
+    swiss_fadp_s1_international_transfers_profile_keys/1,
+    swiss_fadp_s1_international_transfers_input_problems/2,
+    swiss_fadp_s1_international_transfers_what_if/4,
+    permitted_by_adequacy_decision/0,
+    permitted_by_safeguards/0,
+    no_adequacy_decision_or_safeguards/0,
+    permitted_by_derogation/0,
+    disclosure_abroad_not_permitted/0,
+    information_of_commissioner_required/0,
+    information_of_commissioner_not_required/0,
+    same/0,
+    differs/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(reif), [if_/3]).
+:- use_module(ch/swiss_fadp_s1_international_transfers/kernel, [swiss_fadp_s1_international_transfers_input_problems/2]).
+:- use_module(ch/swiss_fadp_s1_international_transfers/swiss_fadp_s1_international_transfers, [swiss_fadp_s1_international_transfers_status/2]).
+
+% The result constructors of the order (exact functors and arities).
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, outcome),
+    inputs_relied_on(pairs),
+    provenance(source, detail),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(address, retrieved_at),
+    document(upload_identifier, digest),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% The result atoms of the order, each a root export.
+permitted_by_adequacy_decision.
+permitted_by_safeguards.
+no_adequacy_decision_or_safeguards.
+permitted_by_derogation.
+disclosure_abroad_not_permitted.
+information_of_commissioner_required.
+information_of_commissioner_not_required.
+same.
+differs.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+swiss_fadp_s1_international_transfers_profile_keys([federal_council_adequacy_listing_covers_disclosure, international_treaty_ensures_suitable_protection, contract_clauses_ensure_suitable_protection, contract_clauses_notified_to_commissioner_beforehand, specific_guarantees_ensure_suitable_protection, specific_guarantees_notified_to_commissioner_beforehand, standard_clauses_ensure_suitable_protection, standard_clauses_approved_issued_or_recognised_by_commissioner, binding_corporate_rules_ensure_suitable_protection, binding_corporate_rules_approved_beforehand, code_of_conduct_ensures_suitable_protection, code_of_conduct_submitted_to_commissioner_for_approval_beforehand, code_of_conduct_backed_by_binding_enforceable_commitment, certification_ensures_suitable_protection, certification_backed_by_binding_enforceable_commitment, data_subject_explicitly_consented, disclosure_directly_connected_with_contract_with_data_subject, disclosure_directly_connected_with_contract_in_interest_of_data_subject, disclosure_necessary_for_overriding_public_interest, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable, data_made_generally_accessible_and_processing_not_expressly_prohibited, data_from_statutory_register_and_inspection_conditions_met, commissioner_requested_information_on_disclosure, commission_adequacy_decision_covers_transfer, appropriate_safeguards_provided, enforceable_rights_and_effective_remedies_available]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+swiss_fadp_s1_international_transfers_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    swiss_fadp_s1_international_transfers_input_problems(Profile, Problems),
+    what_if_status(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_status([_|_], Profile, _, _, NewStatus) :-
+    swiss_fadp_s1_international_transfers_status(Profile, NewStatus).
+what_if_status([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    swiss_fadp_s1_international_transfers_status(Hypothesis, NewStatus).
+
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    drop_key(Profile, Key, Kept),
+    append(Kept, [attribute(Key, Value)], Hypothesis).
+
+drop_key([], _, []).
+drop_key([attribute(ElementKey, ElementValue)|Elements], Key, Kept) :-
+    if_(ElementKey = Key,
+        Kept = LaterKept,
+        Kept = [attribute(ElementKey, ElementValue)|LaterKept]),
+    drop_key(Elements, Key, LaterKept).
+
+% ---- tests ------------------------------------------------------------
+test(the_schema_has_twenty_seven_keys) :-
+    swiss_fadp_s1_international_transfers_profile_keys(Keys),
+    length(Keys, 27).
+test(adding_a_finding_permits_by_adequacy) :-
+    findall(Status, swiss_fadp_s1_international_transfers_what_if([], federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none)), Status), Statuses),
+    Statuses == [permitted_by_adequacy_decision].
+test(replacing_a_finding_reopens_the_safeguards) :-
+    swiss_fadp_s1_international_transfers_what_if([attribute(federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none)))], federal_council_adequacy_listing_covers_disclosure, attested(false, attestation(by, at, reason, none)), Status),
+    Status == indeterminate([international_treaty_ensures_suitable_protection]).
+test(replacing_a_finding_is_not_adequacy, fail) :-
+    swiss_fadp_s1_international_transfers_what_if([attribute(federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none)))], federal_council_adequacy_listing_covers_disclosure, attested(false, attestation(by, at, reason, none)), permitted_by_adequacy_decision).
+test(a_malformed_profile_keeps_its_input_problems) :-
+    swiss_fadp_s1_international_transfers_what_if(not_a_list, data_subject_explicitly_consented, true, Status),
+    Status == input_problems([wrong_type(profile)]).
+test(the_result_atoms_are_defined) :-
+    permitted_by_adequacy_decision,
+    disclosure_abroad_not_permitted,
+    same,
+    differs.
+
+:- end_module(queries).

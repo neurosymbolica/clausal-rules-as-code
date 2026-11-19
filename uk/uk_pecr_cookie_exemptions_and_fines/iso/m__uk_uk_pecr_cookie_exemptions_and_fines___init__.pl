@@ -1,0 +1,86 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_pecr_cookie_exemptions_and_fines___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_kernel, [uk_pecr_cookie_exemptions_and_fines_input_problems/2]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_citations, [citation/2, implements/1]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_uk_pecr_cookie_exemptions_and_fines, [compare_uk_eu_terminal_equipment_storage_or_access/5, decide_uk_pecr_cookie_exemptions_and_fines/2, eu_terminal_equipment_storage_or_access/3, uk_breach_notification_timing/3, uk_pecr_cookie_exemptions_and_fines_checklist/2, uk_pecr_cookie_exemptions_and_fines_decision_resolvable/1, uk_pecr_cookie_exemptions_and_fines_status/2, uk_pecr_cookie_exemptions_and_fines_status_values/1, uk_penalty_maximum_amount_in_pence/3, uk_penalty_maximum_tier/3, uk_terminal_equipment_storage_or_access/3]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_queries, [access_does_not_collect_or_monitor_automatically_emitted_information/0, act_or_omission_on_or_after_5_february_2026/0, became_aware_on_or_after_20_august_2025/0, clear_and_comprehensive_information_about_the_purpose_provided/0, clear_and_comprehensive_information_provided/0, collected_information_shared_only_to_assist_with_improvements/0, commission_notice_not_complied_with/0, communication_received_requests_or_indicates_need_of_emergency_assistance/0, consent_to_the_storage_or_access_given/0, differs/0, higher_maximum_amount/0, hours_elapsed_at_notification/0, information_society_service_requested_by_the_subscriber_or_user/0, not_applicable/0, not_attempted/0, not_permitted/0, notification_accompanied_by_reasons_for_the_delay/0, notification_in_time/0, notification_late_with_reasons/0, notification_made_without_undue_delay/0, notification_out_of_time/0, notification_reasons_for_delay_missing/0, notification_within_72_hours_was_feasible/0, other_provision_of_the_pec_regulations/0, penalised_person_is_an_undertaking/0, permitted/0, person_provides_an_information_society_service/0, person_provides_an_information_society_service_by_means_of_a_website/0, personal_data_breach_occurred/0, provider_of_a_public_electronic_communications_service/0, provision_infringed/0, regulation_14/0, regulation_19/0, regulation_20/0, regulation_21/0, regulation_21a/0, regulation_21b/0, regulation_22/0, regulation_23/0, regulation_24/0, regulation_32b_4_or_5/0, regulation_5/0, regulation_6/0, regulation_7/0, regulation_8/0, same/0, section_142_8b_of_the_data_protection_act_2018/0, service_explicitly_requested_by_user/0, simple_free_means_of_objecting_given/0, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality/0, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance/0, sole_purpose_is_statistical_information_to_improve_the_service_or_website/0, standard_maximum_amount/0, storage_or_access_in_terminal_equipment/0, storage_or_access_solely_for_transmission/0, storage_or_access_strictly_necessary_for_the_requested_service/0, storage_or_access_within_regulation_6/0, strictly_necessary_to_provide_requested_service/0, subscriber_or_user_has_not_objected/0, technical_storage_or_access_solely_for_transmission_of_a_communication/0, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds/0, uk_pecr_cookie_exemptions_and_fines_obligations/2, uk_pecr_cookie_exemptions_and_fines_profile_keys/1, uk_pecr_cookie_exemptions_and_fines_what_if/4, unsure/0, user_consent_given/0]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_fixtures, [uk_pecr_cookie_exemptions_and_fines_assess/2, uk_pecr_cookie_exemptions_and_fines_profile_for/2, uk_pecr_cookie_exemptions_and_fines_subject/1]).
+
+root_export(access_does_not_collect_or_monitor_automatically_emitted_information).
+root_export(act_or_omission_on_or_after_5_february_2026).
+root_export(became_aware_on_or_after_20_august_2025).
+root_export(clear_and_comprehensive_information_about_the_purpose_provided).
+root_export(clear_and_comprehensive_information_provided).
+root_export(collected_information_shared_only_to_assist_with_improvements).
+root_export(commission_notice_not_complied_with).
+root_export(communication_received_requests_or_indicates_need_of_emergency_assistance).
+root_export(consent_to_the_storage_or_access_given).
+root_export(cross_reference_unresolved).
+root_export(differs).
+root_export(duplicate_key).
+root_export(higher_maximum_amount).
+root_export(hours_elapsed_at_notification).
+root_export(indeterminate).
+root_export(information_society_service_requested_by_the_subscriber_or_user).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(needs_legal_review).
+root_export(not_applicable).
+root_export(not_attempted).
+root_export(not_permitted).
+root_export(notification_accompanied_by_reasons_for_the_delay).
+root_export(notification_in_time).
+root_export(notification_late_with_reasons).
+root_export(notification_made_without_undue_delay).
+root_export(notification_out_of_time).
+root_export(notification_reasons_for_delay_missing).
+root_export(notification_within_72_hours_was_feasible).
+root_export(open_textured).
+root_export(other_provision_of_the_pec_regulations).
+root_export(penalised_person_is_an_undertaking).
+root_export(permitted).
+root_export(person_provides_an_information_society_service).
+root_export(person_provides_an_information_society_service_by_means_of_a_website).
+root_export(personal_data_breach_occurred).
+root_export(provenance).
+root_export(provider_of_a_public_electronic_communications_service).
+root_export(provision_infringed).
+root_export(regulation_14).
+root_export(regulation_19).
+root_export(regulation_20).
+root_export(regulation_21).
+root_export(regulation_21a).
+root_export(regulation_21b).
+root_export(regulation_22).
+root_export(regulation_23).
+root_export(regulation_24).
+root_export(regulation_32b_4_or_5).
+root_export(regulation_5).
+root_export(regulation_6).
+root_export(regulation_7).
+root_export(regulation_8).
+root_export(resolution).
+root_export(same).
+root_export(section_142_8b_of_the_data_protection_act_2018).
+root_export(service_explicitly_requested_by_user).
+root_export(simple_free_means_of_objecting_given).
+root_export(sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality).
+root_export(sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance).
+root_export(sole_purpose_is_statistical_information_to_improve_the_service_or_website).
+root_export(standard_maximum_amount).
+root_export(storage_or_access_in_terminal_equipment).
+root_export(storage_or_access_solely_for_transmission).
+root_export(storage_or_access_strictly_necessary_for_the_requested_service).
+root_export(storage_or_access_within_regulation_6).
+root_export(strictly_necessary_to_provide_requested_service).
+root_export(subscriber_or_user_has_not_objected).
+root_export(technical_storage_or_access_solely_for_transmission_of_a_communication).
+root_export(total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds).
+root_export(unknown_key).
+root_export(unsure).
+root_export(user_consent_given).
+root_export(wrong_type).

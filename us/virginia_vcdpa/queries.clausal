@@ -1,0 +1,260 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for us/virginia_vcdpa.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Consumer Data Protection Act, Code of Virginia Title 59.1
+% chapter 53, pinned LIS web copy fetched 2026-11-16 (open question Q13).
+%
+% virginia_vcdpa_profile_keys/1: top-level profile key schema
+% virginia_vcdpa_input_problems/2: the problems a profile has ([] = none),
+%     re-exported from the kernel as the scaffold wrote it
+% virginia_vcdpa_what_if/4 (#16 what-if): override one key, re-decide
+% virginia_vcdpa_applicability_threshold/3 (#6 threshold): the least
+%     consumer_count at which each limb of Va. Code 59.1-576(A) is met,
+%     DERIVED from applicability_status/3 by bisection (no figure is
+%     re-declared here)
+% virginia_vcdpa_consumer_count_boundary/2 (#6 threshold): for a given
+%     profile, the least consumer_count at which the coverage answer
+%     changes, or no_flip_in_range
+%
+% The other declared query types are served by the slice itself:
+%   #15 deadline: response_deadline/4, extended_response_deadline/4,
+%       appeal_response_deadline/4, cure_period_last_day/4,
+%       attorney_general_action_status/5
+%   #3 status: applicability_status/3, attorney_general_action_status/5
+%   #23 calculation: civil_penalty_maximum/3
+%   #7 justification: virginia_vcdpa_checklist/2 (cite per item)
+%
+% Answer vocabulary of the date and figure queries (served by the slice):
+% the table answer_shape/3 below states, for each date and figure query,
+% the answer shape the order pins, and checks a real answer against it.
+%
+% ROOT EXPORTS: the nine profile key atoms, the six entity_category atoms
+% and the judgement value unsure are read by the scorer as package-root
+% attributes. Each is declared below as a 0-arity fact and exported, so
+% the generated package facade carries it. They decide nothing.
+% =====================================================================
+
+:- module(queries, [
+    virginia_vcdpa_profile_keys/1,
+    virginia_vcdpa_input_problems/2,
+    virginia_vcdpa_what_if/4,
+    virginia_vcdpa_applicability_threshold/3,
+    virginia_vcdpa_consumer_count_boundary/2,
+    entity_category/0,
+    conducts_business_in_or_targets_virginia/0,
+    consumer_count/0,
+    over_half_of_gross_revenue_from_sale/0,
+    extension_reasonably_necessary/0,
+    extension_notice_given_within_initial_period/0,
+    cured_with_express_written_statement/0,
+    continued_violation_or_statement_breached/0,
+    violation_count/0,
+    public_body_of_the_commonwealth/0,
+    financial_institution_subject_to_glba/0,
+    hipaa_covered_entity_or_business_associate/0,
+    nonprofit_organization/0,
+    institution_of_higher_education/0,
+    none_of_the_exempt_categories/0,
+    unsure/0
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [if_/3]).
+:- use_module(us/virginia_vcdpa/kernel, [virginia_vcdpa_input_problems/2]).
+:- use_module(us/virginia_vcdpa/virginia_vcdpa, [
+    virginia_vcdpa_status/2,
+    applicability_status/3,
+    response_deadline/4,
+    extended_response_deadline/4,
+    appeal_response_deadline/4,
+    cure_period_last_day/4,
+    civil_penalty_maximum/3
+]).
+:- use_module(us/virginia_vcdpa/citations, [implements/1]).
+
+% The upper end of the consumer_count search. Not a statutory figure: it
+% only bounds the bisection, and it lies above both thresholds.
+:- constant_value(consumer_count_search_ceiling, 1000000).
+
+% ---- root exports (the contract's atoms; no rule) --------------------
+entity_category.
+conducts_business_in_or_targets_virginia.
+consumer_count.
+over_half_of_gross_revenue_from_sale.
+extension_reasonably_necessary.
+extension_notice_given_within_initial_period.
+cured_with_express_written_statement.
+continued_violation_or_statement_breached.
+violation_count.
+public_body_of_the_commonwealth.
+% lint: allow-abbreviation(contract atom)
+financial_institution_subject_to_glba.
+% lint: allow-abbreviation(contract atom)
+hipaa_covered_entity_or_business_associate.
+nonprofit_organization.
+institution_of_higher_education.
+none_of_the_exempt_categories.
+unsure.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+virginia_vcdpa_profile_keys([entity_category, conducts_business_in_or_targets_virginia, consumer_count, over_half_of_gross_revenue_from_sale, extension_reasonably_necessary, extension_notice_given_within_initial_period, cured_with_express_written_statement, continued_violation_or_statement_breached, violation_count]).
+
+% ---- answer shapes of the date and figure queries ---------------------
+% answer_shape(Query, Description, Kind): the answer vocabulary the order
+% pins for each date and figure query (INTERFACE - THE ANSWER SHAPES),
+% verbatim, and the kind of term that answer is.
+answer_shape(response_deadline/4, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)', date_term).
+answer_shape(extended_response_deadline/4, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)', date_term).
+answer_shape(appeal_response_deadline/4, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)', date_term).
+answer_shape(cure_period_last_day/4, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)', date_term).
+answer_shape(civil_penalty_maximum/3, 'a non-negative integer, whole US dollars (see INTERFACE - THE ANSWER SHAPES)', whole_dollars).
+
+% shaped_answer(Kind, Answer): Answer has the pinned shape of Kind.
+shaped_answer(date_term, date(Year, Month, Day)) :-
+    integer(Year),
+    integer(Month),
+    integer(Day).
+shaped_answer(whole_dollars, Dollars) :-
+    integer(Dollars),
+    Dollars #>= 0.
+
+% final_answer(Query, Answer): a final answer of each date and figure query
+% on a sample request (plumbing for the shape check, no statutory test).
+final_answer(response_deadline/4, Deadline) :-
+    response_deadline([], date(2026, 1, 1), Deadline, _Citations).
+final_answer(extended_response_deadline/4, Deadline) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, true), attribute(extension_notice_given_within_initial_period, true)], date(2026, 1, 1), Deadline, _Citations).
+final_answer(appeal_response_deadline/4, Deadline) :-
+    appeal_response_deadline([], date(2026, 1, 1), Deadline, _Citations).
+final_answer(cure_period_last_day/4, LastDay) :-
+    cure_period_last_day([], date(2026, 1, 1), LastDay, _Citations).
+final_answer(civil_penalty_maximum/3, Maximum) :-
+    civil_penalty_maximum([attribute(violation_count, 2)], Maximum, _Citations).
+
+% answer_has_pinned_shape(Query): the final answer of Query has the shape
+% answer_shape/3 pins for it.
+answer_has_pinned_shape(Query) :-
+    answer_shape(Query, _Description, Kind),
+    final_answer(Query, Answer),
+    shaped_answer(Kind, Answer).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% (a) THE LOGIC WAS WRONG: kit override_key/4 works on dicts, but the
+% order's PROFILE is an attribute list; the override is now done on the
+% attribute list itself (list plumbing, no statutory test).
+virginia_vcdpa_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    virginia_vcdpa_status(Hypothesis, NewStatus).
+
+% attribute_override(Profile, Key, Value, NewProfile): every attribute of
+% Key is dropped and attribute(Key, Value) is put first.
+attribute_override(Profile, Key, Value, [attribute(Key, Value)|OtherAttributes]) :-
+    without_key(Profile, Key, OtherAttributes).
+
+% ---- #6 threshold: the two limbs of Va. Code 59.1-576(A) -------------
+% virginia_vcdpa_applicability_threshold(Limb, MinimumConsumerCount, Citation)
+% general_threshold: limb (i), no revenue share from sale.
+% sale_of_personal_data_threshold: limb (ii), revenue share over half.
+virginia_vcdpa_applicability_threshold(general_threshold,
+                                       MinimumConsumerCount,
+                                       cite(us_va_code_59_1_576_a)) :-
+    implements(us_va_code_59_1_576_a),
+    SearchCeiling #= constant(consumer_count_search_ceiling),
+    consumer_count_flip([attribute(entity_category, none_of_the_exempt_categories),
+                         attribute(conducts_business_in_or_targets_virginia, true),
+                         attribute(over_half_of_gross_revenue_from_sale, false)],
+                        0,
+                        SearchCeiling,
+                        MinimumConsumerCount).
+virginia_vcdpa_applicability_threshold(sale_of_personal_data_threshold,
+                                       MinimumConsumerCount,
+                                       cite(us_va_code_59_1_576_a)) :-
+    implements(us_va_code_59_1_576_a),
+    SearchCeiling #= constant(consumer_count_search_ceiling),
+    consumer_count_flip([attribute(entity_category, none_of_the_exempt_categories),
+                         attribute(conducts_business_in_or_targets_virginia, true),
+                         attribute(over_half_of_gross_revenue_from_sale, true)],
+                        0,
+                        SearchCeiling,
+                        MinimumConsumerCount).
+
+% virginia_vcdpa_consumer_count_boundary(Profile, Boundary): the least
+% consumer_count, from 0 to the search ceiling, at which the coverage answer
+% differs from its answer at 0, the other keys as given; no_flip_in_range
+% when the answer never changes; input_problems(Problems) for a malformed
+% profile. Exactly one solution.
+virginia_vcdpa_consumer_count_boundary(Profile, input_problems([Problem|Problems])) :-
+    virginia_vcdpa_input_problems(Profile, [Problem|Problems]).
+virginia_vcdpa_consumer_count_boundary(Profile, Boundary) :-
+    implements(us_va_code_59_1_576_a),
+    virginia_vcdpa_input_problems(Profile, []),
+    SearchCeiling #= constant(consumer_count_search_ceiling),
+    consumer_count_flip(Profile, 0, SearchCeiling, Boundary).
+
+% consumer_count_flip(Profile, Low, High, Boundary): bisection over a
+% coverage answer that changes at most once as the count rises.
+consumer_count_flip(Profile, Low, High, Boundary) :-
+    count_status(Profile, Low, LowStatus),
+    count_status(Profile, High, HighStatus),
+    flip_result(LowStatus, HighStatus, Profile, Low, High, Boundary).
+
+flip_result(Status, Status, _, _, _, no_flip_in_range).
+flip_result(LowStatus, HighStatus, Profile, Low, High, Boundary) :-
+    dif(LowStatus, HighStatus),
+    bisect_count(Profile, LowStatus, Low, High, Boundary).
+
+% Invariant: the answer at Low is LowStatus, the answer at High is not.
+bisect_count(_, _, Low, High, High) :-
+    High #= Low + 1.
+bisect_count(Profile, LowStatus, Low, High, Boundary) :-
+    High #> Low + 1,
+    Middle #= (Low + High) // 2,
+    count_status(Profile, Middle, MiddleStatus),
+    if_(MiddleStatus = LowStatus,
+        bisect_count(Profile, LowStatus, Middle, High, Boundary),
+        bisect_count(Profile, LowStatus, Low, Middle, Boundary)).
+
+% count_status(Profile, ConsumerCount, Status): the applicability answer with
+% consumer_count set to ConsumerCount (list plumbing, no statutory test).
+count_status(Profile, ConsumerCount, Status) :-
+    without_key(Profile, consumer_count, OtherAttributes),
+    applicability_status([attribute(consumer_count, ConsumerCount)|OtherAttributes], Status, _Citations).
+
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], Key, Rest) :-
+    ElementKey == Key,
+    without_key(Elements, Key, Rest).
+without_key([attribute(ElementKey, Value)|Elements], Key, [attribute(ElementKey, Value)|Rest]) :-
+    ElementKey \== Key,
+    without_key(Elements, Key, Rest).
+
+% ---- tests ---------------------------------------------------------
+test(the_general_threshold_is_derived) :-
+    findall(Minimum, virginia_vcdpa_applicability_threshold(general_threshold, Minimum, _), Minimums),
+    Minimums = [Found],
+    Found =:= 100000.
+test(the_sale_threshold_is_derived) :-
+    virginia_vcdpa_applicability_threshold(sale_of_personal_data_threshold, Minimum, cite(us_va_code_59_1_576_a)),
+    Minimum =:= 25000.
+test(an_exempt_profile_never_flips) :-
+    virginia_vcdpa_consumer_count_boundary([attribute(entity_category, nonprofit_organization)], no_flip_in_range).
+test(a_malformed_profile_has_no_boundary) :-
+    virginia_vcdpa_consumer_count_boundary([attribute(colour, red)], input_problems([unknown_key(colour)])).
+test(the_override_replaces_the_key) :-
+    attribute_override([attribute(consumer_count, 5), attribute(violation_count, 1)], consumer_count, 7, Hypothesis),
+    Hypothesis == [attribute(consumer_count, 7), attribute(violation_count, 1)].
+test(the_root_atoms_are_callable) :-
+    entity_category,
+    unsure,
+    none_of_the_exempt_categories.
+test(every_date_and_figure_answer_has_its_pinned_shape) :-
+    findall(Query, answer_shape(Query, _, _), Queries),
+    length(Queries, 5),
+    maplist(answer_has_pinned_shape, Queries).
+test(an_indeterminate_answer_is_not_a_date_term, fail) :-
+    shaped_answer(date_term, indeterminate([violation_count])).
+
+:- end_module(queries).

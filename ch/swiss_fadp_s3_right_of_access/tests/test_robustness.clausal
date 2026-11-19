@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the input check swiss_fadp_s3_right_of_access_input_problems/2 for a
+% PROFILE that is an attribute list [attribute(Key, Value), ...]: an empty list, a
+% value that is not a list, an unknown key and a value outside its type each get exactly
+% one answer. Written by the scaffold from the order's typed input contract
+% (input_contract.types.profile: attribute_list), not by the producer;
+% do not edit or delete.
+% Run: python -m clausal.testing ch/swiss_fadp_s3_right_of_access/tests/test_robustness.clausal
+% =====================================================================
+:- module(test_robustness, []).
+:- use_module(ch/swiss_fadp_s3_right_of_access/queries, [swiss_fadp_s3_right_of_access_input_problems/2]).
+
+test(an_empty_attribute_list_gets_exactly_one_answer) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_profile_that_is_not_a_list_gets_one_non_empty_answer) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems(not_a_profile, Problems), Answers),
+    Answers = [[_|_]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems([attribute(not_a_key_of_the_contract, written)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(unknown_key(not_a_key_of_the_contract), Problems).
+
+test(a_value_outside_the_type_of_request_form_is_named) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems([attribute(request_form, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(request_form), Problems).
+
+test(a_value_outside_the_type_of_controller_agreed_to_oral_request_is_named) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems([attribute(controller_agreed_to_oral_request, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(controller_agreed_to_oral_request), Problems).
+
+test(a_value_outside_the_type_of_formal_law_provides_for_restriction_is_named) :-
+    findall(Problems, swiss_fadp_s3_right_of_access_input_problems([attribute(formal_law_provides_for_restriction, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(formal_law_provides_for_restriction), Problems).
+
+:- end_module(test_robustness).

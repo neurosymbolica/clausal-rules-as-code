@@ -1,0 +1,142 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE
+% control (one key changed -> different verdict), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`; every atom a negative
+% names is also asserted positively, so a misspelling shows up.
+% Run: python -m clausal.testing ind/dpdp_transfer/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(ind/dpdp_transfer/dpdp_transfer, [dpdp_transfer_status_values/1]).
+:- use_module(ind/dpdp_transfer/fixtures, [dpdp_transfer_assess/2]).
+
+% ---- the near-miss atoms are verdict atoms of the slice --------------
+test(the_status_table_is_the_result_vocabulary) :-
+    dpdp_transfer_status_values(StatusValues),
+    StatusValues == [restricted_see_notification, requirements_apply_see_order, not_restricted, not_in_force].
+
+% ---- notified step 6: restricted_see_notification --------------------
+test(notified_restricted_positive) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(restricted_see_notification, _)).
+test(notified_restricted_near_miss_notification_false, fail) :-
+    dpdp_transfer_assess(notified_destination_no_notification, dpdp_transfer_verdict(restricted_see_notification, _)).
+test(notified_restricted_near_miss_section_16_false, fail) :-
+    dpdp_transfer_assess(notified_destination_section_16_not_in_force, dpdp_transfer_verdict(restricted_see_notification, _)).
+test(notified_restricted_near_miss_section_16_absent, fail) :-
+    dpdp_transfer_assess(notified_destination_section_16_unstated, dpdp_transfer_verdict(restricted_see_notification, _)).
+test(notified_restricted_near_miss_notification_absent, fail) :-
+    dpdp_transfer_assess(notified_destination_notification_unstated, dpdp_transfer_verdict(restricted_see_notification, _)).
+test(notified_restricted_near_miss_notification_unsure, fail) :-
+    dpdp_transfer_assess(notified_destination_notification_unclear, dpdp_transfer_verdict(restricted_see_notification, _)).
+
+% ---- notified step 3: not_restricted ---------------------------------
+test(notified_not_restricted_positive) :-
+    dpdp_transfer_assess(notified_destination_no_notification, dpdp_transfer_verdict(not_restricted, _)).
+test(notified_not_restricted_near_miss, fail) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(not_restricted, _)).
+
+% ---- notified step 1: not_in_force -----------------------------------
+test(notified_not_in_force_positive) :-
+    dpdp_transfer_assess(notified_destination_section_16_not_in_force, dpdp_transfer_verdict(not_in_force, _)).
+test(notified_not_in_force_near_miss, fail) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(not_in_force, _)).
+
+% ---- notified steps 2 and 4: one key named ---------------------------
+test(notified_section_16_named_positive) :-
+    dpdp_transfer_assess(notified_destination_section_16_unstated,
+                         dpdp_transfer_verdict(indeterminate([section_16_in_force_on_reference_date]), [])).
+test(notified_section_16_named_near_miss, fail) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(indeterminate(_), _)).
+test(notified_notification_named_positive) :-
+    dpdp_transfer_assess(notified_destination_notification_unstated,
+                         dpdp_transfer_verdict(indeterminate([destination_restricted_by_notification]), [])).
+test(notified_notification_named_near_miss, fail) :-
+    dpdp_transfer_assess(notified_destination_no_notification, dpdp_transfer_verdict(indeterminate(_), _)).
+
+% ---- notified step 5: referral ----------------------------------------
+test(notified_referral_positive) :-
+    dpdp_transfer_assess(notified_destination_notification_unclear,
+                         dpdp_transfer_verdict(needs_legal_review(open_textured(destination_restricted_by_notification, cite(in_dpdp_act_2023_s_16_1)), _), [])).
+test(notified_referral_near_miss, fail) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(needs_legal_review(_, _), _)).
+
+% ---- foreign step 10: requirements_apply_see_order -------------------
+test(foreign_requirements_positive) :-
+    dpdp_transfer_assess(foreign_state_requirements_apply_on_commencement_day,
+                         dpdp_transfer_verdict(requirements_apply_see_order, _)).
+test(foreign_requirements_near_miss_day_before, fail) :-
+    dpdp_transfer_assess(foreign_state_day_before_commencement, dpdp_transfer_verdict(requirements_apply_see_order, _)).
+test(foreign_requirements_near_miss_section_16_false, fail) :-
+    dpdp_transfer_assess(foreign_state_section_16_not_in_force, dpdp_transfer_verdict(requirements_apply_see_order, _)).
+test(foreign_requirements_near_miss_recipient_false, fail) :-
+    dpdp_transfer_assess(foreign_state_recipient_not_foreign_state, dpdp_transfer_verdict(requirements_apply_see_order, _)).
+test(foreign_requirements_near_miss_order_false, fail) :-
+    dpdp_transfer_assess(foreign_state_no_order_specified, dpdp_transfer_verdict(requirements_apply_see_order, _)).
+test(foreign_requirements_near_miss_recipient_unsure, fail) :-
+    dpdp_transfer_assess(foreign_state_recipient_unclear, dpdp_transfer_verdict(requirements_apply_see_order, _)).
+
+% ---- foreign steps 1 and 2: not_in_force -----------------------------
+test(foreign_not_in_force_day_before_positive) :-
+    dpdp_transfer_assess(foreign_state_day_before_commencement, dpdp_transfer_verdict(not_in_force, _)).
+test(foreign_not_in_force_commencement_day_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_requirements_apply_on_commencement_day, dpdp_transfer_verdict(not_in_force, _)).
+test(foreign_not_in_force_section_16_false_positive) :-
+    dpdp_transfer_assess(foreign_state_section_16_not_in_force, dpdp_transfer_verdict(not_in_force, _)).
+test(foreign_not_in_force_section_16_absent_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_section_16_unstated, dpdp_transfer_verdict(not_in_force, _)).
+
+% ---- foreign steps 3 and 4: one key named ----------------------------
+test(foreign_section_16_named_positive) :-
+    dpdp_transfer_assess(foreign_state_section_16_unstated,
+                         dpdp_transfer_verdict(indeterminate([section_16_in_force_on_reference_date]), [])).
+test(foreign_section_16_named_near_miss_day_before, fail) :-
+    dpdp_transfer_assess(foreign_state_section_16_unstated_day_before_commencement,
+                         dpdp_transfer_verdict(indeterminate(_), _)).
+test(foreign_reference_date_named_positive) :-
+    dpdp_transfer_assess(foreign_state_reference_date_unstated,
+                         dpdp_transfer_verdict(indeterminate([reference_date]), [])).
+test(foreign_reference_date_named_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_requirements_apply_on_commencement_day,
+                         dpdp_transfer_verdict(indeterminate(_), _)).
+
+% ---- foreign steps 5 and 6: not_restricted ---------------------------
+test(foreign_recipient_false_positive) :-
+    dpdp_transfer_assess(foreign_state_recipient_not_foreign_state, dpdp_transfer_verdict(not_restricted, _)).
+test(foreign_order_false_positive) :-
+    dpdp_transfer_assess(foreign_state_no_order_specified, dpdp_transfer_verdict(not_restricted, _)).
+test(foreign_not_restricted_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_requirements_apply_on_commencement_day, dpdp_transfer_verdict(not_restricted, _)).
+
+% ---- foreign steps 7 and 8: one key named ----------------------------
+test(foreign_recipient_named_positive) :-
+    dpdp_transfer_assess(foreign_state_recipient_unstated,
+                         dpdp_transfer_verdict(indeterminate([recipient_is_foreign_state_or_its_entity]), [])).
+test(foreign_recipient_named_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_recipient_not_foreign_state, dpdp_transfer_verdict(indeterminate(_), _)).
+test(foreign_order_named_positive) :-
+    dpdp_transfer_assess(foreign_state_order_unstated_recipient_unsure,
+                         dpdp_transfer_verdict(indeterminate([foreign_state_requirements_specified]), [])).
+test(foreign_order_named_near_miss_is_not_referred, fail) :-
+    dpdp_transfer_assess(foreign_state_order_unstated_recipient_unsure, dpdp_transfer_verdict(needs_legal_review(_, _), _)).
+
+% ---- foreign step 9: referral -----------------------------------------
+test(foreign_referral_positive) :-
+    dpdp_transfer_assess(foreign_state_recipient_unclear,
+                         dpdp_transfer_verdict(needs_legal_review(open_textured(recipient_is_foreign_state_or_its_entity, cite(in_dpdp_rules_2025_r_15)), _), [])).
+test(foreign_referral_near_miss, fail) :-
+    dpdp_transfer_assess(foreign_state_requirements_apply_on_commencement_day, dpdp_transfer_verdict(needs_legal_review(_, _), _)).
+
+% ---- step 0: input problems -------------------------------------------
+test(input_problems_positive) :-
+    dpdp_transfer_assess(input_not_a_real_day,
+                         dpdp_transfer_verdict(input_problems([wrong_type(reference_date)]), [])).
+test(input_problems_near_miss_real_leap_day, fail) :-
+    dpdp_transfer_assess(input_real_leap_day, dpdp_transfer_verdict(input_problems(_), _)).
+test(input_crisp_unsure_positive) :-
+    dpdp_transfer_assess(input_crisp_key_given_unsure, dpdp_transfer_verdict(input_problems(_), [])).
+test(input_crisp_near_miss_true, fail) :-
+    dpdp_transfer_assess(notified_destination_restricted, dpdp_transfer_verdict(input_problems(_), _)).
+
+:- end_module(test_negative_controls).

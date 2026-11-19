@@ -1,0 +1,347 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: ch/swiss_fadp_s3_right_of_access
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "swiss_fadp_s3_right_of_access"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The bare-atom facts (result atoms, root_exports)
+# are listed because the scorer reads them as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- swiss_fadp_s3_right_of_access.clausal --
+  - "decide_swiss_fadp_s3_right_of_access/2"
+  - "swiss_fadp_s3_right_of_access_status/2"
+  - "swiss_fadp_s3_right_of_access_checklist/2"
+  - "swiss_fadp_s3_right_of_access_decision_resolvable/1"
+  - "swiss_fadp_s3_right_of_access_status_values/1"
+  - "swiss_access_request_answer/3"
+  - "swiss_access_cost_contribution/3"
+  - "swiss_access_deadline/3"
+  - "swiss_access_deadline_after_cost_notice/3"
+  - "eu_access_response_deadline/3"
+  - "compare_swiss_eu_access_deadline/5"
+  - "access_request_not_in_required_form/0"
+  - "access_must_be_given/0"
+  - "access_may_be_refused_restricted_or_deferred/0"
+  - "access_free_of_charge/0"
+  - "cost_contribution_may_be_requested/0"
+  - "swiss_earlier/0"
+  - "same/0"
+  - "swiss_later/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "swiss_fadp_s3_right_of_access_profile_keys/1"
+  - "swiss_fadp_s3_right_of_access_input_problems/2"
+  - "swiss_fadp_s3_right_of_access_what_if/4"
+  - "swiss_fadp_s3_right_of_access_controller_obligations/2"
+  - "request_form/0"
+  - "controller_agreed_to_oral_request/0"
+  - "controller_category/0"
+  - "formal_law_provides_for_restriction/0"
+  - "restriction_required_by_overriding_third_party_interests/0"
+  - "request_manifestly_unfounded_or_querulous/0"
+  - "restriction_required_by_overriding_controller_interests/0"
+  - "controller_discloses_the_personal_data_to_third_parties/0"
+  - "restriction_required_by_overriding_public_interests/0"
+  - "information_could_endanger_investigation_or_proceedings/0"
+  - "processed_exclusively_for_publication_in_editorial_part_of_periodical_medium/0"
+  - "data_reveal_information_sources/0"
+  - "access_would_give_insight_into_drafts_for_publications/0"
+  - "publication_would_endanger_free_formation_of_public_opinion/0"
+  - "data_serve_media_professional_exclusively_as_personal_working_instrument/0"
+  - "access_involves_disproportionate_effort/0"
+  - "written/0"
+  - "electronic/0"
+  - "oral/0"
+  - "private_person/0"
+  - "federal_body/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "swiss_fadp_s3_right_of_access_subject/1"
+  - "swiss_fadp_s3_right_of_access_profile_for/2"
+  - "swiss_fadp_s3_right_of_access_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Shared backbone packages imported: none (only the kit modules
+# formalize_lib and kit/deadline_lib, which are not domain packages).
+uses: []
+
+scope: >-
+  Swiss law in force (drafter's reading, not a lawyer's). The right of access of
+  the Swiss Federal Act on Data Protection (DSG, SR 235.1, Stand 7 July 2025) Arts
+  25(1), 25(6), 25(7), 26 and 27, with the form of the request, the time limit and
+  the costs set by the Data Protection Ordinance (DSV, SR 235.11, Stand 1 December
+  2025) Arts 16(1), 16(3), 18(1), 18(3) and 19. Decided here: whether a request is in
+  the required form and, if so, whether the controller must give access or may
+  refuse, restrict or defer it (swiss_access_request_answer/3); whether access is
+  free of charge or a cost contribution may be requested
+  (swiss_access_cost_contribution/3); the last day of the 30-day time limit from
+  receipt (swiss_access_deadline/3) and after a cost notice
+  (swiss_access_deadline_after_cost_notice/3); for comparison, the last day of the
+  one-month period of EU GDPR Art 12(3) counted under Regulation (EEC, Euratom) No
+  1182/71 Art 3 by analogy (eu_access_response_deadline/3), and the comparison of the
+  two (compare_swiss_eu_access_deadline/5). Open-textured judgements are stated by
+  the caller; an unsure one that matters goes to a lawyer (needs_legal_review). Out
+  of scope: the content of the information (DSG Art 25(2)), health data, processors
+  and joint controllers, waiver, the form of the answer and identification, a later
+  period announced under DSV Art 18(2), the amount of a contribution, the EU
+  extension and other paragraphs of GDPR Art 12, the scope of the DSG and the GDPR,
+  and penalties (deferred_set and excluded_set).
+
+sources:
+  - "Bundesgesetz ueber den Datenschutz (Datenschutzgesetz, DSG), SR 235.1, German text, fedlex consolidation Stand 7 July 2025 (Akoma Ntoso, fetched 2026-11-14): Art 25(1), (6), (7); Art 26(1) to (4); Art 27(1), (2)"
+  - "Verordnung ueber den Datenschutz (Datenschutzverordnung, DSV), SR 235.11, German text, fedlex consolidation Stand 1 December 2025 (Akoma Ntoso, fetched 2026-11-14): Art 16(1), (3); Art 18(1), (3); Art 19(1) to (3)"
+  - "Regulation (EU) 2016/679 (General Data Protection Regulation), OJ L 119, 4.5.2016, Formex consolidation of 2016-05-04: Art 12(3), first sentence"
+  - "Regulation (EEC, Euratom) No 1182/71 determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971: Art 3(1), Art 3(2)(c), Art 3(4)"
+
+query_interface:
+  2: "swiss_fadp_s3_right_of_access_status/2"                    # status verdict of the request answer
+  5: "compare_swiss_eu_access_deadline/5"                        # comparison: Swiss vs EU last day
+  7: "swiss_fadp_s3_right_of_access_checklist/2"                 # justification: checklist with cite(...) per item
+  14: "swiss_fadp_s3_right_of_access_controller_obligations/2"   # obligation surfacing: what the controller must do
+  15: "swiss_access_deadline/3"                                  # deadline: last day of the 30-day limit
+  16: "swiss_fadp_s3_right_of_access_what_if/4"                  # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - ch-fadp-sr-235-1-2025-07-07#art_25
+  - ch-fadp-sr-235-1-2025-07-07#art_26
+  - ch-fadp-sr-235-1-2025-07-07#art_27
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_16
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_17
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_18
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_19
+  - 02016R0679-20160504#art_012
+  - 31971R1182#art_003
+  reason: 'The titles of the pinned articles (DSG Arts 25, 26 and 27; DSV Arts 16,
+    17, 18 and 19; GDPR Art 12; Regulation (EEC, Euratom) No 1182/71 Art 3) carry
+    no rule: document structure. Deferred so every unit of the pinned extracts is
+    accounted for.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: swiss_content_of_the_information
+  units:
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/listintro
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_a
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_b
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_c
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_d
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_e
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_f
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_2/lbl_g
+  reason: 'DSG Art 25(2) says what the data subject receives: the information needed
+    to assert their rights and for transparent processing, and in every case the seven
+    items of letters a to g (identity and contact details of the controller, the data
+    processed, the purpose, the retention period or its criteria, the available information
+    on the origin, where applicable an automated individual decision and its logic,
+    where applicable the recipients and the information under Art 19(4)). The order
+    says whether access must be given, not what it must contain.'
+  consequence: No answer says whether an answer to a request contains what it must.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a content check in a later order; the deferral stands for
+    this run.
+- what: swiss_health_data_through_health_professional
+  units:
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_3
+  reason: 'DSG Art 25(3) lets personal data concerning health be communicated to the
+    data subject, with their consent, through a health professional they designate:
+    a way of giving access, not whether it is owed.'
+  consequence: No answer says how health data are to be communicated.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later order; the deferral stands for this run.
+- what: swiss_who_answers_processor_and_joint_controllers
+  units:
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_4
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_17/para_1
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_17/para_2
+  reason: DSG Art 25(4) keeps the controller obliged to give access where a processor
+    processes the data; DSV Art 17(1) lets the data subject assert the right with
+    each of several joint controllers, and Art 17(2) has the processor support the
+    controller unless it answers on the controller's behalf. The order answers for
+    the controller to whom the request is made (reading (2)).
+  consequence: No answer says which of several controllers, or whether a processor,
+    must answer; the caller asks the order for the controller it names.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later order; the deferral stands for this run.
+- what: swiss_no_waiver_in_advance
+  units:
+  - ch-fadp-sr-235-1-2025-07-07#art_25/para_5
+  reason: DSG Art 25(5) says no one may waive the right of access in advance. The
+    order reads no waiver key, so a waiver given in advance cannot change any answer,
+    which is what the paragraph requires.
+  consequence: A caller must not treat a waiver given in advance as a ground to refuse
+    access; the order has no key for one.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as an explicit key in a later order; the deferral stands for
+    this run.
+- what: swiss_form_of_the_answer_and_identification
+  units:
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_16/para_2
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_16/para_4
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_16/para_5
+  reason: DSV Art 16(2) sets the form of the answer (in writing or in the form in
+    which the data exist; inspection on site by agreement; orally with the data subject's
+    agreement); Art 16(4) requires an understandable form; Art 16(5) requires the
+    controller to take appropriate measures to identify the data subject, who must
+    cooperate. The order reads the form of the request only (reading (3)) and assumes
+    the identification does not stand in the way (reading (2)).
+  consequence: No answer says whether an answer has the right form, or what follows
+    if the data subject cannot be identified or does not cooperate.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later order; the deferral stands for this run.
+- what: swiss_later_period_announced
+  units:
+  - ch-fadp-ord-sr-235-11-2025-12-01#art_18/para_2
+  reason: 'DSV Art 18(2): where the information cannot be given within 30 days, the
+    controller must inform the data subject and tell them within what period it will
+    be given. The text gives that period no number, so the order computes no date
+    for it (reading (8)).'
+  consequence: No answer gives the later period or checks the information about it;
+    the dates computed are those of the 30-day limit.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a notice check in a later order; the deferral stands for this
+    run.
+- what: eu_article_12_paragraphs_not_compared
+  units:
+  - 02016R0679-20160504#parag_012.001
+  - 02016R0679-20160504#parag_012.002
+  - 02016R0679-20160504#parag_012.007
+  - 02016R0679-20160504#parag_012.008
+  reason: GDPR Art 12(1) (form of information and communications), Art 12(2) (facilitating
+    the exercise of the rights), Art 12(7) and (8) (icons) are pinned with the Article
+    12 extract; this order's EU limb compares only the one-month period of Art 12(3).
+  consequence: No EU answer on these paragraphs.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later comparison order; the deferral stands for this run.
+- what: eu_article_12_response_duties
+  units:
+  - 02016R0679-20160504#parag_012.004
+  - 02016R0679-20160504#parag_012.005
+  - 02016R0679-20160504#point_012.005_a
+  - 02016R0679-20160504#point_012.005_b
+  - 02016R0679-20160504#parag_012.006
+  reason: GDPR Art 12(4) (notice of no action), Art 12(5) (free of charge, fee or
+    refusal for manifestly unfounded or excessive requests) and Art 12(6) (identity
+    information) are formalised in the sibling order gdpr-data-subject-rights-response-duties;
+    this order's EU limb compares the period only.
+  consequence: No EU answer on these duties in this order.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-data-subject-rights-response-duties
+- what: eu_article_12_3_extension_and_electronic_means
+  units:
+  - 02016R0679-20160504#parag_012.003
+  partial: true
+  reason: The first sentence of GDPR Art 12(3) (the one-month period) is read by eu_access_response_deadline/3
+    (reading (10)); its second and third sentences (extension by two further months,
+    and the notice of it) and its last sentence (electronic means) are not read by
+    this order.
+  consequence: No EU answer gives the extended period or checks the notice of extension
+    or the means of delivery.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later comparison order; the deferral stands for this run.
+- what: regulation_1182_71_article_3_rules_not_applied
+  units:
+  - 31971R1182#point_003.002_a
+  - 31971R1182#point_003.002_b
+  - 31971R1182#point_003.002_d
+  - 31971R1182#parag_003.003
+  - 31971R1182#parag_003.005
+  reason: The EU period of this order is expressed in months and runs from an event,
+    so it reads only Art 3(1), Art 3(2) with point (c) and Art 3(4) (reading (10)).
+    Points (a), (b) and (d) govern periods in hours, in days and in parts of months;
+    Art 3(3) (Saturdays, Sundays and public holidays count within a period) holds
+    by construction in a count of calendar months; Art 3(5) (at least two working
+    days) is not applied.
+  consequence: 'None for a caller: the EU period of this order is a whole month, which
+    holds two working days.'
+  declaration: not_an_exception
+  debt: true
+  open: the deferral stands for this run.
+
+excluded_set:
+- what: scope_of_application
+  instrument: DSG (SR 235.1) Arts 2 and 3; Regulation (EU) 2016/679 Arts 2 and 3
+  cites:
+  - ch-fadp-sr-235-1#art_2
+  - ch-fadp-sr-235-1#art_3
+  - 32016R0679#art_002
+  - 32016R0679#art_003
+  reason: The personal, material and territorial scope of the DSG and of the EU GDPR
+    are not pinned; the order assumes that each applies to the processing (reading
+    (13)).
+  consequence: No answer says whether the DSG or the EU GDPR applies.
+- what: entry_into_force_and_transitional_provisions
+  instrument: DSG (SR 235.1) Arts 69 to 74; DSV (SR 235.11) final provisions
+  cites:
+  - ch-fadp-sr-235-1#art_69
+  - ch-fadp-sr-235-1#art_70
+  - ch-fadp-sr-235-1#art_74
+  - ch-fadp-ord-sr-235-11#final_provisions
+  reason: 'The entry-into-force and transitional provisions were not pinned or read:
+    named as missing (reading (13)(iii)).'
+  consequence: The order answers under the pinned consolidations only.
+- what: swiss_penalties
+  instrument: DSG (SR 235.1) Art 60
+  cites:
+  - ch-fadp-sr-235-1#art_60
+  reason: The penal provisions of the DSG are not pinned for this order (reading (12)).
+  consequence: No answer says whether a fine can be imposed for a failure to give
+    access.
+- what: regulation_1182_71_scope_and_public_holidays
+  instrument: Regulation (EEC, Euratom) No 1182/71 Arts 1 and 2
+  cites:
+  - 31971R1182#art_001
+  - 31971R1182#art_002
+  reason: Art 1 (the Regulation applies to acts of the Council or the Commission)
+    and Art 2 (public holidays and working days) are not pinned for this order; the
+    EU limb applies Art 3 to Regulation (EU) 2016/679 by analogy and makes no public-holiday
+    shift (reading (10)).
+  consequence: Where the EU date computed is a public holiday, the caller moves it
+    to the following working day itself; a caller relying on the EU date accepts the
+    reading by analogy.
+- what: eu_right_of_access
+  instrument: Regulation (EU) 2016/679 Art 15
+  cites:
+  - 32016R0679#art_015
+  reason: The content of the EU right of access is formalised in the sibling order
+    gdpr-data-subject-rights-access-rectification-restriction and not pinned here;
+    this order compares only the period of Art 12(3).
+  consequence: No answer compares what the Swiss and the EU rights of access give.

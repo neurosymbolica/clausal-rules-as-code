@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: every answer argument left
+% unbound and read out; each fixture yields exactly its expected answer,
+% once; the date queries read out one date term of bare integers.
+% Run: python -m clausal.testing ch/swiss_fadp_s3_right_of_access/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(ch/swiss_fadp_s3_right_of_access/swiss_fadp_s3_right_of_access, [
+    decide_swiss_fadp_s3_right_of_access/2,
+    swiss_fadp_s3_right_of_access_status/2,
+    swiss_fadp_s3_right_of_access_checklist/2,
+    swiss_access_cost_contribution/3,
+    swiss_access_deadline/3,
+    swiss_access_deadline_after_cost_notice/3,
+    eu_access_response_deadline/3,
+    compare_swiss_eu_access_deadline/5
+]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/fixtures, [swiss_fadp_s3_right_of_access_profile_for/2]).
+
+expected_status(written_request_no_ground, access_must_be_given).
+expected_status(written_request_third_party_interests, access_may_be_refused_restricted_or_deferred).
+expected_status(electronic_request_no_ground, access_must_be_given).
+expected_status(oral_request_without_agreement, access_request_not_in_required_form).
+expected_status(oral_request_without_agreement_with_ground, access_request_not_in_required_form).
+expected_status(oral_request_with_agreement, access_must_be_given).
+expected_status(private_controller_overriding_interests, access_may_be_refused_restricted_or_deferred).
+expected_status(private_controller_discloses_to_third_parties, access_must_be_given).
+expected_status(federal_body_investigation_endangered, access_may_be_refused_restricted_or_deferred).
+expected_status(federal_body_no_condition, access_must_be_given).
+expected_status(private_person_investigation_endangered, access_must_be_given).
+expected_status(category_absent_both_letters_met, access_may_be_refused_restricted_or_deferred).
+expected_status(category_absent_private_letter_only, indeterminate([controller_category])).
+expected_status(editorial_media_sources_revealed, access_may_be_refused_restricted_or_deferred).
+expected_status(sources_revealed_not_editorial_media, access_must_be_given).
+expected_status(media_professional_working_instrument, access_may_be_refused_restricted_or_deferred).
+expected_status(empty_profile, indeterminate([request_form])).
+expected_status(formal_law_unsure_third_party_interests, access_may_be_refused_restricted_or_deferred).
+
+statuses_of(Subject, Statuses) :-
+    swiss_fadp_s3_right_of_access_profile_for(Subject, Profile),
+    findall(Status, swiss_fadp_s3_right_of_access_status(Profile, Status), Statuses).
+
+reads_out_expected(Subject-Status) :-
+    statuses_of(Subject, Statuses),
+    Statuses == [Status].
+
+test(every_fixture_reads_out_its_one_expected_status) :-
+    findall(Subject-Status, expected_status(Subject, Status), Expectations),
+    length(Expectations, 18),
+    maplist(reads_out_expected, Expectations).
+
+test(an_unsure_formal_law_reads_out_one_referral_with_its_pairs) :-
+    statuses_of(formal_law_unsure, Statuses),
+    Statuses == [needs_legal_review(open_textured(formal_law_provides_for_restriction, cite(ch_fadp_art_26_1_a)), [inputs_relied_on([request_form-written, controller_agreed_to_oral_request-false, controller_category-private_person, formal_law_provides_for_restriction-unsure, restriction_required_by_overriding_third_party_interests-false, request_manifestly_unfounded_or_querulous-false, restriction_required_by_overriding_controller_interests-false, controller_discloses_the_personal_data_to_third_parties-false, restriction_required_by_overriding_public_interests-false, information_could_endanger_investigation_or_proceedings-false, processed_exclusively_for_publication_in_editorial_part_of_periodical_medium-false, data_reveal_information_sources-false, access_would_give_insight_into_drafts_for_publications-false, publication_would_endanger_free_formation_of_public_opinion-false, data_serve_media_professional_exclusively_as_personal_working_instrument-false])])].
+
+test(the_permission_reads_out_twenty_two_citations) :-
+    swiss_fadp_s3_right_of_access_profile_for(media_professional_working_instrument, Profile),
+    findall(Citations, decide_swiss_fadp_s3_right_of_access(Profile, swiss_fadp_s3_right_of_access_verdict(_, Citations)), [Citations]),
+    length(Citations, 22),
+    member(cite(ch_fadp_art_26_4), Citations),
+    member(cite(ch_fadp_ord_art_18_3), Citations).
+
+test(the_obligation_reads_out_twenty_citations_without_the_reasons_duty) :-
+    swiss_fadp_s3_right_of_access_profile_for(written_request_no_ground, Profile),
+    findall(Citations, decide_swiss_fadp_s3_right_of_access(Profile, swiss_fadp_s3_right_of_access_verdict(_, Citations)), [Citations]),
+    length(Citations, 20).
+
+test(the_cost_query_reads_out_one_answer_for_each_value) :-
+    findall(Result, swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, false)], Result, _), FreeResults),
+    FreeResults == [access_free_of_charge],
+    findall(Result, swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, true)], Result, _), ContributionResults),
+    ContributionResults == [cost_contribution_may_be_requested],
+    findall(Result, swiss_access_cost_contribution([], Result, _), AbsentResults),
+    AbsentResults == [indeterminate([access_involves_disproportionate_effort])],
+    findall(Result, swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, unsure)], Result, _), UnsureResults),
+    UnsureResults == [needs_legal_review(open_textured(access_involves_disproportionate_effort, cite(ch_fadp_ord_art_19_1)), [inputs_relied_on([access_involves_disproportionate_effort-unsure])])].
+
+test(the_swiss_deadline_reads_out_one_date_of_bare_integers) :-
+    findall(Deadline-Citations, swiss_access_deadline(date(2026, 1, 15), Deadline, Citations), Answers),
+    Answers = [date(DeadlineYear, DeadlineMonth, DeadlineDay)-Citations],
+    integer(DeadlineYear),
+    integer(DeadlineMonth),
+    integer(DeadlineDay),
+    DeadlineYear =:= 2026,
+    DeadlineMonth =:= 2,
+    DeadlineDay =:= 14,
+    Citations == [cite(ch_fadp_art_25_7), cite(ch_fadp_ord_art_18_1)].
+
+test(the_swiss_deadline_crosses_the_year) :-
+    findall(Deadline, swiss_access_deadline(date(2026, 12, 15), Deadline, _), [date(2027, 1, 14)]).
+
+test(the_cost_notice_deadline_reads_out_one_date) :-
+    findall(Deadline, swiss_access_deadline_after_cost_notice(date(2026, 3, 1), Deadline, _), [date(2026, 4, 10)]).
+
+test(the_eu_deadline_reads_out_the_month_end_moved_to_monday) :-
+    findall(Deadline, eu_access_response_deadline(date(2026, 1, 31), Deadline, _), [date(2026, 3, 2)]).
+
+test(the_eu_deadline_reads_out_a_leap_day) :-
+    findall(Deadline, eu_access_response_deadline(date(2028, 1, 31), Deadline, _), [date(2028, 2, 29)]).
+
+test(the_comparison_reads_out_swiss_earlier) :-
+    findall(SwissDeadline-EuDeadline-Difference-ChangedBy, compare_swiss_eu_access_deadline(date(2026, 3, 1), SwissDeadline, EuDeadline, Difference, ChangedBy), Answers),
+    Answers = [date(2026, 3, 31)-date(2026, 4, 1)-Difference-ChangedBy],
+    Difference == swiss_earlier,
+    ChangedBy == [cite(ch_fadp_ord_art_18_1), cite(eu_reg_2016_679_art_12_3)].
+
+test(the_comparison_reads_out_same) :-
+    findall(Difference-ChangedBy, compare_swiss_eu_access_deadline(date(2026, 1, 31), _, _, Difference, ChangedBy), Answers),
+    Answers == [same-[]].
+
+test(the_comparison_reads_out_swiss_later) :-
+    findall(SwissDeadline-EuDeadline-Difference, compare_swiss_eu_access_deadline(date(2026, 2, 10), SwissDeadline, EuDeadline, Difference, _), Answers),
+    Answers = [date(2026, 3, 12)-date(2026, 3, 10)-Difference],
+    Difference == swiss_later.
+
+test(the_checklist_reads_out_an_open_row_for_an_unsure_judgement) :-
+    swiss_fadp_s3_right_of_access_profile_for(formal_law_unsure, Profile),
+    findall(Items, swiss_fadp_s3_right_of_access_checklist(Profile, Items), [Items]),
+    member(item(formal_law_ground, unknown([formal_law_provides_for_restriction]), cite(ch_fadp_art_26_1_a)), Items),
+    member(item(request_in_required_form, met, cite(ch_fadp_ord_art_16_1)), Items).
+
+test(the_checklist_reads_out_an_unmet_form) :-
+    swiss_fadp_s3_right_of_access_profile_for(oral_request_without_agreement, Profile),
+    swiss_fadp_s3_right_of_access_checklist(Profile, Items),
+    member(item(request_in_required_form, unmet(condition_not_met), cite(ch_fadp_ord_art_16_1)), Items).
+
+:- end_module(test_output_mode).

@@ -1,0 +1,138 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s1_international_transfers_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_swiss_fadp_s1_international_transfers, [swiss_fadp_s1_international_transfers_status_values/1, swiss_disclosure_abroad/3, swiss_information_of_commissioner_on_request/3, eu_transfer_under_articles_45_and_46/3, compare_swiss_eu_transfer_routes/5]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_fixtures, [swiss_fadp_s1_international_transfers_profile_for/2]).
+
+abroad_status(Subject, Status) :-
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    swiss_disclosure_abroad(Profile, Status, _).
+
+duty_status(Subject, Status) :-
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    swiss_information_of_commissioner_on_request(Profile, Status, _).
+
+european_status(Subject, Status) :-
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    eu_transfer_under_articles_45_and_46(Profile, Status, _).
+
+difference_of(Subject, Difference) :-
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    compare_swiss_eu_transfer_routes(Profile, _, _, Difference, _).
+
+derogation_permits(Subject) :-
+    abroad_status(Subject, permitted_by_derogation).
+
+test(the_near_miss_atoms_are_table_atoms) :-
+    swiss_fadp_s1_international_transfers_status_values(StatusValues),
+    member(permitted_by_adequacy_decision, StatusValues),
+    member(permitted_by_safeguards, StatusValues),
+    member(permitted_by_derogation, StatusValues),
+    member(disclosure_abroad_not_permitted, StatusValues).
+test(a_finding_permits_by_adequacy) :-
+    abroad_status(adequacy_finding_covers_disclosure, permitted_by_adequacy_decision).
+test(no_finding_is_no_route) :-
+    abroad_status(nothing_permits_disclosure, disclosure_abroad_not_permitted).
+test(a_treaty_permits_on_safeguards) :-
+    abroad_status(international_treaty_ensures_protection, permitted_by_safeguards).
+test(notified_clauses_permit_on_safeguards) :-
+    abroad_status(contract_clauses_notified, permitted_by_safeguards).
+test(unnotified_clauses_are_no_route) :-
+    abroad_status(contract_clauses_not_notified, disclosure_abroad_not_permitted).
+test(notified_guarantees_permit_on_safeguards) :-
+    abroad_status(specific_guarantees_notified, permitted_by_safeguards).
+test(unnotified_guarantees_are_no_route) :-
+    abroad_status(specific_guarantees_not_notified, disclosure_abroad_not_permitted).
+test(approved_standard_clauses_permit_on_safeguards) :-
+    abroad_status(standard_clauses_approved, permitted_by_safeguards).
+test(unapproved_standard_clauses_are_no_route) :-
+    abroad_status(standard_clauses_not_approved, disclosure_abroad_not_permitted).
+test(approved_corporate_rules_permit_on_safeguards) :-
+    abroad_status(binding_corporate_rules_approved, permitted_by_safeguards).
+test(unapproved_corporate_rules_are_no_route) :-
+    abroad_status(binding_corporate_rules_not_approved, disclosure_abroad_not_permitted).
+test(a_backed_code_permits_on_safeguards) :-
+    abroad_status(code_of_conduct_backed, permitted_by_safeguards).
+test(an_unbacked_code_is_no_route) :-
+    abroad_status(code_of_conduct_without_commitment, disclosure_abroad_not_permitted).
+test(a_backed_certification_permits_on_safeguards) :-
+    abroad_status(certification_backed, permitted_by_safeguards).
+test(an_unbacked_certification_is_no_route) :-
+    abroad_status(certification_without_commitment, disclosure_abroad_not_permitted).
+test(every_derogation_case_permits) :-
+    maplist(derogation_permits, [explicit_consent_given, contract_with_data_subject, contract_in_interest_of_data_subject, overriding_public_interest, legal_claims_abroad, life_or_physical_integrity, data_made_generally_accessible, statutory_register_data]).
+test(a_safeguard_comes_before_consent) :-
+    abroad_status(safeguard_preferred_over_consent, permitted_by_safeguards).
+test(a_finding_comes_before_a_safeguard) :-
+    abroad_status(finding_preferred_over_safeguard, permitted_by_adequacy_decision).
+test(a_requested_listed_case_must_be_reported) :-
+    duty_status(commissioner_must_be_informed, information_of_commissioner_required).
+test(an_unrequested_case_is_not_required) :-
+    duty_status(commissioner_did_not_request, information_of_commissioner_not_required).
+test(consent_alone_is_not_required) :-
+    duty_status(consent_only_information_requested, information_of_commissioner_not_required).
+test(consent_beside_a_listed_case_is_still_required) :-
+    duty_status(consent_and_legal_claims_information_requested, information_of_commissioner_required).
+test(a_finding_removes_the_duty) :-
+    swiss_information_of_commissioner_on_request([attribute(federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none))), attribute(commissioner_requested_information_on_disclosure, true), attribute(disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, true)], information_of_commissioner_not_required, _).
+test(an_eu_decision_permits_by_adequacy) :-
+    european_status(eu_adequacy_decision, permitted_by_adequacy_decision).
+test(eu_safeguards_with_remedies_permit) :-
+    european_status(eu_safeguards_with_remedies, permitted_by_safeguards).
+test(eu_safeguards_without_remedies_are_no_route) :-
+    european_status(eu_safeguards_without_remedies, no_adequacy_decision_or_safeguards).
+test(two_findings_are_the_same_route) :-
+    difference_of(swiss_and_eu_adequacy, same).
+test(a_swiss_finding_without_an_eu_route_differs) :-
+    difference_of(swiss_adequacy_eu_no_route, differs).
+
+test(no_finding_is_not_adequacy, fail) :-
+    abroad_status(nothing_permits_disclosure, permitted_by_adequacy_decision).
+test(no_treaty_is_not_safeguards, fail) :-
+    abroad_status(nothing_permits_disclosure, permitted_by_safeguards).
+test(unnotified_clauses_are_not_safeguards, fail) :-
+    abroad_status(contract_clauses_not_notified, permitted_by_safeguards).
+test(unnotified_guarantees_are_not_safeguards, fail) :-
+    abroad_status(specific_guarantees_not_notified, permitted_by_safeguards).
+test(unapproved_standard_clauses_are_not_safeguards, fail) :-
+    abroad_status(standard_clauses_not_approved, permitted_by_safeguards).
+test(unapproved_corporate_rules_are_not_safeguards, fail) :-
+    abroad_status(binding_corporate_rules_not_approved, permitted_by_safeguards).
+test(an_unbacked_code_is_not_safeguards, fail) :-
+    abroad_status(code_of_conduct_without_commitment, permitted_by_safeguards).
+test(an_unbacked_certification_is_not_safeguards, fail) :-
+    abroad_status(certification_without_commitment, permitted_by_safeguards).
+test(no_derogation_case_is_not_a_derogation, fail) :-
+    abroad_status(nothing_permits_disclosure, permitted_by_derogation).
+test(consent_is_not_no_route, fail) :-
+    abroad_status(explicit_consent_given, disclosure_abroad_not_permitted).
+test(a_safeguard_is_not_answered_as_a_derogation, fail) :-
+    abroad_status(safeguard_preferred_over_consent, permitted_by_derogation).
+test(a_finding_is_not_answered_as_safeguards, fail) :-
+    abroad_status(finding_preferred_over_safeguard, permitted_by_safeguards).
+test(an_unrequested_case_need_not_be_reported, fail) :-
+    duty_status(commissioner_did_not_request, information_of_commissioner_required).
+test(consent_alone_is_not_a_listed_case, fail) :-
+    duty_status(consent_only_information_requested, information_of_commissioner_required).
+test(a_finding_never_gives_the_duty, fail) :-
+    swiss_information_of_commissioner_on_request([attribute(federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none))), attribute(commissioner_requested_information_on_disclosure, true), attribute(disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, true)], information_of_commissioner_required, _).
+test(eu_safeguards_are_not_adequacy, fail) :-
+    european_status(eu_safeguards_with_remedies, permitted_by_adequacy_decision).
+test(eu_safeguards_without_remedies_do_not_permit, fail) :-
+    european_status(eu_safeguards_without_remedies, permitted_by_safeguards).
+test(a_swiss_finding_without_an_eu_route_is_not_same, fail) :-
+    difference_of(swiss_adequacy_eu_no_route, same).
+test(two_safeguard_routes_do_not_differ, fail) :-
+    difference_of(swiss_and_eu_safeguards, differs).
+
+cp_test_names([the_near_miss_atoms_are_table_atoms, a_finding_permits_by_adequacy, no_finding_is_no_route, a_treaty_permits_on_safeguards, notified_clauses_permit_on_safeguards, unnotified_clauses_are_no_route, notified_guarantees_permit_on_safeguards, unnotified_guarantees_are_no_route, approved_standard_clauses_permit_on_safeguards, unapproved_standard_clauses_are_no_route, approved_corporate_rules_permit_on_safeguards, unapproved_corporate_rules_are_no_route, a_backed_code_permits_on_safeguards, an_unbacked_code_is_no_route, a_backed_certification_permits_on_safeguards, an_unbacked_certification_is_no_route, every_derogation_case_permits, a_safeguard_comes_before_consent, a_finding_comes_before_a_safeguard, a_requested_listed_case_must_be_reported, an_unrequested_case_is_not_required, consent_alone_is_not_required, consent_beside_a_listed_case_is_still_required, a_finding_removes_the_duty, an_eu_decision_permits_by_adequacy, eu_safeguards_with_remedies_permit, eu_safeguards_without_remedies_are_no_route, two_findings_are_the_same_route, a_swiss_finding_without_an_eu_route_differs]).
+cp_test_fail_names([no_finding_is_not_adequacy, no_treaty_is_not_safeguards, unnotified_clauses_are_not_safeguards, unnotified_guarantees_are_not_safeguards, unapproved_standard_clauses_are_not_safeguards, unapproved_corporate_rules_are_not_safeguards, an_unbacked_code_is_not_safeguards, an_unbacked_certification_is_not_safeguards, no_derogation_case_is_not_a_derogation, consent_is_not_no_route, a_safeguard_is_not_answered_as_a_derogation, a_finding_is_not_answered_as_safeguards, an_unrequested_case_need_not_be_reported, consent_alone_is_not_a_listed_case, a_finding_never_gives_the_duty, eu_safeguards_are_not_adequacy, eu_safeguards_without_remedies_do_not_permit, a_swiss_finding_without_an_eu_route_is_not_same, two_safeguard_routes_do_not_differ]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

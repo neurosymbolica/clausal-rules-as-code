@@ -1,0 +1,165 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_data_subject_rights_objection_notice_and_erasure_follow_up.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, the kernel's input check, the citations marker and
+% the kit primitives, and nothing else.
+%
+% gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_keys/1: top-level profile key schema
+% gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems/2: the problems a profile has ([] = none)
+% gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_what_if/4      (#16 what-if): override one key -> re-evaluate
+% gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_action_compliance/3 (#13 compliance check):
+%     is a proposed action allowed in the current state? Verdict is the
+%     atom permitted or forbidden, or, when the state cannot say, the
+%     status compound the order gives (fail-closed: never permission on
+%     missing facts):
+%       first_communication_without_objection_notice  -- Art 21(4)
+%       first_communication_with_objection_notice     -- Art 21(4)
+%       conclude_erasure_without_informing_other_controllers -- Art 17(2)
+%       conclude_erasure_after_informing_other_controllers   -- Art 17(2)
+% Query type #2 (eligibility, cited checklist) is served by the slice's
+% verdict decide_.../2 and checklist, re-exported by the package facade.
+%
+% The result atoms and result constructors of the order's interface are
+% DECLARED here (exported, never called as queries), so that the package
+% root is the home of every bare atom and constructor the scorer resolves.
+% A result constructor is data and has no clauses.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_keys/1,
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems/2,
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_what_if/4,
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_action_compliance/3,
+    notice_not_owed/0,
+    notice_not_yet_due/0,
+    notice_complies/0,
+    notice_does_not_comply/0,
+    follow_up_duty_does_not_apply/0,
+    follow_up_duty_met/0,
+    follow_up_duty_not_met/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_objection_notice_and_erasure_follow_up/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_objection_notice_and_erasure_follow_up/kernel, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_objection_notice_and_erasure_follow_up/gdpr_data_subject_rights_objection_notice_and_erasure_follow_up, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status/2]).
+
+% ---- result constructors (exported, never called as queries) ----------
+:- constructors([indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(key, citation), cross_reference_unresolved(citation, target), resolution(target, resolution), inputs_relied_on(pairs), outside_fact(key, attested), attested(value, attestation), attestation(by, at, reason, evidence), url(location, retrieved_at), document(upload_identifier, digest), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_keys([right_to_object_applies, first_communication_with_data_subject_has_taken_place, right_explicitly_brought_to_attention_by_first_communication, right_presented_separately_from_other_information, right_presented_clearly, controller_made_personal_data_public, controller_obliged_to_erase_under_article_17_1, reasonable_steps_taken_to_inform_other_controllers]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% (a) THE LOGIC IS WRONG: kit override_key/4 works on dicts only and raised
+% type_error(dict) on this order's attribute-list profile; the override is
+% now done on the attribute list itself (every occurrence of the key is
+% replaced by one attribute(Key, Value)).
+gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status(Hypothesis, NewStatus).
+
+% Profile plumbing (no statutory decision).
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    exclude(attribute_has_key(Key), Profile, Others),
+    append(Others, [attribute(Key, Value)], Hypothesis).
+
+attribute_has_key(Key, attribute(ElementKey, _Value)) :-
+    ElementKey == Key.
+
+% ---- #13 compliance check ---------------------------------------------
+% The proposed actions this check judges.
+proposed_action(first_communication_without_objection_notice).
+proposed_action(first_communication_with_objection_notice).
+proposed_action(conclude_erasure_without_informing_other_controllers).
+proposed_action(conclude_erasure_after_informing_other_controllers).
+
+% Input problems come first, exactly as for the two queries.
+gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_action_compliance(Profile, Action, input_problems([Problem|Problems])) :-
+    proposed_action(Action),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems(Profile, [Problem|Problems]).
+gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_action_compliance(Profile, Action, Verdict) :-
+    proposed_action(Action),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems(Profile, []),
+    action_verdict(Action, Profile, Verdict).
+
+% Profile plumbing (no statutory decision): presence first, then value.
+crisp_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+crisp_state(Profile, Key, Value) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+outside_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+outside_state(Profile, Key, State) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, attested(Value, _)),
+    attested_state(Value, State).
+
+attested_state(true, attested_true).
+attested_state(false, attested_false).
+
+% Art 21(4): a first communication that omits the notice of the right to
+% object is forbidden where the right exists (read through the outside
+% fact right_to_object_applies); permitted where it is attested not to.
+action_verdict(first_communication_without_objection_notice, Profile, Verdict) :-
+    outside_state(Profile, right_to_object_applies, RightState),
+    notice_omission_verdict(RightState, Verdict).
+action_verdict(first_communication_with_objection_notice, _, permitted) :-
+    implements(eu_reg_2016_679_art_21_4).
+% Art 17(2): concluding an erasure without informing the other controllers
+% is forbidden where the duty applies.
+action_verdict(conclude_erasure_without_informing_other_controllers, Profile, Verdict) :-
+    crisp_state(Profile, controller_made_personal_data_public, Public),
+    outside_state(Profile, controller_obliged_to_erase_under_article_17_1, ObligedState),
+    inform_omission_verdict(Public, ObligedState, Verdict).
+action_verdict(conclude_erasure_after_informing_other_controllers, _, permitted) :-
+    implements(eu_reg_2016_679_art_17_2).
+
+notice_omission_verdict(attested_true, forbidden) :-
+    implements(eu_reg_2016_679_art_21_4).
+notice_omission_verdict(attested_false, permitted) :-
+    implements(eu_reg_2016_679_art_21_4).
+notice_omission_verdict(absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_21_4), cite(article_21_right_to_object_statement)), [resolution(cite(article_21_right_to_object_statement), not_attempted), inputs_relied_on([right_to_object_applies-absent])])) :-
+    implements(eu_reg_2016_679_art_21_4).
+
+inform_omission_verdict(false, _, permitted) :-
+    implements(eu_reg_2016_679_art_17_2).
+inform_omission_verdict(Public, attested_false, permitted) :-
+    implements(eu_reg_2016_679_art_17_2),
+    dif(Public, false).
+inform_omission_verdict(absent, ObligedState, indeterminate([controller_made_personal_data_public])) :-
+    implements(eu_reg_2016_679_art_17_2),
+    dif(ObligedState, attested_false).
+inform_omission_verdict(true, absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_2), cite(article_17_1_erasure_obligation_statement)), [resolution(cite(article_17_1_erasure_obligation_statement), not_attempted), inputs_relied_on([controller_obliged_to_erase_under_article_17_1-absent])])) :-
+    implements(eu_reg_2016_679_art_17_2).
+inform_omission_verdict(true, attested_true, forbidden) :-
+    implements(eu_reg_2016_679_art_17_2).
+
+% ---- result atoms (the seven final RESULT atoms) ----------------------
+notice_not_owed.
+notice_not_yet_due.
+notice_complies.
+notice_does_not_comply.
+follow_up_duty_does_not_apply.
+follow_up_duty_met.
+follow_up_duty_not_met.
+
+:- end_module(queries).

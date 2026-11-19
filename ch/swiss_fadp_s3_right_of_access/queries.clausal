@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for ch/swiss_fadp_s3_right_of_access.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else (plus the provenance marker).
+%
+% Drafter's reading, not a lawyer's; the German text is authoritative.
+%
+% Query-type coverage (the contract queries live in the slice and are
+% re-exported by the package facade):
+%   #2  status               swiss_fadp_s3_right_of_access_status/2 (slice)
+%   #5  comparison           compare_swiss_eu_access_deadline/5 (slice)
+%   #7  justification        swiss_fadp_s3_right_of_access_checklist/2 (slice):
+%                            one item(Id, Status, cite(Key)) per requirement
+%   #14 obligation_surfacing swiss_fadp_s3_right_of_access_controller_obligations/2
+%                            (here): what the controller must do
+%   #15 deadline             swiss_access_deadline/3,
+%                            swiss_access_deadline_after_cost_notice/3,
+%                            eu_access_response_deadline/3 (slice). No
+%                            consequence of missing a deadline is pinned
+%                            (the penal provisions are excluded), so only
+%                            the last day is stated.
+%   #16 what-if              swiss_fadp_s3_right_of_access_what_if/4 (here)
+%
+% swiss_fadp_s3_right_of_access_profile_keys/1: top-level profile key schema
+% swiss_fadp_s3_right_of_access_input_problems/2: the problems a profile has
+%   ([] = none), re-exported from the kernel as the scaffold wrote it.
+%
+% ROOT EXPORTS: the sixteen profile key atoms, the five enumeration atoms
+% and the judgement value unsure are read by the scorer as package-root
+% attributes, so each is defined here as a bare fact and exported.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is
+% list plumbing here (drop every attribute of the key, then add the new
+% one) rather than the dict-based override_key/4.
+% =====================================================================
+
+:- module(queries, [
+    swiss_fadp_s3_right_of_access_profile_keys/1,
+    swiss_fadp_s3_right_of_access_input_problems/2,
+    swiss_fadp_s3_right_of_access_what_if/4,
+    swiss_fadp_s3_right_of_access_controller_obligations/2,
+    request_form/0,
+    controller_agreed_to_oral_request/0,
+    controller_category/0,
+    formal_law_provides_for_restriction/0,
+    restriction_required_by_overriding_third_party_interests/0,
+    request_manifestly_unfounded_or_querulous/0,
+    restriction_required_by_overriding_controller_interests/0,
+    controller_discloses_the_personal_data_to_third_parties/0,
+    restriction_required_by_overriding_public_interests/0,
+    information_could_endanger_investigation_or_proceedings/0,
+    processed_exclusively_for_publication_in_editorial_part_of_periodical_medium/0,
+    data_reveal_information_sources/0,
+    access_would_give_insight_into_drafts_for_publications/0,
+    publication_would_endanger_free_formation_of_public_opinion/0,
+    data_serve_media_professional_exclusively_as_personal_working_instrument/0,
+    access_involves_disproportionate_effort/0,
+    written/0,
+    electronic/0,
+    oral/0,
+    private_person/0,
+    federal_body/0,
+    unsure/0
+]).
+
+:- use_module(ch/swiss_fadp_s3_right_of_access/kernel, [swiss_fadp_s3_right_of_access_input_problems/2]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/citations, [implements/1]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/swiss_fadp_s3_right_of_access, [swiss_access_request_answer/3]).
+
+% ---- root exports: the profile key atoms, in root_exports order -------
+request_form.
+controller_agreed_to_oral_request.
+controller_category.
+formal_law_provides_for_restriction.
+restriction_required_by_overriding_third_party_interests.
+request_manifestly_unfounded_or_querulous.
+restriction_required_by_overriding_controller_interests.
+controller_discloses_the_personal_data_to_third_parties.
+restriction_required_by_overriding_public_interests.
+information_could_endanger_investigation_or_proceedings.
+processed_exclusively_for_publication_in_editorial_part_of_periodical_medium.
+data_reveal_information_sources.
+access_would_give_insight_into_drafts_for_publications.
+publication_would_endanger_free_formation_of_public_opinion.
+data_serve_media_professional_exclusively_as_personal_working_instrument.
+access_involves_disproportionate_effort.
+
+% ---- root exports: the enumeration atoms and the judgement value -------
+written.
+electronic.
+oral.
+private_person.
+federal_body.
+unsure.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+swiss_fadp_s3_right_of_access_profile_keys([request_form, controller_agreed_to_oral_request, controller_category, formal_law_provides_for_restriction, restriction_required_by_overriding_third_party_interests, request_manifestly_unfounded_or_querulous, restriction_required_by_overriding_controller_interests, controller_discloses_the_personal_data_to_third_parties, restriction_required_by_overriding_public_interests, information_could_endanger_investigation_or_proceedings, processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, data_reveal_information_sources, access_would_give_insight_into_drafts_for_publications, publication_would_endanger_free_formation_of_public_opinion, data_serve_media_professional_exclusively_as_personal_working_instrument, access_involves_disproportionate_effort]).
+
+% ---- #16 what-if: the request answer with one key hypothetically set ----
+% NewResult is exactly the RESULT of swiss_access_request_answer/3 on the
+% hypothetical profile (a final atom or a status compound).
+swiss_fadp_s3_right_of_access_what_if(Profile, OverriddenKey, NewValue, NewResult) :-
+    hypothetical_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    swiss_access_request_answer(Hypothesis, NewResult, _Citations).
+
+hypothetical_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_for_key(OverriddenKey), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_for_key(OverriddenKey, attribute(ElementKey, _)) :-
+    ElementKey == OverriddenKey.
+
+% ---- #14 obligation surfacing: what the controller must do -------------
+% Obligations is a flat list of obligation(Action, cite(Key)) derived from
+% the request answer; a not-final answer is passed through as the status
+% compound itself. Costs remain in swiss_access_cost_contribution/3.
+swiss_fadp_s3_right_of_access_controller_obligations(Profile, Obligations) :-
+    swiss_access_request_answer(Profile, Result, _Citations),
+    obligations_for_answer(Result, Obligations).
+
+% DSG Art 25(1) with DSV Art 18(1): access must be given within 30 days.
+obligations_for_answer(access_must_be_given, [obligation(give_access, cite(ch_fadp_art_25_1)), obligation(give_access_within_time_limit, cite(ch_fadp_ord_art_18_1))]) :-
+    implements(ch_fadp_art_25_1),
+    implements(ch_fadp_ord_art_18_1).
+% DSG Art 26(4) and DSV Art 18(3): state the reasons, within the same period.
+obligations_for_answer(access_may_be_refused_restricted_or_deferred, [obligation(state_reasons_for_measure, cite(ch_fadp_art_26_4)), obligation(communicate_measure_within_time_limit, cite(ch_fadp_ord_art_18_3))]) :-
+    implements(ch_fadp_art_26_4),
+    implements(ch_fadp_ord_art_18_3).
+% DSV Art 16(1): a request not in the required form raises no duty here.
+obligations_for_answer(access_request_not_in_required_form, []) :-
+    implements(ch_fadp_ord_art_16_1).
+obligations_for_answer(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+obligations_for_answer(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+obligations_for_answer(input_problems(Problems), input_problems(Problems)).
+
+:- end_module(queries).

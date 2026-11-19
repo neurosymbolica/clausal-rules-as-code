@@ -1,0 +1,14 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_transfer_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+citation(in_dpdp_act_2023_s_16_1, [label - 'Digital Personal Data Protection Act 2023 s 16(1) (restriction by notification of transfer of personal data to a country or territory outside India)', ref - 'https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf (pinned unit in-dpdp-act-2023-meity-pdf#s16_1, MeitY copy fetched 2026-11-13)', verbatim - 'The Central Government may, by notification, restrict the transfer of personal data by a Data Fiduciary for processing to such country or territory outside India as may be so notified.']).
+citation(in_dpdp_act_2023_s_16_2, [label - 'Digital Personal Data Protection Act 2023 s 16(2) (other laws in force in India giving a higher degree of protection for or restriction on transfer)', ref - 'https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf (pinned unit in-dpdp-act-2023-meity-pdf#s16_2, MeitY copy fetched 2026-11-13)', verbatim - 'Nothing contained in this section shall restrict the applicability of any law for the time being in force in India that provides for a higher degree of protection for or restriction on transfer of personal data by a Data Fiduciary outside India in relation to any personal data or Data Fiduciary or class thereof.']).
+citation(in_dpdp_rules_2025_r_15, [label - 'Digital Personal Data Protection Rules 2025 rule 15 (transfer of personal data outside the territory of India; requirements for making personal data available to a foreign State or its entity or agency)', ref - 'https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf (pinned unit in-dpdp-rules-2025-meity-pdf#r15, MeitY copy fetched 2026-11-13, English text)', verbatim - 'Any personal data processed by a Data Fiduciary under the Act may be transferred outside the territory of India subject to the restriction that the Data Fiduciary shall meet such requirements as the Central Government may, by general or special order, specify in respect of making such personal data available to any foreign State, or to any person or entity under the control of or any agency of such a State.']).
+citation(in_dpdp_rules_2025_r_1_4, [label - 'Digital Personal Data Protection Rules 2025 rule 1(4) (commencement of rules 3, 5 to 16, 22 and 23, rule 15 included)', ref - 'https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf (pinned unit in-dpdp-rules-2025-meity-pdf#r1_4, MeitY copy fetched 2026-11-13, English text)', verbatim - 'Rules 3, 5 to 16, 22 and 23 shall come into force eighteen months after the date of publication of this Gazette.']).
+
+implements(Key) :-
+    citation(Key, _).

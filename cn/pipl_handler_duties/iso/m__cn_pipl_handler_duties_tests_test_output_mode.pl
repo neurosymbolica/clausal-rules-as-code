@@ -1,0 +1,115 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__cn_pipl_handler_duties_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__cn_pipl_handler_duties_pipl_handler_duties, [duty_status/4, duty_contents/2, decide_pipl_handler_duties/2, pipl_handler_duties_status/2]).
+:- use_module(m__cn_pipl_handler_duties_fixtures, [pipl_handler_duties_profile_for/2]).
+
+duty(compliance_measures).
+duty(protection_officer).
+duty(officer_contact_details).
+duty(china_representative).
+duty(compliance_audit).
+duty(impact_assessment).
+duty(assessment_record_retention).
+duty(breach_remedial_measures).
+duty(breach_notice_to_department).
+duty(breach_notice_to_individuals).
+duty(large_platform_obligations).
+duty(entrusted_party_safeguards).
+
+answers(Subject, Duty, Answers) :-
+    pipl_handler_duties_profile_for(Subject, Profile),
+    findall(Result - Citations, duty_status(Duty, Profile, Result, Citations), Answers).
+
+test(a_bare_handler_reads_out_one_answer_per_duty) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    findall(Duty - Result, (duty(Duty), duty_status(Duty, Profile, Result, _)), Answers),
+    Answers == [compliance_measures - required, protection_officer - indeterminate([reaches_officer_quantity]), officer_contact_details - indeterminate([reaches_officer_quantity]), china_representative - indeterminate([handler_located_outside_china]), compliance_audit - required, impact_assessment - indeterminate([processes_sensitive_personal_information]), assessment_record_retention - indeterminate([processes_sensitive_personal_information]), breach_remedial_measures - indeterminate([incident_occurred_or_possible]), breach_notice_to_department - indeterminate([incident_occurred_or_possible]), breach_notice_to_individuals - indeterminate([incident_occurred_or_possible]), large_platform_obligations - indeterminate([important_platform_handler]), entrusted_party_safeguards - indeterminate([processes_on_entrustment])].
+test(an_empty_profile_asks_for_the_reference_date_first) :-
+    findall(Result - Citations, duty_status(impact_assessment, [], Result, Citations), Answers),
+    Answers == [indeterminate([reference_date]) - []].
+test(a_missing_pinned_text_statement_is_read_out) :-
+    answers(pinned_text_status_absent, compliance_measures, Answers),
+    Answers == [indeterminate([pinned_articles_unamended_on_reference_date]) - []].
+test(the_day_of_entry_into_force_reads_out_required) :-
+    answers(day_of_entry_into_force, compliance_audit, Answers),
+    Answers == [required - [cite(cn_pipl_art_54_p1), cite(cn_pipl_art_73_p1_i1)]].
+test(the_day_before_reads_out_not_in_force) :-
+    answers(day_before_entry_into_force, entrusted_party_safeguards, Answers),
+    Answers == [not_in_force - [cite(cn_pipl_art_74_p1)]].
+test(the_representative_reads_out_its_six_citations) :-
+    answers(offshore_services_handler, china_representative, Answers),
+    Answers == [required - [cite(cn_pipl_art_53_p1), cite(cn_pipl_art_3_p2), cite(cn_pipl_art_3_p2_i1), cite(cn_pipl_art_3_p2_i2), cite(cn_pipl_art_3_p2_i3), cite(cn_pipl_art_73_p1_i1)]].
+test(an_unstated_case_names_the_products_purpose) :-
+    answers(offshore_case_unstated, china_representative, Answers),
+    Answers == [indeterminate([offers_products_or_services_to_individuals_in_china]) - []].
+test(an_unstated_location_is_named) :-
+    answers(offshore_location_unstated, china_representative, Answers),
+    Answers == [indeterminate([handler_located_outside_china]) - []].
+test(an_unsure_purpose_reads_out_its_referral) :-
+    answers(offshore_purpose_unsure, china_representative, Answers),
+    Answers == [needs_legal_review(open_textured(offers_products_or_services_to_individuals_in_china, cite(cn_pipl_art_3_p2_i1)), [inputs_relied_on([decides_purposes_and_means - true, offers_products_or_services_to_individuals_in_china - unsure, analyses_or_evaluates_individuals_in_china - false])]) - []].
+test(an_unsure_analysis_reads_out_its_referral) :-
+    answers(offshore_analysis_unsure, china_representative, Answers),
+    Answers == [needs_legal_review(open_textured(analyses_or_evaluates_individuals_in_china, cite(cn_pipl_art_3_p2_i2)), [inputs_relied_on([decides_purposes_and_means - true, offers_products_or_services_to_individuals_in_china - false, analyses_or_evaluates_individuals_in_china - unsure])]) - []].
+test(an_unsure_offshore_handler_reads_out_its_referral) :-
+    answers(offshore_unsure_handler, china_representative, Answers),
+    Answers == [needs_legal_review(open_textured(decides_purposes_and_means, cite(cn_pipl_art_73_p1_i1)), [inputs_relied_on([decides_purposes_and_means - unsure, offers_products_or_services_to_individuals_in_china - true])]) - []].
+test(an_assessment_reads_out_nine_citations) :-
+    answers(automated_decision_handler, impact_assessment, Answers),
+    Answers == [required_in_advance - [cite(cn_pipl_art_55_p1), cite(cn_pipl_art_55_p1_i1), cite(cn_pipl_art_55_p1_i2), cite(cn_pipl_art_55_p1_i3), cite(cn_pipl_art_55_p1_i4), cite(cn_pipl_art_55_p1_i5), cite(cn_pipl_art_56_p1), cite(cn_pipl_art_73_p1_i1), cite(cn_pipl_art_73_p1_i2)]].
+test(no_occasion_reads_out_not_required) :-
+    answers(no_assessment_occasion, assessment_record_retention, Answers),
+    Answers == [not_required - [cite(cn_pipl_art_55_p1), cite(cn_pipl_art_55_p1_i1), cite(cn_pipl_art_55_p1_i2), cite(cn_pipl_art_55_p1_i3), cite(cn_pipl_art_55_p1_i4), cite(cn_pipl_art_55_p1_i5), cite(cn_pipl_art_73_p1_i1), cite(cn_pipl_art_73_p1_i2)]].
+test(an_unsure_significant_impact_reads_out_its_referral) :-
+    answers(significant_impact_unsure, impact_assessment, Answers),
+    Answers == [needs_legal_review(open_textured(other_significant_impact_processing, cite(cn_pipl_art_55_p1_i5)), [inputs_relied_on([decides_purposes_and_means - true, other_significant_impact_processing - unsure])]) - []].
+test(avoided_harm_reads_out_omission) :-
+    answers(incident_harm_avoided, breach_notice_to_individuals, Answers),
+    Answers == [notice_may_be_omitted - [cite(cn_pipl_art_57_p1), cite(cn_pipl_art_57_p2), cite(cn_pipl_art_73_p1_i1)]].
+test(an_unstated_requirement_is_named_after_harm) :-
+    answers(incident_requirement_unstated, breach_notice_to_individuals, Answers),
+    Answers == [indeterminate([department_required_individual_notice]) - []].
+test(an_unsure_harm_reads_out_its_referral) :-
+    answers(incident_harm_unsure, breach_notice_to_individuals, Answers),
+    Answers == [needs_legal_review(open_textured(harm_effectively_avoided, cite(cn_pipl_art_57_p2)), [inputs_relied_on([decides_purposes_and_means - true, harm_effectively_avoided - unsure])]) - []].
+test(an_unsure_handler_in_an_incident_reads_out_its_referral) :-
+    answers(incident_unsure_handler, breach_notice_to_individuals, Answers),
+    Answers == [needs_legal_review(open_textured(decides_purposes_and_means, cite(cn_pipl_art_73_p1_i1)), [inputs_relied_on([decides_purposes_and_means - unsure, harm_effectively_avoided - true])]) - []].
+test(an_unsure_platform_handler_reads_out_its_referral) :-
+    answers(platform_unsure_handler, large_platform_obligations, Answers),
+    Answers == [needs_legal_review(open_textured(decides_purposes_and_means, cite(cn_pipl_art_73_p1_i1)), [inputs_relied_on([decides_purposes_and_means - unsure, important_platform_handler - true])]) - []].
+test(an_unsure_officer_handler_reads_out_its_referral) :-
+    answers(officer_unsure_handler, protection_officer, Answers),
+    Answers == [needs_legal_review(open_textured(decides_purposes_and_means, cite(cn_pipl_art_73_p1_i1)), [inputs_relied_on([decides_purposes_and_means - unsure])]) - []].
+test(the_compliance_measures_read_out_in_text_order) :-
+    findall(Items, duty_contents(compliance_measures, Items), Answers),
+    Answers == [[content_item(internal_management_rules_and_operating_procedures, cite(cn_pipl_art_51_p1_i1)), content_item(classified_management_of_personal_information, cite(cn_pipl_art_51_p1_i2)), content_item(encryption_and_de_identification_security_measures, cite(cn_pipl_art_51_p1_i3)), content_item(operating_permissions_and_staff_security_training, cite(cn_pipl_art_51_p1_i4)), content_item(security_incident_emergency_plan, cite(cn_pipl_art_51_p1_i5)), content_item(other_measures_prescribed_by_law, cite(cn_pipl_art_51_p1_i6))]].
+test(the_platform_obligations_read_out_in_text_order) :-
+    findall(Items, duty_contents(large_platform_obligations, Items), Answers),
+    Answers == [[content_item(compliance_system_and_independent_supervisory_body, cite(cn_pipl_art_58_p1_i1)), content_item(platform_rules_for_providers_on_the_platform, cite(cn_pipl_art_58_p1_i2)), content_item(stop_services_to_providers_in_serious_violation, cite(cn_pipl_art_58_p1_i3)), content_item(regular_social_responsibility_report, cite(cn_pipl_art_58_p1_i4))]].
+test(the_breach_notice_contents_read_out_once) :-
+    findall(Items, duty_contents(breach_notice, Items), Answers),
+    Answers == [[content_item(categories_causes_and_possible_harm, cite(cn_pipl_art_57_p1_i1)), content_item(remedial_measures_and_steps_individuals_can_take, cite(cn_pipl_art_57_p1_i2)), content_item(handler_contact_details, cite(cn_pipl_art_57_p1_i3))]].
+test(the_facade_reads_out_a_cited_checklist) :-
+    pipl_handler_duties_profile_for(handler_only, Profile),
+    findall(Status, pipl_handler_duties_status(Profile, Status), Statuses),
+    Statuses == [duties_owed],
+    decide_pipl_handler_duties(Profile, pipl_handler_duties_verdict(duties_owed, [item(compliance_measures, required, cite(_FirstKey))|OtherItems])),
+    length(OtherItems, 11).
+test(the_facade_reads_out_input_problems_with_no_checklist) :-
+    pipl_handler_duties_profile_for(stray_element, Profile),
+    findall(Verdict, decide_pipl_handler_duties(Profile, Verdict), Verdicts),
+    Verdicts == [pipl_handler_duties_verdict(input_problems([wrong_type(profile)]), [])].
+
+cp_test_names([a_bare_handler_reads_out_one_answer_per_duty, an_empty_profile_asks_for_the_reference_date_first, a_missing_pinned_text_statement_is_read_out, the_day_of_entry_into_force_reads_out_required, the_day_before_reads_out_not_in_force, the_representative_reads_out_its_six_citations, an_unstated_case_names_the_products_purpose, an_unstated_location_is_named, an_unsure_purpose_reads_out_its_referral, an_unsure_analysis_reads_out_its_referral, an_unsure_offshore_handler_reads_out_its_referral, an_assessment_reads_out_nine_citations, no_occasion_reads_out_not_required, an_unsure_significant_impact_reads_out_its_referral, avoided_harm_reads_out_omission, an_unstated_requirement_is_named_after_harm, an_unsure_harm_reads_out_its_referral, an_unsure_handler_in_an_incident_reads_out_its_referral, an_unsure_platform_handler_reads_out_its_referral, an_unsure_officer_handler_reads_out_its_referral, the_compliance_measures_read_out_in_text_order, the_platform_obligations_read_out_in_text_order, the_breach_notice_contents_read_out_once, the_facade_reads_out_a_cited_checklist, the_facade_reads_out_input_problems_with_no_checklist]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

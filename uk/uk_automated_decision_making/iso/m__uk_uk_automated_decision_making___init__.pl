@@ -1,0 +1,50 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_automated_decision_making___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__uk_uk_automated_decision_making_kernel, [uk_automated_decision_making_input_problems/2]).
+:- use_module(m__uk_uk_automated_decision_making_citations, [citation/2, implements/1]).
+:- use_module(m__uk_uk_automated_decision_making_uk_automated_decision_making, [compare_uk_eu_automated_decision/5, decide_uk_automated_decision_making/2, decision_permitted/0, decision_prohibited/0, differs/0, eu_automated_decision/3, not_a_significant_decision_based_solely_on_automated_processing/0, required_safeguards_in_place/0, required_safeguards_not_in_place/0, restrictions_not_engaged/0, safeguards_not_required/0, same/0, significant_decision_based_solely_on_automated_processing/0, uk_automated_decision_making_checklist/2, uk_automated_decision_making_decision_resolvable/1, uk_automated_decision_making_status/2, uk_automated_decision_making_status_values/1, uk_automated_decision_restriction/3, uk_automated_decision_safeguards/3, uk_significant_automated_decision/3]).
+:- use_module(m__uk_uk_automated_decision_making_queries, [article_9_2_a_applies/0, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures/0, decision_based_entirely_on_processing_with_explicit_consent/0, decision_based_entirely_or_partly_on_personal_data/0, decision_based_entirely_or_partly_on_special_category_data/0, decision_based_on_explicit_consent/0, decision_has_a_similarly_significant_effect_for_the_data_subject/0, decision_necessary_for_a_contract_with_the_data_subject/0, decision_produces_a_legal_effect_for_the_data_subject/0, decision_required_or_authorised_by_law/0, eu_article_9_2_g_applies/0, meaningful_human_involvement_in_the_decision/0, processing_for_the_decision_relies_on_article_6_1_ea/0, safeguards_enable_contesting/0, safeguards_enable_human_intervention/0, safeguards_enable_representations/0, safeguards_provide_information_about_decisions/0, suitable_measures_for_special_category_data_in_place/0, uk_article_9_2_g_applies/0, uk_automated_decision_making_profile_keys/1, uk_automated_decision_making_what_if/4, unsure/0]).
+:- use_module(m__uk_uk_automated_decision_making_fixtures, [uk_automated_decision_making_assess/2, uk_automated_decision_making_profile_for/2, uk_automated_decision_making_subject/1]).
+
+root_export(article_9_2_a_applies).
+root_export(decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures).
+root_export(decision_based_entirely_on_processing_with_explicit_consent).
+root_export(decision_based_entirely_or_partly_on_personal_data).
+root_export(decision_based_entirely_or_partly_on_special_category_data).
+root_export(decision_based_on_explicit_consent).
+root_export(decision_has_a_similarly_significant_effect_for_the_data_subject).
+root_export(decision_necessary_for_a_contract_with_the_data_subject).
+root_export(decision_permitted).
+root_export(decision_produces_a_legal_effect_for_the_data_subject).
+root_export(decision_prohibited).
+root_export(decision_required_or_authorised_by_law).
+root_export(differs).
+root_export(duplicate_key).
+root_export(eu_article_9_2_g_applies).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(meaningful_human_involvement_in_the_decision).
+root_export(needs_legal_review).
+root_export(not_a_significant_decision_based_solely_on_automated_processing).
+root_export(open_textured).
+root_export(processing_for_the_decision_relies_on_article_6_1_ea).
+root_export(required_safeguards_in_place).
+root_export(required_safeguards_not_in_place).
+root_export(restrictions_not_engaged).
+root_export(safeguards_enable_contesting).
+root_export(safeguards_enable_human_intervention).
+root_export(safeguards_enable_representations).
+root_export(safeguards_not_required).
+root_export(safeguards_provide_information_about_decisions).
+root_export(same).
+root_export(significant_decision_based_solely_on_automated_processing).
+root_export(suitable_measures_for_special_category_data_in_place).
+root_export(uk_article_9_2_g_applies).
+root_export(unknown_key).
+root_export(unsure).
+root_export(wrong_type).

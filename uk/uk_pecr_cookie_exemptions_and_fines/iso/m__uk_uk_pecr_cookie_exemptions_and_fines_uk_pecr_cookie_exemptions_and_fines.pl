@@ -1,0 +1,849 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_pecr_cookie_exemptions_and_fines_uk_pecr_cookie_exemptions_and_fines, [decide_uk_pecr_cookie_exemptions_and_fines/2, uk_pecr_cookie_exemptions_and_fines_status/2, uk_pecr_cookie_exemptions_and_fines_checklist/2, uk_pecr_cookie_exemptions_and_fines_decision_resolvable/1, uk_pecr_cookie_exemptions_and_fines_status_values/1, uk_terminal_equipment_storage_or_access/3, eu_terminal_equipment_storage_or_access/3, compare_uk_eu_terminal_equipment_storage_or_access/5, uk_breach_notification_timing/3, uk_penalty_maximum_tier/3, uk_penalty_maximum_amount_in_pence/3]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [tfilter/3]).
+:- use_module(clausal_lists_extra, [intersection/3]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_kernel, [uk_pecr_cookie_exemptions_and_fines_input_problems/2]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_citations, [implements/1]).
+
+uk_pecr_cookie_exemptions_and_fines_status_values([permitted, not_permitted, not_applicable]).
+
+side_gate(uk, storage_or_access_within_regulation_6).
+side_gate(eu, storage_or_access_in_terminal_equipment).
+
+other_side(uk, eu).
+other_side(eu, uk).
+
+side_key_role(uk, storage_or_access_within_regulation_6, gate).
+side_key_role(uk, clear_and_comprehensive_information_about_the_purpose_provided, way).
+side_key_role(uk, consent_to_the_storage_or_access_given, way).
+side_key_role(uk, technical_storage_or_access_solely_for_transmission_of_a_communication, way).
+side_key_role(uk, information_society_service_requested_by_the_subscriber_or_user, way).
+side_key_role(uk, storage_or_access_strictly_necessary_for_the_requested_service, way).
+side_key_role(uk, person_provides_an_information_society_service, way).
+side_key_role(uk, sole_purpose_is_statistical_information_to_improve_the_service_or_website, way).
+side_key_role(uk, collected_information_shared_only_to_assist_with_improvements, way).
+side_key_role(uk, access_does_not_collect_or_monitor_automatically_emitted_information, way).
+side_key_role(uk, simple_free_means_of_objecting_given, way).
+side_key_role(uk, subscriber_or_user_has_not_objected, way).
+side_key_role(uk, person_provides_an_information_society_service_by_means_of_a_website, way).
+side_key_role(uk, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, way).
+side_key_role(uk, communication_received_requests_or_indicates_need_of_emergency_assistance, way).
+side_key_role(uk, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance, way).
+side_key_role(eu, storage_or_access_in_terminal_equipment, gate).
+side_key_role(eu, storage_or_access_solely_for_transmission, way).
+side_key_role(eu, service_explicitly_requested_by_user, way).
+side_key_role(eu, strictly_necessary_to_provide_requested_service, way).
+side_key_role(eu, user_consent_given, way).
+side_key_role(eu, clear_and_comprehensive_information_provided, way).
+
+side_way(uk, consent, [clear_and_comprehensive_information_about_the_purpose_provided, consent_to_the_storage_or_access_given], cite(uk_si_2003_2426_sch_a1_para_2_1)).
+side_way(uk, transmission, [technical_storage_or_access_solely_for_transmission_of_a_communication], cite(uk_si_2003_2426_sch_a1_para_3)).
+side_way(uk, strictly_necessary, [information_society_service_requested_by_the_subscriber_or_user, storage_or_access_strictly_necessary_for_the_requested_service], cite(uk_si_2003_2426_sch_a1_para_4_1)).
+side_way(uk, statistical_purposes, [clear_and_comprehensive_information_about_the_purpose_provided, person_provides_an_information_society_service, sole_purpose_is_statistical_information_to_improve_the_service_or_website, collected_information_shared_only_to_assist_with_improvements, access_does_not_collect_or_monitor_automatically_emitted_information, simple_free_means_of_objecting_given, subscriber_or_user_has_not_objected], cite(uk_si_2003_2426_sch_a1_para_5_1)).
+side_way(uk, website_appearance_or_functionality, [clear_and_comprehensive_information_about_the_purpose_provided, simple_free_means_of_objecting_given, subscriber_or_user_has_not_objected, person_provides_an_information_society_service_by_means_of_a_website, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality], cite(uk_si_2003_2426_sch_a1_para_6_1)).
+side_way(uk, emergency_assistance, [communication_received_requests_or_indicates_need_of_emergency_assistance, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance], cite(uk_si_2003_2426_sch_a1_para_7)).
+side_way(eu, transmission, [storage_or_access_solely_for_transmission], cite(eu_dir_2002_58_art_5_3_s2)).
+side_way(eu, strictly_necessary, [service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service], cite(eu_dir_2002_58_art_5_3_s2)).
+side_way(eu, consent, [user_consent_given, clear_and_comprehensive_information_provided], cite(eu_dir_2002_58_art_5_3_s1)).
+
+provision_read_into(storage_or_access_within_regulation_6, cite(uk_si_2003_2426_sch_a1_para_1_2)).
+provision_read_into(storage_or_access_within_regulation_6, cite(uk_si_2026_82_reg_2)).
+provision_read_into(storage_or_access_within_regulation_6, cite(uk_si_2026_82_reg_2_w)).
+provision_read_into(storage_or_access_within_regulation_6, cite(uk_si_2026_82_reg_2_z13)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_2_1_a)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_5_1_d)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_6_1_c)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_2_2)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_5_3)).
+provision_read_into(clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_6_2)).
+provision_read_into(consent_to_the_storage_or_access_given, cite(uk_si_2003_2426_sch_a1_para_2_1_b)).
+provision_read_into(consent_to_the_storage_or_access_given, cite(uk_si_2003_2426_sch_a1_para_2_3)).
+provision_read_into(consent_to_the_storage_or_access_given, cite(uk_si_2003_2426_sch_a1_para_2_3_a)).
+provision_read_into(consent_to_the_storage_or_access_given, cite(uk_si_2003_2426_sch_a1_para_2_3_b)).
+provision_read_into(technical_storage_or_access_solely_for_transmission_of_a_communication, cite(uk_si_2003_2426_sch_a1_para_3_a)).
+provision_read_into(technical_storage_or_access_solely_for_transmission_of_a_communication, cite(uk_si_2003_2426_sch_a1_para_3_b)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_1_a)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_1_b)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_a)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_b)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_c)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_d)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_e)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_e_i)).
+provision_read_into(storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_2_e_ii)).
+provision_read_into(person_provides_an_information_society_service, cite(uk_si_2003_2426_sch_a1_para_5_1_a)).
+provision_read_into(sole_purpose_is_statistical_information_to_improve_the_service_or_website, cite(uk_si_2003_2426_sch_a1_para_5_1_b)).
+provision_read_into(sole_purpose_is_statistical_information_to_improve_the_service_or_website, cite(uk_si_2003_2426_sch_a1_para_5_1_b_i)).
+provision_read_into(sole_purpose_is_statistical_information_to_improve_the_service_or_website, cite(uk_si_2003_2426_sch_a1_para_5_1_b_ii)).
+provision_read_into(collected_information_shared_only_to_assist_with_improvements, cite(uk_si_2003_2426_sch_a1_para_5_1_c)).
+provision_read_into(access_does_not_collect_or_monitor_automatically_emitted_information, cite(uk_si_2003_2426_sch_a1_para_5_2)).
+provision_read_into(simple_free_means_of_objecting_given, cite(uk_si_2003_2426_sch_a1_para_5_1_e)).
+provision_read_into(simple_free_means_of_objecting_given, cite(uk_si_2003_2426_sch_a1_para_6_1_d)).
+provision_read_into(subscriber_or_user_has_not_objected, cite(uk_si_2003_2426_sch_a1_para_5_1_e)).
+provision_read_into(subscriber_or_user_has_not_objected, cite(uk_si_2003_2426_sch_a1_para_6_1_d)).
+provision_read_into(person_provides_an_information_society_service_by_means_of_a_website, cite(uk_si_2003_2426_sch_a1_para_1_1)).
+provision_read_into(person_provides_an_information_society_service_by_means_of_a_website, cite(uk_si_2003_2426_sch_a1_para_6_1_a)).
+provision_read_into(sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, cite(uk_si_2003_2426_sch_a1_para_6_1_b)).
+provision_read_into(sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, cite(uk_si_2003_2426_sch_a1_para_6_1_b_i)).
+provision_read_into(sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, cite(uk_si_2003_2426_sch_a1_para_6_1_b_ii)).
+provision_read_into(communication_received_requests_or_indicates_need_of_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_a)).
+provision_read_into(communication_received_requests_or_indicates_need_of_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_b)).
+provision_read_into(sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_c)).
+provision_read_into(hours_elapsed_at_notification, cite(uk_reg_1182_1971_art_3_2)).
+provision_read_into(provision_infringed, cite(uk_si_2003_2426_sch_1_para_18_a)).
+provision_read_into(provision_infringed, cite(uk_si_2003_2426_sch_1_para_18_b)).
+provision_read_into(provision_infringed, cite(uk_si_2003_2426_sch_1_para_18_b_i)).
+provision_read_into(provision_infringed, cite(uk_si_2003_2426_sch_1_para_18_c)).
+provision_read_into(provision_infringed, cite(uk_dpa_2018_s_157_2_a)).
+provision_read_into(provision_infringed, cite(uk_dpa_2018_s_157_2_b)).
+provision_read_into(provision_infringed, cite(uk_si_2026_82_reg_2_y)).
+provision_read_into(provision_infringed, cite(uk_si_2026_82_reg_2_z14)).
+provision_read_into(penalised_person_is_an_undertaking, cite(uk_dpa_2018_s_157_6_b)).
+provision_read_into(act_or_omission_on_or_after_5_february_2026, cite(uk_si_2026_82_reg_11_3)).
+provision_read_into(act_or_omission_on_or_after_5_february_2026, cite(uk_si_2026_82_reg_11_3_a)).
+provision_read_into(act_or_omission_on_or_after_5_february_2026, cite(uk_si_2026_82_reg_11_3_b)).
+
+settled_citations(side(uk), permitted, [cite(uk_si_2003_2426_reg_6_1), cite(uk_si_2003_2426_sch_a1_para_2_1), cite(uk_si_2003_2426_sch_a1_para_3), cite(uk_si_2003_2426_sch_a1_para_4_1), cite(uk_si_2003_2426_sch_a1_para_5_1), cite(uk_si_2003_2426_sch_a1_para_6_1), cite(uk_si_2003_2426_sch_a1_para_7)]).
+settled_citations(side(uk), not_permitted, [cite(uk_si_2003_2426_reg_6_1), cite(uk_si_2003_2426_sch_a1_para_2_1), cite(uk_si_2003_2426_sch_a1_para_3), cite(uk_si_2003_2426_sch_a1_para_4_1), cite(uk_si_2003_2426_sch_a1_para_5_1), cite(uk_si_2003_2426_sch_a1_para_6_1), cite(uk_si_2003_2426_sch_a1_para_7)]).
+settled_citations(side(uk), not_applicable, [cite(uk_si_2003_2426_reg_6_1), cite(uk_si_2003_2426_reg_6_2)]).
+settled_citations(side(eu), permitted, [cite(eu_dir_2002_58_art_5_3)]).
+settled_citations(side(eu), not_permitted, [cite(eu_dir_2002_58_art_5_3)]).
+settled_citations(side(eu), not_applicable, [cite(eu_dir_2002_58_art_5_3)]).
+settled_citations(compare, same, []).
+settled_citations(compare, differs, []).
+
+referral_citation(uk, storage_or_access_within_regulation_6, cite(uk_si_2003_2426_reg_6_1)).
+referral_citation(uk, clear_and_comprehensive_information_about_the_purpose_provided, cite(uk_si_2003_2426_sch_a1_para_2_1_a)).
+referral_citation(uk, consent_to_the_storage_or_access_given, cite(uk_si_2003_2426_sch_a1_para_2_1_b)).
+referral_citation(uk, technical_storage_or_access_solely_for_transmission_of_a_communication, cite(uk_si_2003_2426_sch_a1_para_3)).
+referral_citation(uk, information_society_service_requested_by_the_subscriber_or_user, cite(uk_si_2003_2426_sch_a1_para_4_1)).
+referral_citation(uk, storage_or_access_strictly_necessary_for_the_requested_service, cite(uk_si_2003_2426_sch_a1_para_4_1)).
+referral_citation(uk, person_provides_an_information_society_service, cite(uk_si_2003_2426_sch_a1_para_5_1_a)).
+referral_citation(uk, sole_purpose_is_statistical_information_to_improve_the_service_or_website, cite(uk_si_2003_2426_sch_a1_para_5_1_b)).
+referral_citation(uk, collected_information_shared_only_to_assist_with_improvements, cite(uk_si_2003_2426_sch_a1_para_5_1_c)).
+referral_citation(uk, access_does_not_collect_or_monitor_automatically_emitted_information, cite(uk_si_2003_2426_sch_a1_para_5_2)).
+referral_citation(uk, simple_free_means_of_objecting_given, cite(uk_si_2003_2426_sch_a1_para_5_1_e)).
+referral_citation(uk, person_provides_an_information_society_service_by_means_of_a_website, cite(uk_si_2003_2426_sch_a1_para_6_1_a)).
+referral_citation(uk, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, cite(uk_si_2003_2426_sch_a1_para_6_1_b)).
+referral_citation(uk, communication_received_requests_or_indicates_need_of_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_b)).
+referral_citation(uk, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_c)).
+referral_citation(eu, storage_or_access_in_terminal_equipment, cite(eu_dir_2002_58_art_5_3_s1)).
+referral_citation(eu, storage_or_access_solely_for_transmission, cite(eu_dir_2002_58_art_5_3_s2)).
+referral_citation(eu, service_explicitly_requested_by_user, cite(eu_dir_2002_58_art_5_3_s2)).
+referral_citation(eu, strictly_necessary_to_provide_requested_service, cite(eu_dir_2002_58_art_5_3_s2)).
+referral_citation(eu, user_consent_given, cite(eu_dir_2002_58_art_2_f)).
+referral_citation(eu, clear_and_comprehensive_information_provided, cite(eu_dir_2002_58_art_5_3_s1)).
+
+time_citations(notification_in_time, [cite(uk_si_2003_2426_reg_5a_2), cite(uk_reg_611_2013_art_2_2), cite(uk_reg_1182_1971_art_3_1)]).
+time_citations(notification_out_of_time, [cite(uk_si_2003_2426_reg_5a_2), cite(uk_reg_611_2013_art_2_2), cite(uk_reg_1182_1971_art_3_1)]).
+time_citations(notification_late_with_reasons, [cite(uk_si_2003_2426_reg_5a_2), cite(uk_si_2003_2426_reg_5a_3a), cite(uk_reg_611_2013_art_2_2), cite(uk_reg_1182_1971_art_3_1)]).
+time_citations(notification_reasons_for_delay_missing, [cite(uk_si_2003_2426_reg_5a_2), cite(uk_si_2003_2426_reg_5a_3a), cite(uk_reg_611_2013_art_2_2), cite(uk_reg_1182_1971_art_3_1)]).
+
+breach_referral_citation(provider_of_a_public_electronic_communications_service, cite(uk_si_2003_2426_reg_5a_1)).
+breach_referral_citation(personal_data_breach_occurred, cite(uk_si_2003_2426_reg_5a_2)).
+breach_referral_citation(notification_made_without_undue_delay, cite(uk_si_2003_2426_reg_5a_2)).
+breach_referral_citation(notification_within_72_hours_was_feasible, cite(uk_si_2003_2426_reg_5a_2)).
+
+penalty_provision_tier(regulation_5, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_6, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_7, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_8, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_14, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_19, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_20, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_21, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_21a, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_21b, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_22, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_23, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_24, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(regulation_32b_4_or_5, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(commission_notice_not_complied_with, higher_maximum_amount, [cite(uk_dpa_2018_s_157_4), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(section_142_8b_of_the_data_protection_act_2018, higher_maximum_amount, [cite(uk_si_2003_2426_sch_1_para_18_d), cite(uk_si_2026_82_reg_11_2)]).
+penalty_provision_tier(other_provision_of_the_pec_regulations, standard_maximum_amount, [cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)]).
+
+tier_amount(higher_maximum_amount, FixedPence, TurnoverPercent, cite(uk_dpa_2018_s_157_5)) :-
+    implements(uk_dpa_2018_s_157_5_a),
+    FixedPence #= 1750000000,
+    TurnoverPercent #= 4.
+tier_amount(standard_maximum_amount, FixedPence, TurnoverPercent, cite(uk_dpa_2018_s_157_6)) :-
+    implements(uk_dpa_2018_s_157_6_a),
+    FixedPence #= 870000000,
+    TurnoverPercent #= 2.
+
+query_keys(side(uk), [storage_or_access_within_regulation_6, clear_and_comprehensive_information_about_the_purpose_provided, consent_to_the_storage_or_access_given, technical_storage_or_access_solely_for_transmission_of_a_communication, information_society_service_requested_by_the_subscriber_or_user, storage_or_access_strictly_necessary_for_the_requested_service, person_provides_an_information_society_service, sole_purpose_is_statistical_information_to_improve_the_service_or_website, collected_information_shared_only_to_assist_with_improvements, access_does_not_collect_or_monitor_automatically_emitted_information, simple_free_means_of_objecting_given, subscriber_or_user_has_not_objected, person_provides_an_information_society_service_by_means_of_a_website, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, communication_received_requests_or_indicates_need_of_emergency_assistance, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance]).
+query_keys(side(eu), [storage_or_access_in_terminal_equipment, storage_or_access_solely_for_transmission, service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service, user_consent_given, clear_and_comprehensive_information_provided]).
+query_keys(compare, KeyList) :-
+    query_keys(side(uk), UnitedKingdomKeys),
+    query_keys(side(eu), UnionKeys),
+    append(UnitedKingdomKeys, UnionKeys, KeyList).
+
+breach_keys([provider_of_a_public_electronic_communications_service, personal_data_breach_occurred, became_aware_on_or_after_20_august_2025, notification_made_without_undue_delay, hours_elapsed_at_notification, notification_within_72_hours_was_feasible, notification_accompanied_by_reasons_for_the_delay]).
+
+breach_order([provider_of_a_public_electronic_communications_service, personal_data_breach_occurred, notification_made_without_undue_delay, hours_elapsed_at_notification, notification_within_72_hours_was_feasible, notification_accompanied_by_reasons_for_the_delay]).
+
+penalty_keys(tier, [act_or_omission_on_or_after_5_february_2026, provision_infringed]).
+penalty_keys(amount, [act_or_omission_on_or_after_5_february_2026, provision_infringed, penalised_person_is_an_undertaking, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds]).
+
+key_token(Profile, KeyName, absent) :-
+    profile_lacks(Profile, KeyName).
+key_token(Profile, KeyName, KeyValue) :-
+    profile_has(Profile, KeyName),
+    profile_get(Profile, KeyName, KeyValue).
+
+absent_t(Profile, KeyName, true) :-
+    profile_lacks(Profile, KeyName).
+absent_t(Profile, KeyName, false) :-
+    profile_has(Profile, KeyName).
+
+present_t(Profile, KeyName, Truth) :-
+    absent_t(Profile, KeyName, Absent),
+    truth_not(Absent, Truth).
+
+unsure_t(Profile, KeyName, Truth) :-
+    key_token(Profile, KeyName, Token),
+    token_is(Token, unsure, Truth).
+
+present_pairs(Profile, KeyList, Pairs) :-
+    tfilter(present_t(Profile), KeyList, PresentKeys),
+    maplist(key_pair(Profile), PresentKeys, Pairs).
+
+key_pair(Profile, KeyName, KeyName - KeyValue) :-
+    profile_get(Profile, KeyName, KeyValue).
+
+token_is(Token, Token, true).
+token_is(Token, Other, false) :-
+    dif(Token, Other).
+
+truth_not(true, false).
+truth_not(false, true).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+truth_differ(true, true, false).
+truth_differ(true, false, true).
+truth_differ(false, true, true).
+truth_differ(false, false, false).
+
+all_true_t(Truths, Truth) :-
+    memberd_t(false, Truths, HasFalse),
+    truth_not(HasFalse, Truth).
+
+non_empty_t([], false).
+non_empty_t([_|_], true).
+
+possible_part(true, Answer, [Answer]).
+possible_part(false, _, []).
+
+first_key_where(_, [], none).
+first_key_where(Predicate, [KeyName|Remaining], Found) :-
+    call(Predicate, KeyName, Truth),
+    first_key_from(Truth, Predicate, KeyName, Remaining, Found).
+
+first_key_from(true, _, KeyName, _, found(KeyName)).
+first_key_from(false, Predicate, _, Remaining, Found) :-
+    first_key_where(Predicate, Remaining, Found).
+
+build_state(Profile, KeyList, State) :-
+    maplist(state_entry(Profile), KeyList, State).
+
+state_entry(Profile, KeyName, KeyName - Truth) :-
+    key_token(Profile, KeyName, Token),
+    token_truth(Token, Truth).
+
+token_truth(true, true).
+token_truth(false, false).
+token_truth(unsure, unknown).
+token_truth(absent, unknown).
+
+value_of(State, KeyName, Truth) :-
+    member(KeyName - Truth, State).
+
+set_value(State, KeyName, Truth, Updated) :-
+    maplist(replace_value(KeyName, Truth), State, Updated).
+
+replace_value(KeyName, Truth, Entry - _, Entry - Truth) :-
+    Entry == KeyName.
+replace_value(KeyName, _, Entry - Truth, Entry - Truth) :-
+    dif(Entry, KeyName).
+
+way_status(State, WayKeys, Status) :-
+    maplist(value_of(State), WayKeys, Values),
+    memberd_t(false, Values, HasFalse),
+    memberd_t(unknown, Values, HasUnknown),
+    way_status_from(HasFalse, HasUnknown, Status).
+
+way_status_from(true, _, has_false).
+way_status_from(false, true, open).
+way_status_from(false, false, all_true).
+
+ways_statuses(SideName, State, Statuses) :-
+    findall(Status, (side_way(SideName, _, WayKeys, _), way_status(State, WayKeys, Status)), Statuses).
+
+ways_answers(SideName, State, Answers) :-
+    ways_statuses(SideName, State, Statuses),
+    memberd_t(all_true, Statuses, HasAllTrue),
+    memberd_t(open, Statuses, HasOpen),
+    truth_or(HasAllTrue, HasOpen, PermittedPossible),
+    truth_not(HasAllTrue, NotPermittedPossible),
+    possible_part(PermittedPossible, permitted, PermittedPart),
+    possible_part(NotPermittedPossible, not_permitted, NotPermittedPart),
+    append(PermittedPart, NotPermittedPart, Answers).
+
+side_answers(SideName, State, Answers) :-
+    side_gate(SideName, GateKey),
+    value_of(State, GateKey, GateValue),
+    ways_answers(SideName, State, WayAnswers),
+    gate_answers(GateValue, WayAnswers, Answers).
+
+gate_answers(true, WayAnswers, WayAnswers) :-
+    implements(uk_si_2003_2426_reg_6_2_a).
+gate_answers(false, _, [not_applicable]) :-
+    implements(uk_si_2003_2426_reg_6_2_b).
+gate_answers(unknown, WayAnswers, [not_applicable|WayAnswers]).
+
+side_matters_t(SideName, State, KeyName, Truth) :-
+    side_key_role(SideName, KeyName, KeyRole),
+    role_matters_t(KeyRole, SideName, State, KeyName, Truth).
+
+role_matters_t(gate, _, _, _, true).
+role_matters_t(way, SideName, State, KeyName, Truth) :-
+    side_gate(SideName, GateKey),
+    value_of(State, GateKey, GateValue),
+    gated_matters_t(GateValue, SideName, State, KeyName, Truth).
+
+gated_matters_t(false, _, _, _, false).
+gated_matters_t(true, SideName, State, KeyName, Truth) :-
+    witness_t(SideName, State, KeyName, Truth).
+gated_matters_t(unknown, SideName, State, KeyName, Truth) :-
+    witness_t(SideName, State, KeyName, Truth).
+
+witness_t(SideName, State, KeyName, Truth) :-
+    findall(WayName, witness_way(SideName, State, KeyName, WayName), Witnesses),
+    non_empty_t(Witnesses, Truth).
+
+witness_way(SideName, State, KeyName, WayName) :-
+    side_way(SideName, WayName, WayKeys, _),
+    memberd_t(KeyName, WayKeys, true),
+    way_status(State, WayKeys, open),
+    maplist(witness_value(KeyName, WayKeys), State, Completion),
+    ways_statuses(SideName, Completion, Statuses),
+    memberd_t(all_true, Statuses, false).
+
+witness_value(KeyName, _, Entry - _, Entry - false) :-
+    Entry == KeyName.
+witness_value(KeyName, WayKeys, Entry - Truth, Entry - Completed) :-
+    dif(Entry, KeyName),
+    witness_known(Truth, Entry, WayKeys, Completed).
+
+witness_known(true, _, _, true).
+witness_known(false, _, _, false).
+witness_known(unknown, Entry, WayKeys, Completed) :-
+    memberd_t(Entry, WayKeys, Completed).
+
+side_flips(SideName, State, KeyName, Pairs) :-
+    side_key_role(SideName, KeyName, KeyRole),
+    role_flips(KeyRole, SideName, State, KeyName, Pairs).
+
+role_flips(gate, SideName, State, _, Pairs) :-
+    ways_answers(SideName, State, Answers),
+    maplist(gate_pair, Answers, Pairs).
+role_flips(way, SideName, State, KeyName, Pairs) :-
+    side_matters_t(SideName, State, KeyName, Truth),
+    way_flips(Truth, Pairs).
+
+gate_pair(Answer, not_applicable - Answer).
+
+way_flips(true, [permitted - not_permitted]).
+way_flips(false, []).
+
+compare_answers(State, Differences) :-
+    side_answers(uk, State, UnitedKingdomAnswers),
+    side_answers(eu, State, UnionAnswers),
+    intersection(UnitedKingdomAnswers, UnionAnswers, Shared),
+    non_empty_t(Shared, SamePossible),
+    findall(First - Second, (member(First, UnitedKingdomAnswers), member(Second, UnionAnswers), dif(First, Second)), Unequal),
+    non_empty_t(Unequal, DiffersPossible),
+    possible_part(SamePossible, same, SamePart),
+    possible_part(DiffersPossible, differs, DiffersPart),
+    append(SamePart, DiffersPart, Differences).
+
+compare_matters_t(State, KeyName, Truth) :-
+    side_key_role(SideName, KeyName, _),
+    other_side(SideName, OtherSide),
+    side_flips(SideName, State, KeyName, Pairs),
+    side_answers(OtherSide, State, OtherAnswers),
+    findall(hit, (member(First - Second, Pairs), pair_hit(First, Second, OtherAnswers)), HitList),
+    non_empty_t(HitList, Truth).
+
+pair_hit(First, _, OtherAnswers) :-
+    member(First, OtherAnswers).
+pair_hit(_, Second, OtherAnswers) :-
+    member(Second, OtherAnswers).
+
+changed_by(differs, [_], Citations, Citations).
+changed_by(differs, [_, _|_], _, []).
+changed_by(same, _, _, []).
+changed_by(indeterminate(_), _, _, []).
+changed_by(needs_legal_review(_, _), _, _, []).
+
+query_answers(side(SideName), State, Answers) :-
+    side_answers(SideName, State, Answers).
+query_answers(compare, State, Answers) :-
+    compare_answers(State, Answers).
+
+query_matters_t(side(SideName), State, KeyName, Truth) :-
+    side_matters_t(SideName, State, KeyName, Truth).
+query_matters_t(compare, State, KeyName, Truth) :-
+    compare_matters_t(State, KeyName, Truth).
+
+referral_citation_for(side(SideName), KeyName, Citation) :-
+    referral_citation(SideName, KeyName, Citation).
+referral_citation_for(compare, KeyName, Citation) :-
+    side_key_role(SideName, KeyName, _),
+    referral_citation(SideName, KeyName, Citation).
+
+query_status(Query, Profile, Result, Citations) :-
+    query_keys(Query, KeyList),
+    build_state(Profile, KeyList, State),
+    query_answers(Query, State, Answers),
+    resolve_status(Answers, Query, Profile, KeyList, State, Result, Citations).
+
+resolve_status([Answer], Query, _, _, _, Answer, Citations) :-
+    settled_citations(Query, Answer, Citations).
+resolve_status([_, _|_], Query, Profile, KeyList, State, Result, []) :-
+    tfilter(absent_t(Profile), KeyList, AbsentKeys),
+    tfilter(query_matters_t(Query, State), AbsentKeys, MatteringKeys),
+    unresolved_status(MatteringKeys, Query, Profile, KeyList, State, Result).
+
+unresolved_status([First|Remaining], Query, _, _, State, indeterminate([Chosen])) :-
+    first_not_behind([First|Remaining], Query, State, [First|Remaining], Chosen).
+unresolved_status([], Query, Profile, KeyList, State, needs_legal_review(open_textured(KeyName, Citation), [inputs_relied_on(Pairs)])) :-
+    tfilter(unsure_t(Profile), KeyList, UnsureKeys),
+    tfilter(query_matters_t(Query, State), UnsureKeys, [KeyName|_]),
+    referral_citation_for(Query, KeyName, Citation),
+    present_pairs(Profile, KeyList, Pairs).
+
+first_not_behind([], _, _, [Chosen|_], Chosen).
+first_not_behind([Candidate|Remaining], Query, State, Mattering, Chosen) :-
+    behind_some_t(Query, State, Candidate, Mattering, Truth),
+    not_behind_from(Truth, Candidate, Remaining, Query, State, Mattering, Chosen).
+
+not_behind_from(false, Candidate, _, _, _, _, Candidate).
+not_behind_from(true, _, Remaining, Query, State, Mattering, Chosen) :-
+    first_not_behind(Remaining, Query, State, Mattering, Chosen).
+
+behind_some_t(_, _, _, [], false).
+behind_some_t(Query, State, Candidate, [Other|Others], Truth) :-
+    Other == Candidate,
+    behind_some_t(Query, State, Candidate, Others, Truth).
+behind_some_t(Query, State, Candidate, [Other|Others], Truth) :-
+    dif(Other, Candidate),
+    behind_t(Query, State, Candidate, Other, Behind),
+    behind_more(Behind, Query, State, Candidate, Others, Truth).
+
+behind_more(true, _, _, _, _, true).
+behind_more(false, Query, State, Candidate, Others, Truth) :-
+    behind_some_t(Query, State, Candidate, Others, Truth).
+
+behind_t(Query, State, KeyName, Other, Truth) :-
+    set_value(State, Other, true, OtherTrue),
+    set_value(State, Other, false, OtherFalse),
+    query_matters_t(Query, OtherTrue, KeyName, MattersWhenTrue),
+    query_matters_t(Query, OtherFalse, KeyName, MattersWhenFalse),
+    set_value(State, KeyName, true, KeyTrue),
+    set_value(State, KeyName, false, KeyFalse),
+    query_matters_t(Query, KeyTrue, Other, OtherMattersWhenTrue),
+    query_matters_t(Query, KeyFalse, Other, OtherMattersWhenFalse),
+    truth_differ(MattersWhenTrue, MattersWhenFalse, Conditional),
+    truth_and(Conditional, OtherMattersWhenTrue, Partial),
+    truth_and(Partial, OtherMattersWhenFalse, Truth).
+
+uk_terminal_equipment_storage_or_access(Profile, Result, Citations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    cookie_answer(Problems, side(uk), Profile, Result, Citations).
+
+eu_terminal_equipment_storage_or_access(Profile, Result, Citations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    cookie_answer(Problems, side(eu), Profile, Result, Citations).
+
+cookie_answer([First|Remaining], _, _, input_problems([First|Remaining]), []).
+cookie_answer([], side(uk), Profile, Result, Citations) :-
+    implements(uk_si_2003_2426_reg_6_1),
+    query_status(side(uk), Profile, Result, Citations).
+cookie_answer([], side(eu), Profile, Result, Citations) :-
+    implements(eu_dir_2002_58_art_5_3),
+    query_status(side(eu), Profile, Result, Citations).
+
+compare_uk_eu_terminal_equipment_storage_or_access(Profile, UnitedKingdomResult, UnionResult, Difference, ChangedBy) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    comparison_from(Problems, Profile, UnitedKingdomResult, UnionResult, Difference, ChangedBy).
+
+comparison_from([First|Remaining], _, input_problems([First|Remaining]), input_problems([First|Remaining]), input_problems([First|Remaining]), []).
+comparison_from([], Profile, UnitedKingdomResult, UnionResult, Difference, ChangedBy) :-
+    implements(eu_dir_2002_58_art_5_3_s1),
+    query_status(side(uk), Profile, UnitedKingdomResult, UnitedKingdomCitations),
+    query_status(side(eu), Profile, UnionResult, _),
+    query_status(compare, Profile, Difference, _),
+    query_keys(side(uk), UnitedKingdomKeys),
+    build_state(Profile, UnitedKingdomKeys, UnitedKingdomState),
+    side_answers(uk, UnitedKingdomState, UnitedKingdomAnswers),
+    changed_by(Difference, UnitedKingdomAnswers, UnitedKingdomCitations, ChangedBy).
+
+uk_breach_notification_timing(Profile, Result, Citations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    breach_from(Problems, Profile, Result, Citations).
+
+breach_from([First|Remaining], _, input_problems([First|Remaining]), []).
+breach_from([], Profile, Result, Citations) :-
+    key_token(Profile, became_aware_on_or_after_20_august_2025, Aware),
+    breach_by_awareness(Aware, Profile, Result, Citations).
+
+breach_by_awareness(absent, _, indeterminate([became_aware_on_or_after_20_august_2025]), []) :-
+    implements(uk_si_2025_904_reg_2_p).
+breach_by_awareness(false, Profile, needs_legal_review(cross_reference_unresolved(cite(uk_si_2025_904_reg_2_p), cite(uk_si_2003_2426_reg_5a_as_in_effect_before_20_august_2025)), [resolution(cite(uk_si_2003_2426_reg_5a_as_in_effect_before_20_august_2025), not_attempted), inputs_relied_on(Pairs)]), []) :-
+    implements(uk_si_2025_904_reg_2_p),
+    breach_keys(KeyList),
+    present_pairs(Profile, KeyList, Pairs).
+breach_by_awareness(true, Profile, Result, Citations) :-
+    implements(uk_si_2025_904_reg_2),
+    breach_facts(Profile, Facts),
+    breach_amended(Facts, Profile, Result, Citations).
+
+breach_facts(Profile, breach_facts(Provider, Breach, Undue, Hours, Feasible, Reasons, TimeAnswer)) :-
+    key_token(Profile, provider_of_a_public_electronic_communications_service, Provider),
+    key_token(Profile, personal_data_breach_occurred, Breach),
+    key_token(Profile, notification_made_without_undue_delay, Undue),
+    hours_token(Profile, Hours),
+    key_token(Profile, notification_within_72_hours_was_feasible, Feasible),
+    key_token(Profile, notification_accompanied_by_reasons_for_the_delay, Reasons),
+    time_answer(Undue, Hours, Feasible, Reasons, TimeAnswer).
+
+hours_token(Profile, absent) :-
+    profile_lacks(Profile, hours_elapsed_at_notification).
+hours_token(Profile, HoursClass) :-
+    profile_has(Profile, hours_elapsed_at_notification),
+    profile_get(Profile, hours_elapsed_at_notification, HoursElapsed),
+    hours_class(HoursElapsed, HoursClass).
+
+hours_class(HoursElapsed, within) :-
+    implements(uk_reg_1182_1971_art_3_2_a),
+    HoursElapsed #< 73.
+hours_class(HoursElapsed, beyond) :-
+    implements(uk_reg_1182_1971_art_3_1),
+    HoursElapsed #> 72.
+
+time_answer(false, _, _, _, notification_out_of_time) :-
+    implements(uk_si_2003_2426_reg_5a_2).
+time_answer(Undue, Hours, Feasible, Reasons, TimeAnswer) :-
+    member(Undue, [true, unsure, absent]),
+    time_after_delay(Undue, Hours, Feasible, Reasons, TimeAnswer).
+
+time_after_delay(_, beyond, true, _, notification_out_of_time) :-
+    implements(uk_si_2003_2426_reg_5a_2).
+time_after_delay(Undue, beyond, Feasible, Reasons, TimeAnswer) :-
+    member(Feasible, [false, unsure, absent]),
+    beyond_not_feasible(Undue, Feasible, Reasons, TimeAnswer).
+time_after_delay(Undue, within, _, _, TimeAnswer) :-
+    within_answer(Undue, TimeAnswer).
+time_after_delay(_, absent, _, _, none).
+
+within_answer(true, notification_in_time) :-
+    implements(uk_reg_611_2013_art_2_2).
+within_answer(unsure, none).
+within_answer(absent, none).
+
+beyond_not_feasible(true, false, Reasons, TimeAnswer) :-
+    implements(uk_si_2003_2426_reg_5a_3a),
+    reasons_answer(Reasons, TimeAnswer).
+beyond_not_feasible(true, unsure, _, none).
+beyond_not_feasible(true, absent, _, none).
+beyond_not_feasible(unsure, _, _, none).
+beyond_not_feasible(absent, _, _, none).
+
+reasons_answer(true, notification_late_with_reasons).
+reasons_answer(false, notification_reasons_for_delay_missing).
+reasons_answer(absent, none).
+
+breach_amended(Facts, Profile, Result, Citations) :-
+    Facts = breach_facts(Provider, Breach, _, _, _, _, _),
+    token_is(Provider, false, NotProvider),
+    token_is(Breach, false, NoBreach),
+    truth_or(NotProvider, NoBreach, OutOfScope),
+    breach_scope(OutOfScope, Facts, Profile, Result, Citations).
+
+breach_scope(true, _, _, not_applicable, [cite(uk_si_2003_2426_reg_5_1), cite(uk_si_2003_2426_reg_5a_1), cite(uk_si_2003_2426_reg_5a_2)]) :-
+    implements(uk_si_2003_2426_reg_5a_1).
+breach_scope(false, Facts, Profile, Result, Citations) :-
+    Facts = breach_facts(Provider, Breach, _, _, _, _, TimeAnswer),
+    token_is(Provider, true, IsProvider),
+    token_is(Breach, true, IsBreach),
+    truth_and(IsProvider, IsBreach, BothTrue),
+    token_is(TimeAnswer, none, NoAnswer),
+    breach_settled(BothTrue, NoAnswer, Facts, Profile, Result, Citations).
+
+breach_settled(true, false, breach_facts(_, _, _, _, _, _, TimeAnswer), _, TimeAnswer, Citations) :-
+    implements(uk_si_2003_2426_reg_5a_2),
+    time_citations(TimeAnswer, Citations).
+breach_settled(true, true, Facts, Profile, Result, []) :-
+    breach_open(Facts, Profile, Result).
+breach_settled(false, _, Facts, Profile, Result, []) :-
+    breach_open(Facts, Profile, Result).
+
+breach_open(Facts, Profile, Result) :-
+    breach_order(KeyList),
+    first_key_where(breach_missing_t(Facts), KeyList, Found),
+    breach_open_from(Found, Facts, Profile, Result).
+
+breach_open_from(found(KeyName), _, _, indeterminate([KeyName])).
+breach_open_from(none, Facts, Profile, needs_legal_review(open_textured(KeyName, Citation), [inputs_relied_on(Pairs)])) :-
+    breach_order(KeyList),
+    first_key_where(breach_unsure_t(Facts), KeyList, found(KeyName)),
+    breach_referral_citation(KeyName, Citation),
+    breach_keys(AllKeys),
+    present_pairs(Profile, AllKeys, Pairs).
+
+breach_missing_t(breach_facts(Provider, _, _, _, _, _, _), provider_of_a_public_electronic_communications_service, Truth) :-
+    token_is(Provider, absent, Truth).
+breach_missing_t(breach_facts(_, Breach, _, _, _, _, _), personal_data_breach_occurred, Truth) :-
+    token_is(Breach, absent, Truth).
+breach_missing_t(breach_facts(_, _, Undue, Hours, Feasible, _, TimeAnswer), notification_made_without_undue_delay, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Undue, absent, Missing),
+    token_is(Hours, beyond, Beyond),
+    token_is(Feasible, true, WasFeasible),
+    truth_and(Beyond, WasFeasible, Excluded),
+    truth_not(Excluded, Included),
+    all_true_t([NoAnswer, Missing, Included], Truth).
+breach_missing_t(breach_facts(_, _, Undue, Hours, _, _, TimeAnswer), hours_elapsed_at_notification, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Hours, absent, Missing),
+    token_is(Undue, false, UndueDelay),
+    truth_not(UndueDelay, Included),
+    all_true_t([NoAnswer, Missing, Included], Truth).
+breach_missing_t(breach_facts(_, _, Undue, Hours, Feasible, _, TimeAnswer), notification_within_72_hours_was_feasible, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Feasible, absent, Missing),
+    token_is(Undue, false, UndueDelay),
+    truth_not(UndueDelay, NotDelayed),
+    token_is(Hours, within, Within),
+    truth_not(Within, NotWithin),
+    all_true_t([NoAnswer, Missing, NotDelayed, NotWithin], Truth).
+breach_missing_t(breach_facts(_, _, Undue, Hours, Feasible, Reasons, TimeAnswer), notification_accompanied_by_reasons_for_the_delay, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Reasons, absent, Missing),
+    token_is(Undue, false, UndueDelay),
+    truth_not(UndueDelay, NotDelayed),
+    token_is(Hours, within, Within),
+    truth_not(Within, NotWithin),
+    token_is(Feasible, true, WasFeasible),
+    truth_not(WasFeasible, NotFeasible),
+    all_true_t([NoAnswer, Missing, NotDelayed, NotWithin, NotFeasible], Truth).
+
+breach_unsure_t(breach_facts(Provider, _, _, _, _, _, _), provider_of_a_public_electronic_communications_service, Truth) :-
+    token_is(Provider, unsure, Truth).
+breach_unsure_t(breach_facts(_, Breach, _, _, _, _, _), personal_data_breach_occurred, Truth) :-
+    token_is(Breach, unsure, Truth).
+breach_unsure_t(breach_facts(_, _, Undue, Hours, Feasible, _, TimeAnswer), notification_made_without_undue_delay, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Undue, unsure, Unsure),
+    token_is(Hours, beyond, Beyond),
+    token_is(Feasible, true, WasFeasible),
+    truth_and(Beyond, WasFeasible, Excluded),
+    truth_not(Excluded, Included),
+    all_true_t([NoAnswer, Unsure, Included], Truth).
+breach_unsure_t(breach_facts(_, _, _, _, _, _, _), hours_elapsed_at_notification, false).
+breach_unsure_t(breach_facts(_, _, Undue, Hours, Feasible, _, TimeAnswer), notification_within_72_hours_was_feasible, Truth) :-
+    token_is(TimeAnswer, none, NoAnswer),
+    token_is(Feasible, unsure, Unsure),
+    token_is(Undue, false, UndueDelay),
+    truth_not(UndueDelay, NotDelayed),
+    token_is(Hours, within, Within),
+    truth_not(Within, NotWithin),
+    all_true_t([NoAnswer, Unsure, NotDelayed, NotWithin], Truth).
+breach_unsure_t(breach_facts(_, _, _, _, _, _, _), notification_accompanied_by_reasons_for_the_delay, false).
+
+uk_penalty_maximum_tier(Profile, Result, Citations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    penalty_from(Problems, tier, Profile, Result, Citations).
+
+uk_penalty_maximum_amount_in_pence(Profile, Result, Citations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    penalty_from(Problems, amount, Profile, Result, Citations).
+
+penalty_from([First|Remaining], _, _, input_problems([First|Remaining]), []).
+penalty_from([], Query, Profile, Result, Citations) :-
+    key_token(Profile, act_or_omission_on_or_after_5_february_2026, Dated),
+    penalty_dated(Dated, Query, Profile, Result, Citations).
+
+penalty_dated(absent, _, _, indeterminate([act_or_omission_on_or_after_5_february_2026]), []) :-
+    implements(uk_si_2026_82_reg_11_1).
+penalty_dated(false, Query, Profile, needs_legal_review(cross_reference_unresolved(cite(uk_si_2026_82_reg_11_1), cite(uk_si_2003_2426_as_in_effect_before_5_february_2026)), [resolution(cite(uk_si_2003_2426_as_in_effect_before_5_february_2026), not_attempted), inputs_relied_on(Pairs)]), []) :-
+    implements(uk_si_2026_82_reg_11_1),
+    penalty_keys(Query, KeyList),
+    present_pairs(Profile, KeyList, Pairs).
+penalty_dated(true, Query, Profile, Result, Citations) :-
+    implements(uk_si_2026_82_reg_11_2),
+    key_token(Profile, provision_infringed, Provision),
+    penalty_provision(Provision, Query, Profile, Result, Citations).
+
+penalty_provision(absent, _, _, indeterminate([provision_infringed]), []).
+penalty_provision(Provision, tier, _, TierName, Citations) :-
+    implements(uk_si_2003_2426_sch_1_para_18),
+    penalty_provision_tier(Provision, TierName, Citations).
+penalty_provision(Provision, amount, Profile, Result, Citations) :-
+    implements(uk_si_2003_2426_sch_1_para_1),
+    penalty_provision_tier(Provision, TierName, TierCitations),
+    tier_amount(TierName, FixedPence, TurnoverPercent, AmountCitation),
+    key_token(Profile, penalised_person_is_an_undertaking, Undertaking),
+    turnover_token(Profile, Turnover),
+    amount_answer(Undertaking, Turnover, FixedPence, TurnoverPercent, AmountCitation, TierCitations, Profile, Result, Citations).
+
+turnover_token(Profile, absent) :-
+    profile_lacks(Profile, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds).
+turnover_token(Profile, turnover(TurnoverPounds)) :-
+    profile_has(Profile, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds),
+    profile_get(Profile, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds, TurnoverPounds).
+
+amount_answer(false, _, FixedPence, _, AmountCitation, TierCitations, _, FixedPence, Citations) :-
+    implements(uk_dpa_2018_s_157_5_b),
+    append(TierCitations, [AmountCitation], Citations).
+amount_answer(true, turnover(TurnoverPounds), FixedPence, TurnoverPercent, AmountCitation, TierCitations, _, MaximumPence, Citations) :-
+    implements(uk_dpa_2018_s_157_5_a),
+    PercentagePence #= TurnoverPercent * TurnoverPounds,
+    MaximumPence #= max(FixedPence, PercentagePence),
+    append(TierCitations, [AmountCitation], Citations).
+amount_answer(Undertaking, turnover(TurnoverPounds), FixedPence, TurnoverPercent, AmountCitation, TierCitations, _, FixedPence, Citations) :-
+    implements(uk_dpa_2018_s_157_6_a),
+    member(Undertaking, [unsure, absent]),
+    PercentagePence #= TurnoverPercent * TurnoverPounds,
+    PercentagePence #=< FixedPence,
+    append(TierCitations, [AmountCitation], Citations).
+amount_answer(Undertaking, absent, _, _, _, _, _, indeterminate([total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds]), []) :-
+    member(Undertaking, [true, unsure]).
+amount_answer(absent, absent, _, _, _, _, _, indeterminate([penalised_person_is_an_undertaking]), []).
+amount_answer(absent, turnover(TurnoverPounds), FixedPence, TurnoverPercent, _, _, _, indeterminate([penalised_person_is_an_undertaking]), []) :-
+    PercentagePence #= TurnoverPercent * TurnoverPounds,
+    PercentagePence #> FixedPence.
+amount_answer(unsure, turnover(TurnoverPounds), FixedPence, TurnoverPercent, AmountCitation, _, Profile, needs_legal_review(open_textured(penalised_person_is_an_undertaking, AmountCitation), [inputs_relied_on(Pairs)]), []) :-
+    PercentagePence #= TurnoverPercent * TurnoverPounds,
+    PercentagePence #> FixedPence,
+    penalty_keys(amount, KeyList),
+    present_pairs(Profile, KeyList, Pairs).
+
+decide_uk_pecr_cookie_exemptions_and_fines(Profile, uk_pecr_cookie_exemptions_and_fines_verdict(Status, Citations)) :-
+    uk_terminal_equipment_storage_or_access(Profile, Status, Citations).
+
+uk_pecr_cookie_exemptions_and_fines_status(Profile, Status) :-
+    decide_uk_pecr_cookie_exemptions_and_fines(Profile, uk_pecr_cookie_exemptions_and_fines_verdict(Status, _Citations)).
+
+uk_pecr_cookie_exemptions_and_fines_decision_resolvable(Profile) :-
+    decide_uk_pecr_cookie_exemptions_and_fines(Profile, _Verdict).
+
+uk_pecr_cookie_exemptions_and_fines_checklist(Profile, Items) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    checklist_from(Problems, Profile, Items).
+
+checklist_from([First|Remaining], _, [item(input_check, input_problems([First|Remaining]), cite(uk_si_2003_2426_reg_6_1))]).
+checklist_from([], Profile, [ScopeItem|WayItems]) :-
+    query_keys(side(uk), KeyList),
+    build_state(Profile, KeyList, State),
+    scope_item(State, ScopeItem),
+    findall(WayItem, way_item(State, WayItem), WayItems).
+
+scope_item(State, item(scope, Status, cite(uk_si_2003_2426_reg_6_1))) :-
+    value_of(State, storage_or_access_within_regulation_6, GateValue),
+    scope_status(GateValue, Status).
+
+scope_status(true, met).
+scope_status(false, unmet(not_within_regulation_6)).
+scope_status(unknown, unknown([storage_or_access_within_regulation_6])).
+
+way_item(State, item(WayName, Status, Citation)) :-
+    side_way(uk, WayName, WayKeys, Citation),
+    way_status(State, WayKeys, WayStatus),
+    way_item_status(WayStatus, State, WayKeys, Status).
+
+way_item_status(all_true, _, _, met).
+way_item_status(has_false, _, _, unmet(some_conjunct_unmet)).
+way_item_status(open, State, WayKeys, unknown(UnknownKeys)) :-
+    tfilter(unknown_in_state_t(State), WayKeys, UnknownKeys).
+
+unknown_in_state_t(State, KeyName, Truth) :-
+    value_of(State, KeyName, Value),
+    token_is(Value, unknown, Truth).
+
+test(outside_regulation_6_is_not_applicable) :-
+    uk_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, false)], Result, Citations),
+    Result == not_applicable,
+    Citations == [cite(uk_si_2003_2426_reg_6_1), cite(uk_si_2003_2426_reg_6_2)].
+test(consent_way_permits) :-
+    findall(Result, uk_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, true), attribute(clear_and_comprehensive_information_about_the_purpose_provided, true), attribute(consent_to_the_storage_or_access_given, true)], Result, _), Results),
+    Results == [permitted].
+test(empty_profile_asks_for_the_gate) :-
+    uk_terminal_equipment_storage_or_access([], Result, Citations),
+    Result == indeterminate([storage_or_access_within_regulation_6]),
+    Citations == [].
+test(unknown_key_is_an_input_problem) :-
+    uk_terminal_equipment_storage_or_access([attribute(colour, true)], Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+test(eu_unsure_consent_is_referred) :-
+    eu_terminal_equipment_storage_or_access([attribute(storage_or_access_in_terminal_equipment, true), attribute(storage_or_access_solely_for_transmission, false), attribute(service_explicitly_requested_by_user, false), attribute(strictly_necessary_to_provide_requested_service, false), attribute(user_consent_given, unsure), attribute(clear_and_comprehensive_information_provided, true)], Result, []),
+    Result = needs_legal_review(open_textured(user_consent_given, cite(eu_dir_2002_58_art_2_f)), [inputs_relied_on(Pairs)]),
+    length(Pairs, 6).
+test(both_sides_not_applicable_are_the_same) :-
+    compare_uk_eu_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, false), attribute(storage_or_access_in_terminal_equipment, false)], UnitedKingdomResult, UnionResult, Difference, ChangedBy),
+    UnitedKingdomResult == not_applicable,
+    UnionResult == not_applicable,
+    Difference == same,
+    ChangedBy == [].
+test(final_uk_against_eu_not_applicable_differs) :-
+    compare_uk_eu_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, true), attribute(technical_storage_or_access_solely_for_transmission_of_a_communication, true), attribute(storage_or_access_in_terminal_equipment, false)], UnitedKingdomResult, _, Difference, ChangedBy),
+    UnitedKingdomResult == permitted,
+    Difference == differs,
+    length(ChangedBy, 7).
+test(earlier_awareness_is_referred) :-
+    uk_breach_notification_timing([attribute(became_aware_on_or_after_20_august_2025, false)], Result, []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(uk_si_2025_904_reg_2_p), cite(uk_si_2003_2426_reg_5a_as_in_effect_before_20_august_2025)), [resolution(cite(uk_si_2003_2426_reg_5a_as_in_effect_before_20_august_2025), not_attempted), inputs_relied_on([became_aware_on_or_after_20_august_2025 - false])]).
+test(notification_in_the_72nd_hour_is_in_time) :-
+    findall(Result, uk_breach_notification_timing([attribute(provider_of_a_public_electronic_communications_service, true), attribute(personal_data_breach_occurred, true), attribute(became_aware_on_or_after_20_august_2025, true), attribute(notification_made_without_undue_delay, true), attribute(hours_elapsed_at_notification, 72)], Result, _), Results),
+    Results == [notification_in_time].
+test(late_notification_asks_for_feasibility) :-
+    uk_breach_notification_timing([attribute(provider_of_a_public_electronic_communications_service, true), attribute(personal_data_breach_occurred, true), attribute(became_aware_on_or_after_20_august_2025, true), attribute(notification_made_without_undue_delay, true), attribute(hours_elapsed_at_notification, 73)], Result, []),
+    Result == indeterminate([notification_within_72_hours_was_feasible]).
+test(other_provision_is_standard_tier) :-
+    uk_penalty_maximum_tier([attribute(act_or_omission_on_or_after_5_february_2026, true), attribute(provision_infringed, other_provision_of_the_pec_regulations)], Result, Citations),
+    Result == standard_maximum_amount,
+    Citations == [cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2)].
+test(large_undertaking_higher_amount) :-
+    findall(Result - Citations, uk_penalty_maximum_amount_in_pence([attribute(act_or_omission_on_or_after_5_february_2026, true), attribute(provision_infringed, regulation_6), attribute(penalised_person_is_an_undertaking, true), attribute(total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds, 1000000000)], Result, Citations), Answers),
+    Answers = [Amount - AmountCitations],
+    Amount =:= 4000000000,
+    AmountCitations == [cite(uk_si_2003_2426_sch_1_para_18_b_ii), cite(uk_dpa_2018_s_157_2), cite(uk_si_2026_82_reg_11_2), cite(uk_dpa_2018_s_157_5)].
+test(small_turnover_unsure_undertaking_gets_fixed_amount) :-
+    uk_penalty_maximum_amount_in_pence([attribute(act_or_omission_on_or_after_5_february_2026, true), attribute(provision_infringed, other_provision_of_the_pec_regulations), attribute(penalised_person_is_an_undertaking, unsure), attribute(total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds, 100)], Amount, _),
+    Amount =:= 870000000.
+test(large_turnover_unsure_undertaking_is_referred) :-
+    uk_penalty_maximum_amount_in_pence([attribute(act_or_omission_on_or_after_5_february_2026, true), attribute(provision_infringed, regulation_5), attribute(penalised_person_is_an_undertaking, unsure), attribute(total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds, 1000000000)], Result, []),
+    Result = needs_legal_review(open_textured(penalised_person_is_an_undertaking, cite(uk_dpa_2018_s_157_5)), [inputs_relied_on(_)]).
+test(referral_rows_carry_a_cite_term) :-
+    uk_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, true), attribute(clear_and_comprehensive_information_about_the_purpose_provided, false), attribute(technical_storage_or_access_solely_for_transmission_of_a_communication, false), attribute(information_society_service_requested_by_the_subscriber_or_user, false), attribute(person_provides_an_information_society_service, false), attribute(person_provides_an_information_society_service_by_means_of_a_website, false), attribute(communication_received_requests_or_indicates_need_of_emergency_assistance, unsure), attribute(sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance, true)], Result, []),
+    Result = needs_legal_review(open_textured(communication_received_requests_or_indicates_need_of_emergency_assistance, cite(uk_si_2003_2426_sch_a1_para_7_b)), [inputs_relied_on(_)]).
+
+test(outside_regulation_6_is_not_permitted, fail) :-
+    uk_terminal_equipment_storage_or_access([attribute(storage_or_access_within_regulation_6, false)], permitted, _).
+test(notification_in_the_73rd_hour_is_not_in_time, fail) :-
+    uk_breach_notification_timing([attribute(provider_of_a_public_electronic_communications_service, true), attribute(personal_data_breach_occurred, true), attribute(became_aware_on_or_after_20_august_2025, true), attribute(notification_made_without_undue_delay, true), attribute(hours_elapsed_at_notification, 73)], notification_in_time, _).

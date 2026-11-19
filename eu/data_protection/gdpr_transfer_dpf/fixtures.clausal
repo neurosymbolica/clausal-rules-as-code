@@ -1,0 +1,210 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_transfer_dpf.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Every route of THE LIMBS has a positive case and a
+% one-key near-miss control:
+%   step 4 covered            all_conditions_hold
+%   step 1 not covered        one condition false each (not_from_union,
+%                             recipient_outside_united_states,
+%                             decision_not_in_force, recipient_off_list,
+%                             human_resources_data_not_declared), two facts
+%                             denied, a crisp key false with facts absent
+%   step 2 absent referral    one per outside fact (F, L, C); the L case also
+%                             lacks a crisp key (the referral comes first)
+%   step 3 indeterminate      one per crisp key (U, O)
+%   step 0 input problems     a bare boolean outside fact, a duplicate and an
+%                             unknown key, an unbound attestation argument, a
+%                             partial list
+% Each near-miss differs from all_conditions_hold in one key only.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_transfer_dpf_subject/1,
+    gdpr_transfer_dpf_profile_for/2,
+    gdpr_transfer_dpf_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_transfer_dpf/gdpr_transfer_dpf, [decide_gdpr_transfer_dpf/2]).
+
+% ---- the attested statements a human makes (host-supplied BY and AT) ----
+affirming_statement(attested(true, attestation(host_user, host_time, stated_from_published_record, url('https://www.dataprivacyframework.gov/list', '2026-11-01')))).
+denying_statement(attested(false, attestation(host_user, host_time, stated_from_published_record, none))).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_transfer_dpf_subject(all_conditions_hold).
+gdpr_transfer_dpf_subject(not_from_union).
+gdpr_transfer_dpf_subject(recipient_outside_united_states).
+gdpr_transfer_dpf_subject(decision_not_in_force).
+gdpr_transfer_dpf_subject(recipient_off_list).
+gdpr_transfer_dpf_subject(human_resources_data_not_declared).
+gdpr_transfer_dpf_subject(two_facts_denied).
+gdpr_transfer_dpf_subject(crisp_false_with_facts_absent).
+gdpr_transfer_dpf_subject(decision_statement_absent).
+gdpr_transfer_dpf_subject(list_statement_absent_union_absent).
+gdpr_transfer_dpf_subject(coverage_statement_absent).
+gdpr_transfer_dpf_subject(union_absent).
+gdpr_transfer_dpf_subject(recipient_absent).
+gdpr_transfer_dpf_subject(bare_boolean_outside_fact).
+gdpr_transfer_dpf_subject(duplicate_and_unknown).
+gdpr_transfer_dpf_subject(unbound_attestation_argument).
+gdpr_transfer_dpf_subject(partial_list_profile).
+
+% ---- Profiles --------------------------------------------------------
+% Step 4: all five conditions hold.
+gdpr_transfer_dpf_profile_for(all_conditions_hold, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+
+% Step 1 near-misses: one condition false each.
+gdpr_transfer_dpf_profile_for(not_from_union, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, false),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(recipient_outside_united_states, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, false),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(decision_not_in_force, Profile) :-
+    affirming_statement(Affirmed),
+    denying_statement(Denied),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Denied),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(recipient_off_list, Profile) :-
+    affirming_statement(Affirmed),
+    denying_statement(Denied),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Denied),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(human_resources_data_not_declared, Profile) :-
+    affirming_statement(Affirmed),
+    denying_statement(Denied),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Denied)
+    ].
+gdpr_transfer_dpf_profile_for(two_facts_denied, Profile) :-
+    affirming_statement(Affirmed),
+    denying_statement(Denied),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Denied),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Denied)
+    ].
+gdpr_transfer_dpf_profile_for(crisp_false_with_facts_absent, Profile) :-
+    Profile = [
+        attribute(transfer_from_union, false)
+    ].
+
+% Step 2: one outside fact absent each.
+gdpr_transfer_dpf_profile_for(decision_statement_absent, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(list_statement_absent_union_absent, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(coverage_statement_absent, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed)
+    ].
+
+% Step 3: one crisp key absent each, every outside fact attested true.
+gdpr_transfer_dpf_profile_for(union_absent, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(recipient_absent, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+
+% Step 0: input problems.
+gdpr_transfer_dpf_profile_for(bare_boolean_outside_fact, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, true),
+        attribute(certification_covers_transferred_data, Affirmed)
+    ].
+gdpr_transfer_dpf_profile_for(duplicate_and_unknown, Profile) :-
+    Profile = [
+        attribute(colour, red),
+        attribute(transfer_from_union, true),
+        attribute(transfer_from_union, false),
+        attribute(colour, blue)
+    ].
+gdpr_transfer_dpf_profile_for(unbound_attestation_argument, Profile) :-
+    affirming_statement(Affirmed),
+    Profile = [
+        attribute(transfer_from_union, true),
+        attribute(recipient_is_organisation_in_united_states, true),
+        attribute(data_privacy_framework_decision_in_force, Affirmed),
+        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+        attribute(certification_covers_transferred_data, attested(true, attestation(host_user, _HostTime, stated_from_published_record, none)))
+    ].
+gdpr_transfer_dpf_profile_for(partial_list_profile, Profile) :-
+    Profile = [attribute(transfer_from_union, true)|_Remaining].
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_transfer_dpf_assess(Subject, Result) :-
+    gdpr_transfer_dpf_profile_for(Subject, Profile),
+    decide_gdpr_transfer_dpf(Profile, Result).
+
+:- end_module(fixtures).

@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% uk/uk_complaints_to_the_commissioner loads, and it guarantees what it says:
+% the input check of the typed contract answers once per profile, the result
+% terms build and destructure, the verdict atoms are distinct, and the real
+% citation records resolve.
+% Self-contained: it imports only kernel and citations (the determination
+% slice is not referenced here).
+% Run: cd <corpus root> && python -m clausal.testing \
+%      uk/uk_complaints_to_the_commissioner/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(uk/uk_complaints_to_the_commissioner/kernel, [uk_complaints_to_the_commissioner_input_problems/2]).
+:- use_module(uk/uk_complaints_to_the_commissioner/citations, [citation/2, implements/1]).
+
+% ---- the verdict vocabulary -------------------------------------------
+
+test(the_controller_verdict_atoms_are_distinct) :-
+    dif(complaint_under_section_164a, not_a_complaint_under_section_164a).
+
+test(the_commission_verdict_atoms_are_distinct) :-
+    dif(complaint_under_section_165_2, not_a_complaint_under_section_165_2).
+
+test(the_two_questions_have_different_verdict_atoms) :-
+    dif(complaint_under_section_164a, complaint_under_section_165_2),
+    dif(not_a_complaint_under_section_164a, not_a_complaint_under_section_165_2).
+
+test(the_duty_atom_is_not_a_complaint_verdict) :-
+    dif(acknowledgement_duty_does_not_apply, complaint_under_section_164a),
+    dif(acknowledgement_duty_does_not_apply, not_a_complaint_under_section_164a).
+
+test(the_enumeration_atoms_are_distinct) :-
+    dif(uk_gdpr, dpa_2018_part_3),
+    dif(uk_gdpr, dpa_2018_part_4),
+    dif(uk_gdpr, none_of_the_three),
+    dif(dpa_2018_part_3, dpa_2018_part_4),
+    dif(dpa_2018_part_3, none_of_the_three),
+    dif(dpa_2018_part_4, none_of_the_three).
+
+% ---- the result terms build and destructure ---------------------------
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = uk_complaints_to_the_commissioner_verdict(complaint_under_section_164a, [cite(uk_dpa_2018_s_164a_1)]),
+    Verdict = uk_complaints_to_the_commissioner_verdict(Status, Citations),
+    Status == complaint_under_section_164a,
+    Citations == [cite(uk_dpa_2018_s_164a_1)].
+
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([infringement_considered]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys == [infringement_considered],
+    functor(Status, indeterminate, 1).
+
+test(the_input_problems_status_carries_its_list) :-
+    Status = input_problems([wrong_type(receipt_date)]),
+    Status = input_problems(Problems),
+    Problems == [wrong_type(receipt_date)],
+    functor(Status, input_problems, 1).
+
+test(the_output_date_destructures_into_integers) :-
+    LastDay = date(2026, 7, 18),
+    LastDay = date(Year, Month, Day),
+    integer(Year),
+    integer(Month),
+    integer(Day),
+    Year == 2026,
+    Month == 7,
+    Day == 18.
+
+% ---- the real citation records resolve ---------------------------------
+
+test(the_controller_citation_is_recorded) :-
+    citation(uk_dpa_2018_s_164a_1, _Record).
+
+test(the_commission_citation_is_recorded) :-
+    citation(uk_dpa_2018_s_165_2, _Record).
+
+test(the_acknowledgement_citations_are_recorded) :-
+    citation(uk_dpa_2018_s_164a_3, _AcknowledgementRecord),
+    citation(uk_si_2026_82_reg_3, _CommencementRecord),
+    citation(uk_si_2026_82_reg_3_a, _SectionRecord),
+    citation(uk_si_2026_82_reg_7, _TransitionalRecord).
+
+test(the_citation_record_has_label_reference_and_verbatim) :-
+    citation(uk_dpa_2018_s_164a_1, Record),
+    Record = [label-_Label, ref-_Reference, verbatim-_Verbatim].
+
+test(the_provenance_marker_holds_for_a_recorded_key) :-
+    implements(uk_dpa_2018_s_164a_3).
+
+test(the_provenance_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(uk_dpa_2018_s_164a_9).
+
+test(an_unrecorded_citation_does_not_resolve, fail) :-
+    citation(uk_todo_primary_source, _Record).
+
+% ---- the input check of the floor --------------------------------------
+
+test(a_well_formed_profile_has_no_problem_once) :-
+    findall(Problems,
+            uk_complaints_to_the_commissioner_input_problems(
+                [attribute(complaint_by_data_subject_about_own_personal_data, true),
+                 attribute(infringement_considered, uk_gdpr),
+                 attribute(complaint_made_to_the_controller, true)],
+                Problems),
+            Answers),
+    Answers == [[]].
+
+test(an_empty_profile_has_no_problem) :-
+    uk_complaints_to_the_commissioner_input_problems([], []).
+
+test(a_well_formed_profile_is_not_named_a_problem, fail) :-
+    uk_complaints_to_the_commissioner_input_problems(
+        [attribute(infringement_considered, dpa_2018_part_4)],
+        [_|_]).
+
+test(a_value_outside_the_enumeration_is_wrong_type) :-
+    findall(Problems,
+            uk_complaints_to_the_commissioner_input_problems(
+                [attribute(infringement_considered, eu_gdpr)],
+                Problems),
+            Answers),
+    Answers == [[wrong_type(infringement_considered)]].
+
+test(a_crisp_key_given_a_non_boolean_is_wrong_type) :-
+    uk_complaints_to_the_commissioner_input_problems(
+        [attribute(complaint_made_to_the_controller, yes)],
+        [wrong_type(complaint_made_to_the_controller)]).
+
+test(a_key_outside_the_contract_is_unknown) :-
+    uk_complaints_to_the_commissioner_input_problems(
+        [attribute(complaint_made_to_the_processor, true)],
+        [unknown_key(complaint_made_to_the_processor)]).
+
+test(a_repeated_key_is_a_duplicate_and_not_wrong_type) :-
+    findall(Problems,
+            uk_complaints_to_the_commissioner_input_problems(
+                [attribute(complaint_made_to_the_controller, true),
+                 attribute(complaint_made_to_the_controller, maybe)],
+                Problems),
+            Answers),
+    Answers == [[duplicate_key(complaint_made_to_the_controller)]].
+
+test(a_term_that_is_not_a_list_is_wrong_type_profile) :-
+    uk_complaints_to_the_commissioner_input_problems(not_a_profile, [wrong_type(profile)]).
+
+test(an_unbound_profile_is_wrong_type_profile_once) :-
+    findall(Problems,
+            uk_complaints_to_the_commissioner_input_problems(_Profile, Problems),
+            Answers),
+    Answers == [[wrong_type(profile)]].
+
+:- end_module(test_load).

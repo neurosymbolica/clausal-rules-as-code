@@ -1,0 +1,301 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: ind/dpdp_security_retention
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dpdp_security_retention"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dpdp_security_retention.clausal --
+  - "security_safeguards_duty/3"
+  - "accuracy_duty/3"
+  - "erasure_duty/3"
+  - "third_schedule_deemed_no_longer_served/3"
+  - "third_schedule_period_end/2"
+  - "erasure_notice_latest_day/2"
+  - "processing_log_retention_minimum_end/2"
+  - "fixed_lists/2"
+  - "decide_dpdp_security_retention/2"
+  - "dpdp_security_retention_status/2"
+  - "dpdp_security_retention_checklist/2"
+  - "dpdp_security_retention_decision_resolvable/1"
+  - "dpdp_security_retention_status_values/1"
+  # -- queries.clausal --
+  - "dpdp_security_retention_profile_keys/1"
+  - "dpdp_security_retention_input_problems/2"
+  - "dpdp_security_retention_what_if/4"
+  - "required_with_rule_6_minimum/0"
+  - "required_minimum_not_prescribed/0"
+  - "not_required/0"
+  - "not_in_force/0"
+  - "required/0"
+  - "erase/0"
+  - "erase_and_cause_data_processor_to_erase/0"
+  - "retain_until_minimum_retention_period_end/0"
+  - "retain_as_required_by_other_law/0"
+  - "not_yet_required/0"
+  - "deemed_no_longer_served/0"
+  - "not_yet_deemed/0"
+  - "not_listed/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "content_item/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "dpdp_security_retention_subject/1"
+  - "dpdp_security_retention_profile_for/2"
+  - "dpdp_security_retention_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This package imports only kit modules (formalize_lib,
+# library(reif), library(datetime)), no shared backbone package.
+uses: []
+
+scope: >-
+  The Data Fiduciary's duties under section 8 of the Digital Personal Data
+  Protection Act, 2023 other than breach intimation, read with rules 1(4), 6 and 8
+  and the Third and Seventh Schedules of the Digital Personal Data Protection Rules,
+  2025: reasonable security safeguards (s 8(5) with rule 6(1)); completeness,
+  accuracy and consistency (s 8(3)); erasure and causing the Data Processor to erase
+  (s 8(7)(a) and (b)), held back by the one-year retention of rule 8(3) and displaced
+  by retention required by other law; the deemed end of the specified purpose for the
+  three Third Schedule classes (s 8(8) and (11) with rule 8(1)); the latest day for
+  the notice before erasure (rule 8(2)); the last day of the one-year minimum
+  retention (rule 8(3)); and the fixed lists of the rule 6(1) minimum safeguards and
+  the Seventh Schedule purposes. Whether the caller is the Data Fiduciary, whether
+  data is likely to be used for a decision or disclosed, whether other law requires
+  retention and whether the specified purpose is no longer served are the caller's
+  judgements, referred to a lawyer when unsure. Whether each sub-section of s 8 is in
+  force is the caller's statement (the commencement notifications are not pinned).
+  Out of scope: s 8(6) and rule 7 (breach intimation, the sibling order
+  dpdp-breach-intimation), s 8(1), (2), (4), (9) and (10), penalties, sector rules,
+  and whether any safeguard taken is reasonable. All readings are the drafter's, not
+  a lawyer's.
+
+sources:
+  - "Digital Personal Data Protection Act, 2023 (No. 22 of 2023), Gazette of India Extraordinary, MeitY website PDF fetched 2026-11-13 (MeitY copy, not India Code, not compared with the gazette): s 2(i), (j), (k), (t), (u), (x), (za); s 8(1) to (11) with the Illustrations to s 8(7)"
+  - "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E), Gazette of India Extraordinary (Hindi header dated 13 November 2025), MeitY website PDF fetched 2026-11-13, English half only: rule 1(4), rule 6(1)(a) to (g) and 6(2), rule 8(1) to (3) with the Illustration, Third Schedule items 1 to 3 and Note, Seventh Schedule items 1, 2(i), 2(ii) and 3"
+
+query_interface:
+  2: "dpdp_security_retention_status/2"      # eligibility: section 8 duty owed / not owed / undetermined / profile rejected
+  7: "dpdp_security_retention_checklist/2"   # justification: one item per profile query, each with its cite(Key) list
+  16: "dpdp_security_retention_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings_and_section_numbers
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8
+  - in-dpdp-act-2023-meity-pdf#s8_7_illustration
+  - in-dpdp-rules-2025-meity-pdf#r1
+  - in-dpdp-rules-2025-meity-pdf#r2
+  - in-dpdp-rules-2025-meity-pdf#r6
+  - in-dpdp-rules-2025-meity-pdf#r8
+  reason: These units hold only a section number ("8."), a rule heading or the word
+    "Illustrations."; every limb cites the unit it reads. Document structure.
+  consequence: 'None for a caller: the units they head are cited or deferred on their
+    own.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: lead_ins_and_schedule_headers
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2
+  - in-dpdp-rules-2025-meity-pdf#r2_1
+  - in-dpdp-rules-2025-meity-pdf#sch3_note
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_d
+  - in-dpdp-rules-2025-meity-pdf#sch7
+  - in-dpdp-rules-2025-meity-pdf#sch7_2
+  reason: 'These units hold the lead-in words of a list (s 2 and rule 2(1): "unless
+    the context otherwise requires"; the Third Schedule Note and its clause (d), the
+    meaning of user; Seventh Schedule item 2, use by the State for the purposes that
+    follow) or the header row of the Seventh Schedule table with its reference to
+    rules 23(1) and 8(3). They carry words but give no answer of this order: the items
+    they introduce are cited (Seventh Schedule items 2(i) and 2(ii)) or deferred on
+    their own.'
+  consequence: 'None for a caller: the answers rest on the units these lead-ins introduce.'
+  declaration: not_an_exception
+  debt: true
+  open: none needed unless a later order reads the context proviso of s 2 or rule
+    2(1).
+- what: definitions_read_by_the_caller
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_j
+  - in-dpdp-act-2023-meity-pdf#s2_j_i
+  - in-dpdp-act-2023-meity-pdf#s2_j_ii
+  - in-dpdp-act-2023-meity-pdf#s2_k
+  - in-dpdp-act-2023-meity-pdf#s2_t
+  - in-dpdp-act-2023-meity-pdf#s2_u
+  - in-dpdp-act-2023-meity-pdf#s2_x
+  - in-dpdp-act-2023-meity-pdf#s2_za
+  reason: Data Principal (s 2(j), with a child's parents or lawful guardian and a
+    person with disability's lawful guardian), Data Processor (s 2(k)), personal data
+    (s 2(t)), personal data breach (s 2(u)), processing (s 2(x)) and specified purpose
+    (s 2(za)) are words of the duties; the caller reads them and no limb decides them
+    (reading (2)).
+  consequence: The answers rely on the caller's use of these words; the order never
+    checks it.
+  declaration: answered_with_caveat
+  debt: true
+  open: a later order could add queries for these definitions if a product needs them.
+- what: definitions_not_used
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_a
+  - in-dpdp-act-2023-meity-pdf#s2_b
+  - in-dpdp-act-2023-meity-pdf#s2_c
+  - in-dpdp-act-2023-meity-pdf#s2_d
+  - in-dpdp-act-2023-meity-pdf#s2_e
+  - in-dpdp-act-2023-meity-pdf#s2_f
+  - in-dpdp-act-2023-meity-pdf#s2_g
+  - in-dpdp-act-2023-meity-pdf#s2_h
+  - in-dpdp-act-2023-meity-pdf#s2_l
+  - in-dpdp-act-2023-meity-pdf#s2_m
+  - in-dpdp-act-2023-meity-pdf#s2_n
+  - in-dpdp-act-2023-meity-pdf#s2_o
+  - in-dpdp-act-2023-meity-pdf#s2_o_i
+  - in-dpdp-act-2023-meity-pdf#s2_o_ii
+  - in-dpdp-act-2023-meity-pdf#s2_p
+  - in-dpdp-act-2023-meity-pdf#s2_p_i
+  - in-dpdp-act-2023-meity-pdf#s2_p_ii
+  - in-dpdp-act-2023-meity-pdf#s2_q
+  - in-dpdp-act-2023-meity-pdf#s2_r
+  - in-dpdp-act-2023-meity-pdf#s2_s
+  - in-dpdp-act-2023-meity-pdf#s2_s_i
+  - in-dpdp-act-2023-meity-pdf#s2_s_ii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iv
+  - in-dpdp-act-2023-meity-pdf#s2_s_v
+  - in-dpdp-act-2023-meity-pdf#s2_s_vi
+  - in-dpdp-act-2023-meity-pdf#s2_s_vii
+  - in-dpdp-act-2023-meity-pdf#s2_v
+  - in-dpdp-act-2023-meity-pdf#s2_w
+  - in-dpdp-act-2023-meity-pdf#s2_y
+  - in-dpdp-act-2023-meity-pdf#s2_z
+  - in-dpdp-act-2023-meity-pdf#s2_zb
+  - in-dpdp-rules-2025-meity-pdf#r2_1_a
+  - in-dpdp-rules-2025-meity-pdf#r2_1_b
+  - in-dpdp-rules-2025-meity-pdf#r2_1_c
+  - in-dpdp-rules-2025-meity-pdf#r2_1_d
+  - in-dpdp-rules-2025-meity-pdf#r2_2
+  - in-dpdp-rules-2025-meity-pdf#r6_2
+  reason: The other clauses of s 2 of the Act, rule 2 of the Rules (which keeps the
+    Act's meanings and defines Act, techno-legal measures, user account and verifiable
+    consent) and rule 6(2) (computer resource, a word of rule 6(1)(b), by reference
+    to the Information Technology Act, 2000) define words that no limb of this order
+    decides.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+  open: a later order that uses these words would formalise the definitions it needs.
+- what: breach_intimation
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8_6
+  reason: s 8(6) (intimation of a personal data breach to the Board and each affected
+    Data Principal), with rule 7 of the Rules, is formalised by the order dpdp-breach-intimation;
+    this order does not repeat it.
+  consequence: The answers of this order never say whether an intimation is owed.
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: dpdp-breach-intimation
+- what: responsibility_and_data_processor_contract
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8_1
+  - in-dpdp-act-2023-meity-pdf#s8_2
+  reason: s 8(1) makes the Data Fiduciary responsible for compliance, including processing
+    by its Data Processor; s 8(2) lets it involve a Data Processor only under a valid
+    contract. Neither gives an answer of this order; whether a contract is valid is
+    not decided.
+  consequence: The answers never say whether a Data Processor was validly engaged.
+  declaration: not_an_exception
+  debt: true
+  open: a later order could formalise s 8(2) as a judgement.
+- what: technical_and_organisational_measures
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8_4
+  reason: s 8(4) requires appropriate technical and organisational measures to ensure
+    effective observance of the Act and the Rules; the text gives no test and the
+    order formalises no limb for it.
+  consequence: The answers never say whether s 8(4) was met.
+  declaration: not_an_exception
+  debt: true
+  open: a later order could formalise s 8(4) as a judgement.
+- what: contact_information_and_grievance_mechanism
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8_9
+  - in-dpdp-act-2023-meity-pdf#s8_10
+  reason: s 8(9) (publishing the business contact information of a Data Protection
+    Officer or another person, in the manner prescribed by a rule that is not pinned
+    here) and s 8(10) (an effective grievance mechanism) have no limb in this order.
+  consequence: The answers never say whether contact information was published or
+    a mechanism set up.
+  declaration: not_an_exception
+  debt: true
+  open: a later order with the rule on the manner of publication pinned could formalise
+    them.
+- what: illustrations
+  units:
+  - in-dpdp-act-2023-meity-pdf#s8_7_illustration_I
+  - in-dpdp-act-2023-meity-pdf#s8_7_illustration_II
+  - in-dpdp-rules-2025-meity-pdf#r8_3_illustration
+  reason: The Illustrations to s 8(7) and to rule 8(3) show how the rules apply (a
+    purpose served; a retention required by a banking law; retention for one year
+    after a sale and by a Data Processor); readings (7), (8) and (10) refer to them;
+    they add no limb.
+  consequence: 'None for a caller: the rules they illustrate are formalised.'
+  declaration: not_an_exception
+  debt: true
+  open: the Illustrations could become test examples if a later order needs them.
+- what: third_schedule_class_definitions
+  units:
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_a
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_b
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_c
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_d_i
+  - in-dpdp-rules-2025-meity-pdf#sch3_note_d_ii
+  reason: The Note defines e-commerce entity (by reference to the Consumer Protection
+    Act, 2019), online gaming intermediary, social media intermediary (by reference
+    to the Information Technology (Intermediary Guidelines and Digital Media Ethics
+    Code) Rules, 2021) and user; those instruments are not pinned, and the caller
+    states its class and its number of registered users in India (reading (11); Q11).
+  consequence: The answers rely on the caller's class and user count; the order never
+    checks them.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q11: pin the referred instruments if a later order formalises the class tests.'
+- what: title_and_commencement_of_other_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r1_1
+  - in-dpdp-rules-2025-meity-pdf#r1_2
+  - in-dpdp-rules-2025-meity-pdf#r1_3
+  reason: Rule 1(1) is the short title; rule 1(2) and (3) bring other rules into force
+    (rules 1, 2, 17 to 21 and rule 4); only rule 1(4), which dates rules 6 and 8,
+    is read.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+  open: a later order that reads rules 1, 2, 4 or 17 to 21 would read the commencement
+    words it needs.

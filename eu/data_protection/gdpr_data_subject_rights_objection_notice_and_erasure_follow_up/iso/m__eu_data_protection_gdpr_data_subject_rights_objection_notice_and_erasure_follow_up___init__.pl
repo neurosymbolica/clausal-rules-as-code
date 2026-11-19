@@ -1,0 +1,45 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_kernel, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up, [decide_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up/2, erasure_follow_up_duty/4, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_checklist/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_decision_resolvable/1, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status_values/1, objection_right_notice/4]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_queries, [follow_up_duty_does_not_apply/0, follow_up_duty_met/0, follow_up_duty_not_met/0, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_action_compliance/3, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_keys/1, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_what_if/4, notice_complies/0, notice_does_not_comply/0, notice_not_owed/0, notice_not_yet_due/0]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_fixtures, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_assess/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_expected/3, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_subject/1]).
+
+root_export(absent).
+root_export(attestation).
+root_export(attested).
+root_export(controller_made_personal_data_public).
+root_export(controller_obliged_to_erase_under_article_17_1).
+root_export(cross_reference_unresolved).
+root_export(document).
+root_export(duplicate_key).
+root_export(first_communication_with_data_subject_has_taken_place).
+root_export(follow_up_duty_does_not_apply).
+root_export(follow_up_duty_met).
+root_export(follow_up_duty_not_met).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(needs_legal_review).
+root_export(not_attempted).
+root_export(notice_complies).
+root_export(notice_does_not_comply).
+root_export(notice_not_owed).
+root_export(notice_not_yet_due).
+root_export(open_textured).
+root_export(outside_fact).
+root_export(reasonable_steps_taken_to_inform_other_controllers).
+root_export(resolution).
+root_export(right_explicitly_brought_to_attention_by_first_communication).
+root_export(right_presented_clearly).
+root_export(right_presented_separately_from_other_information).
+root_export(right_to_object_applies).
+root_export(unknown_key).
+root_export(unsure).
+root_export(url).
+root_export(wrong_type).

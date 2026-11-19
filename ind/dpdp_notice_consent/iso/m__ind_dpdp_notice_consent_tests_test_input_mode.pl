@@ -1,0 +1,108 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_notice_consent_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_notice_consent_dpdp_notice_consent, [consent_ground/3, legitimate_use_ground/3, consent_notice/3, withdrawal_effect/3, consent_manager_status/3, provision_lists/2, dpdp_notice_consent_status/2]).
+:- use_module(m__ind_dpdp_notice_consent_kernel, [dpdp_notice_consent_input_problems/2]).
+:- use_module(m__ind_dpdp_notice_consent_fixtures, [dpdp_notice_consent_profile_for/2]).
+
+test(consent_ground_holds_with_its_verdict_and_citations_bound) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    consent_ground(Profile, lawful_on_consent, [cite(in_dpdp_act_2023_s_4_1), cite(in_dpdp_act_2023_s_4_1_a), cite(in_dpdp_act_2023_s_6_1)]).
+test(legitimate_use_ground_holds_with_its_verdict_bound) :-
+    dpdp_notice_consent_profile_for(legitimate_use_employment, Profile),
+    legitimate_use_ground(Profile, lawful_on_legitimate_use, _).
+test(consent_notice_holds_with_its_verdict_bound) :-
+    dpdp_notice_consent_profile_for(notice_request_on_rule_3_day, Profile),
+    consent_notice(Profile, notice_with_request_required, _).
+test(withdrawal_effect_holds_with_its_verdict_bound) :-
+    dpdp_notice_consent_profile_for(withdrawal_cease, Profile),
+    withdrawal_effect(Profile, cease_processing_required, [cite(in_dpdp_act_2023_s_6_4), cite(in_dpdp_act_2023_s_6_5), cite(in_dpdp_act_2023_s_6_6)]).
+test(consent_manager_status_holds_with_its_verdict_bound) :-
+    dpdp_notice_consent_profile_for(manager_registered, Profile),
+    consent_manager_status(Profile, may_act_as_consent_manager, _).
+test(a_bound_missing_key_list_names_one_key) :-
+    dpdp_notice_consent_profile_for(consent_withdrawal_absent, Profile),
+    consent_ground(Profile, indeterminate([consent_withdrawn]), []).
+test(a_bound_referral_reason_unifies) :-
+    dpdp_notice_consent_profile_for(consent_purpose_unsure, Profile),
+    consent_ground(Profile, needs_legal_review(open_textured(lawful_purpose, cite(in_dpdp_act_2023_s_4_2)), _), []).
+test(the_facade_status_holds_bound) :-
+    dpdp_notice_consent_profile_for(consent_withdrawn, Profile),
+    dpdp_notice_consent_status(Profile, ineligible).
+test(provision_lists_with_topic_and_first_item_bound) :-
+    provision_lists(legitimate_uses, [content_item(voluntarily_provided_for_specified_purpose, cite(in_dpdp_act_2023_s_7_a))|_]).
+test(a_pair_element_is_not_an_attribute) :-
+    dpdp_notice_consent_input_problems([consent_given - true], [wrong_type(profile)]).
+test(a_non_attribute_element_is_the_only_problem) :-
+    dpdp_notice_consent_input_problems([attribute(colour, red), consent_given], [wrong_type(profile)]).
+test(a_number_key_is_unknown) :-
+    dpdp_notice_consent_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(a_compound_key_is_unknown_as_given) :-
+    dpdp_notice_consent_input_problems([attribute(wrapped(lawful_purpose), true)], [unknown_key(wrapped(lawful_purpose))]).
+test(a_judgement_accepts_unsure) :-
+    dpdp_notice_consent_input_problems([attribute(lawful_purpose, unsure)], []).
+test(a_crisp_key_refuses_unsure) :-
+    dpdp_notice_consent_input_problems([attribute(consent_withdrawn, unsure)], [wrong_type(consent_withdrawn)]).
+test(a_judgement_refuses_another_atom) :-
+    dpdp_notice_consent_input_problems([attribute(acts_as_data_fiduciary, maybe)], [wrong_type(acts_as_data_fiduciary)]).
+test(a_leap_day_is_a_real_day) :-
+    dpdp_notice_consent_input_problems([attribute(question_date, date(2028, 2, 29))], []).
+test(an_atom_date_is_wrong_type) :-
+    dpdp_notice_consent_input_problems([attribute(question_date, today)], [wrong_type(question_date)]).
+test(a_list_date_is_wrong_type) :-
+    dpdp_notice_consent_input_problems([attribute(question_date, [2027, 5, 13])], [wrong_type(question_date)]).
+test(an_enumeration_key_refuses_an_unlisted_atom) :-
+    dpdp_notice_consent_input_problems([attribute(legitimate_use_clause, research)], [wrong_type(legitimate_use_clause)]).
+test(a_notice_occasion_refuses_a_clause_atom) :-
+    dpdp_notice_consent_input_problems([attribute(notice_occasion, medical_emergency)], [wrong_type(notice_occasion)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    dpdp_notice_consent_input_problems([attribute(colour, red), attribute(consent_given, maybe), attribute(lawful_purpose, true), attribute(lawful_purpose, false), attribute(shade, blue), attribute(colour, green)], [duplicate_key(lawful_purpose), wrong_type(consent_given), unknown_key(colour), unknown_key(shade)]).
+test(an_absent_key_is_not_a_problem) :-
+    dpdp_notice_consent_input_problems([], []).
+test(the_input_check_answers_once_for_a_bad_profile) :-
+    findall(Problems, dpdp_notice_consent_input_problems(nothing, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_non_list_profile_gives_input_problems_in_every_query) :-
+    consent_ground(nothing, input_problems([wrong_type(profile)]), []),
+    consent_manager_status(nothing, input_problems([wrong_type(profile)]), []).
+test(an_input_problem_comes_before_a_settling_value) :-
+    consent_ground([attribute(sections_4_to_7_in_force, false), attribute(colour, red)], input_problems([unknown_key(colour)]), []).
+
+test(consent_ground_rejects_a_bound_wrong_verdict, fail) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    consent_ground(Profile, not_lawful_on_consent, _).
+test(legitimate_use_ground_rejects_a_bound_wrong_verdict, fail) :-
+    dpdp_notice_consent_profile_for(legitimate_use_employment, Profile),
+    legitimate_use_ground(Profile, not_lawful_on_legitimate_use, _).
+test(consent_notice_rejects_the_before_rule_3_twin_on_the_day, fail) :-
+    dpdp_notice_consent_profile_for(notice_request_on_rule_3_day, Profile),
+    consent_notice(Profile, notice_with_request_required_before_rule_3, _).
+test(withdrawal_effect_rejects_a_bound_wrong_verdict, fail) :-
+    dpdp_notice_consent_profile_for(withdrawal_cease, Profile),
+    withdrawal_effect(Profile, processing_may_continue_without_consent, _).
+test(consent_manager_status_rejects_a_bound_wrong_verdict, fail) :-
+    dpdp_notice_consent_profile_for(manager_registered, Profile),
+    consent_manager_status(Profile, may_not_act_as_consent_manager, _).
+test(a_bound_missing_key_list_with_a_wrong_key_is_rejected, fail) :-
+    dpdp_notice_consent_profile_for(consent_withdrawal_absent, Profile),
+    consent_ground(Profile, indeterminate([consent_meets_section_6_1]), _).
+test(a_referral_never_carries_citations, fail) :-
+    dpdp_notice_consent_profile_for(consent_purpose_unsure, Profile),
+    consent_ground(Profile, needs_legal_review(_, _), [_|_]).
+test(the_facade_status_rejects_a_bound_wrong_status, fail) :-
+    dpdp_notice_consent_profile_for(consent_withdrawn, Profile),
+    dpdp_notice_consent_status(Profile, eligible).
+test(provision_lists_rejects_a_wrong_first_item, fail) :-
+    provision_lists(legitimate_uses, [content_item(employment_purposes, _)|_]).
+
+cp_test_names([consent_ground_holds_with_its_verdict_and_citations_bound, legitimate_use_ground_holds_with_its_verdict_bound, consent_notice_holds_with_its_verdict_bound, withdrawal_effect_holds_with_its_verdict_bound, consent_manager_status_holds_with_its_verdict_bound, a_bound_missing_key_list_names_one_key, a_bound_referral_reason_unifies, the_facade_status_holds_bound, provision_lists_with_topic_and_first_item_bound, a_pair_element_is_not_an_attribute, a_non_attribute_element_is_the_only_problem, a_number_key_is_unknown, a_compound_key_is_unknown_as_given, a_judgement_accepts_unsure, a_crisp_key_refuses_unsure, a_judgement_refuses_another_atom, a_leap_day_is_a_real_day, an_atom_date_is_wrong_type, a_list_date_is_wrong_type, an_enumeration_key_refuses_an_unlisted_atom, a_notice_occasion_refuses_a_clause_atom, problems_come_in_contract_order_then_unknown_keys, an_absent_key_is_not_a_problem, the_input_check_answers_once_for_a_bad_profile, a_non_list_profile_gives_input_problems_in_every_query, an_input_problem_comes_before_a_settling_value]).
+cp_test_fail_names([consent_ground_rejects_a_bound_wrong_verdict, legitimate_use_ground_rejects_a_bound_wrong_verdict, consent_notice_rejects_the_before_rule_3_twin_on_the_day, withdrawal_effect_rejects_a_bound_wrong_verdict, consent_manager_status_rejects_a_bound_wrong_verdict, a_bound_missing_key_list_with_a_wrong_key_is_rejected, a_referral_never_carries_citations, the_facade_status_rejects_a_bound_wrong_status, provision_lists_rejects_a_wrong_first_item]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

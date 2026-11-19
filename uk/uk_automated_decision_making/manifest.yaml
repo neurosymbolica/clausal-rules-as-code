@@ -1,0 +1,423 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: uk/uk_automated_decision_making
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "uk_automated_decision_making"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The nineteen profile key atoms and unsure are
+# listed as name/0 because the test cases read them as package-root module
+# attributes (root_exports).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- uk_automated_decision_making.clausal --
+  - "decide_uk_automated_decision_making/2"
+  - "uk_automated_decision_making_status/2"
+  - "uk_automated_decision_making_checklist/2"
+  - "uk_automated_decision_making_decision_resolvable/1"
+  - "uk_automated_decision_making_status_values/1"
+  - "uk_significant_automated_decision/3"
+  - "uk_automated_decision_restriction/3"
+  - "uk_automated_decision_safeguards/3"
+  - "eu_automated_decision/3"
+  - "compare_uk_eu_automated_decision/5"
+  - "significant_decision_based_solely_on_automated_processing/0"
+  - "not_a_significant_decision_based_solely_on_automated_processing/0"
+  - "restrictions_not_engaged/0"
+  - "decision_permitted/0"
+  - "decision_prohibited/0"
+  - "safeguards_not_required/0"
+  - "required_safeguards_in_place/0"
+  - "required_safeguards_not_in_place/0"
+  - "same/0"
+  - "differs/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "uk_automated_decision_making_profile_keys/1"
+  - "uk_automated_decision_making_input_problems/2"
+  - "uk_automated_decision_making_what_if/4"
+  - "decision_based_entirely_or_partly_on_personal_data/0"
+  - "meaningful_human_involvement_in_the_decision/0"
+  - "decision_produces_a_legal_effect_for_the_data_subject/0"
+  - "decision_has_a_similarly_significant_effect_for_the_data_subject/0"
+  - "processing_for_the_decision_relies_on_article_6_1_ea/0"
+  - "decision_based_entirely_or_partly_on_special_category_data/0"
+  - "decision_based_entirely_on_processing_with_explicit_consent/0"
+  - "uk_article_9_2_g_applies/0"
+  - "decision_necessary_for_a_contract_with_the_data_subject/0"
+  - "decision_required_or_authorised_by_law/0"
+  - "decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures/0"
+  - "decision_based_on_explicit_consent/0"
+  - "article_9_2_a_applies/0"
+  - "eu_article_9_2_g_applies/0"
+  - "suitable_measures_for_special_category_data_in_place/0"
+  - "safeguards_provide_information_about_decisions/0"
+  - "safeguards_enable_representations/0"
+  - "safeguards_enable_human_intervention/0"
+  - "safeguards_enable_contesting/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "uk_automated_decision_making_subject/1"
+  - "uk_automated_decision_making_profile_for/2"
+  - "uk_automated_decision_making_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators, library(reif)), none of them a backbone package.
+uses: []
+
+scope: >-
+  UK law in force, not a proposal; drafter's reading, not a lawyer's.
+  UK GDPR Chapter III Section 4A (automated individual decision-making), as
+  substituted for the old Art 22 by section 80(1) of the Data (Use and Access)
+  Act 2025, for a decision taken on or after 5 February 2026 (S.I. 2026/82
+  reg 2(j) and (z8), with reg 5), under the legislation.gov.uk 'Latest
+  available (Revised)' text fetched 2026-11-15. Decided here: whether a
+  decision is a significant decision based solely on automated processing
+  (Art 22A); whether Art 22B lets it be taken based solely on automated
+  processing (special categories of personal data, Art 22B(1) to (3); reliance
+  on Art 6(1)(ea), Art 22B(4)); whether Art 22C requires safeguards and, if so,
+  whether the four measures of Art 22C(2) are in place; and, for comparison,
+  this order's own reading of EU GDPR Art 22(1), (2)(a) to (c) and (4) (Formex
+  consolidation 02016R0679-20160504) set beside the UK Art 22B answer on the
+  same profile. Open-textured judgements (meaningful human involvement, legal
+  or similarly significant effect, explicit consent, necessity, authorisation
+  by law, Art 9(2) points, the safeguard measures) are the caller's: unsure
+  goes to a lawyer (needs_legal_review). Out of scope: Art 22D powers and any
+  regulations under them (read as not made); EU Art 22(3); the lawfulness of
+  processing under Arts 6 and 9; the Art 9 and DPA 2018 Sch 1 conditions;
+  transparency duties under Arts 13 to 15; DPA 2018 ss 50A to 50D (law
+  enforcement); any decision taken before 5 February 2026.
+
+sources:
+  - "UK GDPR (retained Regulation (EU) 2016/679) Art 22A(1), (1)(a), (1)(b), (1)(b)(i), (1)(b)(ii), (2), as substituted by s 80(1) Data (Use and Access) Act 2025; legislation.gov.uk Latest available (Revised), fetched 2026-11-15, pin uk-eur-2016-679-revised-2026-09-30"
+  - "UK GDPR Art 22B(1), (2), (3)(a)(i), (3)(a)(ii), (3)(b), (4); same pin"
+  - "UK GDPR Art 22C(1)(a), (1)(b), (2)(a) to (d); same pin"
+  - "UK GDPR Art 22D(1) to (5) (quoted and deferred: powers of the Secretary of State); same pin"
+  - "Regulation (EU) 2016/679 Art 22(1), (2)(a), (2)(b), (2)(c), (4); Formex consolidation 02016R0679-20160504, Article 22 extract (comparison limb); Art 22(3) quoted and deferred"
+  - "S.I. 2026/82 (Data (Use and Access) Act 2025 (Commencement No. 6) Regulations 2026) reg 2(j), 2(z8) and reg 5 (deferred: commencement and saving)"
+  - "Data (Use and Access) Act 2025 (c. 18) s 142(1), (2), (2)(h) (deferred: commencement of regulation-making powers)"
+
+query_interface:
+  3: "uk_automated_decision_restriction/3"          # status_determination: the UK Art 22B status (also uk_significant_automated_decision/3, uk_automated_decision_safeguards/3, eu_automated_decision/3)
+  5: "compare_uk_eu_automated_decision/5"           # comparison: UK Art 22B beside EU Art 22 on one profile
+  7: "uk_automated_decision_making_checklist/2"     # justification: item(Id, Status, cite(Key)) per ground
+  16: "uk_automated_decision_making_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - uk-eur-2016-679-revised-2026-09-30#article-22A
+  - uk-eur-2016-679-revised-2026-09-30#article-22B
+  - uk-eur-2016-679-revised-2026-09-30#article-22C
+  - uk-eur-2016-679-revised-2026-09-30#article-22D
+  - 02016R0679-20160504#art_022
+  reason: 'The titles of UK GDPR Arts 22A to 22D and of EU GDPR Art 22 carry no rule:
+    document structure. Deferred so every unit of the pinned extracts is accounted
+    for.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: uk_secretary_of_state_powers
+  units:
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-1
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-2
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-3
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-3-a
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-3-b
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-3-c
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-4
+  - uk-eur-2016-679-revised-2026-09-30#article-22D-5
+  reason: 'UK GDPR Art 22D(1) to (5) give the Secretary of State power to make regulations
+    about meaningful human involvement, similarly significant effects and the Art
+    22C safeguards, subject to the affirmative resolution procedure: a power to make
+    law, not a rule on facts. Whether any such regulations were made by the fetch
+    date is not checked (reading (9)).'
+  consequence: An answer does not apply any regulations under Art 22D (open question
+    Q9).
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: eu_safeguard_duty
+  units:
+  - 02016R0679-20160504#parag_022.003
+  instrument: Regulation (EU) 2016/679 Art 22(3)
+  reason: EU Art 22(3) requires the controller, in the cases of Art 22(2)(a) and (c),
+    to implement suitable measures, at least the right to obtain human intervention,
+    to express his or her point of view and to contest the decision. This order compares
+    whether the decision may be taken; it does not compare the EU safeguard duty with
+    UK Art 22C.
+  consequence: No EU answer says whether the Art 22(3) measures are implemented.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as an EU safeguards query beside uk_automated_decision_safeguards/3;
+    the deferral stands for this run.
+- what: law_enforcement_automated_decisions
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-50A
+  - ukpga-2018-12-revised-2026-09-30#section-50A-1
+  - ukpga-2018-12-revised-2026-09-30#section-50A-1-a
+  - ukpga-2018-12-revised-2026-09-30#section-50A-1-b
+  - ukpga-2018-12-revised-2026-09-30#section-50A-1-b-i
+  - ukpga-2018-12-revised-2026-09-30#section-50A-1-b-ii
+  - ukpga-2018-12-revised-2026-09-30#section-50A-2
+  - ukpga-2018-12-revised-2026-09-30#section-50B
+  - ukpga-2018-12-revised-2026-09-30#section-50B-1
+  - ukpga-2018-12-revised-2026-09-30#section-50B-2
+  - ukpga-2018-12-revised-2026-09-30#section-50B-3
+  - ukpga-2018-12-revised-2026-09-30#section-50C
+  - ukpga-2018-12-revised-2026-09-30#section-50C-1
+  - ukpga-2018-12-revised-2026-09-30#section-50C-1-a
+  - ukpga-2018-12-revised-2026-09-30#section-50C-1-b
+  - ukpga-2018-12-revised-2026-09-30#section-50C-2
+  - ukpga-2018-12-revised-2026-09-30#section-50C-2-a
+  - ukpga-2018-12-revised-2026-09-30#section-50C-2-b
+  - ukpga-2018-12-revised-2026-09-30#section-50C-2-c
+  - ukpga-2018-12-revised-2026-09-30#section-50C-2-d
+  - ukpga-2018-12-revised-2026-09-30#section-50C-3
+  - ukpga-2018-12-revised-2026-09-30#section-50C-3-a
+  - ukpga-2018-12-revised-2026-09-30#section-50C-3-b
+  - ukpga-2018-12-revised-2026-09-30#section-50C-3-c
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4-a
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4-b
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4-c
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4-d
+  - ukpga-2018-12-revised-2026-09-30#section-50C-4-e
+  - ukpga-2018-12-revised-2026-09-30#section-50C-5
+  - ukpga-2018-12-revised-2026-09-30#section-50D
+  - ukpga-2018-12-revised-2026-09-30#section-50D-1
+  - ukpga-2018-12-revised-2026-09-30#section-50D-2
+  - ukpga-2018-12-revised-2026-09-30#section-50D-3
+  - ukpga-2018-12-revised-2026-09-30#section-50D-4
+  - ukpga-2018-12-revised-2026-09-30#section-50D-4-a
+  - ukpga-2018-12-revised-2026-09-30#section-50D-4-b
+  - ukpga-2018-12-revised-2026-09-30#section-50D-4-c
+  - ukpga-2018-12-revised-2026-09-30#section-50D-5
+  instrument: Data Protection Act 2018 ss 50A to 50D (Part 3, law enforcement processing)
+  reason: Sections 50A to 50D of the Data Protection Act 2018, substituted by section
+    80(3) of the 2025 Act, govern automated decisions in law-enforcement processing
+    by competent authorities (Part 3). This order formalises the UK GDPR only.
+  consequence: No answer covers processing under Part 3 of the Data Protection Act
+    2018.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later UK law-enforcement order; the deferral stands for
+    this run.
+- what: amending_provisions
+  units:
+  - ukpga-2025-18-enacted#section-80
+  - ukpga-2025-18-enacted#section-80-1
+  - ukpga-2025-18-enacted#section-80-2
+  - ukpga-2025-18-enacted#section-80-3
+  - ukpga-2025-18-enacted#section-80-4
+  - ukpga-2025-18-enacted#section-80-4-a
+  - ukpga-2025-18-enacted#section-80-4-b
+  - ukpga-2025-18-enacted#section-80-4-c
+  - ukpga-2025-18-enacted#section-80-5
+  - ukpga-2025-18-enacted#section-80-5-a
+  - ukpga-2025-18-enacted#section-80-5-b
+  - ukpga-2025-18-enacted#section-80-5-c
+  - ukpga-2025-18-enacted#section-80-6
+  - ukpga-2025-18-enacted#schedule-6
+  - ukpga-2025-18-enacted#schedule-6-paragraph-1
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-1
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-2
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-3
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-3-a
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-3-b
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-4
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-5
+  - ukpga-2025-18-enacted#schedule-6-paragraph-2-6
+  - ukpga-2025-18-enacted#schedule-6-paragraph-3
+  - ukpga-2025-18-enacted#schedule-6-paragraph-4
+  - ukpga-2025-18-enacted#schedule-6-paragraph-5
+  - ukpga-2025-18-enacted#schedule-6-paragraph-6
+  - ukpga-2025-18-enacted#schedule-6-paragraph-7
+  - ukpga-2025-18-enacted#schedule-6-paragraph-8
+  - ukpga-2025-18-enacted#schedule-6-paragraph-9
+  - ukpga-2025-18-enacted#schedule-6-paragraph-9-a
+  - ukpga-2025-18-enacted#schedule-6-paragraph-9-b
+  - ukpga-2025-18-enacted#schedule-6-paragraph-10
+  - ukpga-2025-18-enacted#schedule-6-paragraph-11
+  - ukpga-2025-18-enacted#schedule-6-paragraph-12
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-1
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-2
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-3
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-4
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-5
+  - ukpga-2025-18-enacted#schedule-6-paragraph-13-6
+  - ukpga-2025-18-enacted#schedule-6-paragraph-14
+  - ukpga-2025-18-enacted#schedule-6-paragraph-14-1
+  - ukpga-2025-18-enacted#schedule-6-paragraph-14-2
+  - ukpga-2025-18-enacted#schedule-6-paragraph-14-3
+  - ukpga-2025-18-enacted#schedule-6-paragraph-15
+  - ukpga-2025-18-enacted#schedule-6-paragraph-15-a
+  - ukpga-2025-18-enacted#schedule-6-paragraph-15-b
+  - ukpga-2025-18-enacted#schedule-6-paragraph-16
+  - ukpga-2025-18-enacted#d24e324
+  - ukpga-2025-18-enacted#d24e328
+  - ukpga-2025-18-enacted#d24e340
+  - ukpga-2025-18-enacted#d24e346
+  - ukpga-2025-18-enacted#d24e358
+  - ukpga-2025-18-enacted#d24e373
+  - ukpga-2025-18-enacted#d24e398
+  - ukpga-2025-18-enacted#d24e402
+  - ukpga-2025-18-enacted#d24e433
+  - ukpga-2025-18-enacted#d24e439
+  - ukpga-2025-18-enacted#d24e460
+  - ukpga-2025-18-enacted#d24e466
+  - ukpga-2025-18-enacted#d24e493
+  - ukpga-2025-18-enacted#d24e499
+  - ukpga-2025-18-enacted#d24e544
+  - ukpga-2025-18-enacted#d24e548
+  - ukpga-2025-18-enacted#d24e568
+  - ukpga-2025-18-enacted#d24e598
+  reason: Section 80 of the Data (Use and Access) Act 2025 as enacted substitutes
+    Section 4A of the UK GDPR (subsection (1)) and ss 50A to 50D of the Data Protection
+    Act 2018 (subsections (2) to (6)); Schedule 6 makes minor and consequential amendments
+    of UK GDPR Arts 12 to 15, 23, 47 and 83 and of the Data Protection Act 2018. The
+    order reads the amended UK GDPR text (the revised Arts 22A to 22D); the amending
+    words carry no further rule for its questions.
+  consequence: 'None for a caller: the amended text is read.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: commencement
+  units:
+  - uksi-2026-82-made#regulation-2
+  - uksi-2026-82-made#regulation-2-a
+  - uksi-2026-82-made#regulation-2-b
+  - uksi-2026-82-made#regulation-2-c
+  - uksi-2026-82-made#regulation-2-d
+  - uksi-2026-82-made#regulation-2-e
+  - uksi-2026-82-made#regulation-2-f
+  - uksi-2026-82-made#regulation-2-g
+  - uksi-2026-82-made#regulation-2-h
+  - uksi-2026-82-made#regulation-2-i
+  - uksi-2026-82-made#regulation-2-j
+  - uksi-2026-82-made#regulation-2-k
+  - uksi-2026-82-made#regulation-2-l
+  - uksi-2026-82-made#regulation-2-m
+  - uksi-2026-82-made#regulation-2-n
+  - uksi-2026-82-made#regulation-2-o
+  - uksi-2026-82-made#regulation-2-p
+  - uksi-2026-82-made#regulation-2-q
+  - uksi-2026-82-made#regulation-2-r
+  - uksi-2026-82-made#regulation-2-s
+  - uksi-2026-82-made#regulation-2-t
+  - uksi-2026-82-made#regulation-2-u
+  - uksi-2026-82-made#regulation-2-v
+  - uksi-2026-82-made#regulation-2-w
+  - uksi-2026-82-made#regulation-2-x
+  - uksi-2026-82-made#regulation-2-y
+  - uksi-2026-82-made#regulation-2-z
+  - uksi-2026-82-made#regulation-2-z1
+  - uksi-2026-82-made#regulation-2-z2
+  - uksi-2026-82-made#regulation-2-z3
+  - uksi-2026-82-made#regulation-2-z4
+  - uksi-2026-82-made#regulation-2-z5
+  - uksi-2026-82-made#regulation-2-z6
+  - uksi-2026-82-made#regulation-2-z7
+  - uksi-2026-82-made#regulation-2-z8
+  - uksi-2026-82-made#regulation-2-z9
+  - uksi-2026-82-made#regulation-2-z10
+  - uksi-2026-82-made#regulation-2-z11
+  - uksi-2026-82-made#regulation-2-z12
+  - uksi-2026-82-made#regulation-2-z13
+  - uksi-2026-82-made#regulation-2-z14
+  - uksi-2026-82-made#regulation-2-z15
+  - uksi-2026-82-made#regulation-5
+  - ukpga-2025-18-enacted#section-142
+  - ukpga-2025-18-enacted#section-142-1
+  - ukpga-2025-18-enacted#section-142-2
+  - ukpga-2025-18-enacted#section-142-2-a
+  - ukpga-2025-18-enacted#section-142-2-b
+  - ukpga-2025-18-enacted#section-142-2-c
+  - ukpga-2025-18-enacted#section-142-2-d
+  - ukpga-2025-18-enacted#section-142-2-e
+  - ukpga-2025-18-enacted#section-142-2-f
+  - ukpga-2025-18-enacted#section-142-2-g
+  - ukpga-2025-18-enacted#section-142-2-h
+  - ukpga-2025-18-enacted#section-142-3
+  - ukpga-2025-18-enacted#section-142-3-a
+  - ukpga-2025-18-enacted#section-142-3-b
+  - ukpga-2025-18-enacted#section-142-3-c
+  - ukpga-2025-18-enacted#section-142-3-d
+  - ukpga-2025-18-enacted#section-142-4
+  - ukpga-2025-18-enacted#section-142-5
+  reason: S.I. 2026/82 reg 2 and reg 5 and section 142 of the 2025 Act fix from when
+    Section 4A applies; the order states once, in SCOPE and reading (10), that it
+    answers for a decision taken on or after 5 February 2026, and has no date argument.
+  consequence: The order says nothing about a decision taken before 5 February 2026.
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: article_9_conditions
+  instrument: UK GDPR Art 9 and Data Protection Act 2018 Sch 1; Regulation (EU) 2016/679
+    Art 9
+  cites:
+  - uk-eur-2016-679#article-9
+  - ukpga-2018-12#schedule-1
+  - 32016R0679#art_009
+  reason: Art 9(1) (special categories) and Art 9(2)(a) and (g), UK and EU, are named
+    by Art 22B and EU Art 22(4) but not pinned; whether the data is special-category
+    data and whether a point of Art 9(2) applies are the caller's (decision_based_entirely_or_partly_on_special_category_data,
+    uk_article_9_2_g_applies, article_9_2_a_applies, eu_article_9_2_g_applies).
+  consequence: The caller states those facts and judgements; the order does not test
+    the Art 9 conditions.
+- what: recognised_legitimate_interests
+  instrument: UK GDPR Art 6(1)(ea), Art 6(5) and Annex 1
+  cites:
+  - uk-eur-2016-679#article-6-1-ea
+  reason: Art 22B(4) turns on reliance on Art 6(1)(ea); which lawful basis the decision-maker
+    relies on is a fact the caller states (processing_for_the_decision_relies_on_article_6_1_ea);
+    this order does not decide whether Art 6(1)(ea) applies.
+  consequence: The caller states whether the processing relies on Art 6(1)(ea).
+- what: code_of_practice_on_automated_decision_making
+  instrument: S.I. 2026/425 (Data Protection Act 2018 (Code of Practice on Artificial
+    Intelligence and Automated Decision-Making) Regulations 2026)
+  cites:
+  - uksi-2026-425#regulation-2
+  reason: S.I. 2026/425, made under sections 124A and 124B of the Data Protection
+    Act 2018, requires the Commissioner to prepare a code of practice on automated
+    decision-making (decision-making to which Art 22C(1) applies); it is guidance-making,
+    not a rule on facts, and it is not made under Art 22D (reading (9)).
+  consequence: No answer applies the code of practice.
+- what: transparency_and_access_duties
+  instrument: UK GDPR Arts 12 to 15 (as amended by Sch 6 of the 2025 Act)
+  cites:
+  - uk-eur-2016-679#article-13-2-f
+  - uk-eur-2016-679#article-14-2-g
+  - uk-eur-2016-679#article-15-1-h
+  reason: The information about automated decision-making a controller must give on
+    collection or on access (Arts 13(2)(f), 14(2)(g), 15(1)(h)) is not pinned for
+    this order.
+  consequence: No answer says what information must be given under Arts 13 to 15.

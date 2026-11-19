@@ -1,0 +1,79 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer (queries.clausal):
+% the profile key schema, the re-exported input check, the what-if
+% combinator, and the result atoms and constructors served at the root.
+% Run: python -m clausal.testing uk/uk_complaints_to_the_commissioner/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(uk/uk_complaints_to_the_commissioner/queries, [
+    uk_complaints_to_the_commissioner_profile_keys/1,
+    uk_complaints_to_the_commissioner_input_problems/2,
+    uk_complaints_to_the_commissioner_what_if/4,
+    complaint_under_section_164a/0,
+    not_a_complaint_under_section_164a/0,
+    complaint_under_section_165_2/0,
+    not_a_complaint_under_section_165_2/0,
+    acknowledgement_duty_does_not_apply/0
+]).
+:- use_module(uk/uk_complaints_to_the_commissioner/fixtures, [uk_complaints_to_the_commissioner_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    uk_complaints_to_the_commissioner_profile_keys(ProfileKeys),
+    ProfileKeys == [complaint_by_data_subject_about_own_personal_data, infringement_considered, complaint_made_to_the_controller].
+
+test(the_re_exported_input_check_answers_once) :-
+    uk_complaints_to_the_commissioner_profile_for(badly_typed_profile, Profile),
+    findall(Problems, uk_complaints_to_the_commissioner_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(infringement_considered), unknown_key(colour)]].
+
+% ---- what-if (#16) --------------------------------------------------------
+what_if_answers(Subject, OverriddenKey, NewValue, Statuses) :-
+    uk_complaints_to_the_commissioner_profile_for(Subject, Profile),
+    findall(Status, uk_complaints_to_the_commissioner_what_if(Profile, OverriddenKey, NewValue, Status), Statuses).
+
+test(what_if_sending_to_the_controller_flips_to_a_complaint) :-
+    what_if_answers(complaint_to_processor, complaint_made_to_the_controller, true, Statuses),
+    Statuses == [complaint_under_section_164a].
+test(what_if_part_4_flips_to_not_a_complaint) :-
+    what_if_answers(gdpr_complaint_to_controller, infringement_considered, dpa_2018_part_4, Statuses),
+    Statuses == [not_a_complaint_under_section_164a].
+test(what_if_stating_the_missing_key_settles) :-
+    what_if_answers(recipient_not_stated, complaint_made_to_the_controller, true, Statuses),
+    Statuses == [complaint_under_section_164a].
+test(what_if_replaces_every_duplicate) :-
+    what_if_answers(duplicated_key_profile, infringement_considered, uk_gdpr, Statuses),
+    Statuses == [complaint_under_section_164a].
+test(what_if_a_bad_value_is_an_input_problem) :-
+    what_if_answers(gdpr_complaint_to_controller, infringement_considered, gdpr, Statuses),
+    Statuses == [input_problems([wrong_type(infringement_considered)])].
+test(what_if_an_unknown_key_is_an_input_problem) :-
+    what_if_answers(empty_profile, colour, red, Statuses),
+    Statuses == [input_problems([unknown_key(colour)])].
+test(what_if_on_a_non_list_reports_the_profile) :-
+    findall(Status, uk_complaints_to_the_commissioner_what_if(nothing, infringement_considered, uk_gdpr, Status), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+test(what_if_the_same_value_changes_nothing) :-
+    what_if_answers(part_4_complaint_to_controller, infringement_considered, dpa_2018_part_4, Statuses),
+    Statuses == [not_a_complaint_under_section_164a].
+
+% ---- result atoms and constructors served at the package root ------------
+test(the_result_atoms_are_served) :-
+    complaint_under_section_164a,
+    not_a_complaint_under_section_164a,
+    complaint_under_section_165_2,
+    not_a_complaint_under_section_165_2,
+    acknowledgement_duty_does_not_apply.
+test(the_result_constructors_build_terms) :-
+    MissingTerm = indeterminate([infringement_considered]),
+    functor(MissingTerm, indeterminate, 1),
+    ProblemsTerm = input_problems([wrong_type(receipt_date)]),
+    functor(ProblemsTerm, input_problems, 1),
+    UnknownTerm = unknown_key(colour),
+    functor(UnknownTerm, unknown_key, 1),
+    WrongTerm = wrong_type(profile),
+    functor(WrongTerm, wrong_type, 1),
+    DuplicateTerm = duplicate_key(infringement_considered),
+    functor(DuplicateTerm, duplicate_key, 1).
+
+:- end_module(test_queries).

@@ -1,0 +1,47 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the input check swiss_fadp_s4_criminal_provisions_input_problems/2 for a
+% PROFILE that is an attribute list [attribute(Key, Value), ...]: an empty list, a
+% value that is not a list, an unknown key and a value outside its type each get exactly
+% one answer. Written by the scaffold from the order's typed input contract
+% (input_contract.types.profile: attribute_list), not by the producer;
+% do not edit or delete.
+% Run: python -m clausal.testing ch/swiss_fadp_s4_criminal_provisions/tests/test_robustness.clausal
+% =====================================================================
+:- module(test_robustness, []).
+:- use_module(ch/swiss_fadp_s4_criminal_provisions/queries, [swiss_fadp_s4_criminal_provisions_input_problems/2]).
+
+test(an_empty_attribute_list_gets_exactly_one_answer) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_profile_that_is_not_a_list_gets_one_non_empty_answer) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems(not_a_profile, Problems), Answers),
+    Answers = [[_|_]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([attribute(not_a_key_of_the_contract, true)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(unknown_key(not_a_key_of_the_contract), Problems).
+
+test(a_value_outside_the_type_of_conduct_meets_offence_description_is_named) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([attribute(conduct_meets_offence_description, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(conduct_meets_offence_description), Problems).
+
+test(a_value_outside_the_type_of_examined_offence_is_named) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([attribute(examined_offence, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(examined_offence), Problems).
+
+test(a_value_outside_the_type_of_criminal_complaint_filed_is_named) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([attribute(criminal_complaint_filed, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(criminal_complaint_filed), Problems).
+
+test(a_value_outside_the_type_of_fine_in_consideration_in_francs_is_named) :-
+    findall(Problems, swiss_fadp_s4_criminal_provisions_input_problems([attribute(fine_in_consideration_in_francs, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(fine_in_consideration_in_francs), Problems).
+
+:- end_module(test_robustness).

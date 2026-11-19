@@ -1,0 +1,133 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up, [objection_right_notice/4, erasure_follow_up_duty/4, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_fixtures, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_subject/1, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for/2, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_expected/3]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_kernel, [gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems/2]).
+
+expected_results_hold_bound(Subject) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_expected(Subject, NoticeResult, FollowUpResult),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(Subject, Profile),
+    objection_right_notice(Profile, NoticeResult, _NoticeBasis, _NoticeCitations),
+    erasure_follow_up_duty(Profile, FollowUpResult, _FollowUpBasis, _FollowUpCitations).
+
+problems_of(Term, Answers) :-
+    findall(Problems, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems(Term, Problems), Answers).
+
+unbound_key_profile(UnboundKey, [attribute(UnboundKey, true)]).
+
+unbound_key_reported(UnboundKey, Reported) :-
+    unbound_key_profile(UnboundKey, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_input_problems(Profile, [unknown_key(Reported)]).
+
+test(every_fixture_holds_with_its_results_bound) :-
+    findall(Subject, gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_subject(Subject), Subjects),
+    maplist(expected_results_hold_bound, Subjects).
+test(complying_notice_with_every_output_bound) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    objection_right_notice(Profile, notice_complies, [outside_fact(right_to_object_applies, attested(true, attestation(fixture_host, fixture_time, fixture_reason, none)))], [cite(eu_reg_2016_679_art_21_4)]).
+test(met_duty_with_every_output_bound) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    erasure_follow_up_duty(Profile, follow_up_duty_met, [outside_fact(controller_obliged_to_erase_under_article_17_1, attested(true, attestation(fixture_host, fixture_time, fixture_reason, none)))], [cite(eu_reg_2016_679_art_17_2)]).
+test(status_holds_with_the_determination_bound) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status(Profile, determination(notice_complies, follow_up_duty_met)).
+test(status_compound_bound_with_empty_basis) :-
+    objection_right_notice([], indeterminate([first_communication_with_data_subject_has_taken_place]), [], []).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    problems_of(Profile, Answers),
+    Answers == [[]].
+test(the_empty_profile_has_no_problem) :-
+    problems_of([], Answers),
+    Answers == [[]].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    problems_of(_UnboundProfile, Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_partial_list_is_not_an_attribute_list) :-
+    problems_of([attribute(right_presented_clearly, true)|_Tail], Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_element_is_not_an_attribute) :-
+    problems_of([_Element], Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_foreign_element_makes_the_whole_profile_wrong) :-
+    problems_of([attribute(marketing_channel, email), not_an_attribute], Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_atom_is_not_an_attribute_list) :-
+    problems_of(profile, Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_key_is_an_unknown_key_as_given) :-
+    unbound_key_reported(UnboundKey, Reported),
+    Reported == UnboundKey.
+test(a_number_key_is_an_unknown_key) :-
+    problems_of([attribute(42, true)], Answers),
+    Answers == [[unknown_key(42)]].
+test(a_compound_key_is_an_unknown_key) :-
+    problems_of([attribute(channel(email), true)], Answers),
+    Answers == [[unknown_key(channel(email))]].
+test(a_repeated_unknown_key_is_named_once) :-
+    problems_of([attribute(marketing_channel, email), attribute(marketing_channel, post)], Answers),
+    Answers == [[unknown_key(marketing_channel)]].
+test(an_unbound_value_is_a_wrong_type) :-
+    problems_of([attribute(right_presented_clearly, _UnboundValue)], Answers),
+    Answers == [[wrong_type(right_presented_clearly)]].
+test(an_unbound_attestation_argument_is_a_wrong_type) :-
+    problems_of([attribute(right_to_object_applies, attested(true, attestation(host_user, _UnboundTime, stated_reason, none)))], Answers),
+    Answers == [[wrong_type(right_to_object_applies)]].
+test(a_bare_boolean_outside_fact_is_a_wrong_type) :-
+    problems_of([attribute(controller_obliged_to_erase_under_article_17_1, false)], Answers),
+    Answers == [[wrong_type(controller_obliged_to_erase_under_article_17_1)]].
+test(an_attestation_with_three_arguments_is_a_wrong_type) :-
+    problems_of([attribute(right_to_object_applies, attested(true, attestation(host_user, host_time, none)))], Answers),
+    Answers == [[wrong_type(right_to_object_applies)]].
+test(an_attested_unsure_is_a_wrong_type) :-
+    problems_of([attribute(right_to_object_applies, attested(unsure, attestation(host_user, host_time, stated_reason, none)))], Answers),
+    Answers == [[wrong_type(right_to_object_applies)]].
+test(url_evidence_is_accepted) :-
+    problems_of([attribute(right_to_object_applies, attested(true, attestation(host_user, host_time, stated_reason, url(source_location, retrieved_time))))], Answers),
+    Answers == [[]].
+test(unsure_for_a_crisp_key_is_a_wrong_type) :-
+    problems_of([attribute(controller_made_personal_data_public, unsure)], Answers),
+    Answers == [[wrong_type(controller_made_personal_data_public)]].
+test(unsure_for_a_judgement_key_is_accepted) :-
+    problems_of([attribute(reasonable_steps_taken_to_inform_other_controllers, unsure)], Answers),
+    Answers == [[]].
+test(an_attested_term_for_a_judgement_key_is_a_wrong_type) :-
+    problems_of([attribute(right_presented_clearly, attested(true, attestation(host_user, host_time, stated_reason, none)))], Answers),
+    Answers == [[wrong_type(right_presented_clearly)]].
+test(a_duplicate_key_with_equal_values_is_only_a_duplicate) :-
+    problems_of([attribute(right_presented_clearly, maybe), attribute(right_presented_clearly, maybe)], Answers),
+    Answers == [[duplicate_key(right_presented_clearly)]].
+test(problems_follow_the_contract_order_then_unknown_keys) :-
+    problems_of([attribute(zeta_key, 1), attribute(right_presented_clearly, maybe), attribute(first_communication_with_data_subject_has_taken_place, unsure)], Answers),
+    Answers == [[wrong_type(first_communication_with_data_subject_has_taken_place), wrong_type(right_presented_clearly), unknown_key(zeta_key)]].
+test(a_malformed_profile_gets_input_problems_from_both_queries) :-
+    findall(Result - Basis - Citations, objection_right_notice([attribute(marketing_channel, email)], Result, Basis, Citations), NoticeAnswers),
+    NoticeAnswers == [input_problems([unknown_key(marketing_channel)]) - [] - []],
+    findall(Result - Basis - Citations, erasure_follow_up_duty([attribute(marketing_channel, email)], Result, Basis, Citations), FollowUpAnswers),
+    FollowUpAnswers == [input_problems([unknown_key(marketing_channel)]) - [] - []].
+test(an_unbound_profile_gets_input_problems) :-
+    findall(Result - Basis - Citations, erasure_follow_up_duty(_UnboundProfile, Result, Basis, Citations), Answers),
+    Answers == [input_problems([wrong_type(profile)]) - [] - []].
+
+test(complying_notice_rejects_a_wrong_bound_result, fail) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    objection_right_notice(Profile, notice_does_not_comply, _, _).
+test(met_duty_rejects_a_wrong_bound_basis, fail) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    erasure_follow_up_duty(Profile, follow_up_duty_met, [], _).
+test(status_rejects_another_bound_determination, fail) :-
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_profile_for(duties_fulfilled, Profile),
+    gdpr_data_subject_rights_objection_notice_and_erasure_follow_up_status(Profile, determination(notice_does_not_comply, _)).
+
+cp_test_names([every_fixture_holds_with_its_results_bound, complying_notice_with_every_output_bound, met_duty_with_every_output_bound, status_holds_with_the_determination_bound, status_compound_bound_with_empty_basis, a_well_formed_profile_has_no_problem, the_empty_profile_has_no_problem, an_unbound_profile_is_not_an_attribute_list, a_partial_list_is_not_an_attribute_list, an_unbound_element_is_not_an_attribute, a_foreign_element_makes_the_whole_profile_wrong, an_atom_is_not_an_attribute_list, an_unbound_key_is_an_unknown_key_as_given, a_number_key_is_an_unknown_key, a_compound_key_is_an_unknown_key, a_repeated_unknown_key_is_named_once, an_unbound_value_is_a_wrong_type, an_unbound_attestation_argument_is_a_wrong_type, a_bare_boolean_outside_fact_is_a_wrong_type, an_attestation_with_three_arguments_is_a_wrong_type, an_attested_unsure_is_a_wrong_type, url_evidence_is_accepted, unsure_for_a_crisp_key_is_a_wrong_type, unsure_for_a_judgement_key_is_accepted, an_attested_term_for_a_judgement_key_is_a_wrong_type, a_duplicate_key_with_equal_values_is_only_a_duplicate, problems_follow_the_contract_order_then_unknown_keys, a_malformed_profile_gets_input_problems_from_both_queries, an_unbound_profile_gets_input_problems]).
+cp_test_fail_names([complying_notice_rejects_a_wrong_bound_result, met_duty_rejects_a_wrong_bound_basis, status_rejects_another_bound_determination]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

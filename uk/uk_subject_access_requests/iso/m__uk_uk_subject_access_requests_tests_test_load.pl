@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_subject_access_requests_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__uk_uk_subject_access_requests_kernel, [uk_subject_access_requests_input_problems/2]).
+:- use_module(m__uk_uk_subject_access_requests_citations, [citation/2, implements/1]).
+
+test(the_access_citation_is_recorded) :-
+    citation(uk_gdpr_art_15_1, _Record).
+test(the_search_limit_citation_is_recorded) :-
+    citation(uk_gdpr_art_15_1a, _Record).
+test(the_applicable_time_period_citation_is_recorded) :-
+    citation(uk_gdpr_art_12a_1, _Record).
+test(the_eu_comparison_citation_is_recorded) :-
+    citation(eu_reg_1971_1182_art_3_4, _Record).
+test(the_commencement_citation_is_recorded) :-
+    citation(uk_si_2026_82_reg_2_h, _Record).
+test(the_record_carries_label_reference_and_verbatim) :-
+    citation(uk_gdpr_art_12a_5_b, Record),
+    Record = [label - _Label, ref - Reference, verbatim - _Verbatim],
+    Reference == 'uk-eur-2016-679-revised-2026-09-30#article-12A.-5-b'.
+test(the_marker_holds_for_a_recorded_key) :-
+    implements(uk_gdpr_art_12a_2).
+test(the_access_results_are_distinct) :-
+    dif(item_due, item_not_within_article_15_1),
+    dif(item_due, item_beyond_reasonable_and_proportionate_search),
+    dif(item_not_within_article_15_1, item_beyond_reasonable_and_proportionate_search).
+test(the_periods_are_distinct) :-
+    dif(one_month, three_months).
+test(the_clock_stop_results_are_distinct) :-
+    dif(clock_stop_applies, clock_stop_does_not_apply).
+test(the_regimes_are_distinct) :-
+    dif(article_12a_time_rules, earlier_time_limits_saved).
+test(the_differences_are_distinct) :-
+    dif(uk_earlier, same),
+    dif(uk_earlier, uk_later),
+    dif(uk_earlier, not_comparable),
+    dif(same, uk_later),
+    dif(same, not_comparable),
+    dif(uk_later, not_comparable).
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = uk_subject_access_requests_verdict(item_due, [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)]),
+    Verdict = uk_subject_access_requests_verdict(Status, Citations),
+    Status == item_due,
+    Citations == [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)].
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([item_described_in_article_15_1]),
+    Status = indeterminate([Key]),
+    Key == item_described_in_article_15_1.
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(open_textured(item_within_reasonable_and_proportionate_search, cite(uk_gdpr_art_15_1a)), [inputs_relied_on([item_described_in_article_15_1 - true, item_within_reasonable_and_proportionate_search - unsure])]),
+    Status = needs_legal_review(open_textured(Input, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Input == item_within_reasonable_and_proportionate_search,
+    citation(CitationKey, _Record),
+    Pairs == [item_described_in_article_15_1 - true, item_within_reasonable_and_proportionate_search - unsure].
+test(the_date_term_destructures) :-
+    Deadline = date(2026, 3, 4),
+    Deadline = date(Year, Month, Day),
+    Year == 2026,
+    Month == 3,
+    Day == 4.
+test(a_well_formed_profile_has_no_problem) :-
+    findall(Problems, uk_subject_access_requests_input_problems([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, unsure)], Problems), Answers),
+    Answers == [[]].
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, uk_subject_access_requests_input_problems([], Problems), Answers),
+    Answers == [[]].
+test(a_non_list_is_not_a_profile) :-
+    findall(Problems, uk_subject_access_requests_input_problems(not_a_profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_profile_is_not_a_profile) :-
+    findall(Problems, uk_subject_access_requests_input_problems(_Profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unknown_key_is_named) :-
+    findall(Problems, uk_subject_access_requests_input_problems([attribute(stranger_key, true)], Problems), Answers),
+    Answers == [[unknown_key(stranger_key)]].
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    findall(Problems, uk_subject_access_requests_input_problems([attribute(item_described_in_article_15_1, unsure)], Problems), Answers),
+    Answers == [[wrong_type(item_described_in_article_15_1)]].
+test(a_repeated_key_is_a_duplicate) :-
+    findall(Problems, uk_subject_access_requests_input_problems([attribute(extension_notice_given, true), attribute(extension_notice_given, true)], Problems), Answers),
+    Answers == [[duplicate_key(extension_notice_given)]].
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(uk_gdpr_art_15_one_a).
+
+cp_test_names([the_access_citation_is_recorded, the_search_limit_citation_is_recorded, the_applicable_time_period_citation_is_recorded, the_eu_comparison_citation_is_recorded, the_commencement_citation_is_recorded, the_record_carries_label_reference_and_verbatim, the_marker_holds_for_a_recorded_key, the_access_results_are_distinct, the_periods_are_distinct, the_clock_stop_results_are_distinct, the_regimes_are_distinct, the_differences_are_distinct, the_verdict_term_carries_status_and_citations, the_indeterminate_status_names_one_key, the_referral_status_destructures, the_date_term_destructures, a_well_formed_profile_has_no_problem, an_empty_profile_has_no_problem, a_non_list_is_not_a_profile, an_unbound_profile_is_not_a_profile, an_unknown_key_is_named, a_crisp_key_given_unsure_is_wrong_type, a_repeated_key_is_a_duplicate]).
+cp_test_fail_names([the_marker_fails_for_an_unrecorded_key]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

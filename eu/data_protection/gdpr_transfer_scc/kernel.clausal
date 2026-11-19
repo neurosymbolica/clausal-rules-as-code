@@ -1,0 +1,274 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_transfer_scc (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+%
+% Source: Commission Implementing Decision (EU) 2021/914, Article 1(1)
+% (eu_dec_2021_914_art_1) and its Annex (the standard contractual clauses,
+% Clauses 1(b), 1(d), 2(a), 9(a), 14 and the Appendix, Annexes I to III),
+% read with Regulation (EU) 2016/679, Article 46(2)(c)
+% (eu_reg_2016_679_art_46_2_c). Pinned text: 32021D0914 as adopted;
+% 02016R0679-20160504.
+%
+% What lives here: ONLY the order's input check
+% gdpr_transfer_scc_input_problems/2, written by the scaffold from the
+% order's typed input contract (INTERFACE - THE INPUT CHECK). It is called
+% by the determination slice gdpr_transfer_scc.clausal (step 0 of every
+% query) and re-exported by queries.clausal, so it has more than one caller.
+% Everything else (the module table, the Clause 14 table, the Appendix
+% table, the completion-based STATUS RULE, the referral rows) has ONE
+% caller, the slice gdpr_transfer_scc.clausal, and lives there.
+% The input check decides no statutory condition: it is profile plumbing
+% and carries no implements/1 marker.
+%
+% deontic family: STATUS is a modal vocabulary (cf. eu/procurement/exclusion_grounds).
+% Atoms and data terms need NO declaration and NO import; the block below
+% only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS (spelled exactly as the order pins them):
+%   Slice verdict (facade, the safeguard determination, query C):
+%     gdpr_transfer_scc_verdict(Status, Citations)
+%       Status    -- the RESULT of standard_contractual_clauses_safeguard/4:
+%                    appropriate_safeguards_provided |
+%                    appropriate_safeguards_not_provided | a status compound
+%       Citations -- list of cite(Key) terms (set-like, order not scored).
+%   Final RESULT atoms of the four contract queries:
+%     standard_contractual_clauses_module/3:       module_one | module_two |
+%                                                  module_three | module_four
+%     standard_contractual_clauses_availability/4: clauses_available |
+%                                                  clauses_not_available
+%     standard_contractual_clauses_safeguard/4:    appropriate_safeguards_provided |
+%                                                  appropriate_safeguards_not_provided
+%     standard_contractual_clauses_appendix/3:     appendix_complete |
+%                                                  appendix_incomplete
+%   Status compounds (never written bare):
+%     indeterminate([Key])          -- exactly one missing bare key atom
+%     needs_legal_review(Reason, Context)
+%       Reason  cross_reference_unresolved(cite(Citation), cite(Target))
+%               with Context [resolution(cite(Target), not_attempted),
+%                             inputs_relied_on([Key-absent])]
+%       Reason  open_textured(Key, cite(Citation))
+%               with Context [inputs_relied_on([Key-unsure])]
+%     input_problems(Problems)      -- Problems a list of duplicate_key(Key),
+%                                      wrong_type(Key), unknown_key(Key)
+%   BASIS items (queries B and C): outside_fact(Key, Attested), Attested the
+%     attested(Value, attestation(By, At, Reason, Evidence)) term as supplied.
+%   Checklist items: item(RequirementId, Status, cite(Key)), Status met |
+%     unmet(Reason) | unknown([Key]) | inapplicable.
+% =====================================================================
+
+:- module(kernel, [gdpr_transfer_scc_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_transfer_scc_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_transfer_scc_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [standard_contractual_clauses_decision_in_force, exporter_processing_subject_to_gdpr, importer_processing_subject_to_gdpr, no_reason_to_believe_local_laws_prevent_compliance, exporter_role, importer_role, standard_contractual_clauses_concluded, module_selected, clauses_modified, added_clauses_contradict_clauses, local_laws_assessment_documented, processor_combines_received_data_with_data_collected_in_union, annex_i_a_list_of_parties_completed, annex_i_b_description_of_transfer_completed, annex_i_c_competent_supervisory_authority_identified, annex_ii_measures_described_in_specific_terms, sub_processor_authorisation_option, annex_iii_list_of_sub_processors_completed],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(standard_contractual_clauses_decision_in_force, outside_fact).
+key_type(exporter_processing_subject_to_gdpr, outside_fact).
+key_type(importer_processing_subject_to_gdpr, outside_fact).
+key_type(no_reason_to_believe_local_laws_prevent_compliance, outside_fact).
+key_type(exporter_role, role_atom).
+key_type(importer_role, role_atom).
+key_type(standard_contractual_clauses_concluded, boolean).
+key_type(module_selected, module_atom).
+key_type(clauses_modified, boolean).
+key_type(added_clauses_contradict_clauses, judgement).
+key_type(local_laws_assessment_documented, boolean).
+key_type(processor_combines_received_data_with_data_collected_in_union, boolean).
+key_type(annex_i_a_list_of_parties_completed, boolean).
+key_type(annex_i_b_description_of_transfer_completed, boolean).
+key_type(annex_i_c_competent_supervisory_authority_identified, boolean).
+key_type(annex_ii_measures_described_in_specific_terms, judgement).
+key_type(sub_processor_authorisation_option, option_atom).
+key_type(annex_iii_list_of_sub_processors_completed, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(role_atom, Value, T) :-
+    in_type_t(enum([controller, processor]), Value, T).
+
+in_type_t(module_atom, Value, T) :-
+    in_type_t(enum([module_one, module_two, module_three, module_four]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(option_atom, Value, T) :-
+    in_type_t(enum([specific_prior_authorisation, general_written_authorisation]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+:- end_module(kernel).

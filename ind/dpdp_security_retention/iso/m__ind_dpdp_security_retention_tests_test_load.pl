@@ -1,0 +1,110 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_security_retention_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_security_retention_kernel, [dpdp_security_retention_input_problems/2, real_calendar_date_t/2, month_length/3, leap_year_t/2]).
+:- use_module(m__ind_dpdp_security_retention_citations, [citation/2, implements/1]).
+
+test(the_security_safeguards_citation_is_recorded) :-
+    citation(in_dpdp_act_2023_s_8_5, _Record).
+test(the_erasure_citation_is_recorded) :-
+    citation(in_dpdp_act_2023_s_8_7_a, _Record).
+test(the_commencement_citation_is_recorded) :-
+    citation(in_dpdp_rules_2025_r_1_4, _Record).
+test(the_citation_record_has_label_reference_and_verbatim) :-
+    citation(in_dpdp_act_2023_s_2_i, Record),
+    Record = [label - _Label, ref - Reference, verbatim - _Verbatim],
+    Reference == 'in-dpdp-act-2023-meity-pdf#s2_i'.
+test(the_marker_succeeds_for_a_recorded_key) :-
+    implements(in_dpdp_rules_2025_r_8_3).
+test(the_marker_succeeds_once_for_a_recorded_key) :-
+    findall(found, implements(in_dpdp_rules_2025_sch_3_2_b), Solutions),
+    Solutions == [found].
+test(the_safeguards_result_atoms_are_distinct) :-
+    dif(required_with_rule_6_minimum, required_minimum_not_prescribed),
+    dif(required_with_rule_6_minimum, not_required),
+    dif(required_minimum_not_prescribed, not_in_force),
+    dif(not_required, not_in_force).
+test(the_erasure_result_atoms_are_distinct) :-
+    dif(erase, erase_and_cause_data_processor_to_erase),
+    dif(retain_until_minimum_retention_period_end, retain_as_required_by_other_law),
+    dif(not_yet_required, not_required),
+    dif(erase, not_in_force).
+test(the_third_schedule_result_atoms_are_distinct) :-
+    dif(deemed_no_longer_served, not_yet_deemed),
+    dif(not_yet_deemed, not_listed),
+    dif(not_listed, not_in_force).
+test(the_facade_verdict_atoms_are_distinct) :-
+    dif(section_8_duty_owed, no_section_8_duty_owed),
+    dif(section_8_duty_owed, section_8_duty_undetermined),
+    dif(section_8_duty_undetermined, profile_rejected).
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dpdp_security_retention_verdict(section_8_duty_owed, [cite(in_dpdp_act_2023_s_8_5)]),
+    Verdict = dpdp_security_retention_verdict(Status, Citations),
+    Status == section_8_duty_owed,
+    Citations == [cite(in_dpdp_act_2023_s_8_5)].
+test(the_indeterminate_compound_names_one_key) :-
+    Result = indeterminate([assessment_date]),
+    Result = indeterminate([MissingKey]),
+    MissingKey == assessment_date.
+test(the_referral_compound_destructures) :-
+    Result = needs_legal_review(open_textured(acts_as_data_fiduciary, cite(in_dpdp_act_2023_s_2_i)), [inputs_relied_on([acts_as_data_fiduciary - unsure])]),
+    Result = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Input == acts_as_data_fiduciary,
+    Key == in_dpdp_act_2023_s_2_i,
+    Pairs == [acts_as_data_fiduciary - unsure],
+    citation(Key, _Record).
+test(the_content_item_destructures) :-
+    Item = content_item(state_use_for_sovereignty_integrity_or_security, cite(in_dpdp_rules_2025_sch_7_1)),
+    Item = content_item(Name, cite(Key)),
+    Name == state_use_for_sovereignty_integrity_or_security,
+    citation(Key, _Record).
+test(a_well_formed_profile_has_no_problem) :-
+    dpdp_security_retention_input_problems([attribute(section_8_5_in_force, true), attribute(acts_as_data_fiduciary, unsure), attribute(assessment_date, date(2027, 5, 13)), attribute(registered_users_in_india, 0), attribute(third_schedule_class, no_listed_class)], Problems),
+    Problems == [].
+test(the_empty_profile_has_no_problem) :-
+    findall(Problems, dpdp_security_retention_input_problems([], Problems), Solutions),
+    Solutions == [[]].
+test(a_term_that_is_not_a_list_is_the_wrong_type) :-
+    dpdp_security_retention_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_is_the_wrong_type) :-
+    findall(Problems, dpdp_security_retention_input_problems(_Profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_crisp_key_given_unsure_is_the_wrong_type) :-
+    dpdp_security_retention_input_problems([attribute(consent_withdrawn, unsure)], Problems),
+    Problems == [wrong_type(consent_withdrawn)].
+test(a_repeated_key_is_a_duplicate_only) :-
+    dpdp_security_retention_input_problems([attribute(consent_withdrawn, true), attribute(consent_withdrawn, maybe)], Problems),
+    Problems == [duplicate_key(consent_withdrawn)].
+test(a_key_outside_the_contract_comes_after_contract_problems) :-
+    dpdp_security_retention_input_problems([attribute(colour, red), attribute(registered_users_in_india, -1)], Problems),
+    Problems == [wrong_type(registered_users_in_india), unknown_key(colour)].
+test(the_leap_day_of_a_leap_year_is_real) :-
+    real_calendar_date_t(date(2028, 2, 29), true).
+test(the_leap_day_of_a_common_year_is_not_real) :-
+    real_calendar_date_t(date(2027, 2, 29), false).
+test(a_date_with_a_float_is_not_real) :-
+    real_calendar_date_t(date(2027, 5, 13.0), false).
+test(february_has_twenty_nine_days_in_a_leap_year) :-
+    month_length(2028, 2, 29).
+test(the_century_rule_of_the_gregorian_calendar) :-
+    leap_year_t(1900, false),
+    leap_year_t(2000, true),
+    leap_year_t(2027, false).
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(in_dpdp_act_2023_s_8_99).
+test(a_well_formed_profile_is_not_rejected, fail) :-
+    dpdp_security_retention_input_problems([attribute(section_8_7_in_force, false)], [_|_]).
+
+cp_test_names([the_security_safeguards_citation_is_recorded, the_erasure_citation_is_recorded, the_commencement_citation_is_recorded, the_citation_record_has_label_reference_and_verbatim, the_marker_succeeds_for_a_recorded_key, the_marker_succeeds_once_for_a_recorded_key, the_safeguards_result_atoms_are_distinct, the_erasure_result_atoms_are_distinct, the_third_schedule_result_atoms_are_distinct, the_facade_verdict_atoms_are_distinct, the_verdict_term_carries_status_and_citations, the_indeterminate_compound_names_one_key, the_referral_compound_destructures, the_content_item_destructures, a_well_formed_profile_has_no_problem, the_empty_profile_has_no_problem, a_term_that_is_not_a_list_is_the_wrong_type, an_unbound_profile_is_the_wrong_type, a_crisp_key_given_unsure_is_the_wrong_type, a_repeated_key_is_a_duplicate_only, a_key_outside_the_contract_comes_after_contract_problems, the_leap_day_of_a_leap_year_is_real, the_leap_day_of_a_common_year_is_not_real, a_date_with_a_float_is_not_real, february_has_twenty_nine_days_in_a_leap_year, the_century_rule_of_the_gregorian_calendar]).
+cp_test_fail_names([the_marker_fails_for_an_unrecorded_key, a_well_formed_profile_is_not_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

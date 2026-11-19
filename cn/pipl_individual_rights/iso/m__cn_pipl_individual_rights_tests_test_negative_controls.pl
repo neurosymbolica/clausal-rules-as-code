@@ -1,0 +1,179 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__cn_pipl_individual_rights_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__cn_pipl_individual_rights_pipl_individual_rights, [restriction_or_refusal_right/3, access_and_copy_duty/3, portability_duty/3, correction_duty/3, deletion_duty/3, explanation_duty/3, deceased_person_rights/3, request_mechanism/3, refusal_status/3, pipl_individual_rights_status/2, pipl_individual_rights_status_values/1]).
+:- use_module(m__cn_pipl_individual_rights_fixtures, [pipl_individual_rights_profile_for/2]).
+
+subject_result(Subject, Query, Result) :-
+    pipl_individual_rights_profile_for(Subject, Profile),
+    call(Query, Profile, Result, _Citations).
+
+subject_status(Subject, Status) :-
+    pipl_individual_rights_profile_for(Subject, Profile),
+    pipl_individual_rights_status(Profile, Status).
+
+test(restriction_positive_right_available) :-
+    subject_result(baseline_all_rights_engaged, restriction_or_refusal_right, right_available).
+test(restriction_near_miss_excluded_by_other_law) :-
+    subject_result(restriction_excluded_by_other_law, restriction_or_refusal_right, excluded_by_other_law).
+test(restriction_unstated_other_law_is_named) :-
+    subject_result(restriction_other_law_unstated, restriction_or_refusal_right, indeterminate([laws_or_regulations_provide_otherwise])).
+test(access_positive_provide_in_time) :-
+    subject_result(baseline_all_rights_engaged, access_and_copy_duty, provide_in_time).
+test(access_near_miss_article_18_1_not_owed) :-
+    subject_result(access_article_18_1_case, access_and_copy_duty, not_owed).
+test(access_near_miss_article_35_not_owed) :-
+    subject_result(access_article_35_case, access_and_copy_duty, not_owed).
+test(access_article_35_unstated_is_named) :-
+    subject_result(access_article_35_unstated, access_and_copy_duty, indeterminate([article_35_case])).
+test(portability_positive_route_owed) :-
+    subject_result(baseline_all_rights_engaged, portability_duty, provide_transfer_route).
+test(portability_near_miss_not_owed) :-
+    subject_result(portability_conditions_not_met, portability_duty, not_owed).
+test(portability_unstated_conditions_are_named) :-
+    subject_result(portability_conditions_unstated, portability_duty, indeterminate([cyberspace_department_transfer_conditions_met])).
+test(correction_positive_correct_in_time) :-
+    subject_result(baseline_all_rights_engaged, correction_duty, correct_or_supplement_in_time).
+test(correction_near_miss_no_correction_owed) :-
+    subject_result(correction_verification_negative, correction_duty, no_correction_owed).
+test(correction_unsure_is_referred) :-
+    subject_result(correction_verification_unsure, correction_duty, needs_legal_review(open_textured(verification_confirms_inaccurate_or_incomplete, cite(cn_pipl_art_46_p2)), [inputs_relied_on([verification_confirms_inaccurate_or_incomplete - unsure])])).
+test(deletion_positive_delete) :-
+    subject_result(baseline_all_rights_engaged, deletion_duty, delete_personal_information).
+test(deletion_near_miss_retention_stops_processing) :-
+    subject_result(deletion_retention_period_unexpired, deletion_duty, stop_processing_except_storage_and_security).
+test(deletion_near_miss_difficulty_stops_processing) :-
+    subject_result(deletion_technically_difficult, deletion_duty, stop_processing_except_storage_and_security).
+test(deletion_near_miss_no_case_not_owed) :-
+    subject_result(deletion_no_case_holds, deletion_duty, not_owed).
+test(deletion_two_cases_still_delete_once) :-
+    pipl_individual_rights_profile_for(deletion_two_cases_hold, Profile),
+    findall(Result, deletion_duty(Profile, Result, _), Results),
+    Results == [delete_personal_information].
+test(deletion_purpose_unsure_is_referred) :-
+    subject_result(deletion_purpose_unsure, deletion_duty, needs_legal_review(open_textured(purpose_achieved_impossible_or_unnecessary, cite(cn_pipl_art_47_p1_i1)), [inputs_relied_on([purpose_achieved_impossible_or_unnecessary - unsure, processing_violates_law_or_agreement - false, deletion_technically_difficult - false])])).
+test(deletion_violation_unsure_is_referred) :-
+    subject_result(deletion_violation_unsure, deletion_duty, needs_legal_review(open_textured(processing_violates_law_or_agreement, cite(cn_pipl_art_47_p1_i4)), [inputs_relied_on(_)])).
+test(deletion_difficulty_unsure_is_referred) :-
+    subject_result(deletion_difficulty_unsure, deletion_duty, needs_legal_review(open_textured(deletion_technically_difficult, cite(cn_pipl_art_47_p2)), [inputs_relied_on(_)])).
+test(deletion_retention_unstated_is_named) :-
+    subject_result(deletion_retention_unstated, deletion_duty, indeterminate([legal_retention_period_unexpired])).
+test(explanation_positive_explain) :-
+    subject_result(baseline_all_rights_engaged, explanation_duty, explain_processing_rules).
+test(explanation_near_miss_text_not_in_force) :-
+    subject_result(text_not_in_force, explanation_duty, pinned_text_not_applicable).
+test(explanation_in_force_unstated_is_named) :-
+    subject_result(text_in_force_unstated, explanation_duty, indeterminate([pinned_text_in_force_on_reference_day])).
+test(deceased_positive_may_exercise) :-
+    subject_result(baseline_all_rights_engaged, deceased_person_rights, near_relative_may_exercise).
+test(deceased_near_miss_arranged_otherwise) :-
+    subject_result(deceased_arranged_otherwise, deceased_person_rights, near_relative_may_not_exercise).
+test(deceased_near_miss_not_near_relative) :-
+    subject_result(deceased_requester_not_near_relative, deceased_person_rights, near_relative_may_not_exercise).
+test(deceased_near_miss_person_alive) :-
+    subject_result(deceased_person_alive, deceased_person_rights, near_relative_may_not_exercise).
+test(deceased_interests_unsure_is_referred) :-
+    subject_result(deceased_interests_unsure, deceased_person_rights, needs_legal_review(open_textured(for_requester_own_lawful_and_legitimate_interests, cite(cn_pipl_art_49_p1)), [inputs_relied_on([for_requester_own_lawful_and_legitimate_interests - unsure])])).
+test(mechanism_positive_met) :-
+    subject_result(baseline_all_rights_engaged, request_mechanism, requirement_met).
+test(mechanism_near_miss_not_met) :-
+    subject_result(mechanism_not_convenient, request_mechanism, requirement_not_met).
+test(mechanism_unsure_is_referred) :-
+    subject_result(mechanism_convenience_unsure, request_mechanism, needs_legal_review(open_textured(convenient_mechanism_established, cite(cn_pipl_art_50_p1)), [inputs_relied_on([convenient_mechanism_established - unsure])])).
+test(refusal_positive_with_reasons) :-
+    subject_result(baseline_all_rights_engaged, refusal_status, refused_with_reasons).
+test(refusal_near_miss_without_reasons) :-
+    subject_result(refusal_without_reasons, refusal_status, refused_without_reasons).
+test(refusal_near_miss_not_refused) :-
+    subject_result(refusal_not_refused, refusal_status, not_refused).
+test(refusal_reasons_unstated_is_named) :-
+    subject_result(refusal_reasons_unstated, refusal_status, indeterminate([refusal_reasons_given])).
+test(input_duplicate_key_is_rejected) :-
+    subject_result(input_duplicate_key, deletion_duty, input_problems([duplicate_key(consent_withdrawn)])).
+test(input_not_a_list_is_rejected) :-
+    subject_result(input_not_an_attribute_list, explanation_duty, input_problems([wrong_type(profile)])).
+test(the_status_table_has_a_near_miss_atom) :-
+    pipl_individual_rights_status_values(StatusValues),
+    member(eligible, StatusValues),
+    member(ineligible, StatusValues).
+test(facade_positive_eligible) :-
+    subject_status(baseline_all_rights_engaged, eligible).
+test(facade_near_miss_refusal_without_reasons_is_ineligible) :-
+    subject_status(refusal_without_reasons, ineligible).
+test(facade_near_miss_mechanism_not_convenient_is_ineligible) :-
+    subject_status(mechanism_not_convenient, ineligible).
+test(facade_unsure_judgement_is_referred) :-
+    subject_status(deletion_purpose_unsure, referred_for_legal_review).
+test(facade_missing_key_is_undetermined) :-
+    subject_status(refusal_reasons_unstated, undetermined).
+test(facade_text_not_in_force) :-
+    subject_status(text_not_in_force, text_not_in_force).
+test(facade_input_problem_is_rejected) :-
+    subject_status(input_wrong_type_and_unknown_key, input_rejected).
+
+test(restriction_near_miss_is_not_right_available, fail) :-
+    subject_result(restriction_excluded_by_other_law, restriction_or_refusal_right, right_available).
+test(restriction_unstated_other_law_is_not_right_available, fail) :-
+    subject_result(restriction_other_law_unstated, restriction_or_refusal_right, right_available).
+test(access_near_miss_article_18_1_is_not_provide_in_time, fail) :-
+    subject_result(access_article_18_1_case, access_and_copy_duty, provide_in_time).
+test(access_near_miss_article_35_is_not_provide_in_time, fail) :-
+    subject_result(access_article_35_case, access_and_copy_duty, provide_in_time).
+test(portability_near_miss_is_not_route_owed, fail) :-
+    subject_result(portability_conditions_not_met, portability_duty, provide_transfer_route).
+test(correction_near_miss_is_not_correct_in_time, fail) :-
+    subject_result(correction_verification_negative, correction_duty, correct_or_supplement_in_time).
+test(correction_unsure_is_not_correct_in_time, fail) :-
+    subject_result(correction_verification_unsure, correction_duty, correct_or_supplement_in_time).
+test(deletion_near_miss_retention_is_not_delete, fail) :-
+    subject_result(deletion_retention_period_unexpired, deletion_duty, delete_personal_information).
+test(deletion_near_miss_difficulty_is_not_delete, fail) :-
+    subject_result(deletion_technically_difficult, deletion_duty, delete_personal_information).
+test(deletion_near_miss_no_case_is_not_delete, fail) :-
+    subject_result(deletion_no_case_holds, deletion_duty, delete_personal_information).
+test(deletion_purpose_unsure_is_not_not_owed, fail) :-
+    subject_result(deletion_purpose_unsure, deletion_duty, not_owed).
+test(deletion_violation_unsure_is_not_not_owed, fail) :-
+    subject_result(deletion_violation_unsure, deletion_duty, not_owed).
+test(deletion_difficulty_unsure_is_not_delete, fail) :-
+    subject_result(deletion_difficulty_unsure, deletion_duty, delete_personal_information).
+test(deletion_retention_unstated_is_not_delete, fail) :-
+    subject_result(deletion_retention_unstated, deletion_duty, delete_personal_information).
+test(explanation_near_miss_is_not_explain, fail) :-
+    subject_result(text_not_in_force, explanation_duty, explain_processing_rules).
+test(deceased_near_miss_arranged_otherwise_is_not_may_exercise, fail) :-
+    subject_result(deceased_arranged_otherwise, deceased_person_rights, near_relative_may_exercise).
+test(deceased_near_miss_not_near_relative_is_not_may_exercise, fail) :-
+    subject_result(deceased_requester_not_near_relative, deceased_person_rights, near_relative_may_exercise).
+test(deceased_near_miss_person_alive_is_not_may_exercise, fail) :-
+    subject_result(deceased_person_alive, deceased_person_rights, near_relative_may_exercise).
+test(deceased_interests_unsure_is_not_may_exercise, fail) :-
+    subject_result(deceased_interests_unsure, deceased_person_rights, near_relative_may_exercise).
+test(mechanism_near_miss_is_not_met, fail) :-
+    subject_result(mechanism_not_convenient, request_mechanism, requirement_met).
+test(mechanism_unsure_is_not_met, fail) :-
+    subject_result(mechanism_convenience_unsure, request_mechanism, requirement_met).
+test(refusal_near_miss_is_not_with_reasons, fail) :-
+    subject_result(refusal_without_reasons, refusal_status, refused_with_reasons).
+test(refusal_near_miss_not_refused_is_not_with_reasons, fail) :-
+    subject_result(refusal_not_refused, refusal_status, refused_with_reasons).
+test(input_duplicate_key_is_not_delete, fail) :-
+    subject_result(input_duplicate_key, deletion_duty, delete_personal_information).
+test(facade_baseline_is_not_ineligible, fail) :-
+    subject_status(baseline_all_rights_engaged, ineligible).
+test(facade_near_miss_refusal_without_reasons_is_not_eligible, fail) :-
+    subject_status(refusal_without_reasons, eligible).
+test(facade_unsure_judgement_is_not_eligible, fail) :-
+    subject_status(deletion_purpose_unsure, eligible).
+
+cp_test_names([restriction_positive_right_available, restriction_near_miss_excluded_by_other_law, restriction_unstated_other_law_is_named, access_positive_provide_in_time, access_near_miss_article_18_1_not_owed, access_near_miss_article_35_not_owed, access_article_35_unstated_is_named, portability_positive_route_owed, portability_near_miss_not_owed, portability_unstated_conditions_are_named, correction_positive_correct_in_time, correction_near_miss_no_correction_owed, correction_unsure_is_referred, deletion_positive_delete, deletion_near_miss_retention_stops_processing, deletion_near_miss_difficulty_stops_processing, deletion_near_miss_no_case_not_owed, deletion_two_cases_still_delete_once, deletion_purpose_unsure_is_referred, deletion_violation_unsure_is_referred, deletion_difficulty_unsure_is_referred, deletion_retention_unstated_is_named, explanation_positive_explain, explanation_near_miss_text_not_in_force, explanation_in_force_unstated_is_named, deceased_positive_may_exercise, deceased_near_miss_arranged_otherwise, deceased_near_miss_not_near_relative, deceased_near_miss_person_alive, deceased_interests_unsure_is_referred, mechanism_positive_met, mechanism_near_miss_not_met, mechanism_unsure_is_referred, refusal_positive_with_reasons, refusal_near_miss_without_reasons, refusal_near_miss_not_refused, refusal_reasons_unstated_is_named, input_duplicate_key_is_rejected, input_not_a_list_is_rejected, the_status_table_has_a_near_miss_atom, facade_positive_eligible, facade_near_miss_refusal_without_reasons_is_ineligible, facade_near_miss_mechanism_not_convenient_is_ineligible, facade_unsure_judgement_is_referred, facade_missing_key_is_undetermined, facade_text_not_in_force, facade_input_problem_is_rejected]).
+cp_test_fail_names([restriction_near_miss_is_not_right_available, restriction_unstated_other_law_is_not_right_available, access_near_miss_article_18_1_is_not_provide_in_time, access_near_miss_article_35_is_not_provide_in_time, portability_near_miss_is_not_route_owed, correction_near_miss_is_not_correct_in_time, correction_unsure_is_not_correct_in_time, deletion_near_miss_retention_is_not_delete, deletion_near_miss_difficulty_is_not_delete, deletion_near_miss_no_case_is_not_delete, deletion_purpose_unsure_is_not_not_owed, deletion_violation_unsure_is_not_not_owed, deletion_difficulty_unsure_is_not_delete, deletion_retention_unstated_is_not_delete, explanation_near_miss_is_not_explain, deceased_near_miss_arranged_otherwise_is_not_may_exercise, deceased_near_miss_not_near_relative_is_not_may_exercise, deceased_near_miss_person_alive_is_not_may_exercise, deceased_interests_unsure_is_not_may_exercise, mechanism_near_miss_is_not_met, mechanism_unsure_is_not_met, refusal_near_miss_is_not_with_reasons, refusal_near_miss_not_refused_is_not_with_reasons, input_duplicate_key_is_not_delete, facade_baseline_is_not_ineligible, facade_near_miss_refusal_without_reasons_is_not_eligible, facade_unsure_judgement_is_not_eligible]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

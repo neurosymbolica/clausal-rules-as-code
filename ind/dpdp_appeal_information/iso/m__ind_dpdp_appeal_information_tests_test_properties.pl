@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_appeal_information_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_appeal_information_dpdp_appeal_information, [appeal_period/3, appeal_filing_requirements/3, appeal_disposal_target/3, information_call_status/3, non_disclosure_status/3, decide_dpdp_appeal_information/2]).
+:- use_module(m__ind_dpdp_appeal_information_fixtures, [dpdp_appeal_information_subject/1, dpdp_appeal_information_profile_for/2]).
+
+query_name(appeal_period).
+query_name(appeal_filing_requirements).
+query_name(appeal_disposal_target).
+query_name(information_call_status).
+query_name(non_disclosure_status).
+
+subject_classifies(Subject) :-
+    dpdp_appeal_information_subject(Subject),
+    dpdp_appeal_information_profile_for(Subject, Profile),
+    decide_dpdp_appeal_information(Profile, _Verdict).
+
+answer_count(Query, Subject, Count) :-
+    dpdp_appeal_information_profile_for(Subject, Profile),
+    findall(Result - Citations, call(Query, Profile, Result, Citations), Answers),
+    length(Answers, Count).
+
+subject_answer(Result - Citations) :-
+    dpdp_appeal_information_subject(Subject),
+    dpdp_appeal_information_profile_for(Subject, Profile),
+    query_name(Query),
+    call(Query, Profile, Result, Citations).
+
+result_kind(indeterminate(_), non_final).
+result_kind(needs_legal_review(_, _), non_final).
+result_kind(input_problems(_), non_final).
+result_kind(in_time(_), final).
+result_kind(out_of_time_sufficient_cause_needed(_), final).
+result_kind(not_appealable, final).
+result_kind(not_in_force, final).
+result_kind(filing_requirements(_), final).
+result_kind(not_yet_prescribed, final).
+result_kind(disposed_within_target(_), final).
+result_kind(disposal_target_not_yet_passed(_), final).
+result_kind(reasons_in_writing_required(_), final).
+result_kind(required_to_furnish_within_specified_period, final).
+result_kind(required_to_furnish_under_section_36, final).
+result_kind(not_covered, final).
+result_kind(disclosure_barred_without_written_permission, final).
+result_kind(disclosure_permitted_by_written_permission, final).
+result_kind(not_barred_by_rule_23, final).
+
+vocabulary_key(in_dpdp_act_2023_s_29_1).
+vocabulary_key(in_dpdp_act_2023_s_29_2).
+vocabulary_key(in_dpdp_act_2023_s_29_3).
+vocabulary_key(in_dpdp_act_2023_s_29_6).
+vocabulary_key(in_dpdp_act_2023_s_29_7).
+vocabulary_key(in_dpdp_act_2023_s_36).
+vocabulary_key(in_dpdp_rules_2025_r_1_4).
+vocabulary_key(in_dpdp_rules_2025_r_22_1).
+vocabulary_key(in_dpdp_rules_2025_r_22_2).
+vocabulary_key(in_dpdp_rules_2025_r_23_1).
+vocabulary_key(in_dpdp_rules_2025_r_23_2).
+vocabulary_key(in_dpdp_rules_2025_sch_7_1).
+vocabulary_key(in_dpdp_rules_2025_sch_7_2).
+vocabulary_key(in_dpdp_rules_2025_sch_7_2_i).
+vocabulary_key(in_dpdp_rules_2025_sch_7_2_ii).
+vocabulary_key(in_dpdp_rules_2025_sch_7_3).
+
+vocabulary_citation(cite(Key)) :-
+    vocabulary_key(Key).
+
+kind_citations_hold(non_final, []).
+kind_citations_hold(final, [FirstCitation|OtherCitations]) :-
+    maplist(vocabulary_citation, [FirstCitation|OtherCitations]).
+
+citation_rule_holds(Result - Citations) :-
+    result_kind(Result, Kind),
+    kind_citations_hold(Kind, Citations).
+
+one_missing_key(indeterminate([MissingKey])) :-
+    atom(MissingKey).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, dpdp_appeal_information_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_query_yields_exactly_one_answer_per_subject) :-
+    findall(Subject, dpdp_appeal_information_subject(Subject), Subjects),
+    length(Subjects, SubjectCount),
+    findall(Count, (dpdp_appeal_information_subject(Subject), query_name(Query), answer_count(Query, Subject, Count)), Counts),
+    length(Counts, PairCount),
+    PairCount =:= SubjectCount * 5,
+    sort(Counts, [1]).
+test(every_answer_follows_the_citation_rule) :-
+    findall(Answer, subject_answer(Answer), Answers),
+    Answers = [_|_],
+    maplist(citation_rule_holds, Answers).
+test(every_missing_key_answer_names_exactly_one_key) :-
+    findall(Result, (subject_answer(Result - _), Result = indeterminate(_)), MissingResults),
+    MissingResults = [_|_],
+    maplist(one_missing_key, MissingResults).
+test(every_answer_is_ground) :-
+    findall(Answer, subject_answer(Answer), Answers),
+    ground(Answers).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_query_yields_exactly_one_answer_per_subject, every_answer_follows_the_citation_rule, every_missing_key_answer_names_exactly_one_key, every_answer_is_ground]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

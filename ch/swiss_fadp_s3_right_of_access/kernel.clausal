@@ -1,0 +1,259 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for ch/swiss_fadp_s3_right_of_access (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+%
+% Sources (drafter's reading, not a lawyer's; the German text is
+% authoritative, English glosses are our own unofficial translation):
+%   - Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex
+%     consolidation Stand 7 July 2025: Art 25(1), (6), (7); Art 26; Art 27.
+%   - Verordnung ueber den Datenschutz (DSV), SR 235.11, fedlex
+%     consolidation Stand 1 December 2025: Art 16(1), (3); Art 18(1), (3);
+%     Art 19.
+%   - Regulation (EU) 2016/679 Art 12(3) and Regulation (EEC, Euratom)
+%     No 1182/71 Art 3(1), 3(2)(c), 3(4) (the EU comparison limb).
+% The input check below implements the order's INTERFACE - THE INPUT
+% CHECK over the typed input contract (profile: attribute_list). It is a
+% structural check and decides no statutory condition, so it carries no
+% implements/1 marker.
+%
+% Exception to the shared-floor rule: the scaffold writes the order's
+% input check swiss_fadp_s3_right_of_access_input_problems/2 here,
+% exported, for the slice and the facade to import:
+%   :- use_module(ch/swiss_fadp_s3_right_of_access/kernel,
+%                 [swiss_fadp_s3_right_of_access_input_problems/2]).
+% The domain has ONE determination slice
+% (swiss_fadp_s3_right_of_access.clausal), so no other predicate is shared:
+% the date validation, the day arithmetic, the EU month rule and the status
+% rule are single-caller helpers and live in the slice.
+%
+% deontic family: STATUS is a modal vocabulary (obligation / permission).
+%
+% Result terms (atoms and data terms need no declaration; this block only
+% RECORDS their spelling so every file writes them alike):
+%
+%   swiss_fadp_s3_right_of_access_verdict(Status, Citations)
+%     The slice's verdict term (facade decide_swiss_fadp_s3_right_of_access/2).
+%     Status   -- exactly the RESULT of swiss_access_request_answer/3:
+%                 access_request_not_in_required_form
+%                 | access_must_be_given                         (obligation)
+%                 | access_may_be_refused_restricted_or_deferred (permission)
+%                 | a not-final status compound (below).
+%     Citations -- a flat set-like list of cite(Key) terms, the FIXED list of
+%                 the final answer (THE LIMBS), [] for a not-final answer.
+%
+%   Query answers (THE CALLED CONTRACT):
+%     swiss_access_request_answer(Profile, Result, Citations)
+%     swiss_access_cost_contribution(Profile, Result, Citations)
+%       Result access_free_of_charge | cost_contribution_may_be_requested
+%       | a status compound.
+%     swiss_access_deadline(ReceiptDate, DeadlineDate, Citations)
+%     swiss_access_deadline_after_cost_notice(CostNoticeDate, DeadlineDate, Citations)
+%     eu_access_response_deadline(ReceiptDate, DeadlineDate, Citations)
+%       DeadlineDate a date(Year, Month, Day) term of bare integers, or
+%       input_problems([wrong_type(receipt_date)]) /
+%       input_problems([wrong_type(cost_notice_date)]) with Citations [].
+%     compare_swiss_eu_access_deadline(ReceiptDate, SwissDeadline, EuDeadline,
+%                                      Difference, ChangedBy)
+%       Difference swiss_earlier | same | swiss_later; ChangedBy a flat list
+%       of cite(Key), [] when Difference is same or with input problems.
+%
+%   Not-final status compounds (never written bare, never inside a list):
+%     indeterminate([Key])           -- exactly one bare key atom.
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                    -- Pairs a flat list of Key-Value.
+%     input_problems(Problems)       -- Problems the flat list of the check.
+%   Problem terms: unknown_key(Key), wrong_type(Key), duplicate_key(Key).
+%   Judgement values: true, false, unsure. Enumeration atoms: written,
+%   electronic, oral (request_form); private_person, federal_body
+%   (controller_category).
+% =====================================================================
+
+:- module(kernel, [swiss_fadp_s3_right_of_access_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% swiss_fadp_s3_right_of_access_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+swiss_fadp_s3_right_of_access_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [request_form, controller_agreed_to_oral_request, controller_category, formal_law_provides_for_restriction, restriction_required_by_overriding_third_party_interests, request_manifestly_unfounded_or_querulous, restriction_required_by_overriding_controller_interests, controller_discloses_the_personal_data_to_third_parties, restriction_required_by_overriding_public_interests, information_could_endanger_investigation_or_proceedings, processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, data_reveal_information_sources, access_would_give_insight_into_drafts_for_publications, publication_would_endanger_free_formation_of_public_opinion, data_serve_media_professional_exclusively_as_personal_working_instrument, access_involves_disproportionate_effort],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(request_form, request_form_type).
+key_type(controller_agreed_to_oral_request, boolean).
+key_type(controller_category, controller_category_type).
+key_type(formal_law_provides_for_restriction, judgement).
+key_type(restriction_required_by_overriding_third_party_interests, judgement).
+key_type(request_manifestly_unfounded_or_querulous, judgement).
+key_type(restriction_required_by_overriding_controller_interests, judgement).
+key_type(controller_discloses_the_personal_data_to_third_parties, boolean).
+key_type(restriction_required_by_overriding_public_interests, judgement).
+key_type(information_could_endanger_investigation_or_proceedings, judgement).
+key_type(processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, judgement).
+key_type(data_reveal_information_sources, judgement).
+key_type(access_would_give_insight_into_drafts_for_publications, judgement).
+key_type(publication_would_endanger_free_formation_of_public_opinion, judgement).
+key_type(data_serve_media_professional_exclusively_as_personal_working_instrument, judgement).
+key_type(access_involves_disproportionate_effort, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(request_form_type, Value, T) :-
+    in_type_t(enum([written, electronic, oral]), Value, T).
+
+in_type_t(controller_category_type, Value, T) :-
+    in_type_t(enum([private_person, federal_body]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

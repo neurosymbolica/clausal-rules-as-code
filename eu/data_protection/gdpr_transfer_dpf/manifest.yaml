@@ -1,0 +1,1098 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_transfer_dpf
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_transfer_dpf"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_transfer_dpf.clausal --
+  - "data_privacy_framework_adequacy/4"
+  - "decide_gdpr_transfer_dpf/2"
+  - "gdpr_transfer_dpf_status/2"
+  - "gdpr_transfer_dpf_checklist/2"
+  - "gdpr_transfer_dpf_decision_resolvable/1"
+  - "gdpr_transfer_dpf_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_transfer_dpf_profile_keys/1"
+  - "gdpr_transfer_dpf_input_problems/2"
+  - "gdpr_transfer_dpf_what_if/4"
+  - "gdpr_transfer_dpf_compliance_check/2"
+  - "covered_by_data_privacy_framework_adequacy/0"
+  - "not_covered_by_data_privacy_framework_adequacy/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "cite/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_transfer_dpf_subject/1"
+  - "gdpr_transfer_dpf_profile_for/2"
+  - "gdpr_transfer_dpf_assess/2"
+
+# root_exports: the bare atoms the scorer resolves on the package root (the
+# profile keys, the result atoms, absent and not_attempted). Atoms need no
+# export; this list records them.
+root_exports:
+  - transfer_from_union
+  - recipient_is_organisation_in_united_states
+  - data_privacy_framework_decision_in_force
+  - recipient_on_data_privacy_framework_list
+  - certification_covers_transferred_data
+  - covered_by_data_privacy_framework_adequacy
+  - not_covered_by_data_privacy_framework_adequacy
+  - absent
+  - not_attempted
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports none (formalize_lib is kit, not a backbone package).
+uses: []
+
+scope: >-
+  Commission Implementing Decision (EU) 2023/1795 (EU-U.S. Data Privacy Framework)
+  Article 1, read with Regulation (EU) 2016/679 (GDPR) Article 45(1). The bounded
+  question: does Decision (EU) 2023/1795 cover THIS transfer of personal data to an
+  organisation in the United States, so that Art 45(1) GDPR lets it take place without
+  any specific authorisation? Decided here, as one limb (data_privacy_framework_adequacy/4):
+  five conditions that must all hold, each deciding by itself when it fails -- the data
+  are transferred from the Union and the recipient is an organisation in the United
+  States (crisp caller facts); the decision is in force for the transfer, the recipient
+  is on the Data Privacy Framework List, and the data fall within what its certification
+  covers (attested outside facts, never decided here). An absent outside fact is referred
+  before a missing crisp key is named. Out of scope, quoted or deferred: Articles
+  2 to 4 of the decision (Member State information, monitoring, review, suspension,
+  amendment, repeal, addressees), the recitals, the footnotes and the Annexes (the
+  Principles, the List mechanics, the human-resources and journalistic limits, the U.S.
+  letters); the Chapter V cascade of Arts 44 to 49 GDPR (gdpr-chapter-v-transfers) and
+  onward transfers (gdpr-chapter-v-extras); the lawfulness of the processing in every
+  other respect. A not-covered answer says only that this one decision does not cover
+  the transfer, nothing about any other adequacy decision; the open questions (EEA
+  States, further certification limits, listing in error, a supervisory authority order,
+  removal from the List after a transfer) are handed to a lawyer.
+
+sources:
+  - 'Commission Implementing Decision (EU) 2023/1795 of 10 July 2023 pursuant to Regulation (EU) 2016/679 on the adequate level of protection of personal data under the EU-US Data Privacy Framework, OJ L 231, 20.9.2023, p. 118 -- Article 1 (the one operative rule applied)'
+  - 'Regulation (EU) 2016/679 (General Data Protection Regulation), consolidated text in force from 2016-05-04 -- Article 45(1) (the effect of a covered transfer, no specific authorisation)'
+  - 'Commission Implementing Decision (EU) 2023/1795 -- Articles 2, 3 and 4, recitals (7) to (10) and (52) to (55), footnote (14), Annex I Section I points 3 and 6 (quoted for readings and open questions; not formalised, see deferred_set)'
+
+query_interface:
+  2: "gdpr_transfer_dpf_status/2"      # eligibility/status verdict: the limb's RESULT
+  13: "gdpr_transfer_dpf_compliance_check/2"   # compliance_check: may the proposed transfer take place without specific authorisation
+  16: "gdpr_transfer_dpf_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: decision_member_state_information
+  not_formalized_because: institutional
+  units:
+  - 32023D1795#art2
+  reason: Art 2 obliges the Member State concerned to inform the Commission when its
+    authorities use their Art 58 GDPR powers on transfers under Art 1. A duty between
+    the Member States and the Commission; no answer of this order turns on it (reading
+    (7)).
+  consequence: A supervisory authority's order about the transfer is not read (Q6).
+  declaration: not_an_exception
+- what: decision_monitoring_and_review
+  debt: true
+  units:
+  - 32023D1795#art3
+  - 32023D1795#art3_p1
+  - 32023D1795#art3_p2
+  - 32023D1795#art3_p3
+  - 32023D1795#art3_p4
+  reason: 'Art 3 (its heading, and paragraphs 1 to 4: the Commission''s monitoring,
+    the exchange of information with the Member States and the periodic review) is
+    operative text with legal consequences that no limb of this order formalises;
+    the outcome of a review reaches the order only through the attested fact data_privacy_framework_decision_in_force
+    (readings (4) and (8)).'
+  consequence: No answer follows the Commission's monitoring or review; a caller states
+    their outcome as data_privacy_framework_decision_in_force (Q4).
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_suspension_amendment_repeal
+  debt: true
+  partial: true
+  units:
+  - 32023D1795#art3_p5
+  reason: 'Art 3(5) (the Commission may suspend, amend or repeal the decision, or
+    limit its scope, in accordance with Art 45(5) GDPR) is read for the meaning of
+    the attested fact data_privacy_framework_decision_in_force but not formalised:
+    the effect of a suspension, amendment, repeal or limitation arrives through that
+    fact attested false (reading (4)).'
+  consequence: 'No answer decides whether the Commission has suspended, amended, repealed
+    or limited the decision: the caller states it as data_privacy_framework_decision_in_force
+    (Q4).'
+  declaration: answered_with_caveat
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_structure
+  not_formalized_because: structural
+  units:
+  - 32023D1795#art4
+  - 32023D1795#final
+  - 32023D1795#enacting
+  - 32023D1795#annexI_title
+  - 32023D1795#annexI_secI
+  - 32023D1795#annexI_secII
+  - 32023D1795#annexI_secIII
+  - 32023D1795#rec_h1
+  - 32023D1795#rec_h10
+  - 32023D1795#rec_h11
+  - 32023D1795#rec_h12
+  - 32023D1795#rec_h13
+  - 32023D1795#rec_h14
+  - 32023D1795#rec_h15
+  - 32023D1795#rec_h16
+  - 32023D1795#rec_h17
+  - 32023D1795#rec_h18
+  - 32023D1795#rec_h19
+  - 32023D1795#rec_h2
+  - 32023D1795#rec_h20
+  - 32023D1795#rec_h21
+  - 32023D1795#rec_h22
+  - 32023D1795#rec_h23
+  - 32023D1795#rec_h24
+  - 32023D1795#rec_h25
+  - 32023D1795#rec_h26
+  - 32023D1795#rec_h27
+  - 32023D1795#rec_h28
+  - 32023D1795#rec_h29
+  - 32023D1795#rec_h3
+  - 32023D1795#rec_h30
+  - 32023D1795#rec_h31
+  - 32023D1795#rec_h32
+  - 32023D1795#rec_h33
+  - 32023D1795#rec_h34
+  - 32023D1795#rec_h35
+  - 32023D1795#rec_h36
+  - 32023D1795#rec_h37
+  - 32023D1795#rec_h38
+  - 32023D1795#rec_h4
+  - 32023D1795#rec_h5
+  - 32023D1795#rec_h6
+  - 32023D1795#rec_h7
+  - 32023D1795#rec_h8
+  - 32023D1795#rec_h9
+  reason: Art 4 names the addressees of the decision (the Member States); the enacting
+    formula ('HAS ADOPTED THIS DECISION:'), the sign-off (place and date of adoption,
+    signature), the title of Annex I, the headings of its Sections I to III and the
+    headings between the recitals carry no rule. Document structure, not a rule about
+    a transfer.
+  consequence: None for a caller.
+  declaration: not_an_exception
+- what: chapter_v_cascade
+  not_formalized_because: in_sibling
+  decided_in: gdpr-chapter-v-transfers
+  units:
+  - 02016R0679-20160504#parag_045.003
+  - 02016R0679-20160504#parag_045.008
+  reason: Art 45(3) (the Commission may decide by implementing act that a third country
+    ensures an adequate level of protection) and Art 45(8) (the list of adequacy decisions
+    published in the Official Journal) are read by gdpr-chapter-v-transfers, whose
+    cascade (Arts 45, 46 and 49) decides whether a transfer may take place and on
+    which basis; this order formalises only the conditions of one decision under Art
+    45(3) (reading (9)).
+  consequence: 'No answer of this order says whether a transfer that this decision
+    does not cover may take place on another basis: the caller asks gdpr-chapter-v-transfers.'
+  declaration: not_an_exception
+- what: article_45_machinery
+  debt: true
+  units:
+  - 02016R0679-20160504#art_045
+  - 02016R0679-20160504#parag_045.002
+  - 02016R0679-20160504#point_045.002_a
+  - 02016R0679-20160504#point_045.002_b
+  - 02016R0679-20160504#point_045.002_c
+  - 02016R0679-20160504#parag_045.004
+  - 02016R0679-20160504#parag_045.005
+  - 02016R0679-20160504#parag_045.006
+  - 02016R0679-20160504#parag_045.007
+  - 02016R0679-20160504#parag_045.009
+  reason: The Art 45 article heading, Art 45(2) (the elements of the Commission's
+    assessment), (4) to (7) (monitoring, repeal, amendment or suspension and consultations)
+    and (9) (older decisions) are read by no limb of this order; the Commission's
+    acts under them reach this order only through data_privacy_framework_decision_in_force
+    (reading (4)).
+  consequence: No answer checks the Commission's assessment or its review of the decision.
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_recitals
+  debt: true
+  units:
+  - 32023D1795#rec1
+  - 32023D1795#rec10
+  - 32023D1795#rec100
+  - 32023D1795#rec101
+  - 32023D1795#rec102
+  - 32023D1795#rec103
+  - 32023D1795#rec104
+  - 32023D1795#rec105
+  - 32023D1795#rec106
+  - 32023D1795#rec107
+  - 32023D1795#rec108
+  - 32023D1795#rec109
+  - 32023D1795#rec11
+  - 32023D1795#rec110
+  - 32023D1795#rec111
+  - 32023D1795#rec112
+  - 32023D1795#rec113
+  - 32023D1795#rec114
+  - 32023D1795#rec115
+  - 32023D1795#rec116
+  - 32023D1795#rec117
+  - 32023D1795#rec118
+  - 32023D1795#rec119
+  - 32023D1795#rec12
+  - 32023D1795#rec120
+  - 32023D1795#rec121
+  - 32023D1795#rec122
+  - 32023D1795#rec123
+  - 32023D1795#rec124
+  - 32023D1795#rec125
+  - 32023D1795#rec126
+  - 32023D1795#rec127
+  - 32023D1795#rec128
+  - 32023D1795#rec129
+  - 32023D1795#rec13
+  - 32023D1795#rec130
+  - 32023D1795#rec131
+  - 32023D1795#rec132
+  - 32023D1795#rec133
+  - 32023D1795#rec134
+  - 32023D1795#rec135
+  - 32023D1795#rec136
+  - 32023D1795#rec137
+  - 32023D1795#rec138
+  - 32023D1795#rec139
+  - 32023D1795#rec14
+  - 32023D1795#rec140
+  - 32023D1795#rec141
+  - 32023D1795#rec142
+  - 32023D1795#rec143
+  - 32023D1795#rec144
+  - 32023D1795#rec145
+  - 32023D1795#rec146
+  - 32023D1795#rec147
+  - 32023D1795#rec148
+  - 32023D1795#rec149
+  - 32023D1795#rec15
+  - 32023D1795#rec150
+  - 32023D1795#rec151
+  - 32023D1795#rec152
+  - 32023D1795#rec153
+  - 32023D1795#rec154
+  - 32023D1795#rec155
+  - 32023D1795#rec156
+  - 32023D1795#rec157
+  - 32023D1795#rec158
+  - 32023D1795#rec159
+  - 32023D1795#rec16
+  - 32023D1795#rec160
+  - 32023D1795#rec161
+  - 32023D1795#rec162
+  - 32023D1795#rec163
+  - 32023D1795#rec164
+  - 32023D1795#rec165
+  - 32023D1795#rec166
+  - 32023D1795#rec167
+  - 32023D1795#rec168
+  - 32023D1795#rec169
+  - 32023D1795#rec17
+  - 32023D1795#rec170
+  - 32023D1795#rec171
+  - 32023D1795#rec172
+  - 32023D1795#rec173
+  - 32023D1795#rec174
+  - 32023D1795#rec175
+  - 32023D1795#rec176
+  - 32023D1795#rec177
+  - 32023D1795#rec178
+  - 32023D1795#rec179
+  - 32023D1795#rec18
+  - 32023D1795#rec180
+  - 32023D1795#rec181
+  - 32023D1795#rec182
+  - 32023D1795#rec183
+  - 32023D1795#rec184
+  - 32023D1795#rec185
+  - 32023D1795#rec186
+  - 32023D1795#rec187
+  - 32023D1795#rec188
+  - 32023D1795#rec189
+  - 32023D1795#rec19
+  - 32023D1795#rec190
+  - 32023D1795#rec191
+  - 32023D1795#rec192
+  - 32023D1795#rec193
+  - 32023D1795#rec194
+  - 32023D1795#rec195
+  - 32023D1795#rec196
+  - 32023D1795#rec197
+  - 32023D1795#rec198
+  - 32023D1795#rec199
+  - 32023D1795#rec2
+  - 32023D1795#rec20
+  - 32023D1795#rec200
+  - 32023D1795#rec201
+  - 32023D1795#rec202
+  - 32023D1795#rec203
+  - 32023D1795#rec204
+  - 32023D1795#rec205
+  - 32023D1795#rec206
+  - 32023D1795#rec207
+  - 32023D1795#rec208
+  - 32023D1795#rec209
+  - 32023D1795#rec21
+  - 32023D1795#rec210
+  - 32023D1795#rec211
+  - 32023D1795#rec212
+  - 32023D1795#rec213
+  - 32023D1795#rec214
+  - 32023D1795#rec215
+  - 32023D1795#rec216
+  - 32023D1795#rec217
+  - 32023D1795#rec218
+  - 32023D1795#rec219
+  - 32023D1795#rec22
+  - 32023D1795#rec220
+  - 32023D1795#rec221
+  - 32023D1795#rec222
+  - 32023D1795#rec223
+  - 32023D1795#rec23
+  - 32023D1795#rec24
+  - 32023D1795#rec25
+  - 32023D1795#rec26
+  - 32023D1795#rec27
+  - 32023D1795#rec28
+  - 32023D1795#rec29
+  - 32023D1795#rec3
+  - 32023D1795#rec30
+  - 32023D1795#rec31
+  - 32023D1795#rec32
+  - 32023D1795#rec33
+  - 32023D1795#rec34
+  - 32023D1795#rec35
+  - 32023D1795#rec36
+  - 32023D1795#rec37
+  - 32023D1795#rec38
+  - 32023D1795#rec39
+  - 32023D1795#rec4
+  - 32023D1795#rec40
+  - 32023D1795#rec41
+  - 32023D1795#rec42
+  - 32023D1795#rec43
+  - 32023D1795#rec44
+  - 32023D1795#rec45
+  - 32023D1795#rec46
+  - 32023D1795#rec47
+  - 32023D1795#rec48
+  - 32023D1795#rec49
+  - 32023D1795#rec5
+  - 32023D1795#rec50
+  - 32023D1795#rec51
+  - 32023D1795#rec52
+  - 32023D1795#rec53
+  - 32023D1795#rec54
+  - 32023D1795#rec55
+  - 32023D1795#rec56
+  - 32023D1795#rec57
+  - 32023D1795#rec58
+  - 32023D1795#rec59
+  - 32023D1795#rec6
+  - 32023D1795#rec60
+  - 32023D1795#rec61
+  - 32023D1795#rec62
+  - 32023D1795#rec63
+  - 32023D1795#rec64
+  - 32023D1795#rec65
+  - 32023D1795#rec66
+  - 32023D1795#rec67
+  - 32023D1795#rec68
+  - 32023D1795#rec69
+  - 32023D1795#rec7
+  - 32023D1795#rec70
+  - 32023D1795#rec71
+  - 32023D1795#rec72
+  - 32023D1795#rec73
+  - 32023D1795#rec74
+  - 32023D1795#rec75
+  - 32023D1795#rec76
+  - 32023D1795#rec77
+  - 32023D1795#rec78
+  - 32023D1795#rec79
+  - 32023D1795#rec8
+  - 32023D1795#rec80
+  - 32023D1795#rec81
+  - 32023D1795#rec82
+  - 32023D1795#rec83
+  - 32023D1795#rec84
+  - 32023D1795#rec85
+  - 32023D1795#rec86
+  - 32023D1795#rec87
+  - 32023D1795#rec88
+  - 32023D1795#rec89
+  - 32023D1795#rec9
+  - 32023D1795#rec90
+  - 32023D1795#rec91
+  - 32023D1795#rec92
+  - 32023D1795#rec93
+  - 32023D1795#rec94
+  - 32023D1795#rec95
+  - 32023D1795#rec96
+  - 32023D1795#rec97
+  - 32023D1795#rec98
+  - 32023D1795#rec99
+  reason: The recitals (1) to (223) set out the Commission's findings on the Framework
+    and on U.S. law; they are not operative and no limb applies them. Recitals (7)
+    to (10) and (52) to (55) are quoted for readings (2), (3) and (5) and reach the
+    order only through the meanings of recipient_on_data_privacy_framework_list and
+    certification_covers_transferred_data.
+  consequence: No answer applies a recital as a rule; their content reaches the order
+    only through the attested outside facts.
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_footnotes
+  debt: true
+  units:
+  - 32023D1795#fn1
+  - 32023D1795#fn10
+  - 32023D1795#fn100
+  - 32023D1795#fn101
+  - 32023D1795#fn102
+  - 32023D1795#fn103
+  - 32023D1795#fn104
+  - 32023D1795#fn105
+  - 32023D1795#fn106
+  - 32023D1795#fn107
+  - 32023D1795#fn108
+  - 32023D1795#fn109
+  - 32023D1795#fn11
+  - 32023D1795#fn110
+  - 32023D1795#fn111
+  - 32023D1795#fn112
+  - 32023D1795#fn113
+  - 32023D1795#fn114
+  - 32023D1795#fn115
+  - 32023D1795#fn116
+  - 32023D1795#fn117
+  - 32023D1795#fn118
+  - 32023D1795#fn119
+  - 32023D1795#fn12
+  - 32023D1795#fn120
+  - 32023D1795#fn121
+  - 32023D1795#fn122
+  - 32023D1795#fn123
+  - 32023D1795#fn124
+  - 32023D1795#fn125
+  - 32023D1795#fn126
+  - 32023D1795#fn127
+  - 32023D1795#fn128
+  - 32023D1795#fn129
+  - 32023D1795#fn13
+  - 32023D1795#fn130
+  - 32023D1795#fn131
+  - 32023D1795#fn132
+  - 32023D1795#fn133
+  - 32023D1795#fn134
+  - 32023D1795#fn135
+  - 32023D1795#fn136
+  - 32023D1795#fn137
+  - 32023D1795#fn138
+  - 32023D1795#fn139
+  - 32023D1795#fn14
+  - 32023D1795#fn140
+  - 32023D1795#fn141
+  - 32023D1795#fn142
+  - 32023D1795#fn143
+  - 32023D1795#fn144
+  - 32023D1795#fn145
+  - 32023D1795#fn146
+  - 32023D1795#fn147
+  - 32023D1795#fn148
+  - 32023D1795#fn149
+  - 32023D1795#fn15
+  - 32023D1795#fn150
+  - 32023D1795#fn151
+  - 32023D1795#fn152
+  - 32023D1795#fn153
+  - 32023D1795#fn154
+  - 32023D1795#fn155
+  - 32023D1795#fn156
+  - 32023D1795#fn157
+  - 32023D1795#fn158
+  - 32023D1795#fn159
+  - 32023D1795#fn16
+  - 32023D1795#fn160
+  - 32023D1795#fn161
+  - 32023D1795#fn162
+  - 32023D1795#fn163
+  - 32023D1795#fn164
+  - 32023D1795#fn165
+  - 32023D1795#fn166
+  - 32023D1795#fn167
+  - 32023D1795#fn168
+  - 32023D1795#fn169
+  - 32023D1795#fn17
+  - 32023D1795#fn170
+  - 32023D1795#fn171
+  - 32023D1795#fn172
+  - 32023D1795#fn173
+  - 32023D1795#fn174
+  - 32023D1795#fn175
+  - 32023D1795#fn176
+  - 32023D1795#fn177
+  - 32023D1795#fn178
+  - 32023D1795#fn179
+  - 32023D1795#fn18
+  - 32023D1795#fn180
+  - 32023D1795#fn181
+  - 32023D1795#fn182
+  - 32023D1795#fn183
+  - 32023D1795#fn184
+  - 32023D1795#fn185
+  - 32023D1795#fn186
+  - 32023D1795#fn187
+  - 32023D1795#fn188
+  - 32023D1795#fn189
+  - 32023D1795#fn19
+  - 32023D1795#fn190
+  - 32023D1795#fn191
+  - 32023D1795#fn192
+  - 32023D1795#fn193
+  - 32023D1795#fn194
+  - 32023D1795#fn195
+  - 32023D1795#fn196
+  - 32023D1795#fn197
+  - 32023D1795#fn198
+  - 32023D1795#fn199
+  - 32023D1795#fn2
+  - 32023D1795#fn20
+  - 32023D1795#fn200
+  - 32023D1795#fn201
+  - 32023D1795#fn202
+  - 32023D1795#fn203
+  - 32023D1795#fn204
+  - 32023D1795#fn205
+  - 32023D1795#fn206
+  - 32023D1795#fn207
+  - 32023D1795#fn208
+  - 32023D1795#fn209
+  - 32023D1795#fn21
+  - 32023D1795#fn210
+  - 32023D1795#fn211
+  - 32023D1795#fn212
+  - 32023D1795#fn213
+  - 32023D1795#fn214
+  - 32023D1795#fn215
+  - 32023D1795#fn216
+  - 32023D1795#fn217
+  - 32023D1795#fn218
+  - 32023D1795#fn219
+  - 32023D1795#fn22
+  - 32023D1795#fn220
+  - 32023D1795#fn221
+  - 32023D1795#fn222
+  - 32023D1795#fn223
+  - 32023D1795#fn224
+  - 32023D1795#fn225
+  - 32023D1795#fn226
+  - 32023D1795#fn227
+  - 32023D1795#fn228
+  - 32023D1795#fn229
+  - 32023D1795#fn23
+  - 32023D1795#fn230
+  - 32023D1795#fn231
+  - 32023D1795#fn232
+  - 32023D1795#fn233
+  - 32023D1795#fn234
+  - 32023D1795#fn235
+  - 32023D1795#fn236
+  - 32023D1795#fn237
+  - 32023D1795#fn238
+  - 32023D1795#fn239
+  - 32023D1795#fn24
+  - 32023D1795#fn240
+  - 32023D1795#fn241
+  - 32023D1795#fn242
+  - 32023D1795#fn243
+  - 32023D1795#fn244
+  - 32023D1795#fn245
+  - 32023D1795#fn246
+  - 32023D1795#fn247
+  - 32023D1795#fn248
+  - 32023D1795#fn249
+  - 32023D1795#fn25
+  - 32023D1795#fn250
+  - 32023D1795#fn251
+  - 32023D1795#fn252
+  - 32023D1795#fn253
+  - 32023D1795#fn254
+  - 32023D1795#fn255
+  - 32023D1795#fn256
+  - 32023D1795#fn257
+  - 32023D1795#fn258
+  - 32023D1795#fn259
+  - 32023D1795#fn26
+  - 32023D1795#fn260
+  - 32023D1795#fn261
+  - 32023D1795#fn262
+  - 32023D1795#fn263
+  - 32023D1795#fn264
+  - 32023D1795#fn265
+  - 32023D1795#fn266
+  - 32023D1795#fn267
+  - 32023D1795#fn268
+  - 32023D1795#fn269
+  - 32023D1795#fn27
+  - 32023D1795#fn270
+  - 32023D1795#fn271
+  - 32023D1795#fn272
+  - 32023D1795#fn273
+  - 32023D1795#fn274
+  - 32023D1795#fn275
+  - 32023D1795#fn276
+  - 32023D1795#fn277
+  - 32023D1795#fn278
+  - 32023D1795#fn279
+  - 32023D1795#fn28
+  - 32023D1795#fn280
+  - 32023D1795#fn281
+  - 32023D1795#fn282
+  - 32023D1795#fn283
+  - 32023D1795#fn284
+  - 32023D1795#fn285
+  - 32023D1795#fn286
+  - 32023D1795#fn287
+  - 32023D1795#fn288
+  - 32023D1795#fn289
+  - 32023D1795#fn29
+  - 32023D1795#fn290
+  - 32023D1795#fn291
+  - 32023D1795#fn292
+  - 32023D1795#fn293
+  - 32023D1795#fn294
+  - 32023D1795#fn295
+  - 32023D1795#fn296
+  - 32023D1795#fn297
+  - 32023D1795#fn298
+  - 32023D1795#fn299
+  - 32023D1795#fn3
+  - 32023D1795#fn30
+  - 32023D1795#fn300
+  - 32023D1795#fn301
+  - 32023D1795#fn302
+  - 32023D1795#fn303
+  - 32023D1795#fn304
+  - 32023D1795#fn305
+  - 32023D1795#fn306
+  - 32023D1795#fn307
+  - 32023D1795#fn308
+  - 32023D1795#fn309
+  - 32023D1795#fn31
+  - 32023D1795#fn310
+  - 32023D1795#fn311
+  - 32023D1795#fn312
+  - 32023D1795#fn313
+  - 32023D1795#fn314
+  - 32023D1795#fn315
+  - 32023D1795#fn316
+  - 32023D1795#fn317
+  - 32023D1795#fn318
+  - 32023D1795#fn319
+  - 32023D1795#fn32
+  - 32023D1795#fn320
+  - 32023D1795#fn321
+  - 32023D1795#fn322
+  - 32023D1795#fn323
+  - 32023D1795#fn324
+  - 32023D1795#fn325
+  - 32023D1795#fn326
+  - 32023D1795#fn327
+  - 32023D1795#fn328
+  - 32023D1795#fn329
+  - 32023D1795#fn33
+  - 32023D1795#fn330
+  - 32023D1795#fn331
+  - 32023D1795#fn332
+  - 32023D1795#fn333
+  - 32023D1795#fn334
+  - 32023D1795#fn335
+  - 32023D1795#fn336
+  - 32023D1795#fn337
+  - 32023D1795#fn338
+  - 32023D1795#fn339
+  - 32023D1795#fn34
+  - 32023D1795#fn340
+  - 32023D1795#fn341
+  - 32023D1795#fn342
+  - 32023D1795#fn343
+  - 32023D1795#fn344
+  - 32023D1795#fn345
+  - 32023D1795#fn346
+  - 32023D1795#fn347
+  - 32023D1795#fn348
+  - 32023D1795#fn349
+  - 32023D1795#fn35
+  - 32023D1795#fn350
+  - 32023D1795#fn351
+  - 32023D1795#fn352
+  - 32023D1795#fn353
+  - 32023D1795#fn354
+  - 32023D1795#fn355
+  - 32023D1795#fn356
+  - 32023D1795#fn357
+  - 32023D1795#fn358
+  - 32023D1795#fn359
+  - 32023D1795#fn36
+  - 32023D1795#fn360
+  - 32023D1795#fn361
+  - 32023D1795#fn362
+  - 32023D1795#fn363
+  - 32023D1795#fn364
+  - 32023D1795#fn365
+  - 32023D1795#fn366
+  - 32023D1795#fn367
+  - 32023D1795#fn368
+  - 32023D1795#fn369
+  - 32023D1795#fn37
+  - 32023D1795#fn370
+  - 32023D1795#fn371
+  - 32023D1795#fn372
+  - 32023D1795#fn373
+  - 32023D1795#fn374
+  - 32023D1795#fn375
+  - 32023D1795#fn376
+  - 32023D1795#fn377
+  - 32023D1795#fn378
+  - 32023D1795#fn379
+  - 32023D1795#fn38
+  - 32023D1795#fn380
+  - 32023D1795#fn381
+  - 32023D1795#fn382
+  - 32023D1795#fn383
+  - 32023D1795#fn384
+  - 32023D1795#fn385
+  - 32023D1795#fn386
+  - 32023D1795#fn387
+  - 32023D1795#fn388
+  - 32023D1795#fn389
+  - 32023D1795#fn39
+  - 32023D1795#fn390
+  - 32023D1795#fn391
+  - 32023D1795#fn392
+  - 32023D1795#fn393
+  - 32023D1795#fn394
+  - 32023D1795#fn395
+  - 32023D1795#fn396
+  - 32023D1795#fn397
+  - 32023D1795#fn398
+  - 32023D1795#fn399
+  - 32023D1795#fn4
+  - 32023D1795#fn40
+  - 32023D1795#fn400
+  - 32023D1795#fn401
+  - 32023D1795#fn402
+  - 32023D1795#fn403
+  - 32023D1795#fn404
+  - 32023D1795#fn405
+  - 32023D1795#fn406
+  - 32023D1795#fn407
+  - 32023D1795#fn408
+  - 32023D1795#fn409
+  - 32023D1795#fn41
+  - 32023D1795#fn410
+  - 32023D1795#fn411
+  - 32023D1795#fn412
+  - 32023D1795#fn42
+  - 32023D1795#fn43
+  - 32023D1795#fn44
+  - 32023D1795#fn45
+  - 32023D1795#fn46
+  - 32023D1795#fn47
+  - 32023D1795#fn48
+  - 32023D1795#fn49
+  - 32023D1795#fn5
+  - 32023D1795#fn50
+  - 32023D1795#fn51
+  - 32023D1795#fn52
+  - 32023D1795#fn53
+  - 32023D1795#fn54
+  - 32023D1795#fn55
+  - 32023D1795#fn56
+  - 32023D1795#fn57
+  - 32023D1795#fn58
+  - 32023D1795#fn59
+  - 32023D1795#fn6
+  - 32023D1795#fn60
+  - 32023D1795#fn61
+  - 32023D1795#fn62
+  - 32023D1795#fn63
+  - 32023D1795#fn64
+  - 32023D1795#fn65
+  - 32023D1795#fn66
+  - 32023D1795#fn67
+  - 32023D1795#fn68
+  - 32023D1795#fn69
+  - 32023D1795#fn7
+  - 32023D1795#fn70
+  - 32023D1795#fn71
+  - 32023D1795#fn72
+  - 32023D1795#fn73
+  - 32023D1795#fn74
+  - 32023D1795#fn75
+  - 32023D1795#fn76
+  - 32023D1795#fn77
+  - 32023D1795#fn78
+  - 32023D1795#fn79
+  - 32023D1795#fn8
+  - 32023D1795#fn80
+  - 32023D1795#fn81
+  - 32023D1795#fn82
+  - 32023D1795#fn83
+  - 32023D1795#fn84
+  - 32023D1795#fn85
+  - 32023D1795#fn86
+  - 32023D1795#fn87
+  - 32023D1795#fn88
+  - 32023D1795#fn89
+  - 32023D1795#fn9
+  - 32023D1795#fn90
+  - 32023D1795#fn91
+  - 32023D1795#fn92
+  - 32023D1795#fn93
+  - 32023D1795#fn94
+  - 32023D1795#fn95
+  - 32023D1795#fn96
+  - 32023D1795#fn97
+  - 32023D1795#fn98
+  - 32023D1795#fn99
+  reason: 'The footnotes of the decision give sources, references and explanations
+    (footnote (14): the EEA States; footnote (15): the exporter''s own duties under
+    Regulation (EU) 2016/679); none is applied by a limb. Footnote (14) is quoted
+    for open question (Q1).'
+  consequence: No answer reads a footnote; a caller who treats a transfer from an
+    EEA State as one from the Union states transfer_from_union true (Q1).
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_annex_i_principles
+  debt: true
+  units:
+  - 32023D1795#annexI_arb
+  - 32023D1795#annexI_fn1
+  - 32023D1795#annexI_fn10
+  - 32023D1795#annexI_fn11
+  - 32023D1795#annexI_fn12
+  - 32023D1795#annexI_fn13
+  - 32023D1795#annexI_fn14
+  - 32023D1795#annexI_fn15
+  - 32023D1795#annexI_fn16
+  - 32023D1795#annexI_fn17
+  - 32023D1795#annexI_fn2
+  - 32023D1795#annexI_fn3
+  - 32023D1795#annexI_fn4
+  - 32023D1795#annexI_fn5
+  - 32023D1795#annexI_fn6
+  - 32023D1795#annexI_fn7
+  - 32023D1795#annexI_fn8
+  - 32023D1795#annexI_fn9
+  - 32023D1795#annexI_secIII_sp1
+  - 32023D1795#annexI_secIII_sp10
+  - 32023D1795#annexI_secIII_sp10_a
+  - 32023D1795#annexI_secIII_sp10_b
+  - 32023D1795#annexI_secIII_sp10_c
+  - 32023D1795#annexI_secIII_sp11
+  - 32023D1795#annexI_secIII_sp11_a
+  - 32023D1795#annexI_secIII_sp11_b
+  - 32023D1795#annexI_secIII_sp11_c
+  - 32023D1795#annexI_secIII_sp11_d
+  - 32023D1795#annexI_secIII_sp11_e
+  - 32023D1795#annexI_secIII_sp11_f
+  - 32023D1795#annexI_secIII_sp11_g
+  - 32023D1795#annexI_secIII_sp12
+  - 32023D1795#annexI_secIII_sp12_a
+  - 32023D1795#annexI_secIII_sp12_b
+  - 32023D1795#annexI_secIII_sp13
+  - 32023D1795#annexI_secIII_sp13_a
+  - 32023D1795#annexI_secIII_sp14
+  - 32023D1795#annexI_secIII_sp14_a
+  - 32023D1795#annexI_secIII_sp14_b
+  - 32023D1795#annexI_secIII_sp14_c
+  - 32023D1795#annexI_secIII_sp14_d
+  - 32023D1795#annexI_secIII_sp14_e
+  - 32023D1795#annexI_secIII_sp14_f
+  - 32023D1795#annexI_secIII_sp14_g
+  - 32023D1795#annexI_secIII_sp15
+  - 32023D1795#annexI_secIII_sp15_a
+  - 32023D1795#annexI_secIII_sp15_b
+  - 32023D1795#annexI_secIII_sp15_c
+  - 32023D1795#annexI_secIII_sp15_d
+  - 32023D1795#annexI_secIII_sp15_e
+  - 32023D1795#annexI_secIII_sp16
+  - 32023D1795#annexI_secIII_sp16_a
+  - 32023D1795#annexI_secIII_sp16_b
+  - 32023D1795#annexI_secIII_sp16_c
+  - 32023D1795#annexI_secIII_sp1_a
+  - 32023D1795#annexI_secIII_sp1_a_i
+  - 32023D1795#annexI_secIII_sp1_a_ii
+  - 32023D1795#annexI_secIII_sp1_a_iii
+  - 32023D1795#annexI_secIII_sp1_a_iv
+  - 32023D1795#annexI_secIII_sp1_a_v
+  - 32023D1795#annexI_secIII_sp2
+  - 32023D1795#annexI_secIII_sp2_a
+  - 32023D1795#annexI_secIII_sp2_b
+  - 32023D1795#annexI_secIII_sp3
+  - 32023D1795#annexI_secIII_sp3_a
+  - 32023D1795#annexI_secIII_sp4
+  - 32023D1795#annexI_secIII_sp4_a
+  - 32023D1795#annexI_secIII_sp4_b
+  - 32023D1795#annexI_secIII_sp5
+  - 32023D1795#annexI_secIII_sp5_a
+  - 32023D1795#annexI_secIII_sp5_b
+  - 32023D1795#annexI_secIII_sp5_b_i
+  - 32023D1795#annexI_secIII_sp5_b_ii
+  - 32023D1795#annexI_secIII_sp5_c
+  - 32023D1795#annexI_secIII_sp5_d
+  - 32023D1795#annexI_secIII_sp5_e
+  - 32023D1795#annexI_secIII_sp6
+  - 32023D1795#annexI_secIII_sp6_a
+  - 32023D1795#annexI_secIII_sp6_b
+  - 32023D1795#annexI_secIII_sp6_b_i
+  - 32023D1795#annexI_secIII_sp6_b_ii
+  - 32023D1795#annexI_secIII_sp6_b_iii
+  - 32023D1795#annexI_secIII_sp6_b_iv
+  - 32023D1795#annexI_secIII_sp6_b_v
+  - 32023D1795#annexI_secIII_sp6_b_vi
+  - 32023D1795#annexI_secIII_sp6_b_vii
+  - 32023D1795#annexI_secIII_sp6_c
+  - 32023D1795#annexI_secIII_sp6_d
+  - 32023D1795#annexI_secIII_sp6_e
+  - 32023D1795#annexI_secIII_sp6_f
+  - 32023D1795#annexI_secIII_sp6_g
+  - 32023D1795#annexI_secIII_sp6_h
+  - 32023D1795#annexI_secIII_sp7
+  - 32023D1795#annexI_secIII_sp7_a
+  - 32023D1795#annexI_secIII_sp7_b
+  - 32023D1795#annexI_secIII_sp7_c
+  - 32023D1795#annexI_secIII_sp7_d
+  - 32023D1795#annexI_secIII_sp7_e
+  - 32023D1795#annexI_secIII_sp8
+  - 32023D1795#annexI_secIII_sp8_a
+  - 32023D1795#annexI_secIII_sp8_b
+  - 32023D1795#annexI_secIII_sp8_c
+  - 32023D1795#annexI_secIII_sp8_d
+  - 32023D1795#annexI_secIII_sp8_e
+  - 32023D1795#annexI_secIII_sp8_f
+  - 32023D1795#annexI_secIII_sp8_g
+  - 32023D1795#annexI_secIII_sp8_h
+  - 32023D1795#annexI_secIII_sp8_i
+  - 32023D1795#annexI_secIII_sp9
+  - 32023D1795#annexI_secIII_sp9_a
+  - 32023D1795#annexI_secIII_sp9_b
+  - 32023D1795#annexI_secIII_sp9_c
+  - 32023D1795#annexI_secIII_sp9_d
+  - 32023D1795#annexI_secIII_sp9_e
+  - 32023D1795#annexI_secII_pr1
+  - 32023D1795#annexI_secII_pr1_a
+  - 32023D1795#annexI_secII_pr1_a_i
+  - 32023D1795#annexI_secII_pr1_a_ii
+  - 32023D1795#annexI_secII_pr1_a_iii
+  - 32023D1795#annexI_secII_pr1_a_iv
+  - 32023D1795#annexI_secII_pr1_a_ix
+  - 32023D1795#annexI_secII_pr1_a_v
+  - 32023D1795#annexI_secII_pr1_a_vi
+  - 32023D1795#annexI_secII_pr1_a_vii
+  - 32023D1795#annexI_secII_pr1_a_viii
+  - 32023D1795#annexI_secII_pr1_a_x
+  - 32023D1795#annexI_secII_pr1_a_xi
+  - 32023D1795#annexI_secII_pr1_a_xii
+  - 32023D1795#annexI_secII_pr1_b
+  - 32023D1795#annexI_secII_pr2
+  - 32023D1795#annexI_secII_pr2_a
+  - 32023D1795#annexI_secII_pr2_b
+  - 32023D1795#annexI_secII_pr2_c
+  - 32023D1795#annexI_secII_pr3
+  - 32023D1795#annexI_secII_pr3_a
+  - 32023D1795#annexI_secII_pr3_b
+  - 32023D1795#annexI_secII_pr4
+  - 32023D1795#annexI_secII_pr4_a
+  - 32023D1795#annexI_secII_pr5
+  - 32023D1795#annexI_secII_pr5_a
+  - 32023D1795#annexI_secII_pr5_b
+  - 32023D1795#annexI_secII_pr6
+  - 32023D1795#annexI_secII_pr6_a
+  - 32023D1795#annexI_secII_pr7
+  - 32023D1795#annexI_secII_pr7_a
+  - 32023D1795#annexI_secII_pr7_a_i
+  - 32023D1795#annexI_secII_pr7_a_ii
+  - 32023D1795#annexI_secII_pr7_b
+  - 32023D1795#annexI_secII_pr7_c
+  - 32023D1795#annexI_secII_pr7_d
+  - 32023D1795#annexI_secII_pr7_e
+  - 32023D1795#annexI_secI_p1
+  - 32023D1795#annexI_secI_p2
+  - 32023D1795#annexI_secI_p3
+  - 32023D1795#annexI_secI_p4
+  - 32023D1795#annexI_secI_p5
+  - 32023D1795#annexI_secI_p6
+  - 32023D1795#annexI_secI_p7
+  - 32023D1795#annexI_secI_p8
+  - 32023D1795#annexI_secI_p9
+  reason: Annex I (the EU-U.S. Data Privacy Framework Principles and Supplemental
+    Principles, their footnotes and the arbitral model) sets the duties of a certified
+    organisation; no limb of this order applies it. Section I, points 3 (the List)
+    and 6 (the human-resources limit) are quoted for readings (3) and (5) and reach
+    the order only through recipient_on_data_privacy_framework_list and certification_covers_transferred_data.
+  consequence: No answer assesses an organisation's compliance with the Principles;
+    what the List and a certification cover is stated by the caller as an attested
+    outside fact.
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.
+- what: decision_annexes_ii_to_viii
+  debt: true
+  units:
+  - 32023D1795#annexII
+  - 32023D1795#annexIII
+  - 32023D1795#annexIV
+  - 32023D1795#annexV
+  - 32023D1795#annexVI
+  - 32023D1795#annexVII
+  - 32023D1795#annexVIII
+  reason: 'Annexes II to VIII (the U.S. government''s letters and representations:
+    the Department of Commerce, the Federal Trade Commission, the Department of Transportation,
+    the Department of Justice and the Office of the Director of National Intelligence
+    on access by U.S. public authorities, and the list of abbreviations) describe
+    the U.S. framework on which the Commission based its finding; no limb of this
+    order applies them.'
+  consequence: No answer assesses U.S. law; the Commission's finding in Article 1
+    is taken as the decision states it, while data_privacy_framework_decision_in_force
+    says whether it is in force.
+  declaration: exception_modelled
+  open: formalisable; a later change could add it; the deferral stands for this order.

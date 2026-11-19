@@ -1,0 +1,143 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s1_international_transfers_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_swiss_fadp_s1_international_transfers, [decide_swiss_fadp_s1_international_transfers/2, swiss_disclosure_under_article_16/3, swiss_disclosure_abroad/3, swiss_information_of_commissioner_on_request/3, eu_transfer_under_articles_45_and_46/3, compare_swiss_eu_transfer_routes/5, outside_facts_supplied/2, swiss_fadp_s1_international_transfers_checklist/2]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_fixtures, [swiss_fadp_s1_international_transfers_subject/1, swiss_fadp_s1_international_transfers_profile_for/2]).
+
+subject_classifies(Subject) :-
+    swiss_fadp_s1_international_transfers_subject(Subject),
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    decide_swiss_fadp_s1_international_transfers(Profile, _Verdict).
+
+subject_profiles(Profiles) :-
+    findall(Profile, (swiss_fadp_s1_international_transfers_subject(Subject), swiss_fadp_s1_international_transfers_profile_for(Subject, Profile)), Profiles).
+
+answers_once(Profile) :-
+    findall(Verdict, decide_swiss_fadp_s1_international_transfers(Profile, Verdict), Verdicts),
+    length(Verdicts, 1),
+    findall(Result - Citations, swiss_disclosure_under_article_16(Profile, Result, Citations), ArticleAnswers),
+    length(ArticleAnswers, 1),
+    findall(Result - Citations, swiss_disclosure_abroad(Profile, Result, Citations), AbroadAnswers),
+    length(AbroadAnswers, 1),
+    findall(Result - Citations, swiss_information_of_commissioner_on_request(Profile, Result, Citations), DutyAnswers),
+    length(DutyAnswers, 1),
+    findall(Result - Citations, eu_transfer_under_articles_45_and_46(Profile, Result, Citations), EuropeanAnswers),
+    length(EuropeanAnswers, 1),
+    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_transfer_routes(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), CompareAnswers),
+    length(CompareAnswers, 1),
+    findall(Facts, outside_facts_supplied(Profile, Facts), FactAnswers),
+    length(FactAnswers, 1),
+    findall(Items, swiss_fadp_s1_international_transfers_checklist(Profile, Items), ChecklistAnswers),
+    length(ChecklistAnswers, 1).
+
+final_status(permitted_by_adequacy_decision).
+final_status(permitted_by_safeguards).
+final_status(no_adequacy_decision_or_safeguards).
+final_status(permitted_by_derogation).
+final_status(disclosure_abroad_not_permitted).
+final_status(information_of_commissioner_required).
+final_status(information_of_commissioner_not_required).
+
+citations_fit(Status, Citations) :-
+    final_status(Status),
+    Citations = [_|_],
+    sort(Citations, Sorted),
+    length(Sorted, Count),
+    length(Citations, Count).
+citations_fit(indeterminate([Key]), []) :-
+    atom(Key).
+citations_fit(needs_legal_review(_, _), []).
+citations_fit(input_problems([_|_]), []).
+
+profile_citations_fit(Profile) :-
+    swiss_disclosure_under_article_16(Profile, ArticleResult, ArticleCitations),
+    citations_fit(ArticleResult, ArticleCitations),
+    swiss_disclosure_abroad(Profile, AbroadResult, AbroadCitations),
+    citations_fit(AbroadResult, AbroadCitations),
+    swiss_information_of_commissioner_on_request(Profile, DutyResult, DutyCitations),
+    citations_fit(DutyResult, DutyCitations),
+    eu_transfer_under_articles_45_and_46(Profile, EuropeanResult, EuropeanCitations),
+    citations_fit(EuropeanResult, EuropeanCitations).
+
+changed_by_fits(differs, [_, _, _, _]).
+changed_by_fits(same, []).
+changed_by_fits(indeterminate([_]), []).
+changed_by_fits(needs_legal_review(_, _), []).
+changed_by_fits(input_problems(_), []).
+
+profile_changed_by_fits(Profile) :-
+    compare_swiss_eu_transfer_routes(Profile, _, _, Difference, ChangedBy),
+    changed_by_fits(Difference, ChangedBy).
+
+not_final(indeterminate(_)).
+not_final(needs_legal_review(_, _)).
+not_final(input_problems(_)).
+
+routes_agree(permitted_by_adequacy_decision, permitted_by_adequacy_decision).
+routes_agree(permitted_by_safeguards, permitted_by_safeguards).
+routes_agree(no_adequacy_decision_or_safeguards, permitted_by_derogation).
+routes_agree(no_adequacy_decision_or_safeguards, disclosure_abroad_not_permitted).
+routes_agree(no_adequacy_decision_or_safeguards, AbroadResult) :-
+    not_final(AbroadResult).
+routes_agree(ArticleResult, AbroadResult) :-
+    not_final(ArticleResult),
+    not_final(AbroadResult).
+
+profile_routes_agree(Profile) :-
+    swiss_disclosure_under_article_16(Profile, ArticleResult, _),
+    swiss_disclosure_abroad(Profile, AbroadResult, _),
+    routes_agree(ArticleResult, AbroadResult).
+
+item_has_citation(item(_, _, cite(_))).
+
+profile_checklist_cited(Profile) :-
+    swiss_fadp_s1_international_transfers_checklist(Profile, Items),
+    maplist(item_has_citation, Items).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, swiss_fadp_s1_international_transfers_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_query_answers_each_subject_once) :-
+    subject_profiles(Profiles),
+    maplist(answers_once, Profiles).
+test(citations_are_fixed_for_final_and_empty_for_open_answers) :-
+    subject_profiles(Profiles),
+    maplist(profile_citations_fit, Profiles).
+test(changed_by_is_listed_only_when_the_routes_differ) :-
+    subject_profiles(Profiles),
+    maplist(profile_changed_by_fits, Profiles).
+test(the_article_16_route_agrees_with_the_full_route) :-
+    subject_profiles(Profiles),
+    maplist(profile_routes_agree, Profiles).
+test(every_checklist_item_carries_a_citation) :-
+    subject_profiles(Profiles),
+    maplist(profile_checklist_cited, Profiles).
+
+test(a_final_answer_without_citations_does_not_fit, fail) :-
+    citations_fit(permitted_by_safeguards, []).
+test(an_open_answer_with_citations_does_not_fit, fail) :-
+    citations_fit(indeterminate([data_subject_explicitly_consented]), [cite(ch_fadp_art_17_1_a)]).
+test(two_missing_keys_do_not_fit, fail) :-
+    citations_fit(indeterminate([data_subject_explicitly_consented, appropriate_safeguards_provided]), []).
+test(repeated_citations_do_not_fit, fail) :-
+    citations_fit(permitted_by_safeguards, [cite(ch_fadp_art_16_2), cite(ch_fadp_art_16_2)]).
+test(changed_by_on_same_does_not_fit, fail) :-
+    changed_by_fits(same, [cite(ch_fadp_art_16_1), cite(ch_fadp_art_16_2), cite(eu_reg_2016_679_art_45_1), cite(eu_reg_2016_679_art_46_1)]).
+test(adequacy_against_derogation_does_not_agree, fail) :-
+    routes_agree(permitted_by_adequacy_decision, permitted_by_derogation).
+test(an_uncited_item_has_no_citation, fail) :-
+    item_has_citation(item(federal_council_finding, met, none)).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_query_answers_each_subject_once, citations_are_fixed_for_final_and_empty_for_open_answers, changed_by_is_listed_only_when_the_routes_differ, the_article_16_route_agrees_with_the_full_route, every_checklist_item_carries_a_citation]).
+cp_test_fail_names([a_final_answer_without_citations_does_not_fit, an_open_answer_with_citations_does_not_fit, two_missing_keys_do_not_fit, repeated_citations_do_not_fit, changed_by_on_same_does_not_fit, adequacy_against_derogation_does_not_agree, an_uncited_item_has_no_citation]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

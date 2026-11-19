@@ -1,0 +1,393 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for ch/swiss_fadp_s1_international_transfers (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% swiss_fadp_s1_international_transfers_input_problems/2 here, exported, for every slice to import.
+% deontic family: STATUS is a modal vocabulary of permission routes.
+%
+% Sources (the law the slices formalize; the German text is authoritative):
+%   DSG (SR 235.1, Stand 7 July 2025) Art 16(1), (2)(a)-(e), (3); Art 17(1)(a)-(f), (2);
+%   DSV (SR 235.11, Stand 1 December 2025) Art 8(1), Annex 1, Art 12(1)-(3);
+%   Regulation (EU) 2016/679 Art 45(1) and Art 46(1) (the EU comparison limb).
+% The kernel decides no statutory condition: it holds the profile contract
+% (the twenty-seven keys of the order, in root_exports order, with their
+% kind), the input check, the reading of one key into a state, and THE
+% PAIRS RULE builder. None of these is operative, so none carries an
+% implements/1 marker (the kernel is the DAG root and imports no citations).
+%
+% Shared predicates:
+%   profile_key(Position, Key, Kind): the contract table, Position 1..27 in
+%     root_exports order, Kind one of judgement, crisp, outside_fact.
+%   key_state(Profile, Key, State): State is true, false, open_absent or
+%     open_unsure (an unsure judgement). An outside fact reads only VALUE of
+%     attested(VALUE, attestation(By, At, Reason, Evidence)). One solution for a
+%     profile that passed the input check.
+%   inputs_relied_on_pairs(Profile, ReadKeys, ReferredKey, Pairs): THE PAIRS
+%     RULE. The judgement and crisp keys of ReadKeys PRESENT in Profile, each as
+%     Key-Value, in root_exports order, the unsure one included; ReferredKey (the
+%     outside fact of a cross_reference_unresolved referral) is added as
+%     ReferredKey-absent at its place. For an open_textured referral pass the
+%     atom none as ReferredKey. A present outside fact is never a pair.
+%
+% Atoms and data terms need NO declaration and NO import.
+%
+% Result terms. The facade verdict built by the slice:
+%   swiss_fadp_s1_international_transfers_verdict(Status, Citations)
+%     Status: the RESULT of swiss_disclosure_abroad/3, one of
+%       permitted_by_adequacy_decision | permitted_by_safeguards |
+%       permitted_by_derogation | disclosure_abroad_not_permitted,
+%       or a status compound itself;
+%     Citations: a flat set-like list of cite(Key) terms, [] when not final.
+% The contract queries (RESULT atoms exactly as the order pins them):
+%   swiss_disclosure_under_article_16/3 and eu_transfer_under_articles_45_and_46/3:
+%     permitted_by_adequacy_decision | permitted_by_safeguards | no_adequacy_decision_or_safeguards
+%   swiss_information_of_commissioner_on_request/3:
+%     information_of_commissioner_required | information_of_commissioner_not_required
+%   compare_swiss_eu_transfer_routes/5 DIFFERENCE: same | differs
+% Status compounds (never a bare atom, never inside a list):
+%   indeterminate([Key])  -- the first missing judgement or crisp key;
+%   needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]);
+%   needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
+%       [resolution(cite(Target), not_attempted), inputs_relied_on(Pairs)]);
+%   input_problems(Problems) -- Problems of unknown_key/1, wrong_type/1, duplicate_key/1.
+% Checklist items (justification): item(RequirementId, Status, cite(Key)),
+%   Status met | unmet(Reason) | unknown(Keys).
+% =====================================================================
+
+:- module(kernel, [
+    swiss_fadp_s1_international_transfers_input_problems/2,
+    profile_key/3,
+    key_state/3,
+    inputs_relied_on_pairs/4
+]).
+
+:- use_module(library(reif), [memberd_t/3, if_/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+% ---- the profile contract, in root_exports order -------------------
+profile_key(1, federal_council_adequacy_listing_covers_disclosure, outside_fact).
+profile_key(2, international_treaty_ensures_suitable_protection, judgement).
+profile_key(3, contract_clauses_ensure_suitable_protection, judgement).
+profile_key(4, contract_clauses_notified_to_commissioner_beforehand, crisp).
+profile_key(5, specific_guarantees_ensure_suitable_protection, judgement).
+profile_key(6, specific_guarantees_notified_to_commissioner_beforehand, crisp).
+profile_key(7, standard_clauses_ensure_suitable_protection, judgement).
+profile_key(8, standard_clauses_approved_issued_or_recognised_by_commissioner, outside_fact).
+profile_key(9, binding_corporate_rules_ensure_suitable_protection, judgement).
+profile_key(10, binding_corporate_rules_approved_beforehand, outside_fact).
+profile_key(11, code_of_conduct_ensures_suitable_protection, judgement).
+profile_key(12, code_of_conduct_submitted_to_commissioner_for_approval_beforehand, crisp).
+profile_key(13, code_of_conduct_backed_by_binding_enforceable_commitment, judgement).
+profile_key(14, certification_ensures_suitable_protection, judgement).
+profile_key(15, certification_backed_by_binding_enforceable_commitment, judgement).
+profile_key(16, data_subject_explicitly_consented, judgement).
+profile_key(17, disclosure_directly_connected_with_contract_with_data_subject, judgement).
+profile_key(18, disclosure_directly_connected_with_contract_in_interest_of_data_subject, judgement).
+profile_key(19, disclosure_necessary_for_overriding_public_interest, judgement).
+profile_key(20, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, judgement).
+profile_key(21, disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable, judgement).
+profile_key(22, data_made_generally_accessible_and_processing_not_expressly_prohibited, judgement).
+profile_key(23, data_from_statutory_register_and_inspection_conditions_met, judgement).
+profile_key(24, commissioner_requested_information_on_disclosure, crisp).
+profile_key(25, commission_adequacy_decision_covers_transfer, outside_fact).
+profile_key(26, appropriate_safeguards_provided, judgement).
+profile_key(27, enforceable_rights_and_effective_remedies_available, judgement).
+
+% ---- the state of one key ------------------------------------------
+% Presence first, then value (profile_get/3 only).
+key_state(Profile, Key, open_absent) :-
+    profile_key(_, Key, _),
+    profile_lacks(Profile, Key).
+key_state(Profile, Key, State) :-
+    profile_key(_, Key, Kind),
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    value_state(Kind, Value, State).
+
+value_state(outside_fact, attested(true, _), true).
+value_state(outside_fact, attested(false, _), false).
+value_state(judgement, true, true).
+value_state(judgement, false, false).
+value_state(judgement, unsure, open_unsure).
+value_state(crisp, true, true).
+value_state(crisp, false, false).
+
+% ---- THE PAIRS RULE ------------------------------------------------
+inputs_relied_on_pairs(Profile, ReadKeys, ReferredKey, Pairs) :-
+    findall(Key-Kind, profile_key(_, Key, Kind), Rows),
+    pairs_from_rows(Rows, Profile, ReadKeys, ReferredKey, Pairs).
+
+pairs_from_rows([], _, _, _, []).
+pairs_from_rows([Key-Kind|Rows], Profile, ReadKeys, ReferredKey, Pairs) :-
+    memberd_t(Key, ReadKeys, IsRead),
+    row_pair(IsRead, Key, Kind, Profile, ReferredKey, Pair),
+    pairs_from_rows(Rows, Profile, ReadKeys, ReferredKey, LaterPairs),
+    add_pair(Pair, LaterPairs, Pairs).
+
+row_pair(false, _, _, _, _, no_pair).
+row_pair(true, Key, Kind, Profile, ReferredKey, Pair) :-
+    if_(Key = ReferredKey,
+        Pair = pair(Key-absent),
+        read_pair(Kind, Key, Profile, Pair)).
+
+read_pair(outside_fact, _, _, no_pair).
+read_pair(judgement, Key, Profile, Pair) :-
+    present_pair(Profile, Key, Pair).
+read_pair(crisp, Key, Profile, Pair) :-
+    present_pair(Profile, Key, Pair).
+
+present_pair(Profile, Key, no_pair) :-
+    profile_lacks(Profile, Key).
+present_pair(Profile, Key, pair(Key-Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+add_pair(no_pair, Pairs, Pairs).
+add_pair(pair(Pair), Pairs, [Pair|Pairs]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% swiss_fadp_s1_international_transfers_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+swiss_fadp_s1_international_transfers_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [federal_council_adequacy_listing_covers_disclosure, international_treaty_ensures_suitable_protection, contract_clauses_ensure_suitable_protection, contract_clauses_notified_to_commissioner_beforehand, specific_guarantees_ensure_suitable_protection, specific_guarantees_notified_to_commissioner_beforehand, standard_clauses_ensure_suitable_protection, standard_clauses_approved_issued_or_recognised_by_commissioner, binding_corporate_rules_ensure_suitable_protection, binding_corporate_rules_approved_beforehand, code_of_conduct_ensures_suitable_protection, code_of_conduct_submitted_to_commissioner_for_approval_beforehand, code_of_conduct_backed_by_binding_enforceable_commitment, certification_ensures_suitable_protection, certification_backed_by_binding_enforceable_commitment, data_subject_explicitly_consented, disclosure_directly_connected_with_contract_with_data_subject, disclosure_directly_connected_with_contract_in_interest_of_data_subject, disclosure_necessary_for_overriding_public_interest, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable, data_made_generally_accessible_and_processing_not_expressly_prohibited, data_from_statutory_register_and_inspection_conditions_met, commissioner_requested_information_on_disclosure, commission_adequacy_decision_covers_transfer, appropriate_safeguards_provided, enforceable_rights_and_effective_remedies_available],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(federal_council_adequacy_listing_covers_disclosure, outside_fact).
+key_type(international_treaty_ensures_suitable_protection, judgement).
+key_type(contract_clauses_ensure_suitable_protection, judgement).
+key_type(contract_clauses_notified_to_commissioner_beforehand, boolean).
+key_type(specific_guarantees_ensure_suitable_protection, judgement).
+key_type(specific_guarantees_notified_to_commissioner_beforehand, boolean).
+key_type(standard_clauses_ensure_suitable_protection, judgement).
+key_type(standard_clauses_approved_issued_or_recognised_by_commissioner, outside_fact).
+key_type(binding_corporate_rules_ensure_suitable_protection, judgement).
+key_type(binding_corporate_rules_approved_beforehand, outside_fact).
+key_type(code_of_conduct_ensures_suitable_protection, judgement).
+key_type(code_of_conduct_submitted_to_commissioner_for_approval_beforehand, boolean).
+key_type(code_of_conduct_backed_by_binding_enforceable_commitment, judgement).
+key_type(certification_ensures_suitable_protection, judgement).
+key_type(certification_backed_by_binding_enforceable_commitment, judgement).
+key_type(data_subject_explicitly_consented, judgement).
+key_type(disclosure_directly_connected_with_contract_with_data_subject, judgement).
+key_type(disclosure_directly_connected_with_contract_in_interest_of_data_subject, judgement).
+key_type(disclosure_necessary_for_overriding_public_interest, judgement).
+key_type(disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, judgement).
+key_type(disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable, judgement).
+key_type(data_made_generally_accessible_and_processing_not_expressly_prohibited, judgement).
+key_type(data_from_statutory_register_and_inspection_conditions_met, judgement).
+key_type(commissioner_requested_information_on_disclosure, boolean).
+key_type(commission_adequacy_decision_covers_transfer, outside_fact).
+key_type(appropriate_safeguards_provided, judgement).
+key_type(enforceable_rights_and_effective_remedies_available, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+% ---- tests ---------------------------------------------------------
+test(the_contract_has_twenty_seven_keys) :-
+    findall(Key, profile_key(_, Key, _), Keys),
+    length(Keys, 27).
+test(an_absent_key_is_open_absent) :-
+    key_state([], data_subject_explicitly_consented, open_absent).
+test(an_unsure_judgement_is_open_unsure) :-
+    key_state([attribute(data_subject_explicitly_consented, unsure)], data_subject_explicitly_consented, open_unsure).
+test(an_unsure_judgement_is_not_true, fail) :-
+    key_state([attribute(data_subject_explicitly_consented, unsure)], data_subject_explicitly_consented, true).
+test(an_attested_false_outside_fact_is_false) :-
+    key_state([attribute(federal_council_adequacy_listing_covers_disclosure, attested(false, attestation(by, at, reason, none)))], federal_council_adequacy_listing_covers_disclosure, false).
+test(a_key_state_has_one_solution) :-
+    findall(State, key_state([attribute(commissioner_requested_information_on_disclosure, true)], commissioner_requested_information_on_disclosure, State), States),
+    States == [true].
+test(pairs_follow_contract_order_and_name_the_referred_fact) :-
+    inputs_relied_on_pairs([attribute(enforceable_rights_and_effective_remedies_available, unsure), attribute(appropriate_safeguards_provided, true)], [commission_adequacy_decision_covers_transfer, appropriate_safeguards_provided, enforceable_rights_and_effective_remedies_available], commission_adequacy_decision_covers_transfer, Pairs),
+    Pairs == [commission_adequacy_decision_covers_transfer-absent, appropriate_safeguards_provided-true, enforceable_rights_and_effective_remedies_available-unsure].
+test(a_present_outside_fact_is_not_a_pair) :-
+    inputs_relied_on_pairs([attribute(commission_adequacy_decision_covers_transfer, attested(false, attestation(by, at, reason, none))), attribute(appropriate_safeguards_provided, unsure)], [commission_adequacy_decision_covers_transfer, appropriate_safeguards_provided, enforceable_rights_and_effective_remedies_available], none, Pairs),
+    Pairs == [appropriate_safeguards_provided-unsure].
+test(an_unread_key_is_not_a_pair) :-
+    inputs_relied_on_pairs([attribute(data_subject_explicitly_consented, true)], [appropriate_safeguards_provided], none, Pairs),
+    Pairs == [].
+test(a_well_formed_profile_has_no_problem) :-
+    swiss_fadp_s1_international_transfers_input_problems([attribute(data_subject_explicitly_consented, unsure), attribute(commission_adequacy_decision_covers_transfer, attested(true, attestation(by, at, reason, none)))], []).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    swiss_fadp_s1_international_transfers_input_problems([attribute(stray_key, true), attribute(commissioner_requested_information_on_disclosure, unsure), attribute(international_treaty_ensures_suitable_protection, true), attribute(international_treaty_ensures_suitable_protection, true)], Problems),
+    Problems == [duplicate_key(international_treaty_ensures_suitable_protection), wrong_type(commissioner_requested_information_on_disclosure), unknown_key(stray_key)].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    swiss_fadp_s1_international_transfers_input_problems(_, [wrong_type(profile)]).
+test(a_bare_outside_fact_value_is_wrong_type) :-
+    swiss_fadp_s1_international_transfers_input_problems([attribute(federal_council_adequacy_listing_covers_disclosure, true)], [wrong_type(federal_council_adequacy_listing_covers_disclosure)]).
+
+:- end_module(kernel).

@@ -1,0 +1,684 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_subject_access_requests_uk_subject_access_requests, [decide_uk_subject_access_requests/2, uk_subject_access_requests_status/2, uk_subject_access_requests_checklist/2, uk_subject_access_requests_decision_resolvable/1, uk_subject_access_requests_status_values/1, uk_access_entitlement/3, uk_applicable_time_period/3, uk_clock_stop/3, uk_time_rules_regime/3, uk_relevant_time/5, uk_paused_days/4, uk_response_deadline/5, compare_uk_eu_response_deadline/6, item_due/0, item_not_within_article_15_1/0, item_beyond_reasonable_and_proportionate_search/0, one_month/0, three_months/0, clock_stop_applies/0, clock_stop_does_not_apply/0, article_12a_time_rules/0, earlier_time_limits_saved/0, not_yet_started/0, uk_earlier/0, same/0, uk_later/0, not_comparable/0, item_described_in_article_15_1/0, item_within_reasonable_and_proportionate_search/0, extension_notice_given/0, extension_notice_given_before_end_of_first_month/0, extension_notice_states_reasons/0, extension_necessary_for_complexity_or_number/0, request_made_under_article_15/0, controller_asked_for_further_information/0, further_information_reasonably_required/0, not_requested/0, requested_not_received/0, no_fee/0, fee_not_paid/0, unsure/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__uk_uk_subject_access_requests_kernel, [uk_subject_access_requests_input_problems/2]).
+:- use_module(m__uk_uk_subject_access_requests_citations, [implements/1]).
+
+item_due.
+
+item_not_within_article_15_1.
+
+item_beyond_reasonable_and_proportionate_search.
+
+one_month.
+
+three_months.
+
+clock_stop_applies.
+
+clock_stop_does_not_apply.
+
+article_12a_time_rules.
+
+earlier_time_limits_saved.
+
+not_yet_started.
+
+uk_earlier.
+
+same.
+
+uk_later.
+
+not_comparable.
+
+item_described_in_article_15_1.
+
+item_within_reasonable_and_proportionate_search.
+
+extension_notice_given.
+
+extension_notice_given_before_end_of_first_month.
+
+extension_notice_states_reasons.
+
+extension_necessary_for_complexity_or_number.
+
+request_made_under_article_15.
+
+controller_asked_for_further_information.
+
+further_information_reasonably_required.
+
+not_requested.
+
+requested_not_received.
+
+no_fee.
+
+fee_not_paid.
+
+unsure.
+
+uk_subject_access_requests_status_values([item_due, item_not_within_article_15_1, item_beyond_reasonable_and_proportionate_search]).
+
+section_76_commencement_date(date(2026, 2, 5), cite(uk_si_2026_82_reg_2_h)).
+
+uk_response_period_months(one_month, 1, cite(uk_gdpr_art_12a_1)).
+uk_response_period_months(three_months, 3, cite(uk_gdpr_art_12a_3)).
+
+eu_response_period_months(one_month, 1, cite(eu_reg_2016_679_art_12_3)).
+eu_response_period_months(three_months, 3, cite(eu_reg_2016_679_art_12_3)).
+
+weekend_shift(0, 1, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(1, 0, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(2, 0, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(3, 0, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(4, 0, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(5, 0, cite(eu_reg_1971_1182_art_3_4)).
+weekend_shift(6, 2, cite(eu_reg_1971_1182_art_3_4)).
+
+checklist_requirement(item_described_in_article_15_1, cite(uk_gdpr_art_15_1)).
+checklist_requirement(item_within_reasonable_and_proportionate_search, cite(uk_gdpr_art_15_1a)).
+checklist_requirement(extension_notice_given, cite(uk_gdpr_art_12a_3)).
+checklist_requirement(extension_notice_given_before_end_of_first_month, cite(uk_gdpr_art_12a_4_a)).
+checklist_requirement(extension_notice_states_reasons, cite(uk_gdpr_art_12a_4_b)).
+checklist_requirement(extension_necessary_for_complexity_or_number, cite(uk_gdpr_art_12a_3)).
+checklist_requirement(request_made_under_article_15, cite(uk_gdpr_art_12a_5)).
+checklist_requirement(controller_asked_for_further_information, cite(uk_gdpr_art_12a_5_a)).
+checklist_requirement(further_information_reasonably_required, cite(uk_gdpr_art_12a_5)).
+
+input_year_range(1900, 2199).
+
+month_days(1, 31).
+month_days(3, 31).
+month_days(4, 30).
+month_days(5, 31).
+month_days(6, 30).
+month_days(7, 31).
+month_days(8, 31).
+month_days(9, 30).
+month_days(10, 31).
+month_days(11, 30).
+month_days(12, 31).
+
+month_length(_YearNumber, MonthNumber, MonthLength) :-
+    month_days(MonthNumber, MonthLength).
+month_length(YearNumber, 2, MonthLength) :-
+    gregorian_leap_year_t(YearNumber, IsLeapYear),
+    february_length(IsLeapYear, MonthLength).
+
+february_length(true, 29).
+february_length(false, 28).
+
+gregorian_leap_year_t(YearNumber, false) :-
+    YearNumber mod 4 #> 0.
+gregorian_leap_year_t(YearNumber, true) :-
+    YearNumber mod 4 #= 0,
+    YearNumber mod 100 #> 0.
+gregorian_leap_year_t(YearNumber, false) :-
+    YearNumber mod 100 #= 0,
+    YearNumber mod 400 #> 0.
+gregorian_leap_year_t(YearNumber, true) :-
+    YearNumber mod 400 #= 0.
+
+civil_day_number(date(YearNumber, MonthNumber, DayOfMonth), DayNumber) :-
+    ShiftedYear #= YearNumber - (14 - MonthNumber) // 12,
+    EraNumber #= ShiftedYear // 400,
+    YearOfEra #= ShiftedYear - EraNumber * 400,
+    MarchMonthIndex #= (MonthNumber + 9) mod 12,
+    DayOfYear #= (153 * MarchMonthIndex + 2) // 5 + DayOfMonth - 1,
+    DayOfEra #= YearOfEra * 365 + YearOfEra // 4 - YearOfEra // 100 + DayOfYear,
+    DayNumber #= EraNumber * 146097 + DayOfEra.
+
+date_from_day_number(DayNumber, date(YearNumber, MonthNumber, DayOfMonth)) :-
+    EraNumber #= DayNumber // 146097,
+    DayOfEra #= DayNumber - EraNumber * 146097,
+    YearOfEra #= (DayOfEra - DayOfEra // 1460 + DayOfEra // 36524 - DayOfEra // 146096) // 365,
+    ShiftedYear #= YearOfEra + EraNumber * 400,
+    DayOfYear #= DayOfEra - (365 * YearOfEra + YearOfEra // 4 - YearOfEra // 100),
+    MarchMonthIndex #= (5 * DayOfYear + 2) // 153,
+    DayOfMonth #= DayOfYear - (153 * MarchMonthIndex + 2) // 5 + 1,
+    MonthNumber #= (MarchMonthIndex + 2) mod 12 + 1,
+    YearNumber #= ShiftedYear + (14 - MonthNumber) // 12.
+
+weekday_number(DayNumber, Weekday) :-
+    Weekday #= (DayNumber + 3) mod 7.
+
+target_month(date(YearNumber, MonthNumber, _DayOfMonth), PeriodMonths, TargetYear, TargetMonth, MonthLength) :-
+    TotalMonths #= YearNumber * 12 + MonthNumber - 1 + PeriodMonths,
+    TargetYear #= TotalMonths // 12,
+    TargetMonth #= TotalMonths mod 12 + 1,
+    month_length(TargetYear, TargetMonth, MonthLength).
+
+argument_t(Checker, Term, Truth) :-
+    findall(valid, call(Checker, Term), Checks),
+    checks_truth(Checks, Truth).
+
+checks_truth([], false).
+checks_truth([_Check|_Checks], true).
+
+valid_input_date(Term) :-
+    nonvar(Term),
+    Term = date(YearNumber, MonthNumber, DayOfMonth),
+    integer(YearNumber),
+    integer(MonthNumber),
+    integer(DayOfMonth),
+    input_year_range(LowestYear, HighestYear),
+    YearNumber #>= LowestYear,
+    YearNumber #=< HighestYear,
+    MonthNumber #>= 1,
+    MonthNumber #< 13,
+    month_length(YearNumber, MonthNumber, MonthLength),
+    DayOfMonth #>= 1,
+    DayOfMonth #=< MonthLength.
+
+identity_argument(Term) :-
+    valid_input_date(Term).
+identity_argument(Term) :-
+    Term == not_requested.
+identity_argument(Term) :-
+    Term == requested_not_received.
+
+fee_argument(Term) :-
+    valid_input_date(Term).
+fee_argument(Term) :-
+    Term == no_fee.
+fee_argument(Term) :-
+    Term == fee_not_paid.
+
+response_period_argument(Term) :-
+    Term == one_month.
+response_period_argument(Term) :-
+    Term == three_months.
+
+paused_days_argument(Term) :-
+    integer(Term),
+    Term #>= 0.
+
+argument_problems([], []).
+argument_problems([true - _ArgumentName|Remaining], Problems) :-
+    argument_problems(Remaining, Problems).
+argument_problems([false - ArgumentName|Remaining], [wrong_type(ArgumentName)|Problems]) :-
+    argument_problems(Remaining, Problems).
+
+truth_or(true, _Other, true).
+truth_or(false, Other, Other).
+
+key_reading(Profile, Key, Value) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+key_reading(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+uk_access_entitlement(Profile, Result, Citations) :-
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    access_entitlement_answer(Problems, Profile, Result, Citations).
+
+access_entitlement_answer([Problem|Problems], _Profile, input_problems([Problem|Problems]), []).
+access_entitlement_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, item_described_in_article_15_1, Described),
+    key_reading(Profile, item_within_reasonable_and_proportionate_search, Search),
+    access_route(Described, Search, Result, Citations).
+
+access_route(false, _Search, item_not_within_article_15_1, [cite(uk_gdpr_art_15_1)]) :-
+    implements(uk_gdpr_art_15_1).
+access_route(absent, _Search, indeterminate([item_described_in_article_15_1]), []).
+access_route(true, false, item_beyond_reasonable_and_proportionate_search, [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)]) :-
+    implements(uk_gdpr_art_15_1a),
+    search_limit_as_it_now_stands.
+access_route(true, absent, indeterminate([item_within_reasonable_and_proportionate_search]), []).
+access_route(true, unsure, needs_legal_review(open_textured(item_within_reasonable_and_proportionate_search, cite(uk_gdpr_art_15_1a)), [inputs_relied_on([item_described_in_article_15_1 - true, item_within_reasonable_and_proportionate_search - unsure])]), []) :-
+    implements(uk_gdpr_art_15_1a).
+access_route(true, true, item_due, [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)]) :-
+    implements(uk_gdpr_art_15_1a),
+    search_limit_as_it_now_stands.
+
+search_limit_as_it_now_stands :-
+    implements(uk_data_use_and_access_act_2025_section_142_2_b),
+    implements(uk_data_use_and_access_act_2025_section_78_5).
+
+uk_applicable_time_period(Profile, Period, Citations) :-
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    applicable_time_period_answer(Problems, Profile, Period, Citations).
+
+applicable_time_period_answer([Problem|Problems], _Profile, input_problems([Problem|Problems]), []).
+applicable_time_period_answer([], Profile, Period, Citations) :-
+    key_reading(Profile, extension_notice_given, Given),
+    key_reading(Profile, extension_notice_given_before_end_of_first_month, InTime),
+    key_reading(Profile, extension_notice_states_reasons, Reasons),
+    key_reading(Profile, extension_necessary_for_complexity_or_number, Necessity),
+    period_route([Given, InTime, Reasons, Necessity], Period, Citations).
+
+period_route(Readings, one_month, [cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_3), cite(uk_gdpr_art_12a_4)]) :-
+    implements(uk_gdpr_art_12a_4),
+    memberd_t(false, Readings, true).
+period_route([Given, InTime, Reasons, Necessity], Period, Citations) :-
+    memberd_t(false, [Given, InTime, Reasons, Necessity], false),
+    period_open_route(Given, InTime, Reasons, Necessity, Period, Citations).
+
+period_open_route(absent, _InTime, _Reasons, _Necessity, indeterminate([extension_notice_given]), []).
+period_open_route(true, absent, _Reasons, _Necessity, indeterminate([extension_notice_given_before_end_of_first_month]), []).
+period_open_route(true, true, absent, _Necessity, indeterminate([extension_notice_states_reasons]), []).
+period_open_route(true, true, true, absent, indeterminate([extension_necessary_for_complexity_or_number]), []).
+period_open_route(true, true, true, unsure, needs_legal_review(open_textured(extension_necessary_for_complexity_or_number, cite(uk_gdpr_art_12a_3)), [inputs_relied_on([extension_notice_given - true, extension_notice_given_before_end_of_first_month - true, extension_notice_states_reasons - true, extension_necessary_for_complexity_or_number - unsure])]), []) :-
+    implements(uk_gdpr_art_12a_3).
+period_open_route(true, true, true, true, three_months, [cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_3), cite(uk_gdpr_art_12a_3_a), cite(uk_gdpr_art_12a_3_b), cite(uk_gdpr_art_12a_4), cite(uk_gdpr_art_12a_4_a), cite(uk_gdpr_art_12a_4_b)]) :-
+    implements(uk_gdpr_art_12a_3).
+
+uk_clock_stop(Profile, Result, Citations) :-
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    clock_stop_answer(Problems, Profile, Result, Citations).
+
+clock_stop_answer([Problem|Problems], _Profile, input_problems([Problem|Problems]), []).
+clock_stop_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, request_made_under_article_15, AccessRequest),
+    key_reading(Profile, controller_asked_for_further_information, Asked),
+    key_reading(Profile, further_information_reasonably_required, Required),
+    clock_stop_route([AccessRequest, Asked, Required], Result, Citations).
+
+clock_stop_route(Readings, clock_stop_does_not_apply, [cite(uk_gdpr_art_12a_5)]) :-
+    implements(uk_gdpr_art_12a_5),
+    memberd_t(false, Readings, true).
+clock_stop_route([AccessRequest, Asked, Required], Result, Citations) :-
+    memberd_t(false, [AccessRequest, Asked, Required], false),
+    clock_stop_open_route(AccessRequest, Asked, Required, Result, Citations).
+
+clock_stop_open_route(absent, _Asked, _Required, indeterminate([request_made_under_article_15]), []).
+clock_stop_open_route(true, absent, _Required, indeterminate([controller_asked_for_further_information]), []).
+clock_stop_open_route(true, true, absent, indeterminate([further_information_reasonably_required]), []).
+clock_stop_open_route(true, true, unsure, needs_legal_review(open_textured(further_information_reasonably_required, cite(uk_gdpr_art_12a_5)), [inputs_relied_on([request_made_under_article_15 - true, controller_asked_for_further_information - true, further_information_reasonably_required - unsure])]), []) :-
+    implements(uk_gdpr_art_12a_5).
+clock_stop_open_route(true, true, true, clock_stop_applies, [cite(uk_gdpr_art_12a_5), cite(uk_gdpr_art_12a_5_a), cite(uk_gdpr_art_12a_5_b), cite(uk_gdpr_art_12a_5_b_i), cite(uk_gdpr_art_12a_5_b_ii)]) :-
+    implements(uk_gdpr_art_12a_5_b).
+
+uk_time_rules_regime(Receipt, Regime, Citations) :-
+    argument_t(valid_input_date, Receipt, ReceiptValid),
+    time_rules_regime_answer(ReceiptValid, Receipt, Regime, Citations).
+
+time_rules_regime_answer(false, _Receipt, input_problems([wrong_type(receipt_date)]), []).
+time_rules_regime_answer(true, Receipt, Regime, Citations) :-
+    receipt_regime(Receipt, Regime, Citations).
+
+receipt_regime(Receipt, article_12a_time_rules, [cite(uk_si_2026_82_reg_2), cite(uk_si_2026_82_reg_2_h), cite(uk_gdpr_art_12_3), cite(uk_gdpr_art_12_4), cite(uk_gdpr_art_12a_1)]) :-
+    implements(uk_si_2026_82_reg_2_h),
+    section_76_commencement_date(Commencement, cite(uk_si_2026_82_reg_2_h)),
+    civil_day_number(Receipt, ReceiptDayNumber),
+    civil_day_number(Commencement, CommencementDayNumber),
+    ReceiptDayNumber #>= CommencementDayNumber.
+receipt_regime(Receipt, earlier_time_limits_saved, [cite(uk_si_2026_82_reg_4), cite(uk_si_2026_82_reg_4_a)]) :-
+    implements(uk_si_2026_82_reg_4_a),
+    section_76_commencement_date(Commencement, cite(uk_si_2026_82_reg_2_h)),
+    civil_day_number(Receipt, ReceiptDayNumber),
+    civil_day_number(Commencement, CommencementDayNumber),
+    ReceiptDayNumber #< CommencementDayNumber.
+
+uk_relevant_time(Receipt, Identity, FeeArgument, Relevant, Citations) :-
+    argument_t(valid_input_date, Receipt, ReceiptValid),
+    argument_t(identity_argument, Identity, IdentityValid),
+    argument_t(fee_argument, FeeArgument, FeeValid),
+    argument_problems([ReceiptValid - receipt_date, IdentityValid - identity_information, FeeValid - fee], Problems),
+    relevant_time_answer(Problems, Receipt, Identity, FeeArgument, Relevant, Citations).
+
+relevant_time_answer([Problem|Problems], _Receipt, _Identity, _FeeArgument, input_problems([Problem|Problems]), []).
+relevant_time_answer([], Receipt, Identity, FeeArgument, Relevant, Citations) :-
+    identity_outstanding_t(Identity, IdentityOutstanding),
+    fee_outstanding_t(FeeArgument, FeeOutstanding),
+    truth_or(IdentityOutstanding, FeeOutstanding, Outstanding),
+    relevant_time_route(Outstanding, Receipt, Identity, FeeArgument, Relevant, Citations).
+
+identity_outstanding_t(requested_not_received, true).
+identity_outstanding_t(not_requested, false).
+identity_outstanding_t(date(_YearNumber, _MonthNumber, _DayOfMonth), false).
+
+fee_outstanding_t(fee_not_paid, true).
+fee_outstanding_t(no_fee, false).
+fee_outstanding_t(date(_YearNumber, _MonthNumber, _DayOfMonth), false).
+
+relevant_time_route(true, _Receipt, _Identity, _FeeArgument, not_yet_started, [cite(uk_gdpr_art_12a_2), cite(uk_gdpr_art_12a_2_a), cite(uk_gdpr_art_12a_2_b), cite(uk_gdpr_art_12a_2_c)]) :-
+    implements(uk_gdpr_art_12a_2).
+relevant_time_route(false, Receipt, Identity, FeeArgument, Relevant, [cite(uk_gdpr_art_12a_2), cite(uk_gdpr_art_12a_2_a), cite(uk_gdpr_art_12a_2_b), cite(uk_gdpr_art_12a_2_c)]) :-
+    implements(uk_gdpr_art_12a_2),
+    identity_dates(Identity, IdentityDates),
+    fee_dates(FeeArgument, FeeDates),
+    append([[Receipt], IdentityDates, FeeDates], CandidateDates),
+    latest_date(CandidateDates, Relevant).
+
+identity_dates(not_requested, []) :-
+    implements(uk_gdpr_art_12a_2_b).
+identity_dates(date(YearNumber, MonthNumber, DayOfMonth), [date(YearNumber, MonthNumber, DayOfMonth)]) :-
+    implements(uk_gdpr_art_12a_2_b),
+    implements(uk_gdpr_art_12_6).
+
+fee_dates(no_fee, []) :-
+    implements(uk_gdpr_art_12a_2_c).
+fee_dates(date(YearNumber, MonthNumber, DayOfMonth), [date(YearNumber, MonthNumber, DayOfMonth)]) :-
+    implements(uk_gdpr_art_12a_2_c),
+    implements(uk_gdpr_art_12_5).
+
+latest_date(CandidateDates, Latest) :-
+    implements(uk_gdpr_art_12a_2),
+    maplist(keyed_by_day_number, CandidateDates, KeyedDates),
+    keysort(KeyedDates, SortedDates),
+    last(SortedDates, _LatestDayNumber - Latest).
+
+keyed_by_day_number(Date, DayNumber - Date) :-
+    civil_day_number(Date, DayNumber).
+
+uk_paused_days(RequestDate, ReceivedDate, DayCount, Citations) :-
+    argument_t(valid_input_date, RequestDate, RequestValid),
+    argument_t(valid_input_date, ReceivedDate, ReceivedIsDate),
+    received_argument_t(RequestValid, ReceivedIsDate, RequestDate, ReceivedDate, ReceivedValid),
+    argument_problems([RequestValid - request_for_information_date, ReceivedValid - information_received_date], Problems),
+    paused_days_answer(Problems, RequestDate, ReceivedDate, DayCount, Citations).
+
+received_argument_t(_RequestValid, false, _RequestDate, _ReceivedDate, false).
+received_argument_t(false, true, _RequestDate, _ReceivedDate, true).
+received_argument_t(true, true, RequestDate, ReceivedDate, Truth) :-
+    civil_day_number(RequestDate, RequestDayNumber),
+    civil_day_number(ReceivedDate, ReceivedDayNumber),
+    received_order_t(RequestDayNumber, ReceivedDayNumber, Truth).
+
+received_order_t(RequestDayNumber, ReceivedDayNumber, true) :-
+    ReceivedDayNumber #>= RequestDayNumber.
+received_order_t(RequestDayNumber, ReceivedDayNumber, false) :-
+    ReceivedDayNumber #< RequestDayNumber.
+
+paused_days_answer([Problem|Problems], _RequestDate, _ReceivedDate, input_problems([Problem|Problems]), []).
+paused_days_answer([], RequestDate, ReceivedDate, DayCount, [cite(uk_gdpr_art_12a_5_b)]) :-
+    implements(uk_gdpr_art_12a_5_b),
+    civil_day_number(RequestDate, RequestDayNumber),
+    civil_day_number(ReceivedDate, ReceivedDayNumber),
+    DayCount #= ReceivedDayNumber - RequestDayNumber + 1.
+
+uk_response_deadline(Relevant, Period, PausedDays, Deadline, Citations) :-
+    argument_t(valid_input_date, Relevant, RelevantValid),
+    argument_t(response_period_argument, Period, PeriodValid),
+    argument_t(paused_days_argument, PausedDays, PausedValid),
+    argument_problems([RelevantValid - relevant_time_date, PeriodValid - response_period, PausedValid - paused_days], Problems),
+    response_deadline_answer(Problems, Relevant, Period, PausedDays, Deadline, Citations).
+
+response_deadline_answer([Problem|Problems], _Relevant, _Period, _PausedDays, input_problems([Problem|Problems]), []).
+response_deadline_answer([], Relevant, Period, PausedDays, Deadline, Citations) :-
+    implements(uk_gdpr_art_12_3),
+    uk_response_period_months(Period, PeriodMonths, _PeriodCitation),
+    uk_period_end_day_number(Relevant, PeriodMonths, EndDayNumber),
+    paused_deadline_day_number(EndDayNumber, PausedDays, DeadlineDayNumber),
+    date_from_day_number(DeadlineDayNumber, Deadline),
+    period_citations(Period, PeriodCitations),
+    paused_citations(PausedDays, PausedCitations),
+    append([[cite(uk_gdpr_art_12_3), cite(uk_gdpr_art_12_4), cite(uk_gdpr_art_12a_1)], PeriodCitations, PausedCitations], Citations).
+
+uk_period_end_day_number(Relevant, PeriodMonths, EndDayNumber) :-
+    implements(uk_gdpr_art_12a_1),
+    Relevant = date(_YearNumber, _MonthNumber, DayOfMonth),
+    target_month(Relevant, PeriodMonths, TargetYear, TargetMonth, MonthLength),
+    uk_end_in_target_month(DayOfMonth, MonthLength, TargetYear, TargetMonth, EndDayNumber).
+
+uk_end_in_target_month(DayOfMonth, MonthLength, TargetYear, TargetMonth, EndDayNumber) :-
+    implements(uk_gdpr_art_12a_1),
+    DayOfMonth #=< MonthLength,
+    civil_day_number(date(TargetYear, TargetMonth, DayOfMonth), SameDayNumber),
+    EndDayNumber #= SameDayNumber - 1.
+uk_end_in_target_month(DayOfMonth, MonthLength, TargetYear, TargetMonth, EndDayNumber) :-
+    implements(uk_gdpr_art_12a_1),
+    DayOfMonth #> MonthLength,
+    civil_day_number(date(TargetYear, TargetMonth, MonthLength), EndDayNumber).
+
+paused_deadline_day_number(EndDayNumber, PausedDays, DeadlineDayNumber) :-
+    implements(uk_gdpr_art_12a_5_b_i),
+    DeadlineDayNumber #= EndDayNumber + PausedDays.
+
+period_citations(one_month, []).
+period_citations(three_months, [cite(uk_gdpr_art_12a_3)]).
+
+paused_citations(PausedDays, []) :-
+    PausedDays #= 0.
+paused_citations(PausedDays, [cite(uk_gdpr_art_12a_5_b)]) :-
+    PausedDays #> 0.
+
+compare_uk_eu_response_deadline(Receipt, Period, UkDeadline, EuDeadline, Difference, Citations) :-
+    argument_t(valid_input_date, Receipt, ReceiptValid),
+    argument_t(response_period_argument, Period, PeriodValid),
+    argument_problems([ReceiptValid - receipt_date, PeriodValid - response_period], Problems),
+    compare_answer(Problems, Receipt, Period, UkDeadline, EuDeadline, Difference, Citations).
+
+compare_answer([Problem|Problems], _Receipt, _Period, input_problems([Problem|Problems]), input_problems([Problem|Problems]), not_comparable, []).
+compare_answer([], Receipt, Period, UkDeadline, EuDeadline, Difference, Citations) :-
+    eu_response_deadline(Receipt, Period, EuDeadline),
+    receipt_regime(Receipt, Regime, _RegimeCitations),
+    compare_by_regime(Regime, Receipt, Period, EuDeadline, UkDeadline, Difference, Citations).
+
+compare_by_regime(earlier_time_limits_saved, _Receipt, _Period, _EuDeadline, earlier_time_limits_saved, not_comparable, [cite(uk_si_2026_82_reg_4), cite(uk_si_2026_82_reg_4_a), cite(eu_reg_2016_679_art_12_3), cite(eu_reg_1971_1182_art_3_1), cite(eu_reg_1971_1182_art_3_2_c), cite(eu_reg_1971_1182_art_3_4)]) :-
+    implements(uk_si_2026_82_reg_4_a).
+compare_by_regime(article_12a_time_rules, Receipt, Period, EuDeadline, UkDeadline, Difference, Citations) :-
+    implements(uk_gdpr_art_12a_1),
+    uk_response_deadline(Receipt, Period, 0, UkDeadline, _UkCitations),
+    deadline_difference(UkDeadline, EuDeadline, Difference),
+    period_citations(Period, PeriodCitations),
+    append([cite(uk_gdpr_art_12a_1), cite(eu_reg_2016_679_art_12_3), cite(eu_reg_1971_1182_art_3_1), cite(eu_reg_1971_1182_art_3_2_c), cite(eu_reg_1971_1182_art_3_4)], PeriodCitations, Citations).
+
+deadline_difference(UkDeadline, EuDeadline, Difference) :-
+    civil_day_number(UkDeadline, UkDayNumber),
+    civil_day_number(EuDeadline, EuDayNumber),
+    day_number_difference(UkDayNumber, EuDayNumber, Difference).
+
+day_number_difference(UkDayNumber, EuDayNumber, uk_earlier) :-
+    UkDayNumber #< EuDayNumber.
+day_number_difference(UkDayNumber, EuDayNumber, same) :-
+    UkDayNumber #= EuDayNumber.
+day_number_difference(UkDayNumber, EuDayNumber, uk_later) :-
+    UkDayNumber #> EuDayNumber.
+
+eu_response_deadline(Receipt, Period, EuDeadline) :-
+    implements(eu_reg_1971_1182_art_3_1),
+    eu_response_period_months(Period, PeriodMonths, _PeriodCitation),
+    Receipt = date(_YearNumber, _MonthNumber, DayOfMonth),
+    target_month(Receipt, PeriodMonths, TargetYear, TargetMonth, MonthLength),
+    eu_last_day_in_target_month(DayOfMonth, MonthLength, TargetDay),
+    civil_day_number(date(TargetYear, TargetMonth, TargetDay), UnshiftedDayNumber),
+    eu_weekend_shifted(UnshiftedDayNumber, ShiftedDayNumber),
+    date_from_day_number(ShiftedDayNumber, EuDeadline).
+
+eu_last_day_in_target_month(DayOfMonth, MonthLength, DayOfMonth) :-
+    implements(eu_reg_1971_1182_art_3_2_c),
+    DayOfMonth #=< MonthLength.
+eu_last_day_in_target_month(DayOfMonth, MonthLength, MonthLength) :-
+    implements(eu_reg_1971_1182_art_3_2_c),
+    DayOfMonth #> MonthLength.
+
+eu_weekend_shifted(UnshiftedDayNumber, ShiftedDayNumber) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    weekday_number(UnshiftedDayNumber, Weekday),
+    weekend_shift(Weekday, ShiftDays, cite(eu_reg_1971_1182_art_3_4)),
+    ShiftedDayNumber #= UnshiftedDayNumber + ShiftDays.
+
+decide_uk_subject_access_requests(Profile, uk_subject_access_requests_verdict(Status, Citations)) :-
+    uk_access_entitlement(Profile, Status, Citations).
+
+uk_subject_access_requests_status(Profile, Status) :-
+    decide_uk_subject_access_requests(Profile, uk_subject_access_requests_verdict(Status, _Citations)).
+
+uk_subject_access_requests_checklist(Profile, Items) :-
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    checklist_items(Problems, Profile, Items).
+
+checklist_items([Problem|Problems], _Profile, [item(input_check, input_problems([Problem|Problems]), [])]).
+checklist_items([], Profile, Items) :-
+    findall(Key - Citation, checklist_requirement(Key, Citation), Requirements),
+    maplist(checklist_item(Profile), Requirements, Items).
+
+checklist_item(Profile, Key - Citation, item(Key, Status, Citation)) :-
+    key_reading(Profile, Key, Reading),
+    reading_status(Reading, Key, Status).
+
+reading_status(true, _Key, met).
+reading_status(false, Key, unmet(Key)).
+reading_status(absent, Key, unknown([Key])).
+reading_status(unsure, Key, unknown([Key])).
+
+uk_subject_access_requests_decision_resolvable(Profile) :-
+    decide_uk_subject_access_requests(Profile, _Verdict).
+
+test(weekday_of_5_february_2026_is_thursday) :-
+    civil_day_number(date(2026, 2, 5), DayNumber),
+    weekday_number(DayNumber, 4).
+test(weekday_of_28_february_2027_is_sunday) :-
+    civil_day_number(date(2027, 2, 28), DayNumber),
+    weekday_number(DayNumber, 0).
+test(day_number_round_trip) :-
+    civil_day_number(date(2028, 2, 29), DayNumber),
+    date_from_day_number(DayNumber, Date),
+    Date == date(2028, 2, 29).
+test(year_2100_is_not_leap) :-
+    gregorian_leap_year_t(2100, false).
+test(year_2000_is_leap) :-
+    gregorian_leap_year_t(2000, true).
+test(access_item_due) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, true)], item_due, Citations),
+    sort(Citations, [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)]).
+test(access_not_described_whatever_the_search) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, false), attribute(item_within_reasonable_and_proportionate_search, unsure)], item_not_within_article_15_1, [cite(uk_gdpr_art_15_1)]).
+test(access_beyond_search) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, false)], item_beyond_reasonable_and_proportionate_search, _Citations).
+test(access_coverage_named_first) :-
+    uk_access_entitlement([], indeterminate([item_described_in_article_15_1]), []).
+test(access_search_missing) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, true)], indeterminate([item_within_reasonable_and_proportionate_search]), []).
+test(access_unsure_goes_to_lawyer) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, unsure)], needs_legal_review(open_textured(item_within_reasonable_and_proportionate_search, cite(uk_gdpr_art_15_1a)), [inputs_relied_on([item_described_in_article_15_1 - true, item_within_reasonable_and_proportionate_search - unsure])]), []).
+test(access_unread_key_changes_nothing) :-
+    uk_access_entitlement([attribute(extension_notice_given, false), attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, true)], item_due, _Citations).
+test(access_one_solution) :-
+    findall(Result - Citations, uk_access_entitlement([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, true)], Result, Citations), Answers),
+    length(Answers, 1).
+test(access_wrong_type_first) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, unsure)], input_problems([wrong_type(item_described_in_article_15_1)]), []).
+test(access_duplicate_key) :-
+    uk_access_entitlement([attribute(extension_notice_given, true), attribute(extension_notice_given, true)], input_problems([duplicate_key(extension_notice_given)]), []).
+test(period_one_month_without_notice) :-
+    uk_applicable_time_period([attribute(extension_notice_given, false)], one_month, Citations),
+    sort(Citations, [cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_3), cite(uk_gdpr_art_12a_4)]).
+test(period_false_condition_decides_before_absent_notice) :-
+    uk_applicable_time_period([attribute(extension_necessary_for_complexity_or_number, false)], one_month, _Citations).
+test(period_notice_named_missing) :-
+    uk_applicable_time_period([], indeterminate([extension_notice_given]), []).
+test(period_reasons_named_missing) :-
+    uk_applicable_time_period([attribute(extension_notice_given, true), attribute(extension_notice_given_before_end_of_first_month, true), attribute(extension_necessary_for_complexity_or_number, unsure)], indeterminate([extension_notice_states_reasons]), []).
+test(period_necessity_unsure_goes_to_lawyer) :-
+    uk_applicable_time_period([attribute(extension_notice_given, true), attribute(extension_notice_given_before_end_of_first_month, true), attribute(extension_notice_states_reasons, true), attribute(extension_necessary_for_complexity_or_number, unsure)], needs_legal_review(open_textured(extension_necessary_for_complexity_or_number, cite(uk_gdpr_art_12a_3)), [inputs_relied_on([extension_notice_given - true, extension_notice_given_before_end_of_first_month - true, extension_notice_states_reasons - true, extension_necessary_for_complexity_or_number - unsure])]), []).
+test(period_three_months) :-
+    uk_applicable_time_period([attribute(extension_notice_given, true), attribute(extension_notice_given_before_end_of_first_month, true), attribute(extension_notice_states_reasons, true), attribute(extension_necessary_for_complexity_or_number, true)], three_months, Citations),
+    length(Citations, 7).
+test(period_late_notice_is_one_month) :-
+    findall(Period, uk_applicable_time_period([attribute(extension_notice_given, true), attribute(extension_notice_given_before_end_of_first_month, false), attribute(extension_notice_states_reasons, false)], Period, _Citations), Periods),
+    Periods == [one_month].
+test(clock_stop_applies) :-
+    uk_clock_stop([attribute(request_made_under_article_15, true), attribute(controller_asked_for_further_information, true), attribute(further_information_reasonably_required, true)], clock_stop_applies, Citations),
+    length(Citations, 5).
+test(clock_stop_does_not_apply_when_any_false) :-
+    uk_clock_stop([attribute(controller_asked_for_further_information, false)], clock_stop_does_not_apply, [cite(uk_gdpr_art_12a_5)]).
+test(clock_stop_first_missing_key) :-
+    uk_clock_stop([attribute(further_information_reasonably_required, unsure)], indeterminate([request_made_under_article_15]), []).
+test(clock_stop_unsure_goes_to_lawyer) :-
+    uk_clock_stop([attribute(request_made_under_article_15, true), attribute(controller_asked_for_further_information, true), attribute(further_information_reasonably_required, unsure)], needs_legal_review(open_textured(further_information_reasonably_required, cite(uk_gdpr_art_12a_5)), [inputs_relied_on([request_made_under_article_15 - true, controller_asked_for_further_information - true, further_information_reasonably_required - unsure])]), []).
+test(regime_on_commencement_day) :-
+    uk_time_rules_regime(date(2026, 2, 5), article_12a_time_rules, _Citations).
+test(regime_day_before_is_saved) :-
+    uk_time_rules_regime(date(2026, 2, 4), earlier_time_limits_saved, [cite(uk_si_2026_82_reg_4), cite(uk_si_2026_82_reg_4_a)]).
+test(regime_impossible_date) :-
+    uk_time_rules_regime(date(2026, 2, 30), input_problems([wrong_type(receipt_date)]), []).
+test(regime_non_date_argument) :-
+    uk_time_rules_regime(not_a_date, input_problems([wrong_type(receipt_date)]), []).
+test(regime_year_out_of_range) :-
+    uk_time_rules_regime(date(2200, 1, 1), input_problems([wrong_type(receipt_date)]), []).
+test(relevant_time_latest_day) :-
+    uk_relevant_time(date(2026, 3, 1), date(2026, 3, 10), date(2026, 3, 5), Relevant, _Citations),
+    Relevant == date(2026, 3, 10).
+test(relevant_time_plain_request) :-
+    uk_relevant_time(date(2026, 3, 1), not_requested, no_fee, Relevant, Citations),
+    Relevant == date(2026, 3, 1),
+    length(Citations, 4).
+test(relevant_time_not_yet_started) :-
+    uk_relevant_time(date(2026, 3, 1), not_requested, fee_not_paid, not_yet_started, _Citations).
+test(relevant_time_argument_problems_in_order) :-
+    uk_relevant_time(foo, not_requested, unpaid, input_problems([wrong_type(receipt_date), wrong_type(fee)]), []).
+test(relevant_time_one_solution) :-
+    findall(Relevant, uk_relevant_time(date(2026, 3, 1), date(2026, 3, 1), date(2026, 3, 1), Relevant, _Citations), Answers),
+    Answers == [date(2026, 3, 1)].
+test(paused_same_day_is_one) :-
+    uk_paused_days(date(2026, 3, 1), date(2026, 3, 1), 1, [cite(uk_gdpr_art_12a_5_b)]).
+test(paused_both_days_counted) :-
+    uk_paused_days(date(2026, 3, 1), date(2026, 3, 10), 10, _Citations).
+test(paused_received_before_asked) :-
+    uk_paused_days(date(2026, 3, 10), date(2026, 3, 1), input_problems([wrong_type(information_received_date)]), []).
+test(deadline_5_february_2026) :-
+    uk_response_deadline(date(2026, 2, 5), one_month, 0, Deadline, Citations),
+    Deadline == date(2026, 3, 4),
+    sort(Citations, [cite(uk_gdpr_art_12_3), cite(uk_gdpr_art_12_4), cite(uk_gdpr_art_12a_1)]).
+test(deadline_1_march_2026) :-
+    uk_response_deadline(date(2026, 3, 1), one_month, 0, Deadline, _Citations),
+    Deadline == date(2026, 3, 31).
+test(deadline_31_january_2027) :-
+    uk_response_deadline(date(2027, 1, 31), one_month, 0, Deadline, _Citations),
+    Deadline == date(2027, 2, 28).
+test(deadline_29_january_2028_leap_year) :-
+    uk_response_deadline(date(2028, 1, 29), one_month, 0, Deadline, _Citations),
+    Deadline == date(2028, 2, 28).
+test(deadline_29_january_2027) :-
+    uk_response_deadline(date(2027, 1, 29), one_month, 0, Deadline, _Citations),
+    Deadline == date(2027, 2, 28).
+test(deadline_three_months) :-
+    uk_response_deadline(date(2026, 11, 30), three_months, 0, Deadline, Citations),
+    Deadline == date(2027, 2, 28),
+    sort(Citations, [cite(uk_gdpr_art_12_3), cite(uk_gdpr_art_12_4), cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_3)]).
+test(deadline_crosses_year) :-
+    uk_response_deadline(date(2026, 12, 15), one_month, 0, Deadline, _Citations),
+    Deadline == date(2027, 1, 14).
+test(deadline_paused_days_added) :-
+    uk_response_deadline(date(2026, 2, 5), one_month, 3, Deadline, Citations),
+    Deadline == date(2026, 3, 7),
+    sort(Citations, [cite(uk_gdpr_art_12_3), cite(uk_gdpr_art_12_4), cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_5_b)]).
+test(deadline_argument_problems) :-
+    uk_response_deadline(date(2026, 2, 5), two_months, -1, input_problems([wrong_type(response_period), wrong_type(paused_days)]), []).
+test(compare_one_month) :-
+    compare_uk_eu_response_deadline(date(2026, 2, 5), one_month, UkDeadline, EuDeadline, uk_earlier, Citations),
+    UkDeadline == date(2026, 3, 4),
+    EuDeadline == date(2026, 3, 5),
+    length(Citations, 5).
+test(compare_three_months_weekend) :-
+    compare_uk_eu_response_deadline(date(2026, 11, 30), three_months, UkDeadline, EuDeadline, uk_earlier, Citations),
+    UkDeadline == date(2027, 2, 28),
+    EuDeadline == date(2027, 3, 1),
+    length(Citations, 6).
+test(compare_saved_request) :-
+    compare_uk_eu_response_deadline(date(2026, 1, 10), one_month, earlier_time_limits_saved, EuDeadline, not_comparable, Citations),
+    EuDeadline == date(2026, 2, 10),
+    length(Citations, 6).
+test(compare_argument_problems) :-
+    compare_uk_eu_response_deadline(date(2026, 13, 1), one_month, input_problems([wrong_type(receipt_date)]), input_problems([wrong_type(receipt_date)]), not_comparable, []).
+test(compare_one_solution) :-
+    findall(Difference, compare_uk_eu_response_deadline(date(2026, 2, 5), one_month, _UkDeadline, _EuDeadline, Difference, _Citations), Answers),
+    Answers == [uk_earlier].
+test(facade_verdict) :-
+    decide_uk_subject_access_requests([attribute(item_described_in_article_15_1, false)], uk_subject_access_requests_verdict(item_not_within_article_15_1, [cite(uk_gdpr_art_15_1)])).
+test(facade_checklist_rows) :-
+    uk_subject_access_requests_checklist([attribute(item_described_in_article_15_1, true)], Items),
+    length(Items, 9),
+    Items = [item(item_described_in_article_15_1, met, cite(uk_gdpr_art_15_1))|_LaterItems].
+test(facade_checklist_input_problems) :-
+    uk_subject_access_requests_checklist([attribute(unknown_thing, true)], [item(input_check, input_problems([unknown_key(unknown_thing)]), [])]).
+
+test(access_item_due_is_not_beyond, fail) :-
+    uk_access_entitlement([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, true)], item_beyond_reasonable_and_proportionate_search, _Citations).
+test(period_late_notice_is_not_three_months, fail) :-
+    uk_applicable_time_period([attribute(extension_notice_given, true), attribute(extension_notice_given_before_end_of_first_month, false), attribute(extension_notice_states_reasons, true), attribute(extension_necessary_for_complexity_or_number, true)], three_months, _Citations).
+test(regime_day_before_is_not_new_rules, fail) :-
+    uk_time_rules_regime(date(2026, 2, 4), article_12a_time_rules, _Citations).

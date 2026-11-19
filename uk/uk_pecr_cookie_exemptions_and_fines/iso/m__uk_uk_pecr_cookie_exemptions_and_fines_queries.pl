@@ -1,0 +1,206 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__uk_uk_pecr_cookie_exemptions_and_fines_queries, [uk_pecr_cookie_exemptions_and_fines_profile_keys/1, uk_pecr_cookie_exemptions_and_fines_what_if/4, uk_pecr_cookie_exemptions_and_fines_obligations/2, permitted/0, not_permitted/0, not_applicable/0, same/0, differs/0, notification_in_time/0, notification_late_with_reasons/0, notification_out_of_time/0, notification_reasons_for_delay_missing/0, higher_maximum_amount/0, standard_maximum_amount/0, storage_or_access_within_regulation_6/0, clear_and_comprehensive_information_about_the_purpose_provided/0, consent_to_the_storage_or_access_given/0, technical_storage_or_access_solely_for_transmission_of_a_communication/0, information_society_service_requested_by_the_subscriber_or_user/0, storage_or_access_strictly_necessary_for_the_requested_service/0, person_provides_an_information_society_service/0, sole_purpose_is_statistical_information_to_improve_the_service_or_website/0, collected_information_shared_only_to_assist_with_improvements/0, access_does_not_collect_or_monitor_automatically_emitted_information/0, simple_free_means_of_objecting_given/0, subscriber_or_user_has_not_objected/0, person_provides_an_information_society_service_by_means_of_a_website/0, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality/0, communication_received_requests_or_indicates_need_of_emergency_assistance/0, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance/0, storage_or_access_in_terminal_equipment/0, storage_or_access_solely_for_transmission/0, service_explicitly_requested_by_user/0, strictly_necessary_to_provide_requested_service/0, user_consent_given/0, clear_and_comprehensive_information_provided/0, provider_of_a_public_electronic_communications_service/0, personal_data_breach_occurred/0, became_aware_on_or_after_20_august_2025/0, notification_made_without_undue_delay/0, hours_elapsed_at_notification/0, notification_within_72_hours_was_feasible/0, notification_accompanied_by_reasons_for_the_delay/0, act_or_omission_on_or_after_5_february_2026/0, provision_infringed/0, penalised_person_is_an_undertaking/0, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds/0, regulation_5/0, regulation_6/0, regulation_7/0, regulation_8/0, regulation_14/0, regulation_19/0, regulation_20/0, regulation_21/0, regulation_21a/0, regulation_21b/0, regulation_22/0, regulation_23/0, regulation_24/0, regulation_32b_4_or_5/0, commission_notice_not_complied_with/0, section_142_8b_of_the_data_protection_act_2018/0, other_provision_of_the_pec_regulations/0, unsure/0, not_attempted/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_kernel, [uk_pecr_cookie_exemptions_and_fines_input_problems/2]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_citations, [implements/1]).
+:- use_module(m__uk_uk_pecr_cookie_exemptions_and_fines_uk_pecr_cookie_exemptions_and_fines, [uk_pecr_cookie_exemptions_and_fines_status/2, uk_terminal_equipment_storage_or_access/3, uk_breach_notification_timing/3]).
+
+uk_pecr_cookie_exemptions_and_fines_profile_keys([storage_or_access_within_regulation_6, clear_and_comprehensive_information_about_the_purpose_provided, consent_to_the_storage_or_access_given, technical_storage_or_access_solely_for_transmission_of_a_communication, information_society_service_requested_by_the_subscriber_or_user, storage_or_access_strictly_necessary_for_the_requested_service, person_provides_an_information_society_service, sole_purpose_is_statistical_information_to_improve_the_service_or_website, collected_information_shared_only_to_assist_with_improvements, access_does_not_collect_or_monitor_automatically_emitted_information, simple_free_means_of_objecting_given, subscriber_or_user_has_not_objected, person_provides_an_information_society_service_by_means_of_a_website, sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality, communication_received_requests_or_indicates_need_of_emergency_assistance, sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance, storage_or_access_in_terminal_equipment, storage_or_access_solely_for_transmission, service_explicitly_requested_by_user, strictly_necessary_to_provide_requested_service, user_consent_given, clear_and_comprehensive_information_provided, provider_of_a_public_electronic_communications_service, personal_data_breach_occurred, became_aware_on_or_after_20_august_2025, notification_made_without_undue_delay, hours_elapsed_at_notification, notification_within_72_hours_was_feasible, notification_accompanied_by_reasons_for_the_delay, act_or_omission_on_or_after_5_february_2026, provision_infringed, penalised_person_is_an_undertaking, total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds]).
+
+permitted.
+
+not_permitted.
+
+not_applicable.
+
+same.
+
+differs.
+
+notification_in_time.
+
+notification_late_with_reasons.
+
+notification_out_of_time.
+
+notification_reasons_for_delay_missing.
+
+higher_maximum_amount.
+
+standard_maximum_amount.
+
+storage_or_access_within_regulation_6.
+
+clear_and_comprehensive_information_about_the_purpose_provided.
+
+consent_to_the_storage_or_access_given.
+
+technical_storage_or_access_solely_for_transmission_of_a_communication.
+
+information_society_service_requested_by_the_subscriber_or_user.
+
+storage_or_access_strictly_necessary_for_the_requested_service.
+
+person_provides_an_information_society_service.
+
+sole_purpose_is_statistical_information_to_improve_the_service_or_website.
+
+collected_information_shared_only_to_assist_with_improvements.
+
+access_does_not_collect_or_monitor_automatically_emitted_information.
+
+simple_free_means_of_objecting_given.
+
+subscriber_or_user_has_not_objected.
+
+person_provides_an_information_society_service_by_means_of_a_website.
+
+sole_purpose_is_adapting_or_enhancing_website_appearance_or_functionality.
+
+communication_received_requests_or_indicates_need_of_emergency_assistance.
+
+sole_purpose_is_ascertaining_geographical_position_for_emergency_assistance.
+
+storage_or_access_in_terminal_equipment.
+
+storage_or_access_solely_for_transmission.
+
+service_explicitly_requested_by_user.
+
+strictly_necessary_to_provide_requested_service.
+
+user_consent_given.
+
+clear_and_comprehensive_information_provided.
+
+provider_of_a_public_electronic_communications_service.
+
+personal_data_breach_occurred.
+
+became_aware_on_or_after_20_august_2025.
+
+notification_made_without_undue_delay.
+
+hours_elapsed_at_notification.
+
+notification_within_72_hours_was_feasible.
+
+notification_accompanied_by_reasons_for_the_delay.
+
+act_or_omission_on_or_after_5_february_2026.
+
+provision_infringed.
+
+penalised_person_is_an_undertaking.
+
+total_annual_worldwide_turnover_in_preceding_financial_year_in_pounds.
+
+regulation_5.
+
+regulation_6.
+
+regulation_7.
+
+regulation_8.
+
+regulation_14.
+
+regulation_19.
+
+regulation_20.
+
+regulation_21.
+
+regulation_21a.
+
+regulation_21b.
+
+regulation_22.
+
+regulation_23.
+
+regulation_24.
+
+regulation_32b_4_or_5.
+
+commission_notice_not_complied_with.
+
+section_142_8b_of_the_data_protection_act_2018.
+
+other_provision_of_the_pec_regulations.
+
+unsure.
+
+not_attempted.
+
+uk_pecr_cookie_exemptions_and_fines_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    hypothetical_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    uk_pecr_cookie_exemptions_and_fines_status(Hypothesis, NewStatus).
+
+hypothetical_profile([], KeyName, Value, [attribute(KeyName, Value)]).
+hypothetical_profile([attribute(EntryKey, EntryValue)|Entries], KeyName, Value, [attribute(EntryKey, EntryValue)|Hypothesis]) :-
+    EntryKey \== KeyName,
+    hypothetical_profile(Entries, KeyName, Value, Hypothesis).
+hypothetical_profile([attribute(EntryKey, _)|Entries], KeyName, Value, Hypothesis) :-
+    EntryKey == KeyName,
+    hypothetical_profile(Entries, KeyName, Value, Hypothesis).
+
+uk_pecr_cookie_exemptions_and_fines_obligations(Profile, Obligations) :-
+    uk_pecr_cookie_exemptions_and_fines_input_problems(Profile, Problems),
+    obligations_from(Problems, Profile, Obligations).
+
+obligations_from([_|_], _, []).
+obligations_from([], Profile, Obligations) :-
+    findall(Obligation, owed(Profile, Obligation), Obligations).
+
+owed(Profile, obligation(do_not_store_or_access_information_in_terminal_equipment, cite(uk_si_2003_2426_reg_6_1))) :-
+    implements(uk_si_2003_2426_reg_6_1),
+    uk_terminal_equipment_storage_or_access(Profile, not_permitted, _).
+owed(Profile, obligation(notify_personal_data_breach_to_the_information_commission_without_undue_delay_and_where_feasible_within_72_hours, cite(uk_si_2003_2426_reg_5a_2))) :-
+    implements(uk_si_2003_2426_reg_5a_2),
+    breach_duty_arises(Profile).
+owed(Profile, obligation(accompany_notification_with_reasons_for_the_delay, cite(uk_si_2003_2426_reg_5a_3a))) :-
+    implements(uk_si_2003_2426_reg_5a_3a),
+    breach_duty_arises(Profile),
+    notification_beyond_72_hours(Profile).
+
+breach_duty_arises(Profile) :-
+    implements(uk_si_2003_2426_reg_5a_1),
+    profile_get(Profile, provider_of_a_public_electronic_communications_service, true),
+    profile_get(Profile, personal_data_breach_occurred, true),
+    profile_get(Profile, became_aware_on_or_after_20_august_2025, true).
+
+notification_beyond_72_hours(Profile) :-
+    implements(uk_reg_1182_1971_art_3_1),
+    hypothetical_profile(Profile, notification_made_without_undue_delay, true, WithoutDelay),
+    hypothetical_profile(WithoutDelay, notification_within_72_hours_was_feasible, true, Probe),
+    uk_breach_notification_timing(Probe, notification_out_of_time, _).
+
+test(what_if_consent_given_permits) :-
+    uk_pecr_cookie_exemptions_and_fines_what_if([attribute(storage_or_access_within_regulation_6, true), attribute(clear_and_comprehensive_information_about_the_purpose_provided, true), attribute(consent_to_the_storage_or_access_given, false)], consent_to_the_storage_or_access_given, true, Status),
+    Status == permitted.
+test(what_if_gate_false_is_not_applicable) :-
+    uk_pecr_cookie_exemptions_and_fines_what_if([attribute(storage_or_access_within_regulation_6, true)], storage_or_access_within_regulation_6, false, Status),
+    Status == not_applicable.
+test(late_notification_owes_notice_and_reasons) :-
+    uk_pecr_cookie_exemptions_and_fines_obligations([attribute(provider_of_a_public_electronic_communications_service, true), attribute(personal_data_breach_occurred, true), attribute(became_aware_on_or_after_20_august_2025, true), attribute(hours_elapsed_at_notification, 73)], Obligations),
+    Obligations == [obligation(notify_personal_data_breach_to_the_information_commission_without_undue_delay_and_where_feasible_within_72_hours, cite(uk_si_2003_2426_reg_5a_2)), obligation(accompany_notification_with_reasons_for_the_delay, cite(uk_si_2003_2426_reg_5a_3a))].
+test(notification_in_72nd_hour_owes_no_reasons) :-
+    uk_pecr_cookie_exemptions_and_fines_obligations([attribute(provider_of_a_public_electronic_communications_service, true), attribute(personal_data_breach_occurred, true), attribute(became_aware_on_or_after_20_august_2025, true), attribute(hours_elapsed_at_notification, 72)], Obligations),
+    Obligations == [obligation(notify_personal_data_breach_to_the_information_commission_without_undue_delay_and_where_feasible_within_72_hours, cite(uk_si_2003_2426_reg_5a_2))].
+test(cookie_not_permitted_owes_abstention) :-
+    uk_pecr_cookie_exemptions_and_fines_obligations([attribute(storage_or_access_within_regulation_6, true), attribute(clear_and_comprehensive_information_about_the_purpose_provided, false), attribute(technical_storage_or_access_solely_for_transmission_of_a_communication, false), attribute(storage_or_access_strictly_necessary_for_the_requested_service, false), attribute(person_provides_an_information_society_service, false), attribute(person_provides_an_information_society_service_by_means_of_a_website, false), attribute(communication_received_requests_or_indicates_need_of_emergency_assistance, false)], Obligations),
+    Obligations == [obligation(do_not_store_or_access_information_in_terminal_equipment, cite(uk_si_2003_2426_reg_6_1))].
+test(input_problems_owe_nothing) :-
+    uk_pecr_cookie_exemptions_and_fines_obligations([attribute(colour, true)], Obligations),
+    Obligations == [].
+test(vocabulary_atoms_are_defined) :-
+    permitted,
+    not_attempted,
+    unsure,
+    regulation_32b_4_or_5,
+    provision_infringed.

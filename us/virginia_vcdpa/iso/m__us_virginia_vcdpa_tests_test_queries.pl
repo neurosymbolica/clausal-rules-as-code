@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__us_virginia_vcdpa_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__us_virginia_vcdpa_queries, [virginia_vcdpa_profile_keys/1, virginia_vcdpa_what_if/4, virginia_vcdpa_applicability_threshold/3, virginia_vcdpa_consumer_count_boundary/2, entity_category/0, conducts_business_in_or_targets_virginia/0, consumer_count/0, over_half_of_gross_revenue_from_sale/0, extension_reasonably_necessary/0, extension_notice_given_within_initial_period/0, cured_with_express_written_statement/0, continued_violation_or_statement_breached/0, violation_count/0, public_body_of_the_commonwealth/0, financial_institution_subject_to_glba/0, hipaa_covered_entity_or_business_associate/0, nonprofit_organization/0, institution_of_higher_education/0, none_of_the_exempt_categories/0, unsure/0]).
+:- use_module(m__us_virginia_vcdpa_kernel, [virginia_vcdpa_input_problems/2]).
+:- use_module(m__us_virginia_vcdpa_fixtures, [virginia_vcdpa_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    virginia_vcdpa_profile_keys(ProfileKeys),
+    ProfileKeys == [entity_category, conducts_business_in_or_targets_virginia, consumer_count, over_half_of_gross_revenue_from_sale, extension_reasonably_necessary, extension_notice_given_within_initial_period, cured_with_express_written_statement, continued_violation_or_statement_breached, violation_count].
+test(the_reexported_input_check_accepts_a_good_profile) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    virginia_vcdpa_input_problems(Profile, []).
+test(the_reexported_input_check_names_an_unknown_key) :-
+    virginia_vcdpa_profile_for(malformed_profile, Profile),
+    findall(Problems, virginia_vcdpa_input_problems(Profile, Problems), ProblemLists),
+    ProblemLists == [[unknown_key(colour)]].
+test(what_if_a_smaller_count_is_out_of_scope) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    findall(Status, virginia_vcdpa_what_if(Profile, consumer_count, 24999, Status), Statuses),
+    Statuses == [out_of_scope].
+test(what_if_an_exempt_category_is_exempt) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    findall(Status, virginia_vcdpa_what_if(Profile, entity_category, nonprofit_organization, Status), Statuses),
+    Statuses == [exempt_entity].
+test(what_if_the_count_reaches_the_general_threshold) :-
+    virginia_vcdpa_profile_for(just_below_general_threshold, Profile),
+    findall(Status, virginia_vcdpa_what_if(Profile, consumer_count, 100000, Status), Statuses),
+    Statuses == [in_scope].
+test(both_limbs_are_enumerated_once) :-
+    findall(Limb - Minimum - Citation, virginia_vcdpa_applicability_threshold(Limb, Minimum, Citation), Thresholds),
+    Thresholds = [general_threshold - General - cite(us_va_code_59_1_576_a), sale_of_personal_data_threshold - Sale - cite(us_va_code_59_1_576_a)],
+    General =:= 100000,
+    Sale =:= 25000.
+test(the_boundary_without_revenue_is_one_hundred_thousand) :-
+    virginia_vcdpa_profile_for(exactly_general_threshold, Profile),
+    findall(Boundary, virginia_vcdpa_consumer_count_boundary(Profile, Boundary), Boundaries),
+    Boundaries = [Found],
+    Found =:= 100000.
+test(the_boundary_with_revenue_is_twenty_five_thousand) :-
+    virginia_vcdpa_profile_for(data_broker_mid_size, Profile),
+    virginia_vcdpa_consumer_count_boundary(Profile, Boundary),
+    Boundary =:= 25000.
+test(an_absent_revenue_share_flips_at_the_lower_threshold) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    virginia_vcdpa_consumer_count_boundary(Profile, Boundary),
+    Boundary =:= 25000.
+test(no_business_link_never_flips) :-
+    virginia_vcdpa_profile_for(no_business_link, Profile),
+    findall(Boundary, virginia_vcdpa_consumer_count_boundary(Profile, Boundary), Boundaries),
+    Boundaries == [no_flip_in_range].
+test(an_exempt_person_never_flips) :-
+    virginia_vcdpa_profile_for(hospital_hipaa, Profile),
+    virginia_vcdpa_consumer_count_boundary(Profile, no_flip_in_range).
+test(a_malformed_profile_reports_its_problems) :-
+    virginia_vcdpa_profile_for(malformed_profile, Profile),
+    findall(Boundary, virginia_vcdpa_consumer_count_boundary(Profile, Boundary), Boundaries),
+    Boundaries == [input_problems([unknown_key(colour)])].
+test(the_root_export_atoms_are_all_served) :-
+    entity_category,
+    conducts_business_in_or_targets_virginia,
+    consumer_count,
+    over_half_of_gross_revenue_from_sale,
+    extension_reasonably_necessary,
+    extension_notice_given_within_initial_period,
+    cured_with_express_written_statement,
+    continued_violation_or_statement_breached,
+    violation_count,
+    public_body_of_the_commonwealth,
+    financial_institution_subject_to_glba,
+    hipaa_covered_entity_or_business_associate,
+    nonprofit_organization,
+    institution_of_higher_education,
+    none_of_the_exempt_categories,
+    unsure.
+
+cp_test_names([profile_keys_are_the_contract_keys, the_reexported_input_check_accepts_a_good_profile, the_reexported_input_check_names_an_unknown_key, what_if_a_smaller_count_is_out_of_scope, what_if_an_exempt_category_is_exempt, what_if_the_count_reaches_the_general_threshold, both_limbs_are_enumerated_once, the_boundary_without_revenue_is_one_hundred_thousand, the_boundary_with_revenue_is_twenty_five_thousand, an_absent_revenue_share_flips_at_the_lower_threshold, no_business_link_never_flips, an_exempt_person_never_flips, a_malformed_profile_reports_its_problems, the_root_export_atoms_are_all_served]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

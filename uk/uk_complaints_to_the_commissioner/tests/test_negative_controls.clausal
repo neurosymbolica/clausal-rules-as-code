@@ -1,0 +1,145 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% fact changed -> different answer), proving the route is LOAD-BEARING.
+% A negative states "no solution" as `test(Name, fail) :- Goal.`, and
+% every negative atom also appears in a positive test, so a misspelling
+% shows up as a failing positive.
+% Run: python -m clausal.testing uk/uk_complaints_to_the_commissioner/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(uk/uk_complaints_to_the_commissioner/uk_complaints_to_the_commissioner, [
+    controller_complaint_right/3,
+    commission_complaint_right/3,
+    acknowledgement_last_day/3,
+    uk_complaints_to_the_commissioner_status_values/1
+]).
+:- use_module(uk/uk_complaints_to_the_commissioner/fixtures, [uk_complaints_to_the_commissioner_profile_for/2]).
+
+test(the_status_table_holds_both_atoms) :-
+    uk_complaints_to_the_commissioner_status_values(StatusValues),
+    StatusValues == [complaint_under_section_164a, not_a_complaint_under_section_164a].
+
+% ---- controller route: the infringement named (UK GDPR vs Part 4) -------
+test(controller_uk_gdpr_is_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(gdpr_complaint_to_controller, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+test(controller_part_4_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(part_4_complaint_to_controller, Profile),
+    controller_complaint_right(Profile, not_a_complaint_under_section_164a, _).
+test(controller_part_4_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(part_4_complaint_to_controller, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+
+% ---- controller route: Part 3 is named ----------------------------------
+test(controller_part_3_is_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(part_3_complaint_to_controller, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+test(controller_part_3_is_not_negative, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(part_3_complaint_to_controller, Profile),
+    controller_complaint_right(Profile, not_a_complaint_under_section_164a, _).
+
+% ---- controller route: made to the controller ---------------------------
+test(controller_to_processor_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(complaint_to_processor, Profile),
+    controller_complaint_right(Profile, not_a_complaint_under_section_164a, _).
+test(controller_to_processor_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(complaint_to_processor, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+
+% ---- controller route: a data subject about own data --------------------
+test(controller_third_party_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(third_party_complaint, Profile),
+    controller_complaint_right(Profile, not_a_complaint_under_section_164a, _).
+test(controller_third_party_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(third_party_complaint, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+
+% ---- controller route: no infringement considered -----------------------
+test(controller_no_infringement_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(no_infringement_considered, Profile),
+    controller_complaint_right(Profile, not_a_complaint_under_section_164a, _).
+test(controller_no_infringement_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(no_infringement_considered, Profile),
+    controller_complaint_right(Profile, complaint_under_section_164a, _).
+
+% ---- indeterminate route: the missing recipient -------------------------
+test(controller_recipient_missing_is_indeterminate) :-
+    uk_complaints_to_the_commissioner_profile_for(recipient_not_stated, Profile),
+    controller_complaint_right(Profile, indeterminate([complaint_made_to_the_controller]), []).
+test(controller_recipient_given_is_final) :-
+    controller_complaint_right([attribute(complaint_by_data_subject_about_own_personal_data, true), attribute(infringement_considered, uk_gdpr), attribute(complaint_made_to_the_controller, true)], complaint_under_section_164a, _).
+test(controller_recipient_given_is_not_indeterminate, fail) :-
+    controller_complaint_right([attribute(complaint_by_data_subject_about_own_personal_data, true), attribute(infringement_considered, uk_gdpr), attribute(complaint_made_to_the_controller, true)], indeterminate(_), _).
+test(controller_deciding_false_is_not_indeterminate, fail) :-
+    controller_complaint_right([attribute(complaint_by_data_subject_about_own_personal_data, true), attribute(infringement_considered, dpa_2018_part_4)], indeterminate(_), _).
+
+% ---- commission route: Part 4 named, none not named ---------------------
+test(commission_part_4_is_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(part_4_complaint_to_controller, Profile),
+    commission_complaint_right(Profile, complaint_under_section_165_2, _).
+test(commission_none_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(no_infringement_considered, Profile),
+    commission_complaint_right(Profile, not_a_complaint_under_section_165_2, _).
+test(commission_none_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(no_infringement_considered, Profile),
+    commission_complaint_right(Profile, complaint_under_section_165_2, _).
+test(commission_part_4_is_not_negative, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(part_4_complaint_to_controller, Profile),
+    commission_complaint_right(Profile, not_a_complaint_under_section_165_2, _).
+
+% ---- commission route: a data subject about own data --------------------
+test(commission_third_party_is_not_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(third_party_complaint, Profile),
+    commission_complaint_right(Profile, not_a_complaint_under_section_165_2, _).
+test(commission_third_party_near_miss_is_not_positive, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(third_party_complaint, Profile),
+    commission_complaint_right(Profile, complaint_under_section_165_2, _).
+
+% ---- commission route: the recipient is not read ------------------------
+test(commission_to_processor_is_a_complaint) :-
+    uk_complaints_to_the_commissioner_profile_for(complaint_to_processor, Profile),
+    commission_complaint_right(Profile, complaint_under_section_165_2, _).
+test(commission_to_processor_is_not_negative, fail) :-
+    uk_complaints_to_the_commissioner_profile_for(complaint_to_processor, Profile),
+    commission_complaint_right(Profile, not_a_complaint_under_section_165_2, _).
+
+% ---- deadline route: the commencement boundary --------------------------
+test(acknowledgement_on_commencement_gives_a_date) :-
+    acknowledgement_last_day(date(2026, 6, 19), date(2026, 7, 18), _).
+test(acknowledgement_on_commencement_duty_applies, fail) :-
+    acknowledgement_last_day(date(2026, 6, 19), acknowledgement_duty_does_not_apply, _).
+test(acknowledgement_before_commencement_duty_does_not_apply) :-
+    acknowledgement_last_day(date(2026, 6, 18), acknowledgement_duty_does_not_apply, _).
+test(acknowledgement_before_commencement_gives_no_date, fail) :-
+    acknowledgement_last_day(date(2026, 6, 18), date(_, _, _), _).
+
+% ---- deadline route: day one is the day of receipt ----------------------
+test(acknowledgement_counts_the_day_of_receipt) :-
+    acknowledgement_last_day(date(2026, 10, 1), date(2026, 10, 30), _).
+test(acknowledgement_does_not_count_from_the_next_day, fail) :-
+    acknowledgement_last_day(date(2026, 10, 1), date(2026, 10, 31), _).
+
+% ---- deadline route: the valid date --------------------------------------
+test(acknowledgement_leap_day_is_valid) :-
+    acknowledgement_last_day(date(2028, 2, 29), date(2028, 3, 29), _).
+test(acknowledgement_leap_day_is_not_a_problem, fail) :-
+    acknowledgement_last_day(date(2028, 2, 29), input_problems(_), _).
+test(acknowledgement_common_year_february_29_is_a_problem) :-
+    acknowledgement_last_day(date(2027, 2, 29), input_problems([wrong_type(receipt_date)]), []).
+test(acknowledgement_last_year_of_range_is_valid) :-
+    acknowledgement_last_day(date(2199, 1, 1), date(2199, 1, 30), _).
+test(acknowledgement_year_past_range_is_a_problem) :-
+    acknowledgement_last_day(date(2200, 1, 1), input_problems([wrong_type(receipt_date)]), []).
+
+% ---- input problems route ------------------------------------------------
+test(badly_typed_profile_gives_input_problems) :-
+    uk_complaints_to_the_commissioner_profile_for(badly_typed_profile, Profile),
+    controller_complaint_right(Profile, input_problems([wrong_type(infringement_considered), unknown_key(colour)]), []).
+test(corrected_profile_gives_a_verdict) :-
+    controller_complaint_right([attribute(infringement_considered, dpa_2018_part_4)], not_a_complaint_under_section_164a, _).
+test(corrected_profile_has_no_input_problems, fail) :-
+    controller_complaint_right([attribute(infringement_considered, dpa_2018_part_4)], input_problems(_), _).
+
+:- end_module(test_negative_controls).

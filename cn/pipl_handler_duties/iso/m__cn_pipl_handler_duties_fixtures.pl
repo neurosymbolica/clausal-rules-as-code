@@ -1,0 +1,142 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__cn_pipl_handler_duties_fixtures, [pipl_handler_duties_subject/1, pipl_handler_duties_profile_for/2, pipl_handler_duties_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__cn_pipl_handler_duties_pipl_handler_duties, [decide_pipl_handler_duties/2]).
+
+pipl_handler_duties_subject(day_before_entry_into_force).
+pipl_handler_duties_subject(day_of_entry_into_force).
+pipl_handler_duties_subject(september_before_entry_into_force).
+pipl_handler_duties_subject(two_thousand_leap_day).
+pipl_handler_duties_subject(reference_date_absent).
+pipl_handler_duties_subject(pinned_text_status_absent).
+pipl_handler_duties_subject(amended_text).
+pipl_handler_duties_subject(handler_only).
+pipl_handler_duties_subject(not_a_handler).
+pipl_handler_duties_subject(handler_unstated).
+pipl_handler_duties_subject(handler_unsure).
+pipl_handler_duties_subject(officer_quantity_reached).
+pipl_handler_duties_subject(officer_quantity_not_reached).
+pipl_handler_duties_subject(officer_unsure_handler).
+pipl_handler_duties_subject(offshore_services_handler).
+pipl_handler_duties_subject(onshore_services_handler).
+pipl_handler_duties_subject(offshore_no_case).
+pipl_handler_duties_subject(offshore_other_case).
+pipl_handler_duties_subject(offshore_case_unstated).
+pipl_handler_duties_subject(offshore_location_unstated).
+pipl_handler_duties_subject(offshore_purpose_unsure).
+pipl_handler_duties_subject(offshore_analysis_unsure).
+pipl_handler_duties_subject(offshore_unsure_handler).
+pipl_handler_duties_subject(automated_decision_handler).
+pipl_handler_duties_subject(no_assessment_occasion).
+pipl_handler_duties_subject(significant_impact_unsure).
+pipl_handler_duties_subject(incident_harm_not_avoided).
+pipl_handler_duties_subject(no_incident).
+pipl_handler_duties_subject(incident_harm_avoided).
+pipl_handler_duties_subject(incident_department_required).
+pipl_handler_duties_subject(incident_harm_unstated).
+pipl_handler_duties_subject(incident_requirement_unstated).
+pipl_handler_duties_subject(incident_harm_unsure).
+pipl_handler_duties_subject(incident_unsure_handler).
+pipl_handler_duties_subject(important_platform).
+pipl_handler_duties_subject(ordinary_platform).
+pipl_handler_duties_subject(platform_unsure).
+pipl_handler_duties_subject(platform_unsure_handler).
+pipl_handler_duties_subject(entrusted_party).
+pipl_handler_duties_subject(no_duties_at_all).
+pipl_handler_duties_subject(unknown_key_profile).
+pipl_handler_duties_subject(crisp_key_given_unsure).
+pipl_handler_duties_subject(repeated_key).
+pipl_handler_duties_subject(nineteen_hundred_leap_day).
+pipl_handler_duties_subject(stray_element).
+
+in_force_profile(Extra, Profile) :-
+    append([attribute(reference_date, date(2024, 1, 1)), attribute(pinned_articles_unamended_on_reference_date, true)], Extra, Profile).
+
+pipl_handler_duties_profile_for(day_before_entry_into_force, [attribute(reference_date, date(2021, 10, 31)), attribute(pinned_articles_unamended_on_reference_date, true), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(day_of_entry_into_force, [attribute(reference_date, date(2021, 11, 1)), attribute(pinned_articles_unamended_on_reference_date, true), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(september_before_entry_into_force, [attribute(reference_date, date(2021, 9, 30)), attribute(pinned_articles_unamended_on_reference_date, true), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(two_thousand_leap_day, [attribute(reference_date, date(2000, 2, 29))]).
+pipl_handler_duties_profile_for(reference_date_absent, [attribute(pinned_articles_unamended_on_reference_date, true), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(pinned_text_status_absent, [attribute(reference_date, date(2024, 1, 1)), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(amended_text, [attribute(reference_date, date(2024, 1, 1)), attribute(pinned_articles_unamended_on_reference_date, false), attribute(decides_purposes_and_means, true)]).
+pipl_handler_duties_profile_for(handler_only, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true)], Profile).
+pipl_handler_duties_profile_for(not_a_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, false)], Profile).
+pipl_handler_duties_profile_for(handler_unstated, Profile) :-
+    in_force_profile([], Profile).
+pipl_handler_duties_profile_for(handler_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, unsure)], Profile).
+pipl_handler_duties_profile_for(officer_quantity_reached, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(reaches_officer_quantity, true)], Profile).
+pipl_handler_duties_profile_for(officer_quantity_not_reached, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(reaches_officer_quantity, false)], Profile).
+pipl_handler_duties_profile_for(officer_unsure_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, unsure), attribute(reaches_officer_quantity, true)], Profile).
+pipl_handler_duties_profile_for(offshore_services_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, true)], Profile).
+pipl_handler_duties_profile_for(onshore_services_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, false), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, true)], Profile).
+pipl_handler_duties_profile_for(offshore_no_case, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, false), attribute(analyses_or_evaluates_individuals_in_china, false), attribute(other_case_prescribed_by_law, false)], Profile).
+pipl_handler_duties_profile_for(offshore_other_case, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, false), attribute(analyses_or_evaluates_individuals_in_china, false), attribute(other_case_prescribed_by_law, true)], Profile).
+pipl_handler_duties_profile_for(offshore_case_unstated, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true)], Profile).
+pipl_handler_duties_profile_for(offshore_location_unstated, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, true)], Profile).
+pipl_handler_duties_profile_for(offshore_purpose_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, unsure), attribute(analyses_or_evaluates_individuals_in_china, false), attribute(other_case_prescribed_by_law, false)], Profile).
+pipl_handler_duties_profile_for(offshore_analysis_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, false), attribute(analyses_or_evaluates_individuals_in_china, unsure), attribute(other_case_prescribed_by_law, false)], Profile).
+pipl_handler_duties_profile_for(offshore_unsure_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, unsure), attribute(handler_located_outside_china, true), attribute(personal_information_of_individuals_in_china, true), attribute(offers_products_or_services_to_individuals_in_china, true)], Profile).
+pipl_handler_duties_profile_for(automated_decision_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(processes_sensitive_personal_information, false), attribute(uses_automated_decision_making, true), attribute(entrusts_processing, false), attribute(provides_to_another_handler, false), attribute(makes_personal_information_public, false), attribute(provides_outside_china, false), attribute(other_significant_impact_processing, false)], Profile).
+pipl_handler_duties_profile_for(no_assessment_occasion, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(processes_sensitive_personal_information, false), attribute(uses_automated_decision_making, false), attribute(entrusts_processing, false), attribute(provides_to_another_handler, false), attribute(makes_personal_information_public, false), attribute(provides_outside_china, false), attribute(other_significant_impact_processing, false)], Profile).
+pipl_handler_duties_profile_for(significant_impact_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(processes_sensitive_personal_information, false), attribute(uses_automated_decision_making, false), attribute(entrusts_processing, false), attribute(provides_to_another_handler, false), attribute(makes_personal_information_public, false), attribute(provides_outside_china, false), attribute(other_significant_impact_processing, unsure)], Profile).
+pipl_handler_duties_profile_for(incident_harm_not_avoided, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, false), attribute(department_required_individual_notice, false)], Profile).
+pipl_handler_duties_profile_for(no_incident, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, false)], Profile).
+pipl_handler_duties_profile_for(incident_harm_avoided, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, true), attribute(department_required_individual_notice, false)], Profile).
+pipl_handler_duties_profile_for(incident_department_required, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, true), attribute(department_required_individual_notice, true)], Profile).
+pipl_handler_duties_profile_for(incident_harm_unstated, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true)], Profile).
+pipl_handler_duties_profile_for(incident_requirement_unstated, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, true)], Profile).
+pipl_handler_duties_profile_for(incident_harm_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, unsure), attribute(department_required_individual_notice, false)], Profile).
+pipl_handler_duties_profile_for(incident_unsure_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, unsure), attribute(incident_occurred_or_possible, true), attribute(harm_effectively_avoided, true), attribute(department_required_individual_notice, false)], Profile).
+pipl_handler_duties_profile_for(important_platform, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(important_platform_handler, true)], Profile).
+pipl_handler_duties_profile_for(ordinary_platform, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(important_platform_handler, false)], Profile).
+pipl_handler_duties_profile_for(platform_unsure, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(important_platform_handler, unsure)], Profile).
+pipl_handler_duties_profile_for(platform_unsure_handler, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, unsure), attribute(important_platform_handler, true)], Profile).
+pipl_handler_duties_profile_for(entrusted_party, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, false), attribute(processes_on_entrustment, true)], Profile).
+pipl_handler_duties_profile_for(no_duties_at_all, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, false), attribute(processes_on_entrustment, false)], Profile).
+pipl_handler_duties_profile_for(unknown_key_profile, Profile) :-
+    in_force_profile([attribute(colour, red)], Profile).
+pipl_handler_duties_profile_for(crisp_key_given_unsure, Profile) :-
+    in_force_profile([attribute(reaches_officer_quantity, unsure)], Profile).
+pipl_handler_duties_profile_for(repeated_key, Profile) :-
+    in_force_profile([attribute(decides_purposes_and_means, true), attribute(decides_purposes_and_means, false)], Profile).
+pipl_handler_duties_profile_for(nineteen_hundred_leap_day, [attribute(reference_date, date(1900, 2, 29))]).
+pipl_handler_duties_profile_for(stray_element, [attribute(reference_date, date(2024, 1, 1)), stray]).
+
+pipl_handler_duties_assess(Subject, Result) :-
+    pipl_handler_duties_profile_for(Subject, Profile),
+    decide_pipl_handler_duties(Profile, Result).

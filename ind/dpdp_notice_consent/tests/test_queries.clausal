@@ -1,0 +1,80 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one per predicate
+% queries.clausal exports for the manifest's query_interface and the
+% provenance relation, and the root-export data facts.
+% Run: python -m clausal.testing ind/dpdp_notice_consent/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(ind/dpdp_notice_consent/queries, [
+    dpdp_notice_consent_profile_keys/1,
+    dpdp_notice_consent_input_problems/2,
+    dpdp_notice_consent_what_if/4,
+    provenance/2,
+    lawful_on_consent/0,
+    not_in_force/0,
+    unsure/0,
+    date/3
+]).
+:- use_module(ind/dpdp_notice_consent/fixtures, [dpdp_notice_consent_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dpdp_notice_consent_profile_keys(ProfileKeys),
+    ProfileKeys == [sections_4_to_7_in_force, section_6_9_in_force, question_date, acts_as_data_fiduciary, lawful_purpose, consent_given, consent_withdrawn, consent_meets_section_6_1, legitimate_use_clause, legitimate_use_conditions_met, notice_occasion, processing_required_or_authorised_by_law, registered_with_board_as_consent_manager, consent_manager_registration_suspended_or_cancelled].
+
+test(profile_keys_has_one_answer) :-
+    findall(ProfileKeys, dpdp_notice_consent_profile_keys(ProfileKeys), Answers),
+    length(Answers, 1).
+
+test(the_re_exported_input_check_answers) :-
+    dpdp_notice_consent_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(what_if_a_withdrawal_flips_eligible_to_ineligible) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    dpdp_notice_consent_what_if(Profile, consent_withdrawn, true, ineligible).
+
+test(what_if_answers_once) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    findall(NewStatus,
+            dpdp_notice_consent_what_if(Profile, consent_withdrawn, true, NewStatus),
+            Statuses),
+    Statuses == [ineligible].
+
+test(what_if_the_same_value_keeps_the_status) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    dpdp_notice_consent_what_if(Profile, consent_withdrawn, false, eligible).
+
+test(what_if_a_withdrawal_does_not_stay_eligible, fail) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    dpdp_notice_consent_what_if(Profile, consent_withdrawn, true, eligible).
+
+test(what_if_an_ill_typed_value_is_indeterminate) :-
+    dpdp_notice_consent_profile_for(consent_lawful, Profile),
+    dpdp_notice_consent_what_if(Profile, consent_given, unsure, indeterminate).
+
+test(provenance_gives_one_unit_for_a_recorded_key) :-
+    findall(PinnedUnit, provenance(in_dpdp_act_2023_s_4_1, PinnedUnit), Units),
+    length(Units, 1).
+
+test(provenance_has_no_unit_for_an_unrecorded_key, fail) :-
+    provenance(not_a_recorded_citation_key, _).
+
+test(the_root_export_atoms_are_defined) :-
+    lawful_on_consent,
+    not_in_force,
+    unsure.
+
+test(the_input_date_form_holds_for_a_ground_date) :-
+    date(2027, 5, 13).
+
+test(the_input_date_form_holds_for_the_rule_3_eve) :-
+    date(2027, 5, 12).
+
+test(the_input_date_form_holds_for_a_ground_date_once) :-
+    findall(found, date(2027, 5, 13), Answers),
+    Answers == [found].
+
+test(the_input_date_form_refuses_a_non_integer_part, fail) :-
+    date(2027, may, 13).
+
+:- end_module(test_queries).

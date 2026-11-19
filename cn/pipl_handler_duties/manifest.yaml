@@ -1,0 +1,201 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: cn/pipl_handler_duties
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "pipl_handler_duties"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (pipl_handler_duties_input_problems/2 is listed once, under queries.clausal,
+  # which re-exports the kernel's input check)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- pipl_handler_duties.clausal --
+  - "decide_pipl_handler_duties/2"
+  - "pipl_handler_duties_status/2"
+  - "pipl_handler_duties_checklist/2"
+  - "pipl_handler_duties_decision_resolvable/1"
+  - "pipl_handler_duties_status_values/1"
+  - "duty_status/4"
+  - "duty_contents/2"
+  - "required/0"
+  - "required_in_advance/0"
+  - "required_immediately/0"
+  - "required_for_at_least_three_years/0"
+  - "notice_may_be_omitted/0"
+  - "not_required/0"
+  - "not_in_force/0"
+  - "pinned_text_not_applicable/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "content_item/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "pipl_handler_duties_profile_keys/1"
+  - "pipl_handler_duties_input_problems/2"
+  - "pipl_handler_duties_what_if/4"
+  # -- fixtures.clausal --
+  - "pipl_handler_duties_subject/1"
+  - "pipl_handler_duties_profile_for/2"
+  - "pipl_handler_duties_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The package imports only kit modules (formalize_lib,
+# library(reif)), no shared backbone package.
+uses: []
+
+scope: >-
+  For ONE processing activity of the caller on ONE reference day: which duties
+  the Personal Information Protection Law of the PRC (2021 adoption text,
+  pinned npc.gov.cn page, formalised from the Chinese text) lays on a personal
+  information handler under Chapter V (Art 51 compliance measures; Art 52(1)
+  person in charge and Art 52(2) publishing and reporting the contact details;
+  Art 53 dedicated body or representative of a handler outside the territory,
+  read with Art 3(2); Art 54 compliance audit; Art 55 impact assessment and
+  Art 56(2) keeping the report and records at least three years; Art 57 remedial
+  measures and notices on leakage, tampering or loss, with the Art 57(2)
+  permission not to notify individuals; Art 58 large platform obligations) and
+  on a party processing on entrustment (Art 59), with Art 73 items (1) and (2)
+  and the Art 74 in-force test (1 November 2021). Each answer says whether a
+  duty is OWED, never whether it is MET; duty_contents lists what Arts 51,
+  56(1), 57(1) and 58 name. Open-textured judgements (handler status, the
+  Art 3(2) purposes, significant impact, harm effectively avoided, important
+  platform) are handed to a lawyer as needs_legal_review, never decided by a
+  crisp test. Out of scope: Art 3(1) territorial reach (the caller's premise),
+  the cross-border transfer duties of Arts 38 to 43 (a sibling order), the
+  cyberspace department's quantity measure, other laws and administrative
+  regulations, the definition of sensitive personal information, and any later
+  amendment of the pinned articles (a caller statement).
+
+sources:
+  - "中华人民共和国个人信息保护法 (Personal Information Protection Law of the People's Republic of China), 2021 adoption text, pinned unit text cn-pipl-2021 from the npc.gov.cn page (compared on 2026-11-15 with the People's Daily and CAC copies; not a gazette; later amendments not established)"
+  - "PIPL Article 3 paragraph 2 items (1) to (3) (territorial scope, read only by Article 53): cn_pipl_art_3_p2, cn_pipl_art_3_p2_i1, cn_pipl_art_3_p2_i2, cn_pipl_art_3_p2_i3"
+  - "PIPL Articles 51 to 59 (duties of the personal information handler and of the entrusted party): cn_pipl_art_51_p1 and items, cn_pipl_art_52_p1, cn_pipl_art_52_p2, cn_pipl_art_53_p1, cn_pipl_art_54_p1, cn_pipl_art_55_p1 and items, cn_pipl_art_56_p1 and items, cn_pipl_art_56_p2, cn_pipl_art_57_p1 and items, cn_pipl_art_57_p2, cn_pipl_art_58_p1 and items, cn_pipl_art_59_p1"
+  - "PIPL Article 73 items (1) and (2) (personal information handler; automated decision-making): cn_pipl_art_73_p1_i1, cn_pipl_art_73_p1_i2"
+  - "PIPL Article 74 (entry into force on 1 November 2021): cn_pipl_art_74_p1"
+
+query_interface:
+  2: "decide_pipl_handler_duties/2"      # eligibility: facade verdict with its cited checklist
+  7: "pipl_handler_duties_checklist/2"   # justification: every checklist item carries cite(Key)
+  16: "pipl_handler_duties_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings_and_lead_texts
+  units:
+  - cn-pipl-2021#art_3
+  - cn-pipl-2021#art_73
+  - cn-pipl-2021#art_73_p1
+  - cn-pipl-2021#art_74
+  - cn-pipl-2021#art_51
+  - cn-pipl-2021#art_52
+  - cn-pipl-2021#art_53
+  - cn-pipl-2021#art_54
+  - cn-pipl-2021#art_55
+  - cn-pipl-2021#art_56
+  - cn-pipl-2021#art_57
+  - cn-pipl-2021#art_58
+  - cn-pipl-2021#art_59
+  reason: The article units hold only the article numbers (第...条), and the Article
+    73 lead-in (本法下列用语的含义) introduces the items it lists; every limb cites the paragraph
+    or item it reads. Document structure.
+  consequence: 'None for a caller: the paragraphs and items they introduce are cited.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: territorial_reach_article_3_1
+  units:
+  - cn-pipl-2021#art_3_p1
+  reason: 'Article 3(1) says the Law applies to processing within the territory; no
+    limb reads it: whether the Law reaches the processing is the caller''s premise
+    (reading (6), Q9).'
+  consequence: The answers hold only where the Law reaches the processing; the order
+    never answers whether it does under Article 3(1).
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q9: a scope query could read Article 3(1) in a later order.'
+- what: definitions_not_read
+  units:
+  - cn-pipl-2021#art_73_p1_i3
+  - cn-pipl-2021#art_73_p1_i4
+  reason: Article 73 items (3) and (4) define de-identification and anonymisation;
+    no limb reads them (de-identification is named in Article 51 item (3) only as
+    an example of a security technical measure listed by duty_contents, Q14).
+  consequence: 'None for a caller of this order: no answer turns on these definitions.'
+  declaration: not_an_exception
+  debt: true
+  open: none
+- what: officer_quantity_measure
+  units: []
+  instrument: the national cyberspace department's provision fixing the quantity of
+    personal information for designating a person in charge of personal information
+    protection (PIPL Art 52(1)) (not pinned; its title and content are not taken from
+    the pin and are not guessed)
+  reason: Whether the caller reaches the quantity of Article 52(1) is a crisp caller
+    statement (reaches_officer_quantity, Q4).
+  consequence: The answers rely on the caller's statement; the order holds no number.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q4: pin the measure if a later order formalises it.'
+- what: other_measures_and_cases_prescribed_by_law
+  units: []
+  instrument: laws and administrative regulations prescribing other compliance measures
+    (PIPL Art 51 item (6)) or other cases of offshore processing (PIPL Art 3(2) item
+    (3)) (not pinned; not guessed)
+  reason: Article 51 item (6) (other measures prescribed by laws and administrative
+    regulations) is listed as an item only; Article 3(2) item (3) (other cases prescribed
+    by laws or administrative regulations) is the crisp caller statement other_case_prescribed_by_law
+    (Q14, Q8).
+  consequence: The answers never say which other measures or cases those laws prescribe.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q14
+- what: pipl_articles_outside_the_pin
+  units: []
+  instrument: '中华人民共和国个人信息保护法: the articles on sensitive personal information, entrusted
+    processing, making personal information public, image collection in public places,
+    separate consent and provision outside the territory (Articles 21, 25, 26, 28,
+    38 to 43; numbers from the drafter''s knowledge, not taken from the pin)'
+  reason: The definition of sensitive personal information, the rules on entrusted
+    processing, making personal information public, image collection in public places
+    and separate consent, and the cross-border articles are not pinned in this order
+    (Q17, Q6).
+  consequence: The answers rely on the caller's statements (processes_sensitive_personal_information,
+    entrusts_processing, processes_on_entrustment, makes_personal_information_public,
+    provides_outside_china); the cross-border duties are answered by the separate
+    order on cross-border transfer.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q17
+- what: later_amendments
+  units: []
+  instrument: any later amendment of the PIPL (not established; the pinned page was
+    not compared with the official gazette text)
+  reason: Whether a later amendment changed the pinned articles is not established
+    (Q1).
+  consequence: The caller states it through pinned_articles_unamended_on_reference_date.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q1

@@ -1,0 +1,102 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one test per
+% query-taxonomy predicate registered in manifest.yaml query_interface,
+% plus the combinators of queries.clausal (what-if, profile keys, the
+% re-exported input check).
+% Run: python -m clausal.testing uk/uk_subject_access_requests/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(uk/uk_subject_access_requests/queries, [
+    uk_subject_access_requests_profile_keys/1,
+    uk_subject_access_requests_input_problems/2,
+    uk_subject_access_requests_what_if/4
+]).
+:- use_module(uk/uk_subject_access_requests/uk_subject_access_requests, [
+    uk_subject_access_requests_status/2,
+    uk_subject_access_requests_checklist/2,
+    uk_access_entitlement/3,
+    uk_paused_days/4,
+    uk_response_deadline/5,
+    compare_uk_eu_response_deadline/6
+]).
+:- use_module(uk/uk_subject_access_requests/fixtures, [uk_subject_access_requests_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    uk_subject_access_requests_profile_keys(ProfileKeys),
+    ProfileKeys == [item_described_in_article_15_1, item_within_reasonable_and_proportionate_search, extension_notice_given, extension_notice_given_before_end_of_first_month, extension_notice_states_reasons, extension_necessary_for_complexity_or_number, request_made_under_article_15, controller_asked_for_further_information, further_information_reasonably_required].
+
+% #2 status verdict
+test(query_2_status) :-
+    uk_subject_access_requests_profile_for(access_not_described, Profile),
+    findall(Status, uk_subject_access_requests_status(Profile, Status), Statuses),
+    Statuses == [item_not_within_article_15_1].
+
+% #3 status determination
+test(query_3_status_determination) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    findall(Result, uk_access_entitlement(Profile, Result, _Citations), Results),
+    Results == [item_due].
+
+% #5 comparison
+test(query_5_comparison) :-
+    findall(Difference, compare_uk_eu_response_deadline(date(2026, 11, 30), three_months, _UkDeadline, _EuDeadline, Difference, _Citations), Differences),
+    Differences == [uk_earlier].
+
+% #7 justification: every checklist row carries cite(...) provenance
+test(query_7_justification_rows_cite) :-
+    uk_subject_access_requests_profile_for(clock_stop_applies, Profile),
+    uk_subject_access_requests_checklist(Profile, Items),
+    length(Items, 9),
+    findall(Key, member(item(Key, _Status, cite(_CitationKey)), Items), CitedKeys),
+    uk_subject_access_requests_profile_keys(ProfileKeys),
+    CitedKeys == ProfileKeys.
+test(query_7_justification_row_status) :-
+    uk_subject_access_requests_profile_for(clock_stop_applies, Profile),
+    uk_subject_access_requests_checklist(Profile, Items),
+    member(item(request_made_under_article_15, met, cite(uk_gdpr_art_12a_5)), Items),
+    member(item(item_described_in_article_15_1, unknown([item_described_in_article_15_1]), cite(uk_gdpr_art_15_1)), Items).
+
+% #15 deadline
+test(query_15_deadline) :-
+    findall(Deadline, uk_response_deadline(date(2027, 1, 31), one_month, 0, Deadline, _Citations), Deadlines),
+    Deadlines == [date(2027, 2, 28)].
+
+% #23 calculation
+test(query_23_calculation) :-
+    findall(Days, uk_paused_days(date(2026, 2, 27), date(2026, 3, 2), Days, _Citations), DayCounts),
+    DayCounts == [4].
+
+% #16 what-if, one test per query family route it can flip
+test(what_if_search_false_to_true_flips_to_due) :-
+    uk_subject_access_requests_profile_for(access_search_false, Profile),
+    uk_subject_access_requests_what_if(Profile, item_within_reasonable_and_proportionate_search, true, Status),
+    Status == item_due.
+test(what_if_search_true_to_unsure_refers) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    uk_subject_access_requests_what_if(Profile, item_within_reasonable_and_proportionate_search, unsure, Status),
+    Status = needs_legal_review(open_textured(item_within_reasonable_and_proportionate_search, cite(uk_gdpr_art_15_1a)), _Context).
+test(what_if_described_false_overrides_search) :-
+    uk_subject_access_requests_profile_for(access_search_unsure, Profile),
+    uk_subject_access_requests_what_if(Profile, item_described_in_article_15_1, false, Status),
+    Status == item_not_within_article_15_1.
+test(what_if_bad_value_is_reported) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    uk_subject_access_requests_what_if(Profile, item_described_in_article_15_1, unsure, Status),
+    Status == input_problems([wrong_type(item_described_in_article_15_1)]).
+test(what_if_unchanged_value_keeps_status) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    findall(Status, uk_subject_access_requests_what_if(Profile, item_described_in_article_15_1, true, Status), Statuses),
+    Statuses == [item_due].
+
+% the re-exported input check
+test(input_problems_clean_profile) :-
+    uk_subject_access_requests_profile_for(period_three_months, Profile),
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    Problems == [].
+test(input_problems_dirty_profile) :-
+    uk_subject_access_requests_profile_for(access_duplicate_key, Profile),
+    uk_subject_access_requests_input_problems(Profile, Problems),
+    Problems == [duplicate_key(item_described_in_article_15_1)].
+
+:- end_module(test_queries).

@@ -1,0 +1,187 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for ch/swiss_fadp_s4_criminal_provisions.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Every route has a positive case and a one-unit
+% near-miss control:
+%   DSG Art 63 / 62(2) / 61(a) / 60(1)(b)(1)  punishable vs one element false
+%   DSG Arts 61, 60(2) complaint              filed vs missing; ex officio
+%   DSG Art 64(2) boundary                    50000 francs vs 50001 francs
+%   GDPR Art 83(5)                            established vs unsure
+%   comparison                                same vs differs
+%   referral                                  unsure conduct vs conduct met
+%   input check                               duplicate key vs single key
+% The limitation dates (DSG Art 66) are query arguments, not profile keys:
+% the public-interface tests pass them directly.
+% =====================================================================
+
+:- module(fixtures, [
+    swiss_fadp_s4_criminal_provisions_subject/1,
+    swiss_fadp_s4_criminal_provisions_profile_for/2,
+    swiss_fadp_s4_criminal_provisions_assess/2
+]).
+
+:- use_module(ch/swiss_fadp_s4_criminal_provisions/swiss_fadp_s4_criminal_provisions, [decide_swiss_fadp_s4_criminal_provisions/2]).
+
+% ---- Subject registry ------------------------------------------------
+swiss_fadp_s4_criminal_provisions_subject(punishable_article_63).
+swiss_fadp_s4_criminal_provisions_subject(private_person_false_article_63).
+swiss_fadp_s4_criminal_provisions_subject(punishable_article_62_2_after_training).
+swiss_fadp_s4_criminal_provisions_subject(not_wilful_article_62_2).
+swiss_fadp_s4_criminal_provisions_subject(punishable_article_61_a).
+swiss_fadp_s4_criminal_provisions_subject(public_body_article_61_a).
+swiss_fadp_s4_criminal_provisions_subject(punishable_article_60_1_b_1).
+swiss_fadp_s4_criminal_provisions_subject(conduct_not_met_article_60_1_b_1).
+swiss_fadp_s4_criminal_provisions_subject(complaint_filed_article_61_c).
+swiss_fadp_s4_criminal_provisions_subject(complaint_missing_article_61_c).
+swiss_fadp_s4_criminal_provisions_subject(ex_officio_article_60_2).
+swiss_fadp_s4_criminal_provisions_subject(business_boundary_50000).
+swiss_fadp_s4_criminal_provisions_subject(business_boundary_50001).
+swiss_fadp_s4_criminal_provisions_subject(eu_listed_83_5_established).
+swiss_fadp_s4_criminal_provisions_subject(eu_listed_83_5_unsure_infringement).
+swiss_fadp_s4_criminal_provisions_subject(wilful_and_eu_ceiling).
+swiss_fadp_s4_criminal_provisions_subject(not_wilful_but_eu_ceiling).
+swiss_fadp_s4_criminal_provisions_subject(unsure_conduct_article_61_b).
+swiss_fadp_s4_criminal_provisions_subject(conduct_met_article_61_b).
+swiss_fadp_s4_criminal_provisions_subject(empty_profile).
+swiss_fadp_s4_criminal_provisions_subject(malformed_duplicate_key).
+swiss_fadp_s4_criminal_provisions_subject(single_key_control).
+
+% ---- Profiles --------------------------------------------------------
+swiss_fadp_s4_criminal_provisions_profile_for(punishable_article_63, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_63),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(private_person_false_article_63, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_63),
+    attribute(offender_is_private_person, false)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(punishable_article_62_2_after_training, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_62_2),
+    attribute(criminal_complaint_filed, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(not_wilful_article_62_2, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, false),
+    attribute(examined_offence, article_62_2),
+    attribute(criminal_complaint_filed, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(punishable_article_61_a, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_a),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(public_body_article_61_a, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_a),
+    attribute(offender_is_private_person, false)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(punishable_article_60_1_b_1, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_60_1_b_1),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(conduct_not_met_article_60_1_b_1, [
+    attribute(conduct_meets_offence_description, false),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_60_1_b_1),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(complaint_filed_article_61_c, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_c),
+    attribute(offender_is_private_person, true),
+    attribute(criminal_complaint_filed, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(complaint_missing_article_61_c, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_c),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(ex_officio_article_60_2, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_60_2),
+    attribute(offender_is_private_person, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(business_boundary_50000, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_60_1_a),
+    attribute(offender_is_private_person, true),
+    attribute(offence_committed_in_business, true),
+    attribute(fine_in_consideration_in_francs, 50000),
+    attribute(identifying_punishable_persons_requires_disproportionate_investigation, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(business_boundary_50001, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_60_1_a),
+    attribute(offender_is_private_person, true),
+    attribute(offence_committed_in_business, true),
+    attribute(fine_in_consideration_in_francs, 50001),
+    attribute(identifying_punishable_persons_requires_disproportionate_investigation, true)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(eu_listed_83_5_established, [
+    attribute(eu_infringement_established, true),
+    attribute(eu_infringed_obligation_listed_in, listed_in_article_83_5_or_83_6)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(eu_listed_83_5_unsure_infringement, [
+    attribute(eu_infringement_established, unsure),
+    attribute(eu_infringed_obligation_listed_in, listed_in_article_83_5_or_83_6)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(wilful_and_eu_ceiling, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_62_1),
+    attribute(eu_infringement_established, true),
+    attribute(eu_infringed_obligation_listed_in, listed_in_article_83_4)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(not_wilful_but_eu_ceiling, [
+    attribute(acted_wilfully, false),
+    attribute(eu_infringement_established, true),
+    attribute(eu_infringed_obligation_listed_in, listed_in_article_83_5_or_83_6)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(unsure_conduct_article_61_b, [
+    attribute(conduct_meets_offence_description, unsure),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_b),
+    attribute(offender_is_private_person, true),
+    attribute(eu_infringement_established, false)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(conduct_met_article_61_b, [
+    attribute(conduct_meets_offence_description, true),
+    attribute(acted_wilfully, true),
+    attribute(examined_offence, article_61_b),
+    attribute(offender_is_private_person, true),
+    attribute(eu_infringement_established, false)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(empty_profile, []).
+swiss_fadp_s4_criminal_provisions_profile_for(malformed_duplicate_key, [
+    attribute(acted_wilfully, true),
+    attribute(acted_wilfully, false)
+]).
+swiss_fadp_s4_criminal_provisions_profile_for(single_key_control, [
+    attribute(acted_wilfully, true)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+swiss_fadp_s4_criminal_provisions_assess(Subject, Result) :-
+    swiss_fadp_s4_criminal_provisions_profile_for(Subject, Profile),
+    decide_swiss_fadp_s4_criminal_provisions(Profile, Result).
+
+:- end_module(fixtures).

@@ -1,0 +1,145 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (answer given, not read out), and INPUT TOLERANCE:
+% badly formed profiles and date arguments are answered with their problems.
+% Run: python -m clausal.testing uk/uk_subject_access_requests/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(uk/uk_subject_access_requests/uk_subject_access_requests, [
+    uk_subject_access_requests_status/2,
+    uk_access_entitlement/3,
+    uk_applicable_time_period/3,
+    uk_clock_stop/3,
+    uk_time_rules_regime/3,
+    uk_relevant_time/5,
+    uk_paused_days/4,
+    uk_response_deadline/5,
+    compare_uk_eu_response_deadline/6
+]).
+:- use_module(uk/uk_subject_access_requests/kernel, [uk_subject_access_requests_input_problems/2]).
+:- use_module(uk/uk_subject_access_requests/fixtures, [uk_subject_access_requests_profile_for/2]).
+
+% ---- bound answers: each holds, a different bound answer does not ----
+test(access_item_due_holds_bound) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    uk_access_entitlement(Profile, item_due, [cite(uk_gdpr_art_15_1), cite(uk_gdpr_art_15_1a)]).
+test(access_item_due_rejects_other_bound_answer, fail) :-
+    uk_subject_access_requests_profile_for(access_item_due, Profile),
+    uk_access_entitlement(Profile, item_not_within_article_15_1, _Citations).
+test(status_holds_bound) :-
+    uk_subject_access_requests_profile_for(access_search_false, Profile),
+    uk_subject_access_requests_status(Profile, item_beyond_reasonable_and_proportionate_search).
+test(status_rejects_other_bound_answer, fail) :-
+    uk_subject_access_requests_profile_for(access_search_false, Profile),
+    uk_subject_access_requests_status(Profile, item_due).
+test(period_three_months_holds_bound) :-
+    uk_subject_access_requests_profile_for(period_three_months, Profile),
+    uk_applicable_time_period(Profile, three_months, _Citations).
+test(period_no_notice_holds_bound_with_citations) :-
+    uk_subject_access_requests_profile_for(period_no_notice, Profile),
+    uk_applicable_time_period(Profile, one_month, [cite(uk_gdpr_art_12a_1), cite(uk_gdpr_art_12a_3), cite(uk_gdpr_art_12a_4)]).
+test(clock_does_not_apply_holds_bound) :-
+    uk_subject_access_requests_profile_for(clock_not_access_request, Profile),
+    uk_clock_stop(Profile, clock_stop_does_not_apply, [cite(uk_gdpr_art_12a_5)]).
+test(clock_does_not_apply_rejects_applies, fail) :-
+    uk_subject_access_requests_profile_for(clock_not_access_request, Profile),
+    uk_clock_stop(Profile, clock_stop_applies, _Citations).
+test(regime_holds_bound) :-
+    uk_time_rules_regime(date(2026, 2, 5), article_12a_time_rules, _Citations).
+test(relevant_time_holds_bound) :-
+    uk_relevant_time(date(2026, 3, 1), date(2026, 3, 10), date(2026, 3, 5), date(2026, 3, 10), _Citations).
+test(relevant_time_rejects_earlier_day, fail) :-
+    uk_relevant_time(date(2026, 3, 1), date(2026, 3, 10), date(2026, 3, 5), date(2026, 3, 5), _Citations).
+test(paused_days_holds_bound) :-
+    uk_paused_days(date(2026, 3, 1), date(2026, 3, 10), 10, [cite(uk_gdpr_art_12a_5_b)]).
+test(paused_days_rejects_exclusive_count, fail) :-
+    uk_paused_days(date(2026, 3, 1), date(2026, 3, 10), 9, _Citations).
+test(deadline_holds_bound) :-
+    uk_response_deadline(date(2026, 3, 1), one_month, 0, date(2026, 3, 31), _Citations).
+test(deadline_rejects_same_day_next_month, fail) :-
+    uk_response_deadline(date(2026, 3, 1), one_month, 0, date(2026, 4, 1), _Citations).
+test(compare_holds_bound) :-
+    compare_uk_eu_response_deadline(date(2026, 2, 5), one_month, date(2026, 3, 4), date(2026, 3, 5), uk_earlier, _Citations).
+
+% ---- input tolerance: THE INPUT CHECK ---------------------------------
+test(empty_profile_has_no_problem) :-
+    uk_subject_access_requests_input_problems([], Problems),
+    Problems == [].
+test(improper_list_is_wrong_type) :-
+    uk_subject_access_requests_input_problems([attribute(extension_notice_given, true)|not_a_tail], Problems),
+    Problems == [wrong_type(profile)].
+test(non_attribute_element_is_wrong_type_alone) :-
+    uk_subject_access_requests_input_problems([attribute(stray_key, true), loose_element], Problems),
+    Problems == [wrong_type(profile)].
+test(atom_profile_is_wrong_type) :-
+    uk_subject_access_requests_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+test(number_key_is_unknown) :-
+    uk_subject_access_requests_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+% (b) THE TEST WAS WRONG for the answer-shape gate: an unbound key gives a non-ground answer; a ground compound key is used instead.
+test(compound_key_is_unknown_as_given) :-
+    uk_subject_access_requests_input_problems([attribute(key_term(1), true)], Problems),
+    Problems == [unknown_key(key_term(1))].
+% (b) THE TEST WAS WRONG for the groundness gate: a ground compound value outside the type is used instead of an unbound value.
+test(compound_value_is_wrong_type) :-
+    uk_subject_access_requests_input_problems([attribute(item_described_in_article_15_1, value_term(1))], Problems),
+    Problems == [wrong_type(item_described_in_article_15_1)].
+test(crisp_key_rejects_unsure) :-
+    uk_subject_access_requests_input_problems([attribute(extension_notice_given, unsure)], Problems),
+    Problems == [wrong_type(extension_notice_given)].
+test(judgement_key_accepts_unsure) :-
+    uk_subject_access_requests_input_problems([attribute(item_within_reasonable_and_proportionate_search, unsure)], Problems),
+    Problems == [].
+test(duplicate_key_reads_no_value) :-
+    uk_subject_access_requests_input_problems([attribute(extension_notice_given, true), attribute(extension_notice_given, maybe)], Problems),
+    Problems == [duplicate_key(extension_notice_given)].
+test(problems_in_contract_order_then_unknown_keys) :-
+    uk_subject_access_requests_input_problems([attribute(zeta_key, 1), attribute(further_information_reasonably_required, yes), attribute(item_described_in_article_15_1, unsure), attribute(zeta_key, 2), attribute(alpha_key, true)], Problems),
+    Problems == [wrong_type(item_described_in_article_15_1), wrong_type(further_information_reasonably_required), unknown_key(zeta_key), unknown_key(alpha_key)].
+test(input_problems_come_first_in_the_period_query) :-
+    uk_applicable_time_period([attribute(extension_notice_given, false), attribute(stray_key, true)], Period, Citations),
+    Period == input_problems([unknown_key(stray_key)]),
+    Citations == [].
+test(input_problems_come_first_in_the_clock_query) :-
+    uk_clock_stop([attribute(request_made_under_article_15, maybe)], Result, Citations),
+    Result == input_problems([wrong_type(request_made_under_article_15)]),
+    Citations == [].
+
+% ---- input tolerance: THE ARGUMENTS ------------------------------------
+test(year_1899_is_wrong_type) :-
+    uk_time_rules_regime(date(1899, 12, 31), Regime, []),
+    Regime == input_problems([wrong_type(receipt_date)]).
+test(year_2199_is_accepted) :-
+    uk_time_rules_regime(date(2199, 12, 31), Regime, _Citations),
+    Regime == article_12a_time_rules.
+test(year_1900_is_accepted) :-
+    uk_time_rules_regime(date(1900, 1, 1), Regime, _Citations),
+    Regime == earlier_time_limits_saved.
+test(february_29_2100_is_not_a_day) :-
+    uk_response_deadline(date(2100, 2, 29), one_month, 0, Deadline, []),
+    Deadline == input_problems([wrong_type(relevant_time_date)]).
+test(february_29_2000_is_a_day) :-
+    uk_response_deadline(date(2000, 2, 29), one_month, 0, Deadline, _Citations),
+    Deadline == date(2000, 3, 28).
+% (b) THE TEST WAS WRONG for the groundness gate: ground values outside each type are used instead of unbound arguments.
+test(all_deadline_arguments_wrong) :-
+    uk_response_deadline(not_a_date, two_weeks, minus_one, Deadline, []),
+    Deadline == input_problems([wrong_type(relevant_time_date), wrong_type(response_period), wrong_type(paused_days)]).
+test(fractional_paused_days_is_wrong_type) :-
+    uk_response_deadline(date(2026, 3, 1), one_month, 1.5, Deadline, []),
+    Deadline == input_problems([wrong_type(paused_days)]).
+test(identity_atom_outside_type) :-
+    uk_relevant_time(date(2026, 3, 1), maybe_later, no_fee, Relevant, []),
+    Relevant == input_problems([wrong_type(identity_information)]).
+test(paused_both_arguments_wrong) :-
+    uk_paused_days(yesterday, today, Days, []),
+    Days == input_problems([wrong_type(request_for_information_date), wrong_type(information_received_date)]).
+test(compare_period_wrong_type) :-
+    compare_uk_eu_response_deadline(date(2026, 3, 1), six_weeks, UkDeadline, EuDeadline, Difference, []),
+    UkDeadline == input_problems([wrong_type(response_period)]),
+    EuDeadline == input_problems([wrong_type(response_period)]),
+    Difference == not_comparable.
+
+:- end_module(test_input_mode).

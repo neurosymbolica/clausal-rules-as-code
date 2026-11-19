@@ -1,0 +1,61 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_security_retention_fixtures, [dpdp_security_retention_subject/1, dpdp_security_retention_profile_for/2, dpdp_security_retention_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_security_retention_dpdp_security_retention, [decide_dpdp_security_retention/2]).
+
+dpdp_security_retention_subject(safeguards_on_commencement_day).
+dpdp_security_retention_subject(safeguards_day_before_commencement).
+dpdp_security_retention_subject(processor_not_fiduciary).
+dpdp_security_retention_subject(processor_now_fiduciary).
+dpdp_security_retention_subject(nothing_in_force).
+dpdp_security_retention_subject(safeguards_only_in_force).
+dpdp_security_retention_subject(marketplace_after_sale).
+dpdp_security_retention_subject(bank_account_closed).
+dpdp_security_retention_subject(bank_no_other_law).
+dpdp_security_retention_subject(electronic_book_on_last_retention_day).
+dpdp_security_retention_subject(cloud_processor_day_after_retention).
+dpdp_security_retention_subject(social_media_on_period_end).
+dpdp_security_retention_subject(social_media_day_after_period_end).
+dpdp_security_retention_subject(gaming_at_threshold).
+dpdp_security_retention_subject(gaming_below_threshold).
+dpdp_security_retention_subject(e_commerce_on_deeming_floor).
+dpdp_security_retention_subject(e_commerce_day_after_deeming_floor).
+dpdp_security_retention_subject(e_commerce_below_threshold).
+dpdp_security_retention_subject(accuracy_decision_use).
+dpdp_security_retention_subject(accuracy_neither_likely).
+dpdp_security_retention_subject(fiduciary_unsure_with_day).
+dpdp_security_retention_subject(fiduciary_unsure_without_day).
+dpdp_security_retention_subject(empty_profile).
+dpdp_security_retention_subject(malformed_profile).
+
+dpdp_security_retention_profile_for(safeguards_on_commencement_day, [attribute(section_8_5_in_force, true), attribute(section_8_8_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(assessment_date, date(2027, 5, 13))]).
+dpdp_security_retention_profile_for(safeguards_day_before_commencement, [attribute(section_8_5_in_force, true), attribute(section_8_8_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(assessment_date, date(2027, 5, 12))]).
+dpdp_security_retention_profile_for(processor_not_fiduciary, [attribute(section_8_3_in_force, true), attribute(section_8_5_in_force, true), attribute(section_8_7_in_force, true), attribute(section_8_8_in_force, true), attribute(acts_as_data_fiduciary, false), attribute(assessment_date, date(2028, 1, 1)), attribute(registered_users_in_india, 1000)]).
+dpdp_security_retention_profile_for(processor_now_fiduciary, [attribute(section_8_3_in_force, true), attribute(section_8_5_in_force, true), attribute(section_8_7_in_force, true), attribute(section_8_8_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(assessment_date, date(2028, 1, 1)), attribute(registered_users_in_india, 1000)]).
+dpdp_security_retention_profile_for(nothing_in_force, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, false), attribute(assessment_date, date(2028, 1, 1))]).
+dpdp_security_retention_profile_for(safeguards_only_in_force, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, true), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, false), attribute(acts_as_data_fiduciary, true), attribute(assessment_date, date(2028, 1, 1))]).
+dpdp_security_retention_profile_for(marketplace_after_sale, [attribute(section_8_7_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(retention_necessary_for_compliance_with_law, false), attribute(consent_withdrawn, false), attribute(specified_purpose_no_longer_served, true), attribute(assessment_date, date(2028, 6, 1)), attribute(last_processing_date, date(2027, 1, 1)), attribute(data_made_available_to_data_processor, false)]).
+dpdp_security_retention_profile_for(bank_account_closed, [attribute(section_8_7_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(retention_necessary_for_compliance_with_law, true), attribute(consent_withdrawn, false), attribute(specified_purpose_no_longer_served, false)]).
+dpdp_security_retention_profile_for(bank_no_other_law, [attribute(section_8_7_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(retention_necessary_for_compliance_with_law, false), attribute(consent_withdrawn, false), attribute(specified_purpose_no_longer_served, false)]).
+dpdp_security_retention_profile_for(electronic_book_on_last_retention_day, [attribute(section_8_7_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(retention_necessary_for_compliance_with_law, false), attribute(consent_withdrawn, true), attribute(assessment_date, date(2028, 1, 1)), attribute(last_processing_date, date(2027, 1, 1))]).
+dpdp_security_retention_profile_for(cloud_processor_day_after_retention, [attribute(section_8_7_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(retention_necessary_for_compliance_with_law, false), attribute(consent_withdrawn, true), attribute(assessment_date, date(2028, 1, 2)), attribute(last_processing_date, date(2027, 1, 1)), attribute(data_made_available_to_data_processor, true)]).
+dpdp_security_retention_profile_for(social_media_on_period_end, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 6, 1)), attribute(third_schedule_class, social_media_intermediary), attribute(registered_users_in_india, 20000000), attribute(third_schedule_purpose_excepted, false), attribute(last_approached_date, date(2027, 6, 1))]).
+dpdp_security_retention_profile_for(social_media_day_after_period_end, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 6, 2)), attribute(third_schedule_class, social_media_intermediary), attribute(registered_users_in_india, 20000000), attribute(third_schedule_purpose_excepted, false), attribute(last_approached_date, date(2027, 6, 1))]).
+dpdp_security_retention_profile_for(gaming_at_threshold, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 6, 2)), attribute(third_schedule_class, online_gaming_intermediary), attribute(registered_users_in_india, 5000000), attribute(third_schedule_purpose_excepted, false), attribute(last_approached_date, date(2027, 6, 1))]).
+dpdp_security_retention_profile_for(gaming_below_threshold, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 6, 2)), attribute(third_schedule_class, online_gaming_intermediary), attribute(registered_users_in_india, 4999999), attribute(third_schedule_purpose_excepted, false), attribute(last_approached_date, date(2027, 6, 1))]).
+dpdp_security_retention_profile_for(e_commerce_on_deeming_floor, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 5, 13)), attribute(third_schedule_class, e_commerce_entity), attribute(registered_users_in_india, 20000000), attribute(third_schedule_purpose_excepted, false)]).
+dpdp_security_retention_profile_for(e_commerce_day_after_deeming_floor, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 5, 14)), attribute(third_schedule_class, e_commerce_entity), attribute(registered_users_in_india, 20000000), attribute(third_schedule_purpose_excepted, false)]).
+dpdp_security_retention_profile_for(e_commerce_below_threshold, [attribute(section_8_3_in_force, false), attribute(section_8_5_in_force, false), attribute(section_8_7_in_force, false), attribute(section_8_8_in_force, true), attribute(assessment_date, date(2030, 5, 14)), attribute(third_schedule_class, e_commerce_entity), attribute(registered_users_in_india, 19999999), attribute(third_schedule_purpose_excepted, false)]).
+dpdp_security_retention_profile_for(accuracy_decision_use, [attribute(section_8_3_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(likely_used_for_decision_affecting_data_principal, true)]).
+dpdp_security_retention_profile_for(accuracy_neither_likely, [attribute(section_8_3_in_force, true), attribute(acts_as_data_fiduciary, true), attribute(likely_used_for_decision_affecting_data_principal, false), attribute(likely_disclosed_to_another_data_fiduciary, false)]).
+dpdp_security_retention_profile_for(fiduciary_unsure_with_day, [attribute(section_8_5_in_force, true), attribute(acts_as_data_fiduciary, unsure), attribute(assessment_date, date(2028, 1, 1))]).
+dpdp_security_retention_profile_for(fiduciary_unsure_without_day, [attribute(section_8_5_in_force, true), attribute(acts_as_data_fiduciary, unsure)]).
+dpdp_security_retention_profile_for(empty_profile, []).
+dpdp_security_retention_profile_for(malformed_profile, [attribute(section_8_5_in_force, maybe), attribute(colour, blue)]).
+
+dpdp_security_retention_assess(Subject, Result) :-
+    dpdp_security_retention_profile_for(Subject, Profile),
+    decide_dpdp_security_retention(Profile, Result).

@@ -1,0 +1,89 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for uk/uk_complaints_to_the_commissioner.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served by the slice's public predicates,
+% which the package facade re-exports:
+%   #2  eligibility   -- controller_complaint_right/3 (s 164A(1)),
+%                        commission_complaint_right/3 (s 165(2) as amended),
+%                        decide_uk_complaints_to_the_commissioner/2 (primary verdict)
+%   #7  justification -- uk_complaints_to_the_commissioner_checklist/2 (cite per item)
+%   #15 deadline      -- acknowledgement_last_day/3 (s 164A(3); S.I. 2026/82 reg 3(a), reg 7).
+%                        The pinned text states no consequence of missing the
+%                        period; none is formalised.
+% This file adds:
+%   uk_complaints_to_the_commissioner_what_if/4      (#16 what-if): override one key -> re-evaluate
+%   uk_complaints_to_the_commissioner_profile_keys/1: top-level profile key schema
+%   uk_complaints_to_the_commissioner_input_problems/2: the problems a profile has ([] = none),
+%     re-exported exactly as the scaffold wrote it in kernel.clausal.
+%   The result atoms and result constructors of THE CALLED CONTRACT, served
+%   as package-root names (never called as queries). A result constructor
+%   is data: it is declared below and has no clauses.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is a
+% local attribute-list replacement (kit override_key/4 works on dicts only).
+% Each query yields exactly one solution.
+% =====================================================================
+
+:- module(queries, [
+    uk_complaints_to_the_commissioner_profile_keys/1,
+    uk_complaints_to_the_commissioner_input_problems/2,
+    uk_complaints_to_the_commissioner_what_if/4,
+    complaint_under_section_164a/0,
+    not_a_complaint_under_section_164a/0,
+    complaint_under_section_165_2/0,
+    not_a_complaint_under_section_165_2/0,
+    acknowledgement_duty_does_not_apply/0,
+    indeterminate/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(uk/uk_complaints_to_the_commissioner/kernel, [uk_complaints_to_the_commissioner_input_problems/2]).
+:- use_module(uk/uk_complaints_to_the_commissioner/uk_complaints_to_the_commissioner, [uk_complaints_to_the_commissioner_status/2]).
+
+% ---- result constructors (exported data, never called as queries) -------
+:- constructors([indeterminate(missing_keys), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+uk_complaints_to_the_commissioner_profile_keys([complaint_by_data_subject_about_own_personal_data, infringement_considered, complaint_made_to_the_controller]).
+
+% ---- result atoms of THE CALLED CONTRACT (package-root names) ----------
+complaint_under_section_164a.
+not_a_complaint_under_section_164a.
+complaint_under_section_165_2.
+not_a_complaint_under_section_165_2.
+acknowledgement_duty_does_not_apply.
+
+% #16 what-if: re-evaluate the primary verdict status with one key
+% hypothetically set to NewValue. A bad override value is answered as
+% input_problems(...) by the status, since the input check runs first.
+uk_complaints_to_the_commissioner_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    hypothesis_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    uk_complaints_to_the_commissioner_status(Hypothesis, NewStatus).
+
+% A term that is not an attribute list is kept as given, so its status
+% reports the profile problem; an attribute list gets the override.
+hypothesis_profile(Profile, _, _, Profile) :-
+    uk_complaints_to_the_commissioner_input_problems(Profile, [wrong_type(profile)]).
+hypothesis_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    uk_complaints_to_the_commissioner_input_problems(Profile, Problems),
+    dif(Problems, [wrong_type(profile)]),
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis).
+
+% replace_attribute(Elements, OverriddenKey, NewValue, Replaced): every
+% element whose key is identical (==) to OverriddenKey is dropped and one
+% attribute(OverriddenKey, NewValue) is added at the end.
+replace_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+replace_attribute([attribute(ElementKey, _)|Elements], OverriddenKey, NewValue, Replaced) :-
+    ElementKey == OverriddenKey,
+    replace_attribute(Elements, OverriddenKey, NewValue, Replaced).
+replace_attribute([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Replaced]) :-
+    ElementKey \== OverriddenKey,
+    replace_attribute(Elements, OverriddenKey, NewValue, Replaced).
+
+:- end_module(queries).

@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input tolerance:
+% malformed profiles and date arguments give the input problems the order
+% states (INTERFACE - THE INPUT CHECK, step (0) of THE LIMBS).
+% Run: python -m clausal.testing us/virginia_vcdpa/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(us/virginia_vcdpa/kernel, [virginia_vcdpa_input_problems/2]).
+:- use_module(us/virginia_vcdpa/virginia_vcdpa, [
+    applicability_status/3,
+    response_deadline/4,
+    extended_response_deadline/4,
+    appeal_response_deadline/4,
+    cure_period_last_day/4,
+    attorney_general_action_status/5,
+    civil_penalty_maximum/3,
+    virginia_vcdpa_status/2
+]).
+:- use_module(us/virginia_vcdpa/fixtures, [virginia_vcdpa_profile_for/2]).
+
+% ---- bound verdicts ----------------------------------------------------
+test(in_scope_holds_with_the_verdict_bound) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    applicability_status(Profile, in_scope, [cite(us_va_code_59_1_576_a)]).
+test(an_in_scope_profile_rejects_out_of_scope_bound, fail) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    applicability_status(Profile, out_of_scope, _).
+test(exempt_entity_holds_with_the_verdict_bound) :-
+    virginia_vcdpa_profile_for(hospital_hipaa, Profile),
+    applicability_status(Profile, exempt_entity, [cite(us_va_code_59_1_576_b)]).
+test(an_exempt_profile_rejects_in_scope_bound, fail) :-
+    virginia_vcdpa_profile_for(hospital_hipaa, Profile),
+    applicability_status(Profile, in_scope, _).
+test(out_of_scope_holds_with_the_verdict_bound) :-
+    virginia_vcdpa_profile_for(no_business_link, Profile),
+    applicability_status(Profile, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+test(the_status_projection_holds_bound) :-
+    virginia_vcdpa_profile_for(mid_size_not_broker, Profile),
+    virginia_vcdpa_status(Profile, out_of_scope).
+test(needs_legal_review_holds_with_the_verdict_bound) :-
+    virginia_vcdpa_profile_for(unsure_business_link, Profile),
+    applicability_status(Profile,
+                         needs_legal_review(open_textured(conducts_business_in_or_targets_virginia, cite(us_va_code_59_1_576_a)),
+                                            [inputs_relied_on([conducts_business_in_or_targets_virginia-unsure])]),
+                         []).
+test(indeterminate_holds_with_the_verdict_bound) :-
+    virginia_vcdpa_profile_for(empty_profile, Profile),
+    applicability_status(Profile, indeterminate([entity_category]), []).
+test(response_deadline_holds_with_the_date_bound) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 15), _).
+test(appeal_deadline_holds_with_the_date_bound) :-
+    appeal_response_deadline([], date(2026, 1, 1), date(2026, 3, 2), [cite(us_va_code_59_1_577_c)]).
+test(cure_last_day_holds_with_the_date_bound) :-
+    cure_period_last_day([], date(2026, 1, 1), date(2026, 1, 31), [cite(us_va_code_59_1_584_b)]).
+test(no_extension_holds_with_the_atom_bound) :-
+    extended_response_deadline([attribute(extension_notice_given_within_initial_period, false)],
+                               date(2026, 1, 1),
+                               no_extension_available,
+                               [cite(us_va_code_59_1_577_b_1)]).
+test(cure_period_running_holds_with_the_atom_bound) :-
+    attorney_general_action_status([], date(2026, 1, 1), date(2026, 1, 15), cure_period_running, [cite(us_va_code_59_1_584_b)]).
+test(the_penalty_holds_with_the_integer_bound) :-
+    civil_penalty_maximum([attribute(violation_count, 2)], 15000, [cite(us_va_code_59_1_584_c)]).
+
+% ---- input tolerance: the profile --------------------------------------
+% (c) THE TESTS WERE REPLACED: the groundness gate requires every test
+% input to be ground. Each unbound-input test is replaced by a ground input
+% that exercises the same sentence of the order (not an attribute list;
+% a list not ending in []; a value outside its type; a date that is not a
+% real day).
+test(a_single_attribute_outside_a_list_is_wrong_type) :-
+    virginia_vcdpa_input_problems(attribute(consumer_count, 1), Problems),
+    Problems == [wrong_type(profile)].
+test(a_list_not_ending_in_the_empty_list_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(consumer_count, 1)|tail], Problems),
+    Problems == [wrong_type(profile)].
+test(an_atom_is_not_a_profile) :-
+    virginia_vcdpa_input_problems(none, [wrong_type(profile)]).
+test(a_non_attribute_element_spoils_the_list) :-
+    virginia_vcdpa_input_problems([attribute(consumer_count, 1), consumer_count], [wrong_type(profile)]).
+test(a_compound_value_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(violation_count, count(1))], Problems),
+    Problems == [wrong_type(violation_count)].
+% (b) THE TEST WAS REPLACED: the answer-shape gate re-calls each test input
+% and requires a ground answer; a ground non-atom key exercises the same
+% rule of the order (a KEY that is not an atom is unknown_key(KEY) as given).
+test(an_integer_key_is_unknown_as_given) :-
+    virginia_vcdpa_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+test(a_float_count_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(consumer_count, 100000.0)], [wrong_type(consumer_count)]).
+test(a_negative_count_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(violation_count, -1)], [wrong_type(violation_count)]).
+test(unsure_is_not_a_crisp_value) :-
+    virginia_vcdpa_input_problems([attribute(over_half_of_gross_revenue_from_sale, unsure)], [wrong_type(over_half_of_gross_revenue_from_sale)]).
+test(unsure_is_a_judgement_value) :-
+    virginia_vcdpa_input_problems([attribute(extension_reasonably_necessary, unsure)], []).
+test(an_unlisted_judgement_value_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(conducts_business_in_or_targets_virginia, yes)], [wrong_type(conducts_business_in_or_targets_virginia)]).
+test(an_unlisted_category_is_wrong_type) :-
+    virginia_vcdpa_input_problems([attribute(entity_category, charity)], [wrong_type(entity_category)]).
+test(a_repeated_key_with_equal_values_is_a_duplicate_only) :-
+    virginia_vcdpa_input_problems([attribute(entity_category, nonprofit_organization), attribute(entity_category, nonprofit_organization)], Problems),
+    Problems == [duplicate_key(entity_category)].
+test(a_repeated_unknown_key_is_named_once) :-
+    virginia_vcdpa_input_problems([attribute(colour, red), attribute(colour, blue)], Problems),
+    Problems == [unknown_key(colour)].
+test(an_absent_key_is_no_problem) :-
+    virginia_vcdpa_input_problems([attribute(violation_count, 0)], []).
+
+% ---- input tolerance: the queries --------------------------------------
+test(a_query_answers_input_problems_first) :-
+    findall(Result-Citations, applicability_status([attribute(colour, red)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour)])-[]].
+test(a_key_the_query_does_not_read_is_still_checked) :-
+    findall(Deadline-Citations, response_deadline([attribute(violation_count, -1)], date(2026, 1, 1), Deadline, Citations), Answers),
+    Answers == [input_problems([wrong_type(violation_count)])-[]].
+test(an_unreal_day_is_a_date_problem) :-
+    response_deadline([], date(2026, 2, 29), input_problems([wrong_type(received_date)]), []).
+test(a_year_after_2100_is_a_date_problem) :-
+    appeal_response_deadline([], date(2101, 1, 1), input_problems([wrong_type(appeal_received_date)]), []).
+test(a_date_with_an_atom_day_is_a_date_problem) :-
+    cure_period_last_day([], date(2026, 1, x), input_problems([wrong_type(notice_date)]), []).
+test(date_problems_follow_signature_order) :-
+    attorney_general_action_status([], date(2026, 13, 1), date(1999, 1, 1), input_problems([wrong_type(notice_date), wrong_type(reference_date)]), []).
+test(date_problems_follow_profile_problems) :-
+    extended_response_deadline([attribute(colour, red)], nothing, input_problems([unknown_key(colour), wrong_type(received_date)]), []).
+test(a_malformed_profile_gets_no_penalty_figure) :-
+    findall(Maximum, civil_penalty_maximum([attribute(violation_count, 1.5)], Maximum, _), Maximums),
+    Maximums == [input_problems([wrong_type(violation_count)])].
+
+:- end_module(test_input_mode).

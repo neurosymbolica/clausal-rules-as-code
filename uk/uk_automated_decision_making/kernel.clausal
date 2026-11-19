@@ -1,0 +1,254 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for uk/uk_automated_decision_making (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% uk_automated_decision_making_input_problems/2 here, exported, for every
+% file to import. No other predicate is shared: this domain has ONE
+% determination slice (uk_automated_decision_making.clausal), so every
+% derived classification, citation table, referral row and the status
+% rule live in that slice.
+%
+% Source (the law the package formalises; drafter's reading, not a
+% lawyer's):
+%   UK GDPR Chapter III Section 4A, Arts 22A, 22B and 22C, as substituted
+%   by section 80(1) of the Data (Use and Access) Act 2025, in force for a
+%   decision taken on or after 5 February 2026 (S.I. 2026/82 reg 2(j) and
+%   (z8), with reg 5); legislation.gov.uk 'Latest available (Revised)'
+%   text fetched 2026-11-15 (no 'up to date as at' date on the page).
+%   Comparison limb: Regulation (EU) 2016/679 Art 22(1), (2)(a) to (c) and
+%   (4), Formex consolidation 02016R0679-20160504, Article 22 extract.
+%   Deferred (quoted, not formalised): UK GDPR Art 22D; EU Art 22(3);
+%   S.I. 2026/82 regs 2 and 5; DUAA 2025 s 142(1), (2), (2)(h).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike. deontic family: STATUS is a modal vocabulary.
+%
+% THE ANSWER TERMS (INTERFACE - THE CALLED CONTRACT of the order):
+%   uk_significant_automated_decision(Profile, Result, Citations)
+%     Result: significant_decision_based_solely_on_automated_processing
+%           | not_a_significant_decision_based_solely_on_automated_processing
+%           | a status compound itself.
+%   uk_automated_decision_restriction(Profile, Result, Citations)
+%   eu_automated_decision(Profile, Result, Citations)
+%     Result: restrictions_not_engaged | decision_permitted
+%           | decision_prohibited | a status compound itself.
+%   uk_automated_decision_safeguards(Profile, Result, Citations)
+%     Result: safeguards_not_required | required_safeguards_in_place
+%           | required_safeguards_not_in_place | a status compound itself.
+%   compare_uk_eu_automated_decision(Profile, UkResult, EuResult,
+%                                    Difference, ChangedBy)
+%     UkResult, EuResult as the restriction queries; Difference: same
+%     | differs | a status compound itself; ChangedBy the flat list of
+%     cite(Key) of the UK Art 22B answer when Difference is differs and
+%     UkResult is final, else [].
+%   Citations: ONE flat set-like list of cite(Key) terms, fixed per final
+%   Result atom; [] for a status compound.
+%
+% THE STATUS COMPOUNDS (never a bare atom, never inside a list):
+%   indeterminate([Key])           -- exactly one bare key atom;
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                                  -- Pairs a flat list of Key-Value;
+%   input_problems(Problems)       -- Problems the non-empty list of
+%                                     duplicate_key(Key), wrong_type(Key),
+%                                     unknown_key(Key) terms.
+%
+% THE SLICE RESULT TERM (scaffold facade):
+%   uk_automated_decision_making_verdict(Status, Citations)
+%     Status   -- the Result of uk_automated_decision_restriction/3
+%                 (an atom or the status compound itself);
+%     Citations -- that query's Citations, a list of cite(Key) terms.
+%   The checklist rows are formalize_lib item(RequirementId, Status,
+%   cite(Key)) terms.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [uk_automated_decision_making_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% uk_automated_decision_making_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+uk_automated_decision_making_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [decision_based_entirely_or_partly_on_personal_data, meaningful_human_involvement_in_the_decision, decision_produces_a_legal_effect_for_the_data_subject, decision_has_a_similarly_significant_effect_for_the_data_subject, processing_for_the_decision_relies_on_article_6_1_ea, decision_based_entirely_or_partly_on_special_category_data, decision_based_entirely_on_processing_with_explicit_consent, uk_article_9_2_g_applies, decision_necessary_for_a_contract_with_the_data_subject, decision_required_or_authorised_by_law, decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, decision_based_on_explicit_consent, article_9_2_a_applies, eu_article_9_2_g_applies, suitable_measures_for_special_category_data_in_place, safeguards_provide_information_about_decisions, safeguards_enable_representations, safeguards_enable_human_intervention, safeguards_enable_contesting],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(decision_based_entirely_or_partly_on_personal_data, boolean).
+key_type(meaningful_human_involvement_in_the_decision, judgement).
+key_type(decision_produces_a_legal_effect_for_the_data_subject, judgement).
+key_type(decision_has_a_similarly_significant_effect_for_the_data_subject, judgement).
+key_type(processing_for_the_decision_relies_on_article_6_1_ea, boolean).
+key_type(decision_based_entirely_or_partly_on_special_category_data, boolean).
+key_type(decision_based_entirely_on_processing_with_explicit_consent, judgement).
+key_type(uk_article_9_2_g_applies, judgement).
+key_type(decision_necessary_for_a_contract_with_the_data_subject, judgement).
+key_type(decision_required_or_authorised_by_law, judgement).
+key_type(decision_authorised_by_union_or_member_state_law_laying_down_suitable_measures, judgement).
+key_type(decision_based_on_explicit_consent, judgement).
+key_type(article_9_2_a_applies, judgement).
+key_type(eu_article_9_2_g_applies, judgement).
+key_type(suitable_measures_for_special_category_data_in_place, judgement).
+key_type(safeguards_provide_information_about_decisions, judgement).
+key_type(safeguards_enable_representations, judgement).
+key_type(safeguards_enable_human_intervention, judgement).
+key_type(safeguards_enable_contesting, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

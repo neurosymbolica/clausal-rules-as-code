@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/data_protection/gdpr_transfer_dpf loads (kernel and citations), the
+% result terms of THE CALLED CONTRACT build and destructure, the two result
+% atoms are distinct, and the real citation records resolve.
+% Self-contained: the determination slice is not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_transfer_dpf/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/kernel, [gdpr_transfer_dpf_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/citations, [citation/2, implements/1]).
+
+% ---- the result atoms ------------------------------------------------
+test(the_result_atoms_are_distinct) :-
+    dif(covered_by_data_privacy_framework_adequacy, not_covered_by_data_privacy_framework_adequacy).
+
+test(the_result_atoms_are_atoms) :-
+    atom(covered_by_data_privacy_framework_adequacy),
+    atom(not_covered_by_data_privacy_framework_adequacy).
+
+test(a_result_atom_does_not_unify_with_the_other, fail) :-
+    covered_by_data_privacy_framework_adequacy = not_covered_by_data_privacy_framework_adequacy.
+
+% ---- the facade verdict term -----------------------------------------
+test(the_verdict_term_carries_result_and_citations) :-
+    Verdict = gdpr_transfer_dpf_verdict(covered_by_data_privacy_framework_adequacy, [cite(eu_dec_2023_1795_art_1), cite(eu_reg_2016_679_art_45_1)]),
+    Verdict = gdpr_transfer_dpf_verdict(Result, Citations),
+    Result == covered_by_data_privacy_framework_adequacy,
+    Citations == [cite(eu_dec_2023_1795_art_1), cite(eu_reg_2016_679_art_45_1)].
+
+% ---- the status compounds --------------------------------------------
+test(the_absent_referral_builds_and_destructures) :-
+    Result = needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_list_entry_statement)), [resolution(cite(data_privacy_framework_list_entry_statement), not_attempted), inputs_relied_on([recipient_on_data_privacy_framework_list-absent])]),
+    Result = needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)), [resolution(cite(ResolvedTarget), Status), inputs_relied_on(Pairs)]),
+    Citation == eu_dec_2023_1795_art_1,
+    Target == data_privacy_framework_list_entry_statement,
+    ResolvedTarget == Target,
+    Status == not_attempted,
+    Pairs == [recipient_on_data_privacy_framework_list-absent].
+
+test(indeterminate_names_one_key) :-
+    Result = indeterminate([transfer_from_union]),
+    Result = indeterminate(MissingKeys),
+    MissingKeys == [transfer_from_union].
+
+test(the_bare_atom_indeterminate_is_not_the_status, fail) :-
+    indeterminate = indeterminate([transfer_from_union]).
+
+test(the_basis_item_keeps_the_attested_term_whole) :-
+    Attested = attested(false, attestation(by, at, reason, none)),
+    Item = outside_fact(certification_covers_transferred_data, Attested),
+    Item = outside_fact(Key, attested(Value, attestation(_, _, _, Evidence))),
+    Key == certification_covers_transferred_data,
+    Value == false,
+    Evidence == none.
+
+% ---- the citation records --------------------------------------------
+test(the_operative_citation_resolves) :-
+    citation(eu_dec_2023_1795_art_1, _Record).
+
+test(the_effect_citation_resolves) :-
+    citation(eu_reg_2016_679_art_45_1, _Record).
+
+test(each_referral_target_resolves) :-
+    citation(data_privacy_framework_decision_in_force_statement, _DecisionRecord),
+    citation(data_privacy_framework_list_entry_statement, _ListRecord),
+    citation(data_privacy_framework_certification_coverage_statement, _CoverageRecord).
+
+test(the_marker_holds_for_a_recorded_key) :-
+    implements(eu_dec_2023_1795_art_1).
+
+test(the_placeholder_citation_is_gone, fail) :-
+    citation(eu_todo_primary_source, _Record).
+
+% ---- the input check loads from the kernel ---------------------------
+test(the_input_check_accepts_an_empty_profile) :-
+    gdpr_transfer_dpf_input_problems([], []).
+
+test(the_input_check_names_an_unknown_key) :-
+    gdpr_transfer_dpf_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(the_input_check_refuses_a_non_list) :-
+    gdpr_transfer_dpf_input_problems(not_a_profile, [wrong_type(profile)]).
+
+:- end_module(test_load).

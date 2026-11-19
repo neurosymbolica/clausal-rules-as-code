@@ -1,0 +1,836 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s4_criminal_provisions_swiss_fadp_s4_criminal_provisions, [decide_swiss_fadp_s4_criminal_provisions/2, swiss_fadp_s4_criminal_provisions_status/2, swiss_fadp_s4_criminal_provisions_checklist/2, swiss_fadp_s4_criminal_provisions_decision_resolvable/1, swiss_fadp_s4_criminal_provisions_status_values/1, swiss_offence_punishable/3, swiss_prosecution_complaint_condition/3, swiss_prosecution_limitation/5, swiss_business_ordered_to_pay_fine/3, eu_administrative_fine_ceiling/3, compare_swiss_eu_fine_provided/5, punishable_by_fine_under_article_60_1_a/0, punishable_by_fine_under_article_60_1_b_1/0, punishable_by_fine_under_article_60_1_b_2/0, punishable_by_fine_under_article_60_2/0, punishable_by_fine_under_article_61_a/0, punishable_by_fine_under_article_61_b/0, punishable_by_fine_under_article_61_c/0, punishable_by_fine_under_article_62_1/0, punishable_by_fine_under_article_62_2/0, punishable_by_fine_under_article_63/0, not_punishable_under_examined_offence/0, prosecuted_ex_officio/0, complaint_offence_complaint_filed/0, complaint_offence_no_complaint_filed/0, five_year_limitation_period_expired/0, five_year_limitation_period_not_expired/0, business_may_be_ordered_to_pay_fine/0, business_substitution_not_available/0, fine_up_to_10_million_euro_or_2_percent_of_turnover/0, fine_up_to_20_million_euro_or_4_percent_of_turnover/0, no_administrative_fine_under_article_83_4_to_83_6/0, same/0, differs/0, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1, wrong_type/1, duplicate_key/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_keys/2]).
+:- use_module(clausal_lists_extra, [clausal_is_list/1]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(deadline_lib, [month_last_day/3]).
+:- use_module(m__ch_swiss_fadp_s4_criminal_provisions_kernel, [swiss_fadp_s4_criminal_provisions_input_problems/2]).
+:- use_module(m__ch_swiss_fadp_s4_criminal_provisions_citations, [implements/1]).
+
+punishable_by_fine_under_article_60_1_a.
+
+punishable_by_fine_under_article_60_1_b_1.
+
+punishable_by_fine_under_article_60_1_b_2.
+
+punishable_by_fine_under_article_60_2.
+
+punishable_by_fine_under_article_61_a.
+
+punishable_by_fine_under_article_61_b.
+
+punishable_by_fine_under_article_61_c.
+
+punishable_by_fine_under_article_62_1.
+
+punishable_by_fine_under_article_62_2.
+
+punishable_by_fine_under_article_63.
+
+not_punishable_under_examined_offence.
+
+prosecuted_ex_officio.
+
+complaint_offence_complaint_filed.
+
+complaint_offence_no_complaint_filed.
+
+five_year_limitation_period_expired.
+
+five_year_limitation_period_not_expired.
+
+business_may_be_ordered_to_pay_fine.
+
+business_substitution_not_available.
+
+fine_up_to_10_million_euro_or_2_percent_of_turnover.
+
+fine_up_to_20_million_euro_or_4_percent_of_turnover.
+
+no_administrative_fine_under_article_83_4_to_83_6.
+
+same.
+
+differs.
+
+indeterminate(MissingKeys) :-
+    clausal_is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    nonvar(Reason),
+    clausal_is_list(Context).
+
+open_textured(KeyName, Citation) :-
+    atom(KeyName),
+    nonvar(Citation).
+
+inputs_relied_on(Pairs) :-
+    clausal_is_list(Pairs).
+
+provenance(Source, Detail) :-
+    nonvar(Source),
+    nonvar(Detail).
+
+input_problems(Problems) :-
+    clausal_is_list(Problems).
+
+wrong_type(KeyName) :-
+    nonvar(KeyName).
+
+duplicate_key(KeyName) :-
+    atom(KeyName).
+
+offence_result(article_60_1_a, punishable_by_fine_under_article_60_1_a, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_60_1_a)]).
+offence_result(article_60_1_b_1, punishable_by_fine_under_article_60_1_b_1, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_60_1_b), cite(ch_fadp_art_60_1_b_1)]).
+offence_result(article_60_1_b_2, punishable_by_fine_under_article_60_1_b_2, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_60_1_b), cite(ch_fadp_art_60_1_b_2)]).
+offence_result(article_60_2, punishable_by_fine_under_article_60_2, [cite(ch_fadp_art_60_2)]).
+offence_result(article_61_a, punishable_by_fine_under_article_61_a, [cite(ch_fadp_art_61), cite(ch_fadp_art_61_a)]).
+offence_result(article_61_b, punishable_by_fine_under_article_61_b, [cite(ch_fadp_art_61), cite(ch_fadp_art_61_b)]).
+offence_result(article_61_c, punishable_by_fine_under_article_61_c, [cite(ch_fadp_art_61), cite(ch_fadp_art_61_c)]).
+offence_result(article_62_1, punishable_by_fine_under_article_62_1, [cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_3)]).
+offence_result(article_62_2, punishable_by_fine_under_article_62_2, [cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_2), cite(ch_fadp_art_62_3)]).
+offence_result(article_63, punishable_by_fine_under_article_63, [cite(ch_fadp_art_63)]).
+
+offence_kind(article_60_1_a, private_person_offence, cite(ch_fadp_art_60_1)).
+offence_kind(article_60_1_b_1, private_person_offence, cite(ch_fadp_art_60_1)).
+offence_kind(article_60_1_b_2, private_person_offence, cite(ch_fadp_art_60_1)).
+offence_kind(article_60_2, private_person_offence, cite(ch_fadp_art_60_2)).
+offence_kind(article_61_a, private_person_offence, cite(ch_fadp_art_61)).
+offence_kind(article_61_b, private_person_offence, cite(ch_fadp_art_61)).
+offence_kind(article_61_c, private_person_offence, cite(ch_fadp_art_61)).
+offence_kind(article_62_1, article_62_offence, cite(ch_fadp_art_62_1)).
+offence_kind(article_62_2, article_62_offence, cite(ch_fadp_art_62_2)).
+offence_kind(article_63, private_person_offence, cite(ch_fadp_art_63)).
+
+offence_referral_citation(article_60_1_a, cite(ch_fadp_art_60_1_a)).
+offence_referral_citation(article_60_1_b_1, cite(ch_fadp_art_60_1_b_1)).
+offence_referral_citation(article_60_1_b_2, cite(ch_fadp_art_60_1_b_2)).
+offence_referral_citation(article_60_2, cite(ch_fadp_art_60_2)).
+offence_referral_citation(article_61_a, cite(ch_fadp_art_61_a)).
+offence_referral_citation(article_61_b, cite(ch_fadp_art_61_b)).
+offence_referral_citation(article_61_c, cite(ch_fadp_art_61_c)).
+offence_referral_citation(article_62_1, cite(ch_fadp_art_62_1)).
+offence_referral_citation(article_62_2, cite(ch_fadp_art_62_2)).
+offence_referral_citation(article_63, cite(ch_fadp_art_63)).
+
+offence_prosecution(article_60_1_a, on_complaint, cite(ch_fadp_art_60_1)).
+offence_prosecution(article_60_1_b_1, on_complaint, cite(ch_fadp_art_60_1)).
+offence_prosecution(article_60_1_b_2, on_complaint, cite(ch_fadp_art_60_1)).
+offence_prosecution(article_60_2, ex_officio, cite(ch_fadp_art_60_2)).
+offence_prosecution(article_61_a, on_complaint, cite(ch_fadp_art_61)).
+offence_prosecution(article_61_b, on_complaint, cite(ch_fadp_art_61)).
+offence_prosecution(article_61_c, on_complaint, cite(ch_fadp_art_61)).
+offence_prosecution(article_62_1, on_complaint, cite(ch_fadp_art_62_1)).
+offence_prosecution(article_62_2, on_complaint, cite(ch_fadp_art_62_2)).
+offence_prosecution(article_63, ex_officio, cite(ch_fadp_art_63)).
+
+not_punishable_citations([cite(ch_fadp_art_60_1), cite(ch_fadp_art_60_1_a), cite(ch_fadp_art_60_1_b), cite(ch_fadp_art_60_1_b_1), cite(ch_fadp_art_60_1_b_2), cite(ch_fadp_art_60_2), cite(ch_fadp_art_61), cite(ch_fadp_art_61_a), cite(ch_fadp_art_61_b), cite(ch_fadp_art_61_c), cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_3), cite(ch_fadp_art_62_2), cite(ch_fadp_art_63)]).
+
+eu_ceiling(listed_in_article_83_4, fine_up_to_10_million_euro_or_2_percent_of_turnover, [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_4_b), cite(eu_reg_2016_679_art_83_4_c)], cite(eu_reg_2016_679_art_83_4)).
+eu_ceiling(listed_in_article_83_5_or_83_6, fine_up_to_20_million_euro_or_4_percent_of_turnover, [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a), cite(eu_reg_2016_679_art_83_5_b), cite(eu_reg_2016_679_art_83_5_c), cite(eu_reg_2016_679_art_83_5_d), cite(eu_reg_2016_679_art_83_5_e), cite(eu_reg_2016_679_art_83_6)], cite(eu_reg_2016_679_art_83_5)).
+
+eu_no_fine_citations([cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_4_b), cite(eu_reg_2016_679_art_83_4_c), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a), cite(eu_reg_2016_679_art_83_5_b), cite(eu_reg_2016_679_art_83_5_c), cite(eu_reg_2016_679_art_83_5_d), cite(eu_reg_2016_679_art_83_5_e), cite(eu_reg_2016_679_art_83_6)]).
+
+key_domain(conduct_meets_offence_description, [true, false]).
+key_domain(acted_wilfully, [true, false]).
+key_domain(examined_offence, [article_60_1_a, article_60_1_b_1, article_60_1_b_2, article_60_2, article_61_a, article_61_b, article_61_c, article_62_1, article_62_2, article_63]).
+key_domain(offender_is_private_person, [true, false]).
+key_domain(eu_infringement_established, [true, false]).
+key_domain(eu_infringed_obligation_listed_in, [listed_in_article_83_4, listed_in_article_83_5_or_83_6, not_listed_in_article_83_4_to_83_6]).
+
+swiss_fine_maximum(threshold(maximum_fine_in_francs, MaximumFrancs, cite(ch_fadp_art_60_1))) :-
+    implements(ch_fadp_art_60_1),
+    MaximumFrancs #= 250000.
+
+business_substitution_boundary(threshold(fine_in_consideration_in_francs, MaximumFrancs, cite(ch_fadp_art_64_2))) :-
+    implements(ch_fadp_art_64_2),
+    MaximumFrancs #= 50000.
+
+key_reading(Profile, KeyName, absent) :-
+    profile_lacks(Profile, KeyName).
+key_reading(Profile, KeyName, value(Value)) :-
+    profile_has(Profile, KeyName),
+    profile_get(Profile, KeyName, Value).
+
+keyed_reading(Profile, KeyName, KeyName - Reading) :-
+    key_reading(Profile, KeyName, Reading).
+
+reading_is_t(absent, _, false).
+reading_is_t(value(Value), Wanted, Truth) :-
+    memberd_t(Value, [Wanted], Truth).
+
+absent_t(absent, true).
+absent_t(value(_), false).
+
+present_t(absent, false).
+present_t(value(_), true).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+first_true_key([], none).
+first_true_key([true - KeyName|_], key(KeyName)).
+first_true_key([false - _|Remaining], Outcome) :-
+    first_true_key(Remaining, Outcome).
+
+present_pairs([], []).
+present_pairs([_ - absent|Remaining], Pairs) :-
+    present_pairs(Remaining, Pairs).
+present_pairs([KeyName - value(Value)|Remaining], [KeyName - Value|Pairs]) :-
+    present_pairs(Remaining, Pairs).
+
+private_person_offence_t(absent, false).
+private_person_offence_t(value(Offence), Truth) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_kind(Offence, OffenceKind, _),
+    memberd_t(OffenceKind, [private_person_offence], Truth).
+
+article_62_offence_t(absent, false).
+article_62_offence_t(value(Offence), Truth) :-
+    implements(ch_fadp_art_62_3),
+    offence_kind(Offence, OffenceKind, _),
+    memberd_t(OffenceKind, [article_62_offence], Truth).
+
+offence_judgement_key(conduct_meets_offence_description).
+offence_judgement_key(acted_wilfully).
+
+swiss_offence_punishable(Profile, Result, Citations) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    swiss_offence_answer(Problems, Profile, Result, Citations).
+
+swiss_offence_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+swiss_offence_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, conduct_meets_offence_description, Conduct),
+    key_reading(Profile, acted_wilfully, Wilful),
+    key_reading(Profile, examined_offence, Offence),
+    key_reading(Profile, offender_is_private_person, Private),
+    swiss_decision(Conduct, Wilful, Offence, Private, Result, Citations).
+
+swiss_decision(Conduct, Wilful, Offence, Private, Result, Citations) :-
+    swiss_not_punishable_t(Conduct, Wilful, Offence, Private, NotPunishable),
+    swiss_after_negative(NotPunishable, Conduct, Wilful, Offence, Private, Result, Citations).
+
+swiss_not_punishable_t(Conduct, Wilful, Offence, Private, Truth) :-
+    implements(ch_fadp_art_60_to_63),
+    reading_is_t(Conduct, false, ConductFails),
+    reading_is_t(Wilful, false, WilfulFails),
+    private_person_offence_t(Offence, PrivateOffence),
+    reading_is_t(Private, false, NotPrivate),
+    truth_and(PrivateOffence, NotPrivate, PersonFails),
+    truth_or(ConductFails, WilfulFails, EitherFails),
+    truth_or(EitherFails, PersonFails, Truth).
+
+swiss_punishable_t(Conduct, Wilful, Offence, Private, Truth) :-
+    implements(ch_fadp_art_60_to_63),
+    reading_is_t(Conduct, true, ConductMet),
+    reading_is_t(Wilful, true, WilfulMet),
+    present_t(Offence, OffenceGiven),
+    article_62_offence_t(Offence, ArticleSixtyTwo),
+    reading_is_t(Private, true, PrivateMet),
+    truth_or(ArticleSixtyTwo, PrivateMet, PersonMet),
+    truth_and(ConductMet, WilfulMet, BothMet),
+    truth_and(BothMet, OffenceGiven, ElementsMet),
+    truth_and(ElementsMet, PersonMet, Truth).
+
+swiss_after_negative(true, _, _, _, _, not_punishable_under_examined_offence, Citations) :-
+    implements(ch_fadp_art_60_to_63),
+    not_punishable_citations(Citations).
+swiss_after_negative(false, Conduct, Wilful, Offence, Private, Result, Citations) :-
+    swiss_punishable_t(Conduct, Wilful, Offence, Private, Punishable),
+    swiss_after_positive(Punishable, Conduct, Wilful, Offence, Private, Result, Citations).
+
+swiss_after_positive(true, _, _, value(Offence), _, Result, Citations) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_result(Offence, Result, Citations).
+swiss_after_positive(false, Conduct, Wilful, Offence, Private, Result, Citations) :-
+    swiss_missing_key(Conduct, Wilful, Offence, Private, Missing),
+    swiss_after_missing(Missing, Conduct, Wilful, Offence, Private, Result, Citations).
+
+swiss_missing_key(Conduct, Wilful, Offence, Private, Missing) :-
+    absent_t(Conduct, ConductAbsent),
+    absent_t(Wilful, WilfulAbsent),
+    absent_t(Offence, OffenceAbsent),
+    absent_t(Private, PrivateAbsent),
+    private_person_offence_t(Offence, PrivateOffence),
+    truth_or(OffenceAbsent, PrivateOffence, PersonRelevant),
+    truth_and(PrivateAbsent, PersonRelevant, PersonNeeded),
+    first_true_key([ConductAbsent - conduct_meets_offence_description, WilfulAbsent - acted_wilfully, OffenceAbsent - examined_offence, PersonNeeded - offender_is_private_person], Missing).
+
+swiss_unsure_key(Conduct, Wilful, Offence, Private, Outcome) :-
+    reading_is_t(Conduct, unsure, ConductUnsure),
+    reading_is_t(Wilful, unsure, WilfulUnsure),
+    reading_is_t(Private, unsure, PrivateUnsure),
+    private_person_offence_t(Offence, PrivateOffence),
+    truth_and(PrivateUnsure, PrivateOffence, PersonUnsure),
+    first_true_key([ConductUnsure - conduct_meets_offence_description, WilfulUnsure - acted_wilfully, PersonUnsure - offender_is_private_person], Outcome).
+
+swiss_after_missing(key(KeyName), _, _, _, _, indeterminate([KeyName]), []).
+swiss_after_missing(none, Conduct, Wilful, Offence, Private, needs_legal_review(open_textured(KeyName, Citation), [inputs_relied_on(Pairs)]), []) :-
+    swiss_unsure_key(Conduct, Wilful, Offence, Private, key(KeyName)),
+    swiss_referral_citation(KeyName, Offence, Citation),
+    swiss_referral_pairs(Conduct, Wilful, Offence, Private, Pairs).
+
+swiss_referral_citation(KeyName, value(Offence), Citation) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_judgement_key(KeyName),
+    offence_referral_citation(Offence, Citation).
+swiss_referral_citation(offender_is_private_person, value(Offence), Citation) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_kind(Offence, private_person_offence, Citation).
+
+swiss_referral_pairs(Conduct, Wilful, value(Offence), Private, Pairs) :-
+    offence_kind(Offence, OffenceKind, _),
+    swiss_row_inputs(OffenceKind, Conduct, Wilful, value(Offence), Private, Inputs),
+    present_pairs(Inputs, Pairs).
+
+swiss_row_inputs(private_person_offence, Conduct, Wilful, Offence, Private, [conduct_meets_offence_description - Conduct, acted_wilfully - Wilful, examined_offence - Offence, offender_is_private_person - Private]).
+swiss_row_inputs(article_62_offence, Conduct, Wilful, Offence, _, [conduct_meets_offence_description - Conduct, acted_wilfully - Wilful, examined_offence - Offence]).
+
+swiss_prosecution_complaint_condition(Profile, Result, Citations) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    complaint_answer(Problems, Profile, Result, Citations).
+
+complaint_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+complaint_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, examined_offence, Offence),
+    key_reading(Profile, criminal_complaint_filed, Filed),
+    complaint_decision(Offence, Filed, Result, Citations).
+
+complaint_decision(absent, _, indeterminate([examined_offence]), []).
+complaint_decision(value(Offence), Filed, Result, Citations) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_prosecution(Offence, ProsecutionMode, _),
+    complaint_route(ProsecutionMode, Filed, Result, Citations).
+
+complaint_route(ex_officio, _, prosecuted_ex_officio, [cite(ch_fadp_art_60_2), cite(ch_fadp_art_63)]) :-
+    implements(ch_fadp_art_63).
+complaint_route(on_complaint, value(true), complaint_offence_complaint_filed, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_61), cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_2)]) :-
+    implements(ch_fadp_art_60_1).
+complaint_route(on_complaint, value(false), complaint_offence_no_complaint_filed, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_61), cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_2)]) :-
+    implements(ch_fadp_art_60_1).
+complaint_route(on_complaint, absent, indeterminate([criminal_complaint_filed]), []).
+
+swiss_prosecution_limitation(Profile, OffenceDate, AssessmentDate, Result, Citations) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, ProfileProblems),
+    date_argument_problems(OffenceDate, offence_date, OffenceProblems),
+    date_argument_problems(AssessmentDate, assessment_date, AssessmentProblems),
+    append([ProfileProblems, OffenceProblems, AssessmentProblems], Problems),
+    limitation_answer(Problems, OffenceDate, AssessmentDate, Result, Citations).
+
+date_argument_problems(Date, ArgumentName, Problems) :-
+    calendar_date_t(Date, Valid),
+    date_problem(Valid, ArgumentName, Problems).
+
+date_problem(true, _, []).
+date_problem(false, ArgumentName, [wrong_type(ArgumentName)]).
+
+calendar_date_t(Date, false) :-
+    var(Date).
+calendar_date_t(Date, Truth) :-
+    nonvar(Date),
+    date_shape_t(Date, Truth).
+
+date_shape_t(date(DateYear, DateMonth, DayOfMonth), Truth) :-
+    integer_component_t(DateYear, YearInteger),
+    integer_component_t(DateMonth, MonthInteger),
+    integer_component_t(DayOfMonth, DayInteger),
+    truth_and(YearInteger, MonthInteger, YearMonthIntegers),
+    truth_and(YearMonthIntegers, DayInteger, AllIntegers),
+    calendar_day_t(AllIntegers, DateYear, DateMonth, DayOfMonth, Truth).
+date_shape_t(Term, false) :-
+    Term \= date(_, _, _).
+
+integer_component_t(Component, false) :-
+    var(Component).
+integer_component_t(Component, true) :-
+    integer(Component).
+integer_component_t(Component, false) :-
+    float(Component).
+integer_component_t(Component, false) :-
+    atom(Component).
+integer_component_t(Component, false) :-
+    compound(Component).
+
+calendar_day_t(false, _, _, _, false).
+calendar_day_t(true, DateYear, DateMonth, DayOfMonth, Truth) :-
+    month_in_range_t(DateMonth, MonthValid),
+    day_in_month_t(MonthValid, DateYear, DateMonth, DayOfMonth, Truth).
+
+month_in_range_t(DateMonth, true) :-
+    DateMonth >= 1,
+    DateMonth =< 12.
+month_in_range_t(DateMonth, false) :-
+    DateMonth < 1.
+month_in_range_t(DateMonth, false) :-
+    DateMonth > 12.
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, DateYear, DateMonth, DayOfMonth, true) :-
+    month_last_day(DateYear, DateMonth, LastDay),
+    DayOfMonth >= 1,
+    DayOfMonth =< LastDay.
+day_in_month_t(true, _, _, DayOfMonth, false) :-
+    DayOfMonth < 1.
+day_in_month_t(true, DateYear, DateMonth, DayOfMonth, false) :-
+    month_last_day(DateYear, DateMonth, LastDay),
+    DayOfMonth > LastDay.
+
+limitation_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+limitation_answer([], OffenceDate, AssessmentDate, Result, Citations) :-
+    fifth_anniversary_number(OffenceDate, AnniversaryNumber),
+    date_number(AssessmentDate, AssessmentNumber),
+    limitation_route(AssessmentNumber, AnniversaryNumber, Result, Citations).
+
+fifth_anniversary_number(date(OffenceYear, OffenceMonth, OffenceDay), AnniversaryNumber) :-
+    implements(ch_fadp_art_66),
+    AnniversaryYear #= OffenceYear + 5,
+    anniversary_day(OffenceMonth, OffenceDay, AnniversaryYear, AnniversaryDay),
+    date_number(date(AnniversaryYear, OffenceMonth, AnniversaryDay), AnniversaryNumber).
+
+anniversary_day(2, 29, AnniversaryYear, AnniversaryDay) :-
+    implements(ch_fadp_art_66),
+    month_last_day(AnniversaryYear, 2, AnniversaryDay).
+anniversary_day(OffenceMonth, OffenceDay, _, OffenceDay) :-
+    implements(ch_fadp_art_66),
+    dif(OffenceMonth - OffenceDay, 2 - 29).
+
+date_number(date(DateYear, DateMonth, DayOfMonth), DayNumber) :-
+    DayNumber #= DateYear * 10000 + DateMonth * 100 + DayOfMonth.
+
+limitation_route(AssessmentNumber, AnniversaryNumber, five_year_limitation_period_expired, [cite(ch_fadp_art_66)]) :-
+    implements(ch_fadp_art_66),
+    AssessmentNumber #> AnniversaryNumber.
+limitation_route(AssessmentNumber, AnniversaryNumber, five_year_limitation_period_not_expired, [cite(ch_fadp_art_66)]) :-
+    implements(ch_fadp_art_66),
+    AssessmentNumber #=< AnniversaryNumber.
+
+swiss_business_ordered_to_pay_fine(Profile, Result, Citations) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    business_answer(Problems, Profile, Result, Citations).
+
+business_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+business_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, offence_committed_in_business, Business),
+    key_reading(Profile, fine_in_consideration_in_francs, Fine),
+    key_reading(Profile, identifying_punishable_persons_requires_disproportionate_investigation, Disproportionate),
+    business_decision(Business, Fine, Disproportionate, Result, Citations).
+
+fine_over_maximum_t(absent, false).
+fine_over_maximum_t(value(Francs), true) :-
+    implements(ch_fadp_art_64_2),
+    business_substitution_boundary(threshold(_, MaximumFrancs, _)),
+    Francs #> MaximumFrancs.
+fine_over_maximum_t(value(Francs), false) :-
+    implements(ch_fadp_art_64_2),
+    business_substitution_boundary(threshold(_, MaximumFrancs, _)),
+    Francs #=< MaximumFrancs.
+
+business_decision(Business, Fine, Disproportionate, Result, Citations) :-
+    business_unavailable_t(Business, Fine, Disproportionate, Unavailable),
+    business_after_unavailable(Unavailable, Business, Fine, Disproportionate, Result, Citations).
+
+business_unavailable_t(Business, Fine, Disproportionate, Truth) :-
+    implements(ch_fadp_art_64_1),
+    implements(ch_fadp_art_64_2),
+    reading_is_t(Business, false, NotBusiness),
+    fine_over_maximum_t(Fine, FineOver),
+    reading_is_t(Disproportionate, false, NotDisproportionate),
+    truth_or(NotBusiness, FineOver, EitherFails),
+    truth_or(EitherFails, NotDisproportionate, Truth).
+
+business_available_t(Business, Fine, Disproportionate, Truth) :-
+    implements(ch_fadp_art_64_2),
+    reading_is_t(Business, true, InBusiness),
+    present_t(Fine, FineGiven),
+    reading_is_t(Disproportionate, true, IsDisproportionate),
+    truth_and(InBusiness, FineGiven, FirstTwo),
+    truth_and(FirstTwo, IsDisproportionate, Truth).
+
+business_after_unavailable(true, _, _, _, business_substitution_not_available, [cite(ch_fadp_art_64_2)]) :-
+    implements(ch_fadp_art_64_2).
+business_after_unavailable(false, Business, Fine, Disproportionate, Result, Citations) :-
+    business_available_t(Business, Fine, Disproportionate, Available),
+    business_after_available(Available, Business, Fine, Disproportionate, Result, Citations).
+
+business_after_available(true, _, _, _, business_may_be_ordered_to_pay_fine, [cite(ch_fadp_art_64_2)]) :-
+    implements(ch_fadp_art_64_2).
+business_after_available(false, Business, Fine, Disproportionate, Result, Citations) :-
+    absent_t(Business, BusinessAbsent),
+    absent_t(Fine, FineAbsent),
+    absent_t(Disproportionate, DisproportionateAbsent),
+    first_true_key([BusinessAbsent - offence_committed_in_business, FineAbsent - fine_in_consideration_in_francs, DisproportionateAbsent - identifying_punishable_persons_requires_disproportionate_investigation], Missing),
+    business_after_missing(Missing, Business, Fine, Disproportionate, Result, Citations).
+
+business_after_missing(key(KeyName), _, _, _, indeterminate([KeyName]), []).
+business_after_missing(none, Business, Fine, Disproportionate, needs_legal_review(open_textured(KeyName, cite(ch_fadp_art_64_2)), [inputs_relied_on(Pairs)]), []) :-
+    reading_is_t(Business, unsure, BusinessUnsure),
+    reading_is_t(Disproportionate, unsure, DisproportionateUnsure),
+    first_true_key([BusinessUnsure - offence_committed_in_business, DisproportionateUnsure - identifying_punishable_persons_requires_disproportionate_investigation], key(KeyName)),
+    present_pairs([offence_committed_in_business - Business, fine_in_consideration_in_francs - Fine, identifying_punishable_persons_requires_disproportionate_investigation - Disproportionate], Pairs).
+
+eu_administrative_fine_ceiling(Profile, Result, Citations) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    eu_answer(Problems, Profile, Result, Citations).
+
+eu_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+eu_answer([], Profile, Result, Citations) :-
+    key_reading(Profile, eu_infringement_established, Infringement),
+    key_reading(Profile, eu_infringed_obligation_listed_in, Listing),
+    eu_decision(Infringement, Listing, Result, Citations).
+
+eu_decision(Infringement, Listing, Result, Citations) :-
+    eu_no_fine_t(Infringement, Listing, NoFine),
+    eu_after_no_fine(NoFine, Infringement, Listing, Result, Citations).
+
+eu_no_fine_t(Infringement, Listing, Truth) :-
+    implements(eu_reg_2016_679_art_83_4),
+    implements(eu_reg_2016_679_art_83_2_b),
+    reading_is_t(Infringement, false, NoInfringement),
+    reading_is_t(Listing, not_listed_in_article_83_4_to_83_6, NotListed),
+    truth_or(NoInfringement, NotListed, Truth).
+
+eu_after_no_fine(true, _, _, no_administrative_fine_under_article_83_4_to_83_6, Citations) :-
+    implements(eu_reg_2016_679_art_83_5),
+    eu_no_fine_citations(Citations).
+eu_after_no_fine(false, Infringement, Listing, Result, Citations) :-
+    eu_route(Infringement, Listing, Result, Citations).
+
+eu_route(value(true), value(ListingValue), Result, Citations) :-
+    implements(eu_reg_2016_679_art_83_4),
+    eu_ceiling(ListingValue, Result, Citations, _).
+eu_route(absent, _, indeterminate([eu_infringement_established]), []).
+eu_route(value(true), absent, indeterminate([eu_infringed_obligation_listed_in]), []).
+eu_route(value(unsure), absent, indeterminate([eu_infringed_obligation_listed_in]), []).
+eu_route(value(unsure), value(ListingValue), needs_legal_review(open_textured(eu_infringement_established, Citation), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2016_679_art_83_4),
+    eu_ceiling(ListingValue, _, _, Citation),
+    present_pairs([eu_infringement_established - value(unsure), eu_infringed_obligation_listed_in - value(ListingValue)], Pairs).
+
+compare_swiss_eu_fine_provided(Profile, SwissResult, EuResult, Difference, ChangedBy) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    comparison_answer(Problems, Profile, SwissResult, EuResult, Difference, ChangedBy).
+
+comparison_answer([Problem|Problems], _, input_problems([Problem|Problems]), input_problems([Problem|Problems]), input_problems([Problem|Problems]), []).
+comparison_answer([], Profile, SwissResult, EuResult, Difference, ChangedBy) :-
+    swiss_offence_punishable(Profile, SwissResult, _),
+    eu_administrative_fine_ceiling(Profile, EuResult, _),
+    maplist(keyed_reading(Profile), [conduct_meets_offence_description, acted_wilfully, examined_offence, offender_is_private_person, eu_infringement_established, eu_infringed_obligation_listed_in], Readings),
+    comparison_difference(Readings, Difference),
+    changed_by(Difference, ChangedBy).
+
+changed_by(differs, [cite(ch_fadp_art_60_1), cite(ch_fadp_art_60_2), cite(ch_fadp_art_61), cite(ch_fadp_art_62_1), cite(ch_fadp_art_62_2), cite(ch_fadp_art_63), cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6)]) :-
+    implements(ch_fadp_art_60_to_63).
+changed_by(same, []).
+changed_by(indeterminate(_Missing), []).
+changed_by(needs_legal_review(_Reason, _Context), []).
+
+comparison_difference(Readings, Difference) :-
+    findall(CompletionDifference, completion_difference_of(Readings, CompletionDifference), Differences),
+    sort(Differences, DistinctDifferences),
+    difference_from_set(DistinctDifferences, Readings, Difference).
+
+difference_from_set([same], _, same).
+difference_from_set([differs], _, differs).
+difference_from_set([differs, same], Readings, Difference) :-
+    comparison_open_status(Readings, Difference).
+
+completion_difference_of(Readings, Difference) :-
+    completion(Readings, Values),
+    completion_difference(Values, Difference).
+
+completion(Readings, Values) :-
+    maplist(open_value, Readings, Values).
+
+open_value(KeyName - Reading, Value) :-
+    open_values(KeyName, Reading, Values),
+    member(Value, Values).
+
+open_values(KeyName, absent, Values) :-
+    key_domain(KeyName, Values).
+open_values(_KeyName, value(unsure), [true, false]).
+open_values(_KeyName, value(Value), [Value]) :-
+    dif(Value, unsure).
+
+completion_difference([Conduct, Wilful, Offence, Private, Infringement, Listing], Difference) :-
+    swiss_completion_class(Conduct, Wilful, Offence, Private, SwissClass),
+    eu_completion_class(Infringement, Listing, EuropeanClass),
+    class_difference(SwissClass, EuropeanClass, Difference).
+
+swiss_completion_class(Conduct, Wilful, Offence, Private, Class) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_kind(Offence, OffenceKind, _),
+    person_element_t(OffenceKind, Private, PersonMet),
+    memberd_t(Conduct, [true], ConductMet),
+    memberd_t(Wilful, [true], WilfulMet),
+    truth_and(ConductMet, WilfulMet, BothMet),
+    truth_and(BothMet, PersonMet, FineProvided),
+    fine_truth_class(FineProvided, Class).
+
+person_element_t(article_62_offence, _, true).
+person_element_t(private_person_offence, Private, Truth) :-
+    implements(ch_fadp_art_60_to_63),
+    memberd_t(Private, [true], Truth).
+
+eu_completion_class(Infringement, Listing, Class) :-
+    implements(eu_reg_2016_679_art_83_4),
+    memberd_t(Infringement, [true], Infringed),
+    memberd_t(Listing, [listed_in_article_83_4, listed_in_article_83_5_or_83_6], Listed),
+    truth_and(Infringed, Listed, FineProvided),
+    fine_truth_class(FineProvided, Class).
+
+fine_truth_class(true, fine).
+fine_truth_class(false, no_fine).
+
+class_difference(fine, fine, same).
+class_difference(no_fine, no_fine, same).
+class_difference(fine, no_fine, differs).
+class_difference(no_fine, fine, differs).
+
+key_changes_t(Readings, KeyName, Truth) :-
+    findall(Masked - Difference, masked_difference(Readings, KeyName, Masked, Difference), Pairs),
+    sort(Pairs, DistinctPairs),
+    pairs_keys(DistinctPairs, Maskeds),
+    sort(Maskeds, DistinctMaskeds),
+    length(DistinctPairs, PairCount),
+    length(DistinctMaskeds, MaskedCount),
+    more_pairs_t(PairCount, MaskedCount, Truth).
+
+masked_difference(Readings, KeyName, Masked, Difference) :-
+    completion(Readings, Values),
+    completion_difference(Values, Difference),
+    mask_values(Readings, Values, KeyName, Masked).
+
+mask_values([], [], _, []).
+mask_values([KeyName - _|Readings], [Value|Values], Wanted, [Masked|MaskedValues]) :-
+    memberd_t(KeyName, [Wanted], Identical),
+    masked_value(Identical, Value, Masked),
+    mask_values(Readings, Values, Wanted, MaskedValues).
+
+masked_value(true, _, masked).
+masked_value(false, Value, Value).
+
+more_pairs_t(PairCount, MaskedCount, true) :-
+    PairCount > MaskedCount.
+more_pairs_t(PairCount, MaskedCount, false) :-
+    PairCount =:= MaskedCount.
+
+with_value([], _, _, []).
+with_value([KeyName - Reading|Readings], Wanted, Value, [KeyName - NewReading|NewReadings]) :-
+    memberd_t(KeyName, [Wanted], Identical),
+    replaced_reading(Identical, Reading, Value, NewReading),
+    with_value(Readings, Wanted, Value, NewReadings).
+
+replaced_reading(true, _, Value, value(Value)).
+replaced_reading(false, Reading, _, Reading).
+
+comparison_open_status(Readings, Difference) :-
+    needed_keys(Readings, Readings, Needed),
+    open_status_from_needed(Needed, Readings, Difference).
+
+needed_keys([], _, []).
+needed_keys([KeyName - absent|Remaining], Readings, Needed) :-
+    key_changes_t(Readings, KeyName, Changes),
+    needed_keys(Remaining, Readings, LaterNeeded),
+    add_if_true(Changes, KeyName, LaterNeeded, Needed).
+needed_keys([_ - value(_)|Remaining], Readings, Needed) :-
+    needed_keys(Remaining, Readings, Needed).
+
+add_if_true(true, KeyName, Keys, [KeyName|Keys]).
+add_if_true(false, _, Keys, Keys).
+
+open_status_from_needed([FirstKey|OtherKeys], Readings, indeterminate([KeyName])) :-
+    first_not_behind([FirstKey|OtherKeys], [FirstKey|OtherKeys], Readings, KeyName).
+open_status_from_needed([], Readings, needs_legal_review(open_textured(KeyName, Citation), [inputs_relied_on(Pairs)])) :-
+    first_unsure_changing(Readings, Readings, KeyName),
+    comparison_referral_citation(KeyName, Readings, Citation),
+    present_pairs(Readings, Pairs).
+
+first_not_behind([Candidate|Candidates], Needed, Readings, KeyName) :-
+    behind_some_t(Candidate, Needed, Readings, Behind),
+    pick_not_behind(Behind, Candidate, Candidates, Needed, Readings, KeyName).
+
+pick_not_behind(false, Candidate, _, _, _, Candidate).
+pick_not_behind(true, _, Candidates, Needed, Readings, KeyName) :-
+    first_not_behind(Candidates, Needed, Readings, KeyName).
+
+behind_some_t(_, [], _, false).
+behind_some_t(KeyName, [OtherKey|OtherKeys], Readings, Truth) :-
+    memberd_t(OtherKey, [KeyName], IsSelf),
+    behind_other_t(IsSelf, KeyName, OtherKey, Readings, Behind),
+    behind_some_t(KeyName, OtherKeys, Readings, LaterBehind),
+    truth_or(Behind, LaterBehind, Truth).
+
+behind_other_t(true, _, _, _, false).
+behind_other_t(false, KeyName, OtherKey, Readings, Truth) :-
+    behind_pair_t(KeyName, OtherKey, Readings, Truth).
+
+behind_pair_t(KeyName, OtherKey, Readings, Truth) :-
+    key_domain(OtherKey, OtherValues),
+    changes_under_values(OtherValues, OtherKey, KeyName, Readings, KeyChanges),
+    sort(KeyChanges, DistinctKeyChanges),
+    some_not_all_t(DistinctKeyChanges, SomeNotAll),
+    behind_converse(SomeNotAll, KeyName, OtherKey, Readings, Truth).
+
+behind_converse(false, _, _, _, false).
+behind_converse(true, KeyName, OtherKey, Readings, Truth) :-
+    key_domain(KeyName, KeyValues),
+    changes_under_values(KeyValues, KeyName, OtherKey, Readings, OtherChanges),
+    sort(OtherChanges, DistinctOtherChanges),
+    each_true_t(DistinctOtherChanges, Truth).
+
+changes_under_values([], _, _, _, []).
+changes_under_values([Value|Values], AddedKey, WatchedKey, Readings, [Changes|LaterChanges]) :-
+    with_value(Readings, AddedKey, Value, AddedReadings),
+    key_changes_t(AddedReadings, WatchedKey, Changes),
+    changes_under_values(Values, AddedKey, WatchedKey, Readings, LaterChanges).
+
+some_not_all_t([false, true], true).
+some_not_all_t([false], false).
+some_not_all_t([true], false).
+
+each_true_t([true], true).
+each_true_t([false], false).
+each_true_t([false, true], false).
+
+first_unsure_changing([KeyName - value(unsure)|Remaining], Readings, Found) :-
+    key_changes_t(Readings, KeyName, Changes),
+    take_or_continue(Changes, KeyName, Remaining, Readings, Found).
+first_unsure_changing([_ - absent|Remaining], Readings, Found) :-
+    first_unsure_changing(Remaining, Readings, Found).
+first_unsure_changing([_ - value(Value)|Remaining], Readings, Found) :-
+    dif(Value, unsure),
+    first_unsure_changing(Remaining, Readings, Found).
+
+take_or_continue(true, KeyName, _, _, KeyName).
+take_or_continue(false, _, Remaining, Readings, Found) :-
+    first_unsure_changing(Remaining, Readings, Found).
+
+swiss_judgement_key(conduct_meets_offence_description).
+swiss_judgement_key(acted_wilfully).
+swiss_judgement_key(offender_is_private_person).
+
+comparison_referral_citation(KeyName, _, cite(ch_fadp_art_60_to_63)) :-
+    implements(ch_fadp_art_60_to_63),
+    swiss_judgement_key(KeyName).
+comparison_referral_citation(eu_infringement_established, Readings, Citation) :-
+    implements(eu_reg_2016_679_art_83_4),
+    member(eu_infringed_obligation_listed_in - value(ListingValue), Readings),
+    eu_ceiling(ListingValue, _, _, Citation).
+
+swiss_fadp_s4_criminal_provisions_status_values([punishable_by_fine_under_article_60_1_a, punishable_by_fine_under_article_60_1_b_1, punishable_by_fine_under_article_60_1_b_2, punishable_by_fine_under_article_60_2, punishable_by_fine_under_article_61_a, punishable_by_fine_under_article_61_b, punishable_by_fine_under_article_61_c, punishable_by_fine_under_article_62_1, punishable_by_fine_under_article_62_2, punishable_by_fine_under_article_63, not_punishable_under_examined_offence]).
+
+decide_swiss_fadp_s4_criminal_provisions(Profile, swiss_fadp_s4_criminal_provisions_verdict(Status, Citations)) :-
+    swiss_offence_punishable(Profile, Status, Citations).
+
+swiss_fadp_s4_criminal_provisions_status(Profile, Status) :-
+    decide_swiss_fadp_s4_criminal_provisions(Profile, swiss_fadp_s4_criminal_provisions_verdict(Status, _Citations)).
+
+swiss_fadp_s4_criminal_provisions_checklist(Profile, Items) :-
+    swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems),
+    checklist_items(Problems, Profile, Items).
+
+checklist_items([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(ch_fadp_art_60_to_63))]).
+checklist_items([], Profile, [item(offence_description, ConductStatus, OffenceCitation), item(wilful_conduct, WilfulStatus, OffenceCitation), item(private_person, PersonStatus, PersonCitation)]) :-
+    implements(ch_fadp_art_60_to_63),
+    key_reading(Profile, conduct_meets_offence_description, Conduct),
+    key_reading(Profile, acted_wilfully, Wilful),
+    key_reading(Profile, examined_offence, Offence),
+    key_reading(Profile, offender_is_private_person, Private),
+    judgement_item_status(Conduct, conduct_meets_offence_description, ConductStatus),
+    judgement_item_status(Wilful, acted_wilfully, WilfulStatus),
+    offence_item_citation(Offence, OffenceCitation),
+    person_item(Offence, Private, PersonStatus, PersonCitation).
+
+judgement_item_status(value(true), _, met).
+judgement_item_status(value(false), KeyName, unmet(KeyName)).
+judgement_item_status(value(unsure), KeyName, unknown([KeyName])).
+judgement_item_status(absent, KeyName, unknown([KeyName])).
+
+offence_item_citation(absent, cite(ch_fadp_art_60_to_63)).
+offence_item_citation(value(Offence), Citation) :-
+    offence_referral_citation(Offence, Citation).
+
+person_item(absent, Private, Status, cite(ch_fadp_art_60_to_63)) :-
+    judgement_item_status(Private, offender_is_private_person, Status).
+person_item(value(Offence), Private, Status, Citation) :-
+    implements(ch_fadp_art_60_to_63),
+    offence_kind(Offence, OffenceKind, Citation),
+    person_status(OffenceKind, Private, Status).
+
+person_status(article_62_offence, _, inapplicable).
+person_status(private_person_offence, Private, Status) :-
+    judgement_item_status(Private, offender_is_private_person, Status).
+
+swiss_fadp_s4_criminal_provisions_decision_resolvable(Profile) :-
+    decide_swiss_fadp_s4_criminal_provisions(Profile, _Verdict).
+
+test(punishable_under_article_63) :-
+    swiss_offence_punishable([attribute(conduct_meets_offence_description, true), attribute(acted_wilfully, true), attribute(examined_offence, article_63), attribute(offender_is_private_person, true)], Result, Citations),
+    Result == punishable_by_fine_under_article_63,
+    Citations == [cite(ch_fadp_art_63)].
+test(article_62_needs_no_private_person) :-
+    swiss_offence_punishable([attribute(conduct_meets_offence_description, true), attribute(acted_wilfully, true), attribute(examined_offence, article_62_1)], Result, _),
+    Result == punishable_by_fine_under_article_62_1.
+test(not_wilful_is_not_punishable) :-
+    findall(Result, swiss_offence_punishable([attribute(acted_wilfully, false)], Result, _), Results),
+    Results == [not_punishable_under_examined_offence].
+test(empty_profile_asks_for_conduct) :-
+    swiss_offence_punishable([], Result, Citations),
+    Result == indeterminate([conduct_meets_offence_description]),
+    Citations == [].
+test(missing_key_before_unsure) :-
+    swiss_offence_punishable([attribute(conduct_meets_offence_description, unsure)], Result, _),
+    Result == indeterminate([acted_wilfully]).
+test(unsure_conduct_goes_to_review) :-
+    swiss_offence_punishable([attribute(conduct_meets_offence_description, unsure), attribute(acted_wilfully, true), attribute(examined_offence, article_61_a), attribute(offender_is_private_person, true)], Result, _),
+    Result == needs_legal_review(open_textured(conduct_meets_offence_description, cite(ch_fadp_art_61_a)), [inputs_relied_on([conduct_meets_offence_description - unsure, acted_wilfully - true, examined_offence - article_61_a, offender_is_private_person - true])]).
+test(unknown_key_is_an_input_problem) :-
+    swiss_offence_punishable([attribute(colour, blue)], Result, _),
+    Result == input_problems([unknown_key(colour)]).
+test(article_63_is_ex_officio) :-
+    swiss_prosecution_complaint_condition([attribute(examined_offence, article_63)], Result, _),
+    Result == prosecuted_ex_officio.
+test(article_62_2_needs_a_complaint) :-
+    swiss_prosecution_complaint_condition([attribute(examined_offence, article_62_2), attribute(criminal_complaint_filed, false)], Result, _),
+    Result == complaint_offence_no_complaint_filed.
+test(limitation_on_the_anniversary_is_not_expired) :-
+    swiss_prosecution_limitation([], date(2020, 2, 29), date(2025, 2, 28), Result, Citations),
+    Result == five_year_limitation_period_not_expired,
+    Citations == [cite(ch_fadp_art_66)].
+test(limitation_after_the_anniversary_is_expired) :-
+    swiss_prosecution_limitation([], date(2020, 2, 29), date(2025, 3, 1), Result, _),
+    Result == five_year_limitation_period_expired.
+test(limitation_bad_date_is_an_input_problem) :-
+    swiss_prosecution_limitation([], date(2020, 1, 1), date(2025, 2, 30), Result, Citations),
+    Result == input_problems([wrong_type(assessment_date)]),
+    Citations == [].
+test(business_at_the_boundary_may_pay) :-
+    swiss_business_ordered_to_pay_fine([attribute(offence_committed_in_business, true), attribute(fine_in_consideration_in_francs, 50000), attribute(identifying_punishable_persons_requires_disproportionate_investigation, true)], Result, _),
+    Result == business_may_be_ordered_to_pay_fine.
+test(business_above_the_boundary_is_not_available) :-
+    swiss_business_ordered_to_pay_fine([attribute(fine_in_consideration_in_francs, 50001)], Result, _),
+    Result == business_substitution_not_available.
+test(eu_listed_in_83_4_has_lower_ceiling) :-
+    eu_administrative_fine_ceiling([attribute(eu_infringement_established, true), attribute(eu_infringed_obligation_listed_in, listed_in_article_83_4)], Result, _),
+    Result == fine_up_to_10_million_euro_or_2_percent_of_turnover.
+test(comparison_differs_without_intent) :-
+    compare_swiss_eu_fine_provided([attribute(acted_wilfully, false), attribute(eu_infringement_established, true), attribute(eu_infringed_obligation_listed_in, listed_in_article_83_5_or_83_6)], SwissResult, EuResult, Difference, _),
+    SwissResult == not_punishable_under_examined_offence,
+    EuResult == fine_up_to_20_million_euro_or_4_percent_of_turnover,
+    Difference == differs.
+test(comparison_on_empty_profile_asks_for_conduct) :-
+    compare_swiss_eu_fine_provided([], _, _, Difference, ChangedBy),
+    Difference == indeterminate([conduct_meets_offence_description]),
+    ChangedBy == [].
+test(swiss_fine_maximum_is_250000_francs) :-
+    swiss_fine_maximum(threshold(_, MaximumFrancs, _)),
+    MaximumFrancs =:= 250000.

@@ -1,0 +1,396 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for us/virginia_vcdpa (deontic family).
+%
+% Source: Consumer Data Protection Act, Code of Virginia Title 59.1
+% chapter 53 (Va. Code 59.1-575 to 59.1-585). The pinned unit text is the
+% Virginia LIS web copy fetched 2026-11-16 (document
+% va-code-59-1-ch53-2026-11-16-lis-copy). That copy is secondary and
+% carries no in-force-as-of line (open question Q13).
+%
+% The floor serves the questions of Va. Code 59.1-576(A), (B),
+% 59.1-577(B)(1), (B)(2), (C) and 59.1-584(B), (C). It decides none of
+% them itself. It holds only:
+%   - virginia_vcdpa_input_problems/2: THE INPUT CHECK of the order,
+%     written by the scaffold from the typed input contract;
+%   - query_problems/3: step (0) of THE LIMBS. It gives the profile
+%     problems, then wrong_type(ARG) for each date argument, in signature
+%     order, that is not a ground date(Y, M, D) of a real Gregorian day
+%     with a year from 2000 to 2100 inclusive (reading (4));
+%   - date_argument_problems/2: the date half of step (0);
+%   - value_or_absent/3: the presence-first read of one profile key with
+%     profile_get/3. It gives the value, or the atom absent.
+%
+% No statutory figure lives here. Each figure is a constant in the slice
+% that reads it (virginia_vcdpa.clausal). The kernel carries no
+% implements/1 markers, because it decides no statutory condition and it
+% sits below citations.clausal in the DAG. The year range 2000 to 2100 is
+% the order's input domain, not a statutory figure.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. Import a predicate where it is called:
+%   :- use_module(us/virginia_vcdpa/kernel, [query_problems/3]).
+%
+% Result terms built by the determination slice and the queries. Every
+% atom below is spelled exactly as the order pins it.
+%
+%   virginia_vcdpa_verdict(Status, Citations): the facade verdict.
+%     Status is the applicability_status/3 answer; Citations is a list of
+%     cite(Key).
+%
+%   Final answers sit in the answer position bare, with no list and no
+%   wrapper:
+%     applicability_status/3: in_scope | out_of_scope | exempt_entity
+%     response_deadline/4, appeal_response_deadline/4,
+%       cure_period_last_day/4: date(Year, Month, Day)
+%     extended_response_deadline/4: date(Year, Month, Day)
+%       | no_extension_available
+%     attorney_general_action_status/5: notice_not_yet_provided
+%       | cure_period_running | action_may_be_initiated
+%       | no_action_for_cured_violation
+%     civil_penalty_maximum/3: a non-negative integer of whole US dollars
+%
+%   Not-final answers are the compound itself, always with Citations []:
+%     input_problems(Problems): Problems is the flat list of
+%       duplicate_key(Key), wrong_type(Key) and unknown_key(Key) terms,
+%       followed by the date-argument wrong_type(ArgumentName) terms.
+%     indeterminate([Key]): exactly one missing key, the first one in
+%       root_exports order. The bare atom is never written.
+%     needs_legal_review(open_textured(Key, cite(Citation)),
+%       [inputs_relied_on([Key-unsure])]): this may be followed by one
+%       unscored provenance(Step, Citations) element.
+%
+%   Citations is a set-like flat list of cite(Key), with Key recorded in
+%   citations.clausal.
+% =====================================================================
+
+:- module(kernel, [
+    virginia_vcdpa_input_problems/2,
+    query_problems/3,
+    date_argument_problems/2,
+    value_or_absent/3
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
+
+% The input domain of the date arguments (reading (4)).
+:- constant_value(earliest_supported_year, 2000).
+:- constant_value(latest_supported_year, 2100).
+
+% ---- input checks: the problems a profile has, if any -----------
+% virginia_vcdpa_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first. It gives its normal answer only when
+% Problems = []. When Problems is not [], it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile. The answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+virginia_vcdpa_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [entity_category, conducts_business_in_or_targets_virginia, consumer_count, over_half_of_gross_revenue_from_sale, extension_reasonably_necessary, extension_notice_given_within_initial_period, cured_with_express_written_statement, continued_violation_or_statement_breached, violation_count],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(entity_category, entity_category).
+key_type(conducts_business_in_or_targets_virginia, judgement).
+key_type(consumer_count, non_negative_integer).
+key_type(over_half_of_gross_revenue_from_sale, boolean).
+key_type(extension_reasonably_necessary, judgement).
+key_type(extension_notice_given_within_initial_period, boolean).
+key_type(cured_with_express_written_statement, boolean).
+key_type(continued_violation_or_statement_breached, boolean).
+key_type(violation_count, non_negative_integer).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is. T is false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound.
+% The same variable twice is one unknown key; two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type. T is true when Elements gives Key no value.
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+% lint: allow-abbreviation(contract atom)
+in_type_t(entity_category, Value, T) :-
+    in_type_t(enum([public_body_of_the_commonwealth, financial_institution_subject_to_glba, hipaa_covered_entity_or_business_associate, nonprofit_organization, institution_of_higher_education, none_of_the_exempt_categories]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer. T is false when
+% it is a float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+% ---- step (0) of THE LIMBS: profile problems, then date problems --
+% query_problems(Profile, NamedDates, Problems): NamedDates is the list of
+% ArgumentName-Date pairs of the query, in the order of its signature. An
+% example is [notice_date-NoticeDate, reference_date-ReferenceDate].
+% Problems is THE INPUT CHECK for Profile, followed by
+% wrong_type(ArgumentName) for each date argument that is not a valid
+% contract date. Exactly one solution.
+query_problems(Profile, NamedDates, Problems) :-
+    virginia_vcdpa_input_problems(Profile, ProfileProblems),
+    date_argument_problems(NamedDates, DateProblems),
+    append(ProfileProblems, DateProblems, Problems).
+
+% date_argument_problems(NamedDates, Problems): wrong_type(ArgumentName) for
+% each invalid date, in the order given. Exactly one solution.
+date_argument_problems([], []).
+date_argument_problems([ArgumentName-Date|NamedDates], Problems) :-
+    valid_contract_date_t(Date, IsValid),
+    date_argument_problems(NamedDates, LaterProblems),
+    name_date_problem(IsValid, ArgumentName, LaterProblems, Problems).
+
+name_date_problem(true, _, Problems, Problems).
+name_date_problem(false, ArgumentName, Problems, [wrong_type(ArgumentName)|Problems]).
+
+% valid_contract_date_t(Date, T): T is true when Date is a ground
+% date(Year, Month, Day) of three integers naming a real Gregorian day with
+% Year from 2000 to 2100 inclusive. T is false for anything else, including
+% an unbound Date.
+valid_contract_date_t(Date, false) :-
+    var(Date).
+valid_contract_date_t(Date, T) :-
+    nonvar(Date),
+    Date = date(Year, Month, Day),
+    date_parts_t(Year, Month, Day, T).
+valid_contract_date_t(Date, false) :-
+    nonvar(Date),
+    Date \= date(_, _, _).
+
+date_parts_t(Year, Month, Day, T) :-
+    term_variables([Year, Month, Day], Variables),
+    ground_date_parts_t(Variables, Year, Month, Day, T).
+
+ground_date_parts_t([_|_], _, _, _, false).
+ground_date_parts_t([], Year, Month, Day, T) :-
+    integer_t(Year, YearIsInteger),
+    integer_t(Month, MonthIsInteger),
+    integer_t(Day, DayIsInteger),
+    truth_and(YearIsInteger, MonthIsInteger, YearAndMonthAreIntegers),
+    truth_and(YearAndMonthAreIntegers, DayIsInteger, PartsAreIntegers),
+    integer_date_parts_t(PartsAreIntegers, Year, Month, Day, T).
+
+integer_date_parts_t(false, _, _, _, false).
+integer_date_parts_t(true, Year, Month, Day, T) :-
+    supported_year_t(Year, YearIsSupported),
+    in_range_t(Month, 1, 12, MonthIsReal),
+    truth_and(YearIsSupported, MonthIsReal, YearAndMonthAreValid),
+    day_in_month_t(YearAndMonthAreValid, Year, Month, Day, T).
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, Year, Month, Day, T) :-
+    month_last_day(Year, Month, LastDay),
+    in_range_t(Day, 1, LastDay, T).
+
+supported_year_t(Year, true) :-
+    Year #>= constant(earliest_supported_year),
+    Year #=< constant(latest_supported_year).
+supported_year_t(Year, false) :-
+    Year #< constant(earliest_supported_year).
+supported_year_t(Year, false) :-
+    Year #> constant(latest_supported_year).
+
+in_range_t(Value, Lowest, Highest, true) :-
+    Value #>= Lowest,
+    Value #=< Highest.
+in_range_t(Value, Lowest, _, false) :-
+    Value #< Lowest.
+in_range_t(Value, _, Highest, false) :-
+    Value #> Highest.
+
+% ---- presence-first read of one key ------------------------------
+% value_or_absent(Profile, Key, Value): Value is the key's value in Profile,
+% or the atom absent when the key is missing. No contract key takes the
+% value absent. This gives exactly one solution once the input check is
+% clean, because each key then occurs at most once.
+value_or_absent(Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+value_or_absent(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+% ---- tests ---------------------------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    virginia_vcdpa_input_problems([], []).
+test(a_list_of_atoms_is_not_a_profile) :-
+    virginia_vcdpa_input_problems([entity_category], [wrong_type(profile)]).
+test(problems_come_in_the_stated_order) :-
+    virginia_vcdpa_input_problems([attribute(colour, red), attribute(consumer_count, 1), attribute(consumer_count, 2), attribute(violation_count, minus)], Problems),
+    Problems == [duplicate_key(consumer_count), wrong_type(violation_count), unknown_key(colour)].
+test(a_real_day_is_no_date_problem) :-
+    date_argument_problems([received_date-date(2026, 1, 15)], []).
+test(a_leap_day_in_a_leap_year_is_real) :-
+    date_argument_problems([received_date-date(2028, 2, 29)], []).
+test(a_year_before_2000_is_a_date_problem) :-
+    date_argument_problems([notice_date-date(1999, 12, 31)], [wrong_type(notice_date)]).
+test(an_unbound_date_is_a_date_problem) :-
+    date_argument_problems([reference_date-_], [wrong_type(reference_date)]).
+test(an_atom_is_not_a_date) :-
+    date_argument_problems([appeal_received_date-today], [wrong_type(appeal_received_date)]).
+test(date_problems_follow_profile_problems) :-
+    query_problems([attribute(colour, red)], [notice_date-date(2026, 1, 1), reference_date-nothing], Problems),
+    Problems == [unknown_key(colour), wrong_type(reference_date)].
+test(a_present_key_gives_its_value) :-
+    findall(Value, value_or_absent([attribute(consumer_count, 5)], consumer_count, Value), Values),
+    Values == [5].
+test(a_missing_key_gives_absent) :-
+    findall(Value, value_or_absent([], consumer_count, Value), Values),
+    Values == [absent].
+
+:- end_module(kernel).

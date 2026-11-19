@@ -1,0 +1,112 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_transfer_scc_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_transfer_scc_gdpr_transfer_scc, [standard_contractual_clauses_module/3, standard_contractual_clauses_availability/4, standard_contractual_clauses_safeguard/4, standard_contractual_clauses_appendix/3, gdpr_transfer_scc_status/2]).
+:- use_module(m__eu_data_protection_gdpr_transfer_scc_kernel, [gdpr_transfer_scc_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_transfer_scc_fixtures, [gdpr_transfer_scc_profile_for/2]).
+
+attested_value(Value, attested(Value, attestation(host_service, received_at, reason, none))).
+
+profile_without([], _, []).
+profile_without([attribute(RemovedKey, _)|Elements], RemovedKey, Remaining) :-
+    profile_without(Elements, RemovedKey, Remaining).
+profile_without([attribute(OtherKey, OtherValue)|Elements], RemovedKey, [attribute(OtherKey, OtherValue)|Remaining]) :-
+    dif(OtherKey, RemovedKey),
+    profile_without(Elements, RemovedKey, Remaining).
+
+test(the_safeguard_status_holds_with_the_verdict_bound) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    gdpr_transfer_scc_status(Profile, appropriate_safeguards_provided).
+test(the_module_holds_with_result_and_citations_bound) :-
+    standard_contractual_clauses_module([attribute(exporter_role, processor), attribute(importer_role, processor)], module_three, [cite(eu_dec_2021_914_art_1), cite(eu_dec_2021_914_annex_i)]).
+test(the_missing_importer_role_is_named_bound) :-
+    standard_contractual_clauses_module([attribute(exporter_role, controller)], indeterminate([importer_role]), []).
+test(availability_holds_with_every_output_bound) :-
+    attested_value(true, InForce),
+    attested_value(true, ExporterSubject),
+    attested_value(false, ImporterSubject),
+    standard_contractual_clauses_availability([attribute(standard_contractual_clauses_decision_in_force, InForce), attribute(exporter_processing_subject_to_gdpr, ExporterSubject), attribute(importer_processing_subject_to_gdpr, ImporterSubject)], clauses_available, [outside_fact(standard_contractual_clauses_decision_in_force, InForce), outside_fact(exporter_processing_subject_to_gdpr, ExporterSubject), outside_fact(importer_processing_subject_to_gdpr, ImporterSubject)], [cite(eu_dec_2021_914_art_1)]).
+test(exporter_attested_false_settles_before_the_absent_decision) :-
+    attested_value(false, ExporterSubject),
+    standard_contractual_clauses_availability([attribute(exporter_processing_subject_to_gdpr, ExporterSubject)], clauses_not_available, [outside_fact(exporter_processing_subject_to_gdpr, ExporterSubject)], [cite(eu_dec_2021_914_art_1)]).
+test(the_absent_exporter_fact_is_referred_bound) :-
+    attested_value(true, InForce),
+    attested_value(false, ImporterSubject),
+    standard_contractual_clauses_availability([attribute(standard_contractual_clauses_decision_in_force, InForce), attribute(importer_processing_subject_to_gdpr, ImporterSubject)], needs_legal_review(cross_reference_unresolved(cite(eu_dec_2021_914_art_1), cite(exporter_subject_to_gdpr_statement)), [resolution(cite(exporter_subject_to_gdpr_statement), not_attempted), inputs_relied_on([exporter_processing_subject_to_gdpr - absent])]), [], []).
+test(the_absent_clause_14_outcome_is_referred_bound) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, FullProfile),
+    profile_without(FullProfile, no_reason_to_believe_local_laws_prevent_compliance, Profile),
+    standard_contractual_clauses_safeguard(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_dec_2021_914_annex_cl_14_m1m2m3m4_a), cite(local_laws_assessment_outcome_statement)), [resolution(cite(local_laws_assessment_outcome_statement), not_attempted), inputs_relied_on([no_reason_to_believe_local_laws_prevent_compliance - absent])]), [], []).
+test(the_appendix_holds_with_result_and_citations_bound) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    standard_contractual_clauses_appendix(Profile, appendix_complete, [cite(eu_dec_2021_914_art_1), cite(eu_dec_2021_914_annex_cl_1_d), cite(eu_dec_2021_914_appendix), cite(eu_dec_2021_914_annex_i), cite(eu_dec_2021_914_annex_ii), cite(eu_dec_2021_914_annex_iii), cite(eu_dec_2021_914_annex_cl_9_m2_a), cite(eu_dec_2021_914_annex_cl_9_m3_a)]).
+test(the_unsure_annex_ii_judgement_is_referred_bound) :-
+    gdpr_transfer_scc_profile_for(annex_ii_unsure, Profile),
+    standard_contractual_clauses_appendix(Profile, needs_legal_review(open_textured(annex_ii_measures_described_in_specific_terms, cite(eu_dec_2021_914_annex_ii)), [inputs_relied_on([annex_ii_measures_described_in_specific_terms - unsure])]), []).
+test(an_input_problem_comes_first_in_the_safeguard) :-
+    gdpr_transfer_scc_profile_for(bare_boolean_outside_fact, Profile),
+    standard_contractual_clauses_safeguard(Profile, input_problems([wrong_type(standard_contractual_clauses_decision_in_force)]), [], []).
+test(an_input_problem_comes_first_in_the_availability) :-
+    standard_contractual_clauses_availability([attribute(colour, red)], input_problems([unknown_key(colour)]), [], []).
+test(the_empty_profile_has_no_problem) :-
+    gdpr_transfer_scc_input_problems([], []).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_transfer_scc_input_problems(_UnboundProfile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_atom_is_not_an_attribute_list) :-
+    gdpr_transfer_scc_input_problems(not_a_list, [wrong_type(profile)]).
+test(a_pair_element_is_not_an_attribute) :-
+    gdpr_transfer_scc_input_problems([attribute(exporter_role, controller), exporter_role - controller], [wrong_type(profile)]).
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_transfer_scc_input_problems([attribute(exporter_role, controller)|_OpenTail], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_element_is_not_an_attribute) :-
+    findall(Problems, gdpr_transfer_scc_input_problems([_UnboundElement], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_number_key_is_an_unknown_key) :-
+    gdpr_transfer_scc_input_problems([attribute(42, controller)], [unknown_key(42)]).
+test(a_compound_key_is_an_unknown_key_as_given) :-
+    gdpr_transfer_scc_input_problems([attribute(key(exporter_role), controller)], [unknown_key(key(exporter_role))]).
+test(an_unbound_value_is_a_wrong_type) :-
+    findall(Problems, gdpr_transfer_scc_input_problems([attribute(exporter_role, _UnboundValue)], Problems), Answers),
+    Answers == [[wrong_type(exporter_role)]].
+test(a_bare_boolean_outside_fact_is_a_wrong_type) :-
+    gdpr_transfer_scc_input_problems([attribute(exporter_processing_subject_to_gdpr, true)], [wrong_type(exporter_processing_subject_to_gdpr)]).
+test(an_attestation_with_an_unbound_argument_is_a_wrong_type) :-
+    findall(Problems, gdpr_transfer_scc_input_problems([attribute(exporter_processing_subject_to_gdpr, attested(true, attestation(host_service, _UnboundTime, reason, none)))], Problems), Answers),
+    Answers == [[wrong_type(exporter_processing_subject_to_gdpr)]].
+test(an_attested_url_evidence_is_accepted) :-
+    gdpr_transfer_scc_input_problems([attribute(exporter_processing_subject_to_gdpr, attested(true, attestation(host_service, received_at, reason, url(address, retrieved_at))))], []).
+test(an_unsure_crisp_key_is_a_wrong_type) :-
+    gdpr_transfer_scc_input_problems([attribute(clauses_modified, unsure)], [wrong_type(clauses_modified)]).
+test(an_unsure_judgement_is_well_typed) :-
+    gdpr_transfer_scc_input_problems([attribute(added_clauses_contradict_clauses, unsure)], []).
+test(an_attested_crisp_key_is_a_wrong_type) :-
+    attested_value(false, Attested),
+    gdpr_transfer_scc_input_problems([attribute(clauses_modified, Attested)], [wrong_type(clauses_modified)]).
+test(a_module_outside_the_four_is_a_wrong_type) :-
+    gdpr_transfer_scc_input_problems([attribute(module_selected, module_five)], [wrong_type(module_selected)]).
+test(a_repeated_key_with_equal_values_is_a_duplicate) :-
+    gdpr_transfer_scc_input_problems([attribute(module_selected, module_two), attribute(module_selected, module_two)], [duplicate_key(module_selected)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    gdpr_transfer_scc_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    gdpr_transfer_scc_input_problems([attribute(colour, red), attribute(module_selected, module_five), attribute(exporter_role, controller), attribute(exporter_role, unsure)], [duplicate_key(exporter_role), wrong_type(module_selected), unknown_key(colour)]).
+
+test(the_other_safeguard_status_is_rejected, fail) :-
+    gdpr_transfer_scc_profile_for(module_two_all_met, Profile),
+    gdpr_transfer_scc_status(Profile, appropriate_safeguards_not_provided).
+test(a_wrong_bound_module_is_rejected, fail) :-
+    standard_contractual_clauses_module([attribute(exporter_role, processor), attribute(importer_role, processor)], module_two, _Citations).
+
+cp_test_names([the_safeguard_status_holds_with_the_verdict_bound, the_module_holds_with_result_and_citations_bound, the_missing_importer_role_is_named_bound, availability_holds_with_every_output_bound, exporter_attested_false_settles_before_the_absent_decision, the_absent_exporter_fact_is_referred_bound, the_absent_clause_14_outcome_is_referred_bound, the_appendix_holds_with_result_and_citations_bound, the_unsure_annex_ii_judgement_is_referred_bound, an_input_problem_comes_first_in_the_safeguard, an_input_problem_comes_first_in_the_availability, the_empty_profile_has_no_problem, an_unbound_profile_is_not_an_attribute_list, an_atom_is_not_an_attribute_list, a_pair_element_is_not_an_attribute, a_partial_list_is_not_an_attribute_list, an_unbound_element_is_not_an_attribute, a_number_key_is_an_unknown_key, a_compound_key_is_an_unknown_key_as_given, an_unbound_value_is_a_wrong_type, a_bare_boolean_outside_fact_is_a_wrong_type, an_attestation_with_an_unbound_argument_is_a_wrong_type, an_attested_url_evidence_is_accepted, an_unsure_crisp_key_is_a_wrong_type, an_unsure_judgement_is_well_typed, an_attested_crisp_key_is_a_wrong_type, a_module_outside_the_four_is_a_wrong_type, a_repeated_key_with_equal_values_is_a_duplicate, a_repeated_unknown_key_is_named_once, problems_come_in_contract_order_then_unknown_keys]).
+cp_test_fail_names([the_other_safeguard_status_is_rejected, a_wrong_bound_module_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

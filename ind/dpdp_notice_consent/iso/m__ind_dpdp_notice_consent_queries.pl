@@ -1,0 +1,242 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_notice_consent_queries, [dpdp_notice_consent_profile_keys/1, dpdp_notice_consent_what_if/4, provenance/2, sections_4_to_7_in_force/0, section_6_9_in_force/0, question_date/0, acts_as_data_fiduciary/0, lawful_purpose/0, consent_given/0, consent_withdrawn/0, consent_meets_section_6_1/0, legitimate_use_clause/0, legitimate_use_conditions_met/0, notice_occasion/0, processing_required_or_authorised_by_law/0, registered_with_board_as_consent_manager/0, consent_manager_registration_suspended_or_cancelled/0, unsure/0, voluntarily_provided_for_specified_purpose/0, state_subsidy_benefit_service_certificate_licence_or_permit/0, state_function_or_sovereignty_integrity_or_security/0, legal_obligation_to_disclose_to_state/0, compliance_with_judgment_decree_or_order/0, medical_emergency/0, epidemic_outbreak_or_public_health_threat/0, disaster_or_breakdown_of_public_order/0, employment_purposes/0, no_listed_use/0, request_for_consent/0, consent_given_before_commencement/0, no_notice_occasion/0, notice_with_request/0, notice_for_earlier_consent/0, rule_3_notice/0, consent_request/0, legitimate_uses/0, state_use_standards/0, consent_manager_conditions/0, consent_manager_obligations/0, personal_data_and_proposed_purpose/0, manner_to_withdraw_consent_and_seek_grievance_redressal/0, manner_to_complain_to_board/0, option_of_english_or_eighth_schedule_language/0, personal_data_and_purpose_processed/0, understandable_independently_of_other_information/0, fair_account_in_clear_and_plain_language/0, itemised_description_of_personal_data/0, specified_purposes_and_goods_services_or_uses/0, link_and_means_to_withdraw_consent/0, link_and_means_to_exercise_rights/0, link_and_means_to_complain_to_board/0, request_in_clear_and_plain_language/0, contact_of_data_protection_officer_or_authorised_person/0, lawful_manner/0, for_specified_uses_or_purposes/0, limited_to_necessary_personal_data/0, completeness_accuracy_and_consistency/0, retention_only_while_required/0, reasonable_security_safeguards/0, intimation_to_data_principal/0, business_contact_for_questions/0, consistent_with_other_applicable_standards/0, accountability_for_observance/0, company_incorporated_in_india/0, sufficient_technical_operational_and_financial_capacity/0, sound_financial_condition_and_management/0, net_worth_not_less_than_two_crore_rupees/0, adequate_business_volume_capital_structure_and_earning_prospects/0, directors_and_management_of_fairness_and_integrity/0, articles_require_conflict_of_interest_obligations/0, operations_in_interests_of_data_principals/0, platform_certified_consistent_with_board_standards/0, measures_certified_for_standards_and_publication_obligations/0, enable_consent_directly_or_through_another_fiduciary/0, contents_not_readable_by_consent_manager/0, record_of_consents_given_denied_or_withdrawn/0, record_of_notices_preceding_or_accompanying_requests/0, record_of_sharing_with_transferee_fiduciary/0, give_data_principal_access_to_record/0, record_information_in_machine_readable_form_on_request/0, keep_record_at_least_seven_years/0, website_or_app_as_primary_means/0, no_sub_contracting_or_assignment/0, act_in_fiduciary_capacity/0, avoid_conflict_of_interest_with_fiduciaries/0, measures_against_conflict_of_interest_of_management/0, publish_promoters_directors_and_management/0, publish_shareholders_above_two_per_cent/0, publish_bodies_corporate_where_management_holds_above_two_per_cent/0, publish_other_information_board_directs/0, audit_technical_and_organisational_controls/0, audit_continued_fulfilment_of_conditions/0, audit_adherence_to_obligations/0, no_transfer_of_control_without_board_approval/0, lawful_on_consent/0, not_lawful_on_consent/0, not_in_force/0, lawful_on_legitimate_use/0, not_lawful_on_legitimate_use/0, notice_with_request_required/0, notice_with_request_required_before_rule_3/0, notice_for_earlier_consent_required/0, notice_for_earlier_consent_required_before_rule_3/0, not_required/0, cease_processing_required/0, processing_may_continue_without_consent/0, may_act_as_consent_manager/0, may_not_act_as_consent_manager/0, date/3]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_notice_consent_kernel, [dpdp_notice_consent_input_problems/2]).
+:- use_module(m__ind_dpdp_notice_consent_citations, [citation/2]).
+:- use_module(m__ind_dpdp_notice_consent_dpdp_notice_consent, [dpdp_notice_consent_status/2]).
+
+date(Year, Month, Day) :-
+    integer(Year),
+    integer(Month),
+    integer(Day).
+
+dpdp_notice_consent_profile_keys([sections_4_to_7_in_force, section_6_9_in_force, question_date, acts_as_data_fiduciary, lawful_purpose, consent_given, consent_withdrawn, consent_meets_section_6_1, legitimate_use_clause, legitimate_use_conditions_met, notice_occasion, processing_required_or_authorised_by_law, registered_with_board_as_consent_manager, consent_manager_registration_suspended_or_cancelled]).
+
+dpdp_notice_consent_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dpdp_notice_consent_status(Hypothesis, NewStatus).
+
+override_attribute([], Key, Value, [attribute(Key, Value)]).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== Key,
+    override_attribute(Elements, Key, Value, Hypothesis).
+override_attribute([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
+    ElementKey == Key,
+    override_attribute(Elements, Key, Value, Hypothesis).
+
+provenance(CitationKey, PinnedUnit) :-
+    citation(CitationKey, Pairs),
+    member(ref - PinnedUnit, Pairs).
+
+sections_4_to_7_in_force.
+
+section_6_9_in_force.
+
+question_date.
+
+acts_as_data_fiduciary.
+
+lawful_purpose.
+
+consent_given.
+
+consent_withdrawn.
+
+consent_meets_section_6_1.
+
+legitimate_use_clause.
+
+legitimate_use_conditions_met.
+
+notice_occasion.
+
+processing_required_or_authorised_by_law.
+
+registered_with_board_as_consent_manager.
+
+consent_manager_registration_suspended_or_cancelled.
+
+unsure.
+
+voluntarily_provided_for_specified_purpose.
+
+state_subsidy_benefit_service_certificate_licence_or_permit.
+
+state_function_or_sovereignty_integrity_or_security.
+
+legal_obligation_to_disclose_to_state.
+
+compliance_with_judgment_decree_or_order.
+
+medical_emergency.
+
+epidemic_outbreak_or_public_health_threat.
+
+disaster_or_breakdown_of_public_order.
+
+employment_purposes.
+
+no_listed_use.
+
+request_for_consent.
+
+consent_given_before_commencement.
+
+no_notice_occasion.
+
+notice_with_request.
+
+notice_for_earlier_consent.
+
+rule_3_notice.
+
+consent_request.
+
+legitimate_uses.
+
+state_use_standards.
+
+consent_manager_conditions.
+
+consent_manager_obligations.
+
+personal_data_and_proposed_purpose.
+
+manner_to_withdraw_consent_and_seek_grievance_redressal.
+
+manner_to_complain_to_board.
+
+option_of_english_or_eighth_schedule_language.
+
+personal_data_and_purpose_processed.
+
+understandable_independently_of_other_information.
+
+fair_account_in_clear_and_plain_language.
+
+itemised_description_of_personal_data.
+
+specified_purposes_and_goods_services_or_uses.
+
+link_and_means_to_withdraw_consent.
+
+link_and_means_to_exercise_rights.
+
+link_and_means_to_complain_to_board.
+
+request_in_clear_and_plain_language.
+
+contact_of_data_protection_officer_or_authorised_person.
+
+lawful_manner.
+
+for_specified_uses_or_purposes.
+
+limited_to_necessary_personal_data.
+
+completeness_accuracy_and_consistency.
+
+retention_only_while_required.
+
+reasonable_security_safeguards.
+
+intimation_to_data_principal.
+
+business_contact_for_questions.
+
+consistent_with_other_applicable_standards.
+
+accountability_for_observance.
+
+company_incorporated_in_india.
+
+sufficient_technical_operational_and_financial_capacity.
+
+sound_financial_condition_and_management.
+
+net_worth_not_less_than_two_crore_rupees.
+
+adequate_business_volume_capital_structure_and_earning_prospects.
+
+directors_and_management_of_fairness_and_integrity.
+
+articles_require_conflict_of_interest_obligations.
+
+operations_in_interests_of_data_principals.
+
+platform_certified_consistent_with_board_standards.
+
+measures_certified_for_standards_and_publication_obligations.
+
+enable_consent_directly_or_through_another_fiduciary.
+
+contents_not_readable_by_consent_manager.
+
+record_of_consents_given_denied_or_withdrawn.
+
+record_of_notices_preceding_or_accompanying_requests.
+
+record_of_sharing_with_transferee_fiduciary.
+
+give_data_principal_access_to_record.
+
+record_information_in_machine_readable_form_on_request.
+
+keep_record_at_least_seven_years.
+
+website_or_app_as_primary_means.
+
+no_sub_contracting_or_assignment.
+
+act_in_fiduciary_capacity.
+
+avoid_conflict_of_interest_with_fiduciaries.
+
+measures_against_conflict_of_interest_of_management.
+
+publish_promoters_directors_and_management.
+
+publish_shareholders_above_two_per_cent.
+
+publish_bodies_corporate_where_management_holds_above_two_per_cent.
+
+publish_other_information_board_directs.
+
+audit_technical_and_organisational_controls.
+
+audit_continued_fulfilment_of_conditions.
+
+audit_adherence_to_obligations.
+
+no_transfer_of_control_without_board_approval.
+
+lawful_on_consent.
+
+not_lawful_on_consent.
+
+not_in_force.
+
+lawful_on_legitimate_use.
+
+not_lawful_on_legitimate_use.
+
+notice_with_request_required.
+
+notice_with_request_required_before_rule_3.
+
+notice_for_earlier_consent_required.
+
+notice_for_earlier_consent_required_before_rule_3.
+
+not_required.
+
+cease_processing_required.
+
+processing_may_continue_without_consent.
+
+may_act_as_consent_manager.
+
+may_not_act_as_consent_manager.

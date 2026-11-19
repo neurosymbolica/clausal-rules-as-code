@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer and every query type
+% registered in manifest.yaml query_interface (#2, #5, #7, #14, #16).
+% Run: python -m clausal.testing ch/swiss_fadp_s2_information_duties_and_dpia/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(ch/swiss_fadp_s2_information_duties_and_dpia/queries, [
+    swiss_fadp_s2_information_duties_and_dpia_profile_keys/1,
+    swiss_fadp_s2_information_duties_and_dpia_input_problems/2,
+    swiss_fadp_s2_information_duties_and_dpia_what_if/4,
+    swiss_fadp_s2_information_duties_and_dpia_obligations/2,
+    information_required/0,
+    same/0,
+    differs/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    input_problems/1,
+    controller_is_federal_body/0,
+    safeguards_or_exception_relied_on/0,
+    unsure/0
+]).
+:- use_module(ch/swiss_fadp_s2_information_duties_and_dpia/swiss_fadp_s2_information_duties_and_dpia, [
+    swiss_fadp_s2_information_duties_and_dpia_checklist/2,
+    swiss_fadp_s2_information_duties_and_dpia_decision_resolvable/1,
+    compare_swiss_eu_information_duty/5
+]).
+:- use_module(ch/swiss_fadp_s2_information_duties_and_dpia/fixtures, [swiss_fadp_s2_information_duties_and_dpia_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_keys(ProfileKeys),
+    ProfileKeys == [controller_is_federal_body, personal_data_collected_from_data_subject, data_subject_already_has_information, processing_provided_for_by_law, controller_bound_by_statutory_secrecy, article_27_conditions_met, information_impossible_or_requires_disproportionate_effort, overriding_third_party_interests_require_restriction, information_defeats_purpose_of_processing, overriding_controller_interests_require_restriction, controller_discloses_personal_data_to_third_parties, overriding_public_interests_require_restriction, information_may_endanger_investigation_or_proceedings, personal_data_disclosed_to_recipients, personal_data_disclosed_abroad, disclosure_abroad_relies_on_safeguards_or_exception, decision_based_solely_on_automated_processing, decision_has_legal_consequence_or_significantly_impairs_data_subject, decision_directly_related_to_contract_with_data_subject, data_subject_request_granted, data_subject_explicitly_consented_to_automated_decision, data_subject_need_not_be_heard_before_decision, processing_may_entail_high_risk_to_personality_or_fundamental_rights, large_scale_processing_of_sensitive_personal_data, systematic_large_scale_monitoring_of_public_areas, controller_legally_obliged_to_process_data, system_product_or_service_certified_for_intended_use, controller_complies_with_code_of_conduct, code_of_conduct_based_on_impact_assessment, code_of_conduct_provides_protective_measures, code_of_conduct_submitted_to_commissioner, eu_data_subject_already_has_information, eu_information_impossible_disproportionate_or_seriously_impairing, eu_obtaining_or_disclosure_expressly_laid_down_by_law, eu_personal_data_confidential_under_professional_secrecy, eu_decision_based_solely_on_automated_processing, eu_decision_has_legal_or_similarly_significant_effects, eu_processing_likely_to_result_in_high_risk, eu_systematic_extensive_evaluation_with_significant_automated_decisions, eu_large_scale_processing_of_special_categories_or_criminal_data, eu_systematic_large_scale_monitoring_of_publicly_accessible_area, eu_article_35_10_exemption_applies].
+
+test(the_input_check_is_reexported) :-
+    swiss_fadp_s2_information_duties_and_dpia_input_problems([], []).
+
+test(constructors_and_root_atoms_are_callable) :-
+    information_required,
+    same,
+    differs,
+    controller_is_federal_body,
+    safeguards_or_exception_relied_on,
+    unsure,
+    indeterminate([controller_is_federal_body]),
+    needs_legal_review(open_textured(controller_is_federal_body, cite(ch_fadp_art_21_4)), [inputs_relied_on([])]),
+    input_problems([]).
+
+% ---- #16 what-if ---------------------------------------------------------
+test(what_if_already_informed_lifts_the_duty) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    findall(Status, swiss_fadp_s2_information_duties_and_dpia_what_if(Profile, data_subject_already_has_information, true, Status), Statuses),
+    Statuses == [information_not_required].
+
+test(what_if_adds_an_absent_key) :-
+    swiss_fadp_s2_information_duties_and_dpia_what_if([], data_subject_already_has_information, true, information_not_required).
+
+test(what_if_on_a_non_profile_reports_the_problem) :-
+    swiss_fadp_s2_information_duties_and_dpia_what_if(not_a_profile, data_subject_already_has_information, true, input_problems([wrong_type(profile)])).
+
+test(what_if_with_a_bad_value_reports_it) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_what_if(Profile, controller_is_federal_body, maybe, input_problems([wrong_type(controller_is_federal_body)])).
+
+% ---- #14 obligation surfacing --------------------------------------------
+test(baseline_obligations_are_the_duty_and_two_items) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    findall(Obligations, swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations), Answers),
+    Answers == [[obligation(information_required, [cite(ch_fadp_art_19_1), cite(ch_fadp_art_20_1), cite(ch_fadp_art_20_2), cite(ch_fadp_art_20_3)]), obligation(information_item(identity_and_contact_details_of_controller), [cite(ch_fadp_art_19_2), cite(ch_fadp_art_19_2_a)]), obligation(information_item(processing_purpose), [cite(ch_fadp_art_19_2), cite(ch_fadp_art_19_2_b)])]].
+
+test(federal_automated_decision_obligations_include_marking) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(federal_automated_decision_with_hearing, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(obligation(decision_marking_required, [cite(ch_fadp_art_21_1), cite(ch_fadp_art_21_4)]), Obligations),
+    member(obligation(view_and_review_rights_apply, _), Obligations),
+    member(obligation(automated_decision_information_required, _), Obligations).
+
+test(exempt_controller_owes_no_items) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(already_informed_exception, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    Obligations == [].
+
+test(open_determinations_are_surfaced_as_open) :-
+    swiss_fadp_s2_information_duties_and_dpia_obligations([], Obligations),
+    member(open(swiss_information_duty, indeterminate([data_subject_already_has_information])), Obligations).
+
+test(malformed_profile_obligations_carry_the_problem) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(malformed_federal_body_value, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(open(swiss_information_duty, input_problems([wrong_type(controller_is_federal_body)])), Obligations).
+
+% ---- #7 justification: the checklist carries cite(...) per row -----------
+test(checklist_marks_the_met_ground_with_its_citation) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(already_informed_exception, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_checklist(Profile, Items),
+    member(item(already_has_information, met, cite(ch_fadp_art_20_1_a)), Items).
+
+test(checklist_marks_an_unmet_ground) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_checklist(Profile, [item(swiss_information_duty, information_required, _)|Rows]),
+    member(item(third_party_interests, unmet(third_party_interests), cite(ch_fadp_art_20_3_a)), Rows).
+
+test(every_checklist_ground_row_carries_a_citation) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(federal_investigation_restriction, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_checklist(Profile, [_|Rows]),
+    findall(Name, member(item(Name, _, cite(_)), Rows), Cited),
+    length(Rows, RowCount),
+    length(Cited, RowCount),
+    RowCount == 9.
+
+test(checklist_unknown_ground_names_its_keys) :-
+    swiss_fadp_s2_information_duties_and_dpia_checklist([], Items),
+    member(item(already_has_information, unknown([data_subject_already_has_information]), cite(ch_fadp_art_20_1_a)), Items).
+
+% ---- #5 comparison -------------------------------------------------------
+test(comparison_same_on_the_baseline) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    findall(answer(Swiss, Eu, Difference, ChangedBy), compare_swiss_eu_information_duty(Profile, Swiss, Eu, Difference, ChangedBy), Answers),
+    Answers == [answer(information_required, information_required, same, [])].
+
+test(comparison_permission_differs_from_eu_duty) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(third_party_interests_restriction, Profile),
+    compare_swiss_eu_information_duty(Profile, information_may_be_restricted_deferred_or_omitted, information_required, differs, [cite(ch_fadp_art_19_1), cite(ch_fadp_art_20_1), cite(ch_fadp_art_20_2), cite(ch_fadp_art_20_3), cite(eu_reg_2016_679_art_13_4), cite(eu_reg_2016_679_art_14_5)]).
+
+% ---- #2 status resolvable ------------------------------------------------
+test(final_headline_is_resolvable) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_decision_resolvable(Profile).
+
+test(open_headline_is_not_resolvable, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_decision_resolvable([]).
+
+:- end_module(test_queries).

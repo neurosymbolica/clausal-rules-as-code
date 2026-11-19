@@ -1,0 +1,445 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: us/virginia_vcdpa
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "virginia_vcdpa"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The 0-arity entries under queries.clausal are the
+# root_exports the scorer reads as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- virginia_vcdpa.clausal --
+  - "applicability_status/3"
+  - "response_deadline/4"
+  - "extended_response_deadline/4"
+  - "appeal_response_deadline/4"
+  - "cure_period_last_day/4"
+  - "attorney_general_action_status/5"
+  - "civil_penalty_maximum/3"
+  - "in_scope/0"
+  - "out_of_scope/0"
+  - "exempt_entity/0"
+  - "no_extension_available/0"
+  - "notice_not_yet_provided/0"
+  - "cure_period_running/0"
+  - "action_may_be_initiated/0"
+  - "no_action_for_cured_violation/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "decide_virginia_vcdpa/2"
+  - "virginia_vcdpa_status/2"
+  - "virginia_vcdpa_checklist/2"
+  - "virginia_vcdpa_decision_resolvable/1"
+  - "virginia_vcdpa_status_values/1"
+  # -- queries.clausal --
+  - "virginia_vcdpa_profile_keys/1"
+  - "virginia_vcdpa_input_problems/2"
+  - "virginia_vcdpa_what_if/4"
+  - "virginia_vcdpa_applicability_threshold/3"
+  - "virginia_vcdpa_consumer_count_boundary/2"
+  - "entity_category/0"
+  - "conducts_business_in_or_targets_virginia/0"
+  - "consumer_count/0"
+  - "over_half_of_gross_revenue_from_sale/0"
+  - "extension_reasonably_necessary/0"
+  - "extension_notice_given_within_initial_period/0"
+  - "cured_with_express_written_statement/0"
+  - "continued_violation_or_statement_breached/0"
+  - "violation_count/0"
+  - "public_body_of_the_commonwealth/0"
+  - "financial_institution_subject_to_glba/0"
+  - "hipaa_covered_entity_or_business_associate/0"
+  - "nonprofit_organization/0"
+  - "institution_of_higher_education/0"
+  - "none_of_the_exempt_categories/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "virginia_vcdpa_subject/1"
+  - "virginia_vcdpa_profile_for/2"
+  - "virginia_vcdpa_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib,
+# kit/deadline_lib, kit/query_combinators), no shared backbone package.
+uses: []
+
+scope: "Consumer Data Protection Act, Code of Virginia Title 59.1 chapter 53, as pinned from the Virginia LIS web copy fetched 2026-11-16. Decided here: whether the chapter applies to a person (Va. Code 59.1-576(A), (B)); the last day for a controller's response to a consumer request and for its notice of a decline (59.1-577(B)(1), (B)(2)); the last day of the once-only 45-day extension (59.1-577(B)(1)); the last day for the controller's written answer to an appeal (59.1-577(C)); the last day of the Attorney General's 30-day cure period (59.1-584(B)); whether, on a day the caller names, the Attorney General may initiate an action on the noticed violation (59.1-584(B), (C)); and the most that may be sought in civil penalties, 7,500 US dollars per violation (59.1-584(C)). Days are calendar days, the day of the event not counted, and no last day is moved for a weekend or holiday. Open-textured terms (business link to Virginia; reasonable necessity of an extension) are handed to a lawyer as needs_legal_review. Out of scope (the deferred set): the definitions of 59.1-575 the caller applies, the data exemptions and COPPA deeming of 59.1-576(C), (D), the consumer rights, fees, authentication and deletion rules of 59.1-577(A) and (B)(3) to (B)(5), 59.1-577.1, 59.1-578 to 59.1-583, 59.1-584(A), (D), (E) and the computing-time rules of Va. Code 1-210. The answers never say that a duty was broken or met."
+
+sources:
+  - "Consumer Data Protection Act, Code of Virginia Title 59.1 chapter 53 (Va. Code 59.1-575 to 59.1-585), Virginia LIS web copy fetched 2026-11-16, document va-code-59-1-ch53-2026-11-16-lis-copy, sha256 62c62e78b55d4eb681b9de8ce2d5cdde04862e58fff66191c79b52934164065b (secondary copy; no in-force-as-of line, open question Q13)"
+  - "Va. Code 59.1-576(A), (B): applicability and exempt persons"
+  - "Va. Code 59.1-577(B)(1), (B)(2), (C): response, extension, decline and appeal periods"
+  - "Va. Code 59.1-584(B), (C): cure period, Attorney General action and civil penalties"
+
+query_interface:
+  2: "virginia_vcdpa_status/2"                      # status verdict projection
+  3: "applicability_status/3"                       # status determination
+  6: "virginia_vcdpa_applicability_threshold/3"     # threshold boundary
+  7: "virginia_vcdpa_checklist/2"                   # justification: cite per item
+  15: "response_deadline/4"                         # deadline
+  16: "virginia_vcdpa_what_if/4"                    # what_if: re-evaluate under an overridden key
+  23: "civil_penalty_maximum/3"                     # calculation
+
+deferred_set:
+- what: section_headings_history_notes_and_repealed_section
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_585
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_583_history
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584_history
+  reason: The units of 59.1-576, 59.1-577 and 59.1-584 hold only the section number
+    and heading (their text is in the subsections the limbs cite or the other deferred
+    rows list); the eleven history units list the acts that enacted and amended each
+    section; 59.1-585 holds only the words 'Repealed. Repealed by Acts 2022, cc. 451
+    and 452, cl. 2.' None states a rule. Deferred so every unit of the pinned extract
+    is accounted for; the histories are read only for reading (1) on the version of
+    the text.
+  consequence: 'None for a caller: no rule is in these units.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: definitions_the_keys_use
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_consumer
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_personal_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_nonprofit_organization
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_institution_of_higher_education
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sale_of_personal_data_5
+  reason: The definitions of 'consumer', 'personal data', 'sale of personal data'
+    (with its five exclusions), 'nonprofit organization' and 'institution of higher
+    education' in 59.1-575 give the meaning of consumer_count, over_half_of_gross_revenue_from_sale
+    and two atoms of entity_category. The caller applies them when it states those
+    facts (reading (3)); the order does not test them.
+  consequence: The caller counts consumers, classifies revenue as from a sale and
+    states the entity category under these definitions; the answers do not check that
+    it did.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: other_definitions
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_affiliate
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_authenticate
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_biometric_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_business_associate
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_child
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_consent
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_controller
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_covered_entity
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_de_identified_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_health_record
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_health_care_provider
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_hipaa
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_identified_or_identifiable_natural_person
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_online_service_product_or_feature
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_parent
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_political_organization
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_precise_geolocation_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_processor
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_profiling
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_protected_health_information
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_pseudonymous_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_publicly_available_information
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sensitive_data
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sensitive_data_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sensitive_data_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sensitive_data_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_sensitive_data_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform_2_a
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform_2_b
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_social_media_platform_2_c
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_state_agency
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_targeted_advertising
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_targeted_advertising_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_targeted_advertising_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_targeted_advertising_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_targeted_advertising_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_third_party
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_575_user
+  reason: The lead-in of 59.1-575 and its other definitions (affiliate, authenticate,
+    biometric data, child, consent, controller, processor, sensitive data, targeted
+    advertising, social media platform and the rest) are used by duties this order
+    does not formalise, or by the caller's premises (that the recipient of a request
+    is a controller, that a request is authenticated).
+  consequence: No answer reads these definitions; the caller's premises rest on them.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: quoted_units_formalised_in_part
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584_C
+  partial: true
+  debt: true
+  reason: '59.1-576(B) clause (ii) also exempts ''data subject to Title V'' of the
+    Gramm-Leach-Bliley Act, a data exemption this order does not formalise (the person-level
+    exemptions are formalised); 59.1-577(C) also requires the controller to establish
+    an appeal process available within a reasonable period of time, conspicuously
+    available and similar to the request process, and, after a denied appeal, to provide
+    a means to contact the Attorney General: only its 60-day period is formalised;
+    59.1-584(C) also allows an injunction and directs where penalties, expenses and
+    fees are paid: only the action''s condition and the $7,500 figure are formalised.'
+  consequence: The answers never say which data are exempt under the Gramm-Leach-Bliley
+    clause, whether the appeal process is adequate, or anything about an injunction
+    or the fund (reading (3), (7), (9), (10)).
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: data_exemptions_and_coppa_deeming
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_6
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_7
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_8
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_9
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_10
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_11
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_12
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_13
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_C_14
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_576_D
+  reason: 59.1-576(C) lists fourteen kinds of information and data exempt from the
+    chapter (health, credit reporting, education records, employment data and others);
+    59.1-576(D) deems controllers and processors that comply with COPPA's verifiable
+    parental consent requirements compliant with the chapter's parental consent duty.
+    Both are about data or a consent duty, not about whether the chapter applies to
+    a person or a date.
+  consequence: in_scope does not say that the chapter reaches every piece of data
+    the person holds (reading (3), (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rights_request_conditions_fees_and_authentication
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_A_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_B_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_B_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_B_5
+  reason: 59.1-577(A) and (A)(1) to (A)(5) grant the consumer rights (confirm and
+    access, correct, delete, portable copy, opt out) and who may invoke them; the
+    lead-in of 59.1-577(B) says the duties apply 'except as otherwise provided in
+    this chapter'; 59.1-577(B)(3) sets the free responses up to twice annually and
+    the fee or refusal for manifestly unfounded, excessive or repetitive requests;
+    (B)(4) relieves a controller that cannot authenticate a request; (B)(5) deems
+    a controller compliant with a deletion request for data obtained from a third
+    party. This order takes the request as given and formalises its deadlines only.
+  consequence: The deadline answers never say whether the right exists, whether a
+    fee may be charged or the request refused, or whether authentication failed (reading
+    (5), (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: social_media_platforms_and_minors
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_577_1_E
+  reason: '59.1-577.1 (added by 2025, c. 703) sets duties for controllers and processors
+    operating a social media platform toward minors under 16: age determination, a
+    default limit of one hour per day per service or application with verifiable parental
+    consent to change it, and limits on use of age information and on degrading service.
+    It is a section of its own and outside the dated duties this order formalises
+    (response, extension, appeal, cure, penalty, applicability).'
+  consequence: No answer speaks of social media platforms or the daily time limit
+    (reading (1), (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: controller_processor_assessment_deidentified_limitations_and_investigation
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_A_6
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_C_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_E
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_1_a
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_1_b
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_1_c
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_1_d
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_578_F_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_B_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_579_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_A_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_E
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_F
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_580_G
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_C_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_C_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_C_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_581_E
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_5
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_6
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_7
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_8
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_A_9
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_B
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_B_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_B_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_B_3
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_B_4
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_C
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_E
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_F
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_F_1
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_F_2
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_G
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_582_H
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_583
+  reason: 59.1-578 (controller duties and privacy notice), 59.1-579 (controller and
+    processor roles and contracts), 59.1-580 (data protection assessments; subsection
+    G applies them to processing activities created or generated after January 1,
+    2023), 59.1-581 (de-identified and pseudonymous data), 59.1-582 (limitations and
+    exemptions for processing) and 59.1-583 (civil investigative demand) set duties
+    and limits that are not part of this order's dated-duties slice.
+  consequence: The answers never say whether a controller or processor met these duties,
+    or whether a limitation of 59.1-582 or 59.1-581 excuses a response (reading (5),
+    (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: computing_time_rules_not_pinned
+  units: []
+  instrument: Va. Code § 1-210 (computing time; not pinned)
+  reason: The general Virginia rules on computing time are not pinned. This order
+    counts calendar days from the event, the day of the event not counted, and moves
+    no last day for a Saturday, Sunday or public holiday (reading (4); open question
+    Q2). If those rules apply to the periods of 59.1-577 and 59.1-584, a last day
+    may move.
+  consequence: A date this order gives that falls on a Saturday, Sunday or public
+    holiday is given unmoved; the caller or a lawyer checks whether a later day applies.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: enforcement_authority_expenses_and_no_private_action
+  units:
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584_A
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584_D
+  - va-code-59-1-ch53-2026-11-16-lis-copy#s59_1_584_E
+  reason: 59.1-584(A) gives the Attorney General exclusive authority to enforce; (D)
+    lets the Attorney General recover reasonable expenses including attorney fees;
+    (E) excludes a private right of action. attorney_general_action_status speaks
+    of the Attorney General's action only and civil_penalty_maximum of civil penalties
+    only; these three subsections change no answer this order gives.
+  consequence: The answers never say what expenses may be recovered and never speak
+    of an action by anyone but the Attorney General (reading (9), (10)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.

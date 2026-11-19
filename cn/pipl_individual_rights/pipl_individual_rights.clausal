@@ -1,0 +1,845 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% pipl_individual_rights.clausal -- the "pipl_individual_rights" DETERMINATION for
+% cn/pipl_individual_rights, self-contained top to bottom.
+%
+% Source: 中华人民共和国个人信息保护法 (Personal Information Protection Law
+% of the People's Republic of China, PIPL), 2021 adoption text, Chapter IV,
+% Articles 44 to 50 (pinned units cn-pipl-2021#art_44 ... #art_50,
+% npc.gov.cn page text). The CHINESE text governs; English notes are the
+% drafter's own and are not authoritative.
+%
+% This slice holds:
+%   - the nine queries of the order, each QUERY(Profile, Result, Citations),
+%     each a ladder of disjoint clauses with the result IN THE HEAD,
+%     answered after the scaffold's input check (kernel.clausal);
+%   - its statutory VALUE table: the closed list of the five deletion cases
+%     of Article 47(1), each row with a ready-made cite(Key) term (the order
+%     has no number, period or threshold: 'in time' (及时) carries no number,
+%     reading (3));
+%   - the result atoms (arity 0) and the result constructors, so the package
+%     root can export them;
+%   - the facade (query types #2 and #7): a checklist with one row per
+%     query, each row carrying cite(Key), and a verdict over the rows.
+%
+% FACADE READING (drafter's design, not part of the order; reading (10)
+% says every query answers on its own and there is no combined answer, so
+% the facade never changes a query's answer). The facade asks: is the
+% handler's position under Articles 44 to 50 fully determined on this
+% profile, and does it show a breach of Article 50(1)? Row status met for
+% every final answer, unmet(Result) for requirement_not_met and
+% refused_without_reasons, unknown([Key]) for indeterminate([Key]),
+% referred(Reason) for needs_legal_review(Reason, _). Verdict:
+% input_rejected | text_not_in_force | ineligible (some unmet) |
+% undetermined (some unknown, none unmet) | referred_for_legal_review
+% (some referred, no unknown, none unmet) | eligible (every row met).
+% =====================================================================
+
+:- module(pipl_individual_rights, [
+    restriction_or_refusal_right/3,
+    access_and_copy_duty/3,
+    portability_duty/3,
+    correction_duty/3,
+    deletion_duty/3,
+    explanation_duty/3,
+    deceased_person_rights/3,
+    request_mechanism/3,
+    refusal_status/3,
+    decide_pipl_individual_rights/2,
+    pipl_individual_rights_status/2,
+    pipl_individual_rights_checklist/2,
+    pipl_individual_rights_decision_resolvable/1,
+    pipl_individual_rights_status_values/1,
+    pinned_text_not_applicable/0,
+    right_available/0,
+    excluded_by_other_law/0,
+    not_owed/0,
+    provide_in_time/0,
+    provide_transfer_route/0,
+    correct_or_supplement_in_time/0,
+    no_correction_owed/0,
+    delete_personal_information/0,
+    stop_processing_except_storage_and_security/0,
+    explain_processing_rules/0,
+    near_relative_may_exercise/0,
+    near_relative_may_not_exercise/0,
+    requirement_met/0,
+    requirement_not_met/0,
+    not_refused/0,
+    refused_with_reasons/0,
+    refused_without_reasons/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(cn/pipl_individual_rights/kernel, [
+    pipl_individual_rights_input_problems/2,
+    pipl_individual_rights_key_state/3,
+    pipl_individual_rights_relied_pairs/3
+]).
+:- use_module(cn/pipl_individual_rights/citations, [implements/1]).
+
+% ---- result constructors ------------------------------------------------
+% Data terms carried by every answer; they have no clauses (a constructor
+% is data), and the declaration names their fields.
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- result atoms -------------------------------------------------------
+% Defined so the package root can export them as attributes. They are
+% never called as queries; every answer carries them as data.
+pinned_text_not_applicable.
+right_available.
+excluded_by_other_law.
+not_owed.
+provide_in_time.
+provide_transfer_route.
+correct_or_supplement_in_time.
+no_correction_owed.
+delete_personal_information.
+stop_processing_except_storage_and_security.
+explain_processing_rules.
+near_relative_may_exercise.
+near_relative_may_not_exercise.
+requirement_met.
+requirement_not_met.
+not_refused.
+refused_with_reasons.
+refused_without_reasons.
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Article 47(1): the closed list of the five deletion cases, in item order
+% (reading (7)). Each row carries its ready-made citation.
+deletion_case(purpose_achieved_impossible_or_unnecessary, cite(cn_pipl_art_47_p1_i1)).
+deletion_case(service_stopped_or_retention_period_expired, cite(cn_pipl_art_47_p1_i2)).
+deletion_case(consent_withdrawn, cite(cn_pipl_art_47_p1_i3)).
+deletion_case(processing_violates_law_or_agreement, cite(cn_pipl_art_47_p1_i4)).
+deletion_case(other_deletion_case_prescribed_by_law, cite(cn_pipl_art_47_p1_i5)).
+
+% The fixed CITATIONS lists of the deletion answers (Q14).
+deletion_duty_citations([
+    cite(cn_pipl_art_47_p1),
+    cite(cn_pipl_art_47_p1_i1),
+    cite(cn_pipl_art_47_p1_i2),
+    cite(cn_pipl_art_47_p1_i3),
+    cite(cn_pipl_art_47_p1_i4),
+    cite(cn_pipl_art_47_p1_i5),
+    cite(cn_pipl_art_47_p2)
+]).
+deletion_case_citations([
+    cite(cn_pipl_art_47_p1),
+    cite(cn_pipl_art_47_p1_i1),
+    cite(cn_pipl_art_47_p1_i2),
+    cite(cn_pipl_art_47_p1_i3),
+    cite(cn_pipl_art_47_p1_i4),
+    cite(cn_pipl_art_47_p1_i5)
+]).
+
+% THE PAIRS LISTS (INTERFACE - THE STATUSES), in root_exports order.
+pairs_list(correction_duty, [verification_confirms_inaccurate_or_incomplete]).
+pairs_list(deletion_duty, [purpose_achieved_impossible_or_unnecessary, processing_violates_law_or_agreement, deletion_technically_difficult]).
+pairs_list(deceased_person_rights, [for_requester_own_lawful_and_legitimate_interests]).
+pairs_list(request_mechanism, [convenient_mechanism_established]).
+
+% The facade verdict vocabulary (used by the property tests).
+pipl_individual_rights_status_values([eligible, ineligible, undetermined, referred_for_legal_review, text_not_in_force, input_rejected]).
+
+% ---- plumbing -----------------------------------------------------------
+% Step (0) of every query: input problems first, then the query's ladder.
+answer_after_input_check([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+answer_after_input_check([], Profile, Ladder, Result, Citations) :-
+    call(Ladder, Profile, Result, Citations).
+
+key_state(Profile, ContractKey, State) :-
+    pipl_individual_rights_key_state(Profile, ContractKey, State).
+
+key_state_pair(Profile, ContractKey, ContractKey-State) :-
+    key_state(Profile, ContractKey, State).
+
+relied_pairs(Profile, Query, Pairs) :-
+    pairs_list(Query, PairsKeys),
+    pipl_individual_rights_relied_pairs(Profile, PairsKeys, Pairs).
+
+% first_absent_key(KeyStatePairs, FirstAbsent): key(ContractKey) for the
+% first absent key in list order, none when no key is absent.
+first_absent_key([], none).
+first_absent_key([ContractKey-absent|_], key(ContractKey)).
+first_absent_key([_-State|Pairs], FirstAbsent) :-
+    dif(State, absent),
+    first_absent_key(Pairs, FirstAbsent).
+
+% =====================================================================
+% (A) RESTRICTION_OR_REFUSAL_RIGHT -- PIPL Art 44 (reading (4)).
+% =====================================================================
+restriction_or_refusal_right(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, restriction_or_refusal_ladder, Result, Citations).
+
+restriction_or_refusal_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, laws_or_regulations_provide_otherwise, OtherLaw),
+    restriction_or_refusal_answer(InForce, OtherLaw, Result, Citations).
+
+restriction_or_refusal_answer(absent, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+restriction_or_refusal_answer(false, _, pinned_text_not_applicable, []).
+restriction_or_refusal_answer(true, absent, indeterminate([laws_or_regulations_provide_otherwise]), []).
+restriction_or_refusal_answer(true, true, excluded_by_other_law, [cite(cn_pipl_art_44_p1)]) :-
+    implements(cn_pipl_art_44_p1).
+restriction_or_refusal_answer(true, false, right_available, [cite(cn_pipl_art_44_p1)]) :-
+    implements(cn_pipl_art_44_p1).
+
+% =====================================================================
+% (B) ACCESS_AND_COPY_DUTY -- PIPL Art 45(1) and (2) (readings (3), (5)).
+% =====================================================================
+access_and_copy_duty(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, access_and_copy_ladder, Result, Citations).
+
+access_and_copy_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, article_18_1_case, EighteenOneCase),
+    key_state(Profile, article_35_case, ThirtyFiveCase),
+    access_and_copy_answer(InForce, EighteenOneCase, ThirtyFiveCase, Result, Citations).
+
+access_and_copy_answer(absent, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+access_and_copy_answer(false, _, _, pinned_text_not_applicable, []).
+access_and_copy_answer(true, true, _, not_owed, [cite(cn_pipl_art_45_p1)]) :-
+    implements(cn_pipl_art_45_p1).
+access_and_copy_answer(true, false, true, not_owed, [cite(cn_pipl_art_45_p1)]) :-
+    implements(cn_pipl_art_45_p1).
+access_and_copy_answer(true, absent, true, not_owed, [cite(cn_pipl_art_45_p1)]) :-
+    implements(cn_pipl_art_45_p1).
+access_and_copy_answer(true, absent, false, indeterminate([article_18_1_case]), []).
+access_and_copy_answer(true, absent, absent, indeterminate([article_18_1_case]), []).
+access_and_copy_answer(true, false, absent, indeterminate([article_35_case]), []).
+access_and_copy_answer(true, false, false, provide_in_time, [cite(cn_pipl_art_45_p1), cite(cn_pipl_art_45_p2)]) :-
+    implements(cn_pipl_art_45_p2).
+
+% =====================================================================
+% (C) PORTABILITY_DUTY -- PIPL Art 45(3) (reading (5), Q6).
+% =====================================================================
+portability_duty(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, portability_ladder, Result, Citations).
+
+portability_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, cyberspace_department_transfer_conditions_met, ConditionsMet),
+    portability_answer(InForce, ConditionsMet, Result, Citations).
+
+portability_answer(absent, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+portability_answer(false, _, pinned_text_not_applicable, []).
+portability_answer(true, absent, indeterminate([cyberspace_department_transfer_conditions_met]), []).
+portability_answer(true, true, provide_transfer_route, [cite(cn_pipl_art_45_p3)]) :-
+    implements(cn_pipl_art_45_p3).
+portability_answer(true, false, not_owed, [cite(cn_pipl_art_45_p3)]) :-
+    implements(cn_pipl_art_45_p3).
+
+% =====================================================================
+% (D) CORRECTION_DUTY -- PIPL Art 46 (reading (6), Q7).
+% =====================================================================
+correction_duty(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, correction_ladder, Result, Citations).
+
+correction_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, verification_confirms_inaccurate_or_incomplete, Verification),
+    correction_answer(InForce, Verification, Profile, Result, Citations).
+
+correction_answer(absent, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+correction_answer(false, _, _, pinned_text_not_applicable, []).
+correction_answer(true, absent, _, indeterminate([verification_confirms_inaccurate_or_incomplete]), []).
+correction_answer(true, true, _, correct_or_supplement_in_time, [cite(cn_pipl_art_46_p1), cite(cn_pipl_art_46_p2)]) :-
+    implements(cn_pipl_art_46_p2).
+correction_answer(true, false, _, no_correction_owed, [cite(cn_pipl_art_46_p1), cite(cn_pipl_art_46_p2)]) :-
+    implements(cn_pipl_art_46_p2).
+correction_answer(
+    true,
+    unsure,
+    Profile,
+    needs_legal_review(open_textured(verification_confirms_inaccurate_or_incomplete, cite(cn_pipl_art_46_p2)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_46_p2),
+    relied_pairs(Profile, correction_duty, Pairs).
+
+% =====================================================================
+% (E) DELETION_DUTY -- PIPL Art 47 (reading (7), Q8).
+% =====================================================================
+deletion_duty(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, deletion_ladder, Result, Citations).
+
+deletion_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    findall(CaseKey, deletion_case(CaseKey, _), CaseKeys),
+    maplist(key_state_pair(Profile), CaseKeys, CasePairs),
+    pairs_values(CasePairs, CaseStates),
+    deletion_case_summary(CaseStates, CaseSummary),
+    first_absent_key(CasePairs, FirstAbsent),
+    key_state(Profile, legal_retention_period_unexpired, Retention),
+    key_state(Profile, deletion_technically_difficult, Difficulty),
+    article_47_2_summary(Retention, Difficulty, ReplacementSummary),
+    retention_question(Retention, Difficulty, Question),
+    key_state(Profile, purpose_achieved_impossible_or_unnecessary, Purpose),
+    deletion_answer(InForce, CaseSummary, ReplacementSummary, FirstAbsent, Question, Purpose, Profile, Result, Citations).
+
+% Article 47(1): A DELETION CASE HOLDS (holds), NO DELETION CASE HOLDS
+% (all_false), or neither (open: none true, not all false).
+deletion_case_summary(CaseStates, CaseSummary) :-
+    implements(cn_pipl_art_47_p1),
+    foldl(deletion_case_step, CaseStates, all_false, CaseSummary).
+
+deletion_case_step(true, _, holds).
+deletion_case_step(false, Running, Running).
+deletion_case_step(absent, holds, holds).
+deletion_case_step(absent, all_false, open).
+deletion_case_step(absent, open, open).
+deletion_case_step(unsure, holds, holds).
+deletion_case_step(unsure, all_false, open).
+deletion_case_step(unsure, open, open).
+
+% Article 47(2): THE ARTICLE 47(2) CASE HOLDS (holds), FAILS (fails), or is
+% open.
+article_47_2_summary(true, _, holds) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(absent, true, holds) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(false, true, holds) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(false, false, fails) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(false, absent, open) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(false, unsure, open) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(absent, absent, open) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(absent, false, open) :-
+    implements(cn_pipl_art_47_p2).
+article_47_2_summary(absent, unsure, open) :-
+    implements(cn_pipl_art_47_p2).
+
+% Steps 11 and 12: which Article 47(2) key is still to be asked, if any.
+retention_question(absent, absent, ask(legal_retention_period_unexpired)).
+retention_question(absent, false, ask(legal_retention_period_unexpired)).
+retention_question(absent, unsure, ask(legal_retention_period_unexpired)).
+retention_question(absent, true, settled).
+retention_question(true, _, settled).
+retention_question(false, absent, ask(deletion_technically_difficult)).
+retention_question(false, true, settled).
+retention_question(false, false, settled).
+retention_question(false, unsure, settled).
+
+% deletion_answer(InForce, CaseSummary, ReplacementSummary, FirstAbsent,
+%                 Question, Purpose, Profile, Result, Citations)
+deletion_answer(absent, _, _, _, _, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+deletion_answer(false, _, _, _, _, _, _, pinned_text_not_applicable, []).
+deletion_answer(true, holds, holds, _, _, _, _, stop_processing_except_storage_and_security, Citations) :-
+    implements(cn_pipl_art_47_p2),
+    deletion_duty_citations(Citations).
+deletion_answer(true, holds, fails, _, _, _, _, delete_personal_information, Citations) :-
+    implements(cn_pipl_art_47_p1),
+    deletion_duty_citations(Citations).
+deletion_answer(true, all_false, _, _, _, _, _, not_owed, Citations) :-
+    implements(cn_pipl_art_47_p1),
+    deletion_case_citations(Citations).
+deletion_answer(true, open, _, key(MissingKey), _, _, _, indeterminate([MissingKey]), []).
+deletion_answer(true, open, _, none, ask(MissingKey), _, _, indeterminate([MissingKey]), []).
+deletion_answer(
+    true,
+    open,
+    _,
+    none,
+    settled,
+    unsure,
+    Profile,
+    needs_legal_review(open_textured(purpose_achieved_impossible_or_unnecessary, cite(cn_pipl_art_47_p1_i1)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_47_p1_i1),
+    relied_pairs(Profile, deletion_duty, Pairs).
+deletion_answer(
+    true,
+    open,
+    _,
+    none,
+    settled,
+    Purpose,
+    Profile,
+    needs_legal_review(open_textured(processing_violates_law_or_agreement, cite(cn_pipl_art_47_p1_i4)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_47_p1_i4),
+    dif(Purpose, unsure),
+    relied_pairs(Profile, deletion_duty, Pairs).
+deletion_answer(true, holds, open, _, ask(MissingKey), _, _, indeterminate([MissingKey]), []).
+deletion_answer(
+    true,
+    holds,
+    open,
+    _,
+    settled,
+    _,
+    Profile,
+    needs_legal_review(open_textured(deletion_technically_difficult, cite(cn_pipl_art_47_p2)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_47_p2),
+    relied_pairs(Profile, deletion_duty, Pairs).
+
+% =====================================================================
+% (F) EXPLANATION_DUTY -- PIPL Art 48.
+% =====================================================================
+explanation_duty(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, explanation_ladder, Result, Citations).
+
+explanation_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    explanation_answer(InForce, Result, Citations).
+
+explanation_answer(absent, indeterminate([pinned_text_in_force_on_reference_day]), []).
+explanation_answer(false, pinned_text_not_applicable, []).
+explanation_answer(true, explain_processing_rules, [cite(cn_pipl_art_48_p1)]) :-
+    implements(cn_pipl_art_48_p1).
+
+% =====================================================================
+% (G) DECEASED_PERSON_RIGHTS -- PIPL Art 49 (reading (8), Q10).
+% =====================================================================
+deceased_person_rights(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, deceased_person_ladder, Result, Citations).
+
+deceased_person_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, person_deceased, Deceased),
+    key_state(Profile, requester_is_near_relative, NearRelative),
+    key_state(Profile, for_requester_own_lawful_and_legitimate_interests, OwnInterests),
+    key_state(Profile, deceased_arranged_otherwise, ArrangedOtherwise),
+    deceased_person_bar(Deceased, NearRelative, OwnInterests, ArrangedOtherwise, BarStatus),
+    first_absent_key(
+        [
+            person_deceased-Deceased,
+            requester_is_near_relative-NearRelative,
+            for_requester_own_lawful_and_legitimate_interests-OwnInterests,
+            deceased_arranged_otherwise-ArrangedOtherwise
+        ],
+        FirstAbsent
+    ),
+    deceased_person_answer(InForce, BarStatus, FirstAbsent, OwnInterests, Profile, Result, Citations).
+
+% Steps 3 to 6: any condition of Article 49 settled the wrong way bars it.
+deceased_person_bar(Deceased, NearRelative, OwnInterests, ArrangedOtherwise, BarStatus) :-
+    implements(cn_pipl_art_49_p1),
+    condition_flag(Deceased, DeceasedFlag),
+    condition_flag(NearRelative, RelativeFlag),
+    condition_flag(OwnInterests, InterestFlag),
+    exception_flag(ArrangedOtherwise, ArrangementFlag),
+    foldl(bar_step, [DeceasedFlag, RelativeFlag, InterestFlag, ArrangementFlag], clear, BarStatus).
+
+condition_flag(false, barred).
+condition_flag(true, clear).
+condition_flag(absent, clear).
+condition_flag(unsure, clear).
+
+exception_flag(true, barred).
+exception_flag(false, clear).
+exception_flag(absent, clear).
+
+bar_step(barred, _, barred).
+bar_step(clear, Running, Running).
+
+deceased_person_answer(absent, _, _, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+deceased_person_answer(false, _, _, _, _, pinned_text_not_applicable, []).
+deceased_person_answer(true, barred, _, _, _, near_relative_may_not_exercise, [cite(cn_pipl_art_49_p1)]) :-
+    implements(cn_pipl_art_49_p1).
+deceased_person_answer(true, clear, key(MissingKey), _, _, indeterminate([MissingKey]), []).
+deceased_person_answer(
+    true,
+    clear,
+    none,
+    unsure,
+    Profile,
+    needs_legal_review(open_textured(for_requester_own_lawful_and_legitimate_interests, cite(cn_pipl_art_49_p1)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_49_p1),
+    relied_pairs(Profile, deceased_person_rights, Pairs).
+deceased_person_answer(true, clear, none, OwnInterests, _, near_relative_may_exercise, [cite(cn_pipl_art_49_p1)]) :-
+    implements(cn_pipl_art_49_p1),
+    dif(OwnInterests, unsure).
+
+% =====================================================================
+% (H) REQUEST_MECHANISM -- PIPL Art 50(1), first sentence (reading (9)).
+% =====================================================================
+request_mechanism(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, request_mechanism_ladder, Result, Citations).
+
+request_mechanism_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, convenient_mechanism_established, Mechanism),
+    request_mechanism_answer(InForce, Mechanism, Profile, Result, Citations).
+
+request_mechanism_answer(absent, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+request_mechanism_answer(false, _, _, pinned_text_not_applicable, []).
+request_mechanism_answer(true, absent, _, indeterminate([convenient_mechanism_established]), []).
+request_mechanism_answer(true, true, _, requirement_met, [cite(cn_pipl_art_50_p1)]) :-
+    implements(cn_pipl_art_50_p1).
+request_mechanism_answer(true, false, _, requirement_not_met, [cite(cn_pipl_art_50_p1)]) :-
+    implements(cn_pipl_art_50_p1).
+request_mechanism_answer(
+    true,
+    unsure,
+    Profile,
+    needs_legal_review(open_textured(convenient_mechanism_established, cite(cn_pipl_art_50_p1)), [inputs_relied_on(Pairs)]),
+    []
+) :-
+    implements(cn_pipl_art_50_p1),
+    relied_pairs(Profile, request_mechanism, Pairs).
+
+% =====================================================================
+% (I) REFUSAL_STATUS -- PIPL Art 50(1) second sentence and Art 50(2).
+% =====================================================================
+refusal_status(Profile, Result, Citations) :-
+    pipl_individual_rights_input_problems(Profile, Problems),
+    answer_after_input_check(Problems, Profile, refusal_ladder, Result, Citations).
+
+refusal_ladder(Profile, Result, Citations) :-
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    key_state(Profile, request_refused, Refused),
+    key_state(Profile, refusal_reasons_given, ReasonsGiven),
+    refusal_answer(InForce, Refused, ReasonsGiven, Result, Citations).
+
+refusal_answer(absent, _, _, indeterminate([pinned_text_in_force_on_reference_day]), []).
+refusal_answer(false, _, _, pinned_text_not_applicable, []).
+refusal_answer(true, false, _, not_refused, [cite(cn_pipl_art_50_p1)]) :-
+    implements(cn_pipl_art_50_p1).
+refusal_answer(true, absent, _, indeterminate([request_refused]), []).
+refusal_answer(true, true, absent, indeterminate([refusal_reasons_given]), []).
+refusal_answer(true, true, true, refused_with_reasons, [cite(cn_pipl_art_50_p1), cite(cn_pipl_art_50_p2)]) :-
+    implements(cn_pipl_art_50_p2).
+refusal_answer(true, true, false, refused_without_reasons, [cite(cn_pipl_art_50_p1), cite(cn_pipl_art_50_p2)]) :-
+    implements(cn_pipl_art_50_p2).
+
+% =====================================================================
+% FACADE -- checklist (query types #2 and #7) and verdict.
+% =====================================================================
+% One row per query: row id, the query it reads, its ready-made citation.
+checklist_row(article_44_restriction_or_refusal, restriction_or_refusal_right, cite(cn_pipl_art_44_p1)).
+checklist_row(article_45_access_and_copy, access_and_copy_duty, cite(cn_pipl_art_45_p1)).
+checklist_row(article_45_portability, portability_duty, cite(cn_pipl_art_45_p3)).
+checklist_row(article_46_correction, correction_duty, cite(cn_pipl_art_46_p2)).
+checklist_row(article_47_deletion, deletion_duty, cite(cn_pipl_art_47_p1)).
+checklist_row(article_48_explanation, explanation_duty, cite(cn_pipl_art_48_p1)).
+checklist_row(article_49_deceased_person, deceased_person_rights, cite(cn_pipl_art_49_p1)).
+checklist_row(article_50_request_mechanism, request_mechanism, cite(cn_pipl_art_50_p1)).
+checklist_row(article_50_refusal, refusal_status, cite(cn_pipl_art_50_p1)).
+
+pipl_individual_rights_checklist(Profile, Items) :-
+    findall(RowIdentifier, checklist_row(RowIdentifier, _, _), RowIdentifiers),
+    maplist(checklist_item(Profile), RowIdentifiers, Items).
+
+checklist_item(Profile, RowIdentifier, item(RowIdentifier, RowStatus, Citation)) :-
+    checklist_row(RowIdentifier, Query, Citation),
+    call(Query, Profile, Result, _Citations),
+    row_status(Result, RowStatus).
+
+% Final answers that show no breach of a duty.
+answer_without_breach(right_available).
+answer_without_breach(excluded_by_other_law).
+answer_without_breach(not_owed).
+answer_without_breach(provide_in_time).
+answer_without_breach(provide_transfer_route).
+answer_without_breach(correct_or_supplement_in_time).
+answer_without_breach(no_correction_owed).
+answer_without_breach(delete_personal_information).
+answer_without_breach(stop_processing_except_storage_and_security).
+answer_without_breach(explain_processing_rules).
+answer_without_breach(near_relative_may_exercise).
+answer_without_breach(near_relative_may_not_exercise).
+answer_without_breach(requirement_met).
+answer_without_breach(not_refused).
+answer_without_breach(refused_with_reasons).
+
+row_status(input_problems(Problems), rejected(Problems)).
+row_status(pinned_text_not_applicable, not_applicable).
+row_status(indeterminate(MissingKeys), unknown(MissingKeys)).
+row_status(needs_legal_review(Reason, _), referred(Reason)).
+row_status(requirement_not_met, unmet(requirement_not_met)) :-
+    implements(cn_pipl_art_50_p1).
+row_status(refused_without_reasons, unmet(refused_without_reasons)) :-
+    implements(cn_pipl_art_50_p1).
+row_status(FinalAnswer, met) :-
+    answer_without_breach(FinalAnswer).
+
+row_class(met, clear).
+row_class(unmet(_), breach).
+row_class(unknown(_), undetermined).
+row_class(referred(_), referred).
+row_class(not_applicable, undetermined).
+row_class(rejected(_), undetermined).
+
+% Precedence of the facade summary: breach > undetermined > referred > clear.
+summary_rank(clear, 0).
+summary_rank(referred, 1).
+summary_rank(undetermined, 2).
+summary_rank(breach, 3).
+
+checklist_summary(Items, Summary) :-
+    foldl(summary_step, Items, clear, Summary).
+
+summary_step(item(_, RowStatus, _), Running, NextSummary) :-
+    row_class(RowStatus, RowSummary),
+    summary_rank(Running, RunningRank),
+    summary_rank(RowSummary, RowRank),
+    NextRank #= max(RunningRank, RowRank),
+    summary_rank(NextSummary, NextRank).
+
+% A profile judged on the merits: no input problem, in-force key true or
+% absent (absent makes every row unknown).
+judged_checklist(Profile, Items, Summary) :-
+    pipl_individual_rights_input_problems(Profile, []),
+    key_state(Profile, pinned_text_in_force_on_reference_day, InForce),
+    memberd_t(InForce, [true, absent], true),
+    pipl_individual_rights_checklist(Profile, Items),
+    checklist_summary(Items, Summary).
+
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(input_rejected, Items)) :-
+    pipl_individual_rights_input_problems(Profile, [_|_]),
+    pipl_individual_rights_checklist(Profile, Items).
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(text_not_in_force, Items)) :-
+    pipl_individual_rights_input_problems(Profile, []),
+    key_state(Profile, pinned_text_in_force_on_reference_day, false),
+    pipl_individual_rights_checklist(Profile, Items).
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(ineligible, Items)) :-
+    judged_checklist(Profile, Items, breach).
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(undetermined, Items)) :-
+    judged_checklist(Profile, Items, undetermined).
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(referred_for_legal_review, Items)) :-
+    judged_checklist(Profile, Items, referred).
+decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(eligible, Items)) :-
+    judged_checklist(Profile, Items, clear).
+
+% ---- projection: Status only ------------------------------------------
+pipl_individual_rights_status(Profile, Status) :-
+    decide_pipl_individual_rights(Profile, pipl_individual_rights_verdict(Status, _Items)).
+
+pipl_individual_rights_decision_resolvable(Profile) :-
+    decide_pipl_individual_rights(Profile, _Verdict).
+
+% =====================================================================
+% TESTS
+% =====================================================================
+complete_profile(ReasonsGiven, [
+    attribute(pinned_text_in_force_on_reference_day, true),
+    attribute(laws_or_regulations_provide_otherwise, false),
+    attribute(article_18_1_case, false),
+    attribute(article_35_case, false),
+    attribute(cyberspace_department_transfer_conditions_met, true),
+    attribute(verification_confirms_inaccurate_or_incomplete, true),
+    attribute(purpose_achieved_impossible_or_unnecessary, false),
+    attribute(service_stopped_or_retention_period_expired, false),
+    attribute(consent_withdrawn, true),
+    attribute(processing_violates_law_or_agreement, false),
+    attribute(other_deletion_case_prescribed_by_law, false),
+    attribute(legal_retention_period_unexpired, false),
+    attribute(deletion_technically_difficult, false),
+    attribute(person_deceased, true),
+    attribute(requester_is_near_relative, true),
+    attribute(for_requester_own_lawful_and_legitimate_interests, true),
+    attribute(deceased_arranged_otherwise, false),
+    attribute(convenient_mechanism_established, true),
+    attribute(request_refused, true),
+    attribute(refusal_reasons_given, ReasonsGiven)
+]).
+
+test(an_empty_profile_names_the_in_force_key_in_every_query) :-
+    findall(Result-Citations, restriction_or_refusal_right([], Result, Citations), RestrictionAnswers),
+    RestrictionAnswers == [indeterminate([pinned_text_in_force_on_reference_day])-[]],
+    findall(Result-Citations, deletion_duty([], Result, Citations), DeletionAnswers),
+    DeletionAnswers == [indeterminate([pinned_text_in_force_on_reference_day])-[]],
+    findall(Result-Citations, refusal_status([], Result, Citations), RefusalAnswers),
+    RefusalAnswers == [indeterminate([pinned_text_in_force_on_reference_day])-[]].
+
+test(a_text_not_in_force_is_not_applicable_with_no_citations) :-
+    findall(Result-Citations, explanation_duty([attribute(pinned_text_in_force_on_reference_day, false)], Result, Citations), Answers),
+    Answers == [pinned_text_not_applicable-[]].
+
+test(restriction_excluded_by_other_law) :-
+    findall(Result-Citations, restriction_or_refusal_right([attribute(pinned_text_in_force_on_reference_day, true), attribute(laws_or_regulations_provide_otherwise, true)], Result, Citations), Answers),
+    Answers == [excluded_by_other_law-[cite(cn_pipl_art_44_p1)]].
+
+test(restriction_right_available) :-
+    findall(Result-Citations, restriction_or_refusal_right([attribute(pinned_text_in_force_on_reference_day, true), attribute(laws_or_regulations_provide_otherwise, false)], Result, Citations), Answers),
+    Answers == [right_available-[cite(cn_pipl_art_44_p1)]].
+
+test(access_article_35_true_settles_not_owed_before_18_1_is_named) :-
+    findall(Result-Citations, access_and_copy_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(article_35_case, true)], Result, Citations), Answers),
+    Answers == [not_owed-[cite(cn_pipl_art_45_p1)]].
+
+test(access_names_18_1_first_when_both_absent) :-
+    findall(Result-Citations, access_and_copy_duty([attribute(pinned_text_in_force_on_reference_day, true)], Result, Citations), Answers),
+    Answers == [indeterminate([article_18_1_case])-[]].
+
+test(access_names_35_once_18_1_is_false) :-
+    findall(Result-Citations, access_and_copy_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(article_18_1_case, false)], Result, Citations), Answers),
+    Answers == [indeterminate([article_35_case])-[]].
+
+test(access_provide_in_time) :-
+    findall(Result-Citations, access_and_copy_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(article_18_1_case, false), attribute(article_35_case, false)], Result, Citations), Answers),
+    Answers == [provide_in_time-[cite(cn_pipl_art_45_p1), cite(cn_pipl_art_45_p2)]].
+
+test(portability_conditions_missing_is_named) :-
+    findall(Result-Citations, portability_duty([attribute(pinned_text_in_force_on_reference_day, true)], Result, Citations), Answers),
+    Answers == [indeterminate([cyberspace_department_transfer_conditions_met])-[]].
+
+test(portability_route_owed) :-
+    findall(Result-Citations, portability_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(cyberspace_department_transfer_conditions_met, true)], Result, Citations), Answers),
+    Answers == [provide_transfer_route-[cite(cn_pipl_art_45_p3)]].
+
+test(correction_unsure_goes_to_a_lawyer) :-
+    findall(Result-Citations, correction_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(verification_confirms_inaccurate_or_incomplete, unsure)], Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(verification_confirms_inaccurate_or_incomplete, cite(cn_pipl_art_46_p2)), [inputs_relied_on([verification_confirms_inaccurate_or_incomplete-unsure])])-[]].
+
+test(correction_negative_verification_owes_none) :-
+    findall(Result-Citations, correction_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(verification_confirms_inaccurate_or_incomplete, false)], Result, Citations), Answers),
+    Answers == [no_correction_owed-[cite(cn_pipl_art_46_p1), cite(cn_pipl_art_46_p2)]].
+
+test(deletion_consent_withdrawn_and_no_47_2_case_deletes) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(consent_withdrawn, true), attribute(legal_retention_period_unexpired, false), attribute(deletion_technically_difficult, false)], Result, _), Answers),
+    Answers == [delete_personal_information].
+
+test(deletion_technical_difficulty_stops_processing) :-
+    findall(Result-Citations, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(consent_withdrawn, true), attribute(deletion_technically_difficult, true)], Result, Citations), Answers),
+    deletion_duty_citations(Expected),
+    Answers == [stop_processing_except_storage_and_security-Expected].
+
+test(deletion_case_true_names_the_retention_key) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(consent_withdrawn, true)], Result, _), Answers),
+    Answers == [indeterminate([legal_retention_period_unexpired])].
+
+test(deletion_all_five_false_is_not_owed) :-
+    findall(Result-Citations, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(purpose_achieved_impossible_or_unnecessary, false), attribute(service_stopped_or_retention_period_expired, false), attribute(consent_withdrawn, false), attribute(processing_violates_law_or_agreement, false), attribute(other_deletion_case_prescribed_by_law, false)], Result, Citations), Answers),
+    deletion_case_citations(Expected),
+    Answers == [not_owed-Expected].
+
+test(deletion_names_the_first_case_key) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true)], Result, _), Answers),
+    Answers == [indeterminate([purpose_achieved_impossible_or_unnecessary])].
+
+test(deletion_unsure_purpose_still_names_the_retention_key) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(purpose_achieved_impossible_or_unnecessary, unsure), attribute(service_stopped_or_retention_period_expired, false), attribute(consent_withdrawn, false), attribute(processing_violates_law_or_agreement, false), attribute(other_deletion_case_prescribed_by_law, false)], Result, _), Answers),
+    Answers == [indeterminate([legal_retention_period_unexpired])].
+
+test(deletion_unsure_purpose_goes_to_a_lawyer) :-
+    findall(Result-Citations, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(purpose_achieved_impossible_or_unnecessary, unsure), attribute(service_stopped_or_retention_period_expired, false), attribute(consent_withdrawn, false), attribute(processing_violates_law_or_agreement, false), attribute(other_deletion_case_prescribed_by_law, false), attribute(legal_retention_period_unexpired, false), attribute(deletion_technically_difficult, false)], Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(purpose_achieved_impossible_or_unnecessary, cite(cn_pipl_art_47_p1_i1)), [inputs_relied_on([purpose_achieved_impossible_or_unnecessary-unsure, processing_violates_law_or_agreement-false, deletion_technically_difficult-false])])-[]].
+
+test(deletion_unsure_violation_goes_to_a_lawyer) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(purpose_achieved_impossible_or_unnecessary, false), attribute(service_stopped_or_retention_period_expired, false), attribute(consent_withdrawn, false), attribute(processing_violates_law_or_agreement, unsure), attribute(other_deletion_case_prescribed_by_law, false), attribute(legal_retention_period_unexpired, false), attribute(deletion_technically_difficult, false)], Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(processing_violates_law_or_agreement, cite(cn_pipl_art_47_p1_i4)), [inputs_relied_on([purpose_achieved_impossible_or_unnecessary-false, processing_violates_law_or_agreement-unsure, deletion_technically_difficult-false])])].
+
+test(deletion_unsure_difficulty_goes_to_a_lawyer) :-
+    findall(Result, deletion_duty([attribute(pinned_text_in_force_on_reference_day, true), attribute(consent_withdrawn, true), attribute(legal_retention_period_unexpired, false), attribute(deletion_technically_difficult, unsure)], Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(deletion_technically_difficult, cite(cn_pipl_art_47_p2)), [inputs_relied_on([deletion_technically_difficult-unsure])])].
+
+test(deceased_not_dead_bars_before_any_key_is_named) :-
+    findall(Result-Citations, deceased_person_rights([attribute(pinned_text_in_force_on_reference_day, true), attribute(person_deceased, false)], Result, Citations), Answers),
+    Answers == [near_relative_may_not_exercise-[cite(cn_pipl_art_49_p1)]].
+
+test(deceased_arranged_otherwise_bars_with_earlier_keys_absent) :-
+    findall(Result, deceased_person_rights([attribute(pinned_text_in_force_on_reference_day, true), attribute(deceased_arranged_otherwise, true)], Result, _), Answers),
+    Answers == [near_relative_may_not_exercise].
+
+test(deceased_names_the_first_absent_key) :-
+    findall(Result, deceased_person_rights([attribute(pinned_text_in_force_on_reference_day, true), attribute(person_deceased, true)], Result, _), Answers),
+    Answers == [indeterminate([requester_is_near_relative])].
+
+test(deceased_unsure_interest_goes_to_a_lawyer) :-
+    findall(Result, deceased_person_rights([attribute(pinned_text_in_force_on_reference_day, true), attribute(person_deceased, true), attribute(requester_is_near_relative, true), attribute(for_requester_own_lawful_and_legitimate_interests, unsure), attribute(deceased_arranged_otherwise, false)], Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(for_requester_own_lawful_and_legitimate_interests, cite(cn_pipl_art_49_p1)), [inputs_relied_on([for_requester_own_lawful_and_legitimate_interests-unsure])])].
+
+test(deceased_near_relative_may_exercise) :-
+    findall(Result-Citations, deceased_person_rights([attribute(pinned_text_in_force_on_reference_day, true), attribute(person_deceased, true), attribute(requester_is_near_relative, true), attribute(for_requester_own_lawful_and_legitimate_interests, true), attribute(deceased_arranged_otherwise, false)], Result, Citations), Answers),
+    Answers == [near_relative_may_exercise-[cite(cn_pipl_art_49_p1)]].
+
+test(mechanism_unsure_goes_to_a_lawyer) :-
+    findall(Result, request_mechanism([attribute(pinned_text_in_force_on_reference_day, true), attribute(convenient_mechanism_established, unsure)], Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(convenient_mechanism_established, cite(cn_pipl_art_50_p1)), [inputs_relied_on([convenient_mechanism_established-unsure])])].
+
+test(mechanism_not_met) :-
+    findall(Result-Citations, request_mechanism([attribute(pinned_text_in_force_on_reference_day, true), attribute(convenient_mechanism_established, false)], Result, Citations), Answers),
+    Answers == [requirement_not_met-[cite(cn_pipl_art_50_p1)]].
+
+test(refusal_not_refused_ignores_reasons) :-
+    findall(Result-Citations, refusal_status([attribute(pinned_text_in_force_on_reference_day, true), attribute(request_refused, false)], Result, Citations), Answers),
+    Answers == [not_refused-[cite(cn_pipl_art_50_p1)]].
+
+test(refusal_without_reasons) :-
+    findall(Result-Citations, refusal_status([attribute(pinned_text_in_force_on_reference_day, true), attribute(request_refused, true), attribute(refusal_reasons_given, false)], Result, Citations), Answers),
+    Answers == [refused_without_reasons-[cite(cn_pipl_art_50_p1), cite(cn_pipl_art_50_p2)]].
+
+test(refusal_names_the_reasons_key_once_refused) :-
+    findall(Result, refusal_status([attribute(pinned_text_in_force_on_reference_day, true), attribute(request_refused, true)], Result, _), Answers),
+    Answers == [indeterminate([refusal_reasons_given])].
+
+test(input_problems_come_first_with_no_citations) :-
+    findall(Result-Citations, refusal_status([attribute(pinned_text_in_force_on_reference_day, true), attribute(person_deceased, maybe)], Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(person_deceased)])-[]].
+
+test(a_non_list_profile_gives_input_problems) :-
+    findall(Result, explanation_duty(not_a_list, Result, _), Answers),
+    Answers == [input_problems([wrong_type(profile)])].
+
+test(facade_complete_profile_is_eligible) :-
+    complete_profile(true, Profile),
+    findall(Status, pipl_individual_rights_status(Profile, Status), Statuses),
+    Statuses == [eligible].
+
+test(facade_refusal_without_reasons_is_ineligible) :-
+    complete_profile(false, Profile),
+    findall(Status, pipl_individual_rights_status(Profile, Status), Statuses),
+    Statuses == [ineligible].
+
+test(facade_complete_profile_is_not_ineligible, fail) :-
+    complete_profile(true, Profile),
+    pipl_individual_rights_status(Profile, ineligible).
+
+test(facade_empty_profile_is_undetermined) :-
+    findall(Status, pipl_individual_rights_status([], Status), Statuses),
+    Statuses == [undetermined].
+
+test(facade_text_not_in_force) :-
+    findall(Status, pipl_individual_rights_status([attribute(pinned_text_in_force_on_reference_day, false)], Status), Statuses),
+    Statuses == [text_not_in_force].
+
+test(facade_unknown_key_is_rejected) :-
+    findall(Status, pipl_individual_rights_status([attribute(colour, red)], Status), Statuses),
+    Statuses == [input_rejected].
+
+test(facade_checklist_rows_carry_citations) :-
+    complete_profile(true, Profile),
+    pipl_individual_rights_checklist(Profile, Items),
+    length(Items, 9),
+    member(item(article_47_deletion, met, cite(cn_pipl_art_47_p1)), Items).
+
+:- end_module(pipl_individual_rights).

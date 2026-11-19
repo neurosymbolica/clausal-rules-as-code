@@ -1,0 +1,252 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: cn/pipl_individual_rights
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "pipl_individual_rights"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The result atoms (arity 0) and the result constructors are
+# listed because the scorer reads them as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # (the input check is re-exported by queries.clausal, listed there)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- pipl_individual_rights.clausal --
+  - "restriction_or_refusal_right/3"
+  - "access_and_copy_duty/3"
+  - "portability_duty/3"
+  - "correction_duty/3"
+  - "deletion_duty/3"
+  - "explanation_duty/3"
+  - "deceased_person_rights/3"
+  - "request_mechanism/3"
+  - "refusal_status/3"
+  - "decide_pipl_individual_rights/2"
+  - "pipl_individual_rights_status/2"
+  - "pipl_individual_rights_checklist/2"
+  - "pipl_individual_rights_decision_resolvable/1"
+  - "pipl_individual_rights_status_values/1"
+  - "pinned_text_not_applicable/0"
+  - "right_available/0"
+  - "excluded_by_other_law/0"
+  - "not_owed/0"
+  - "provide_in_time/0"
+  - "provide_transfer_route/0"
+  - "correct_or_supplement_in_time/0"
+  - "no_correction_owed/0"
+  - "delete_personal_information/0"
+  - "stop_processing_except_storage_and_security/0"
+  - "explain_processing_rules/0"
+  - "near_relative_may_exercise/0"
+  - "near_relative_may_not_exercise/0"
+  - "requirement_met/0"
+  - "requirement_not_met/0"
+  - "not_refused/0"
+  - "refused_with_reasons/0"
+  - "refused_without_reasons/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "pipl_individual_rights_profile_keys/1"
+  - "pipl_individual_rights_input_problems/2"
+  - "pipl_individual_rights_what_if/4"
+  # -- fixtures.clausal --
+  - "pipl_individual_rights_subject/1"
+  - "pipl_individual_rights_profile_for/2"
+  - "pipl_individual_rights_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The package imports only the kit's formalize_lib and
+# library(reif)/library(clpz), none of which is a domain backbone package.
+uses: []
+
+scope: >-
+  The rights of individuals in the processing of personal information under
+  Chapter IV of the Personal Information Protection Law of the PRC (2021
+  adoption text, formalised from the Chinese), Articles 44 to 50: the right to
+  restrict or refuse processing (Art 44), to consult and copy (Art 45(1) and
+  (2)), transfer (Art 45(3)), correction and supplementing (Art 46), deletion
+  (Art 47), explanation of the processing rules (Art 48), the near relatives of
+  a deceased person (Art 49), and the handler's request mechanism, the reasons
+  for a refusal and the individual's court action (Art 50). Nine queries, each
+  about one request by one individual (or near relative) to one personal
+  information handler, each answering on its own. Not decided here (caller
+  statements or out of scope): territorial scope (Art 3) and whether the
+  respondent is a handler (Art 73 item (1)); whether the pinned text is in
+  force on the reference day (Art 74, later amendments not established);
+  Articles 18(1) and 35; the national cyberspace department's transfer
+  conditions; other laws and administrative regulations; the Civil Code's
+  near relatives; the cross-border Articles 38 to 43; Articles 13 to 18, 25,
+  26, 33 to 37, 39 and 51 to 59. The six open-textured judgements are handed
+  to a lawyer when unsure (needs_legal_review), never given a crisp test; no
+  period is computed for 'in time' (及时).
+
+sources:
+  - "中华人民共和国个人信息保护法 (Personal Information Protection Law of the People's Republic of China), 2021 adoption text, Articles 44, 45, 46, 47, 48, 49 and 50 (pinned units cn-pipl-2021#art_44 to #art_50 and their paragraphs and items), npc.gov.cn page text, compared with the People's Daily and CAC copies; the Chinese governs, English glosses are the drafter's own"
+  - "中华人民共和国个人信息保护法, Article 3 (territorial scope), Article 73 (meaning of terms) and Article 74 (entry into force, 1 November 2021): pinned and quoted, no limb (readings (1), (2))"
+
+query_interface:
+  2: "decide_pipl_individual_rights/2"      # eligibility: verdict(status, cited checklist)
+  7: "pipl_individual_rights_checklist/2"   # justification: item(Id, Status, cite(Key)) per row
+  16: "pipl_individual_rights_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - cn-pipl-2021#art_44
+  - cn-pipl-2021#art_45
+  - cn-pipl-2021#art_46
+  - cn-pipl-2021#art_47
+  - cn-pipl-2021#art_48
+  - cn-pipl-2021#art_49
+  - cn-pipl-2021#art_50
+  - cn-pipl-2021#art_3
+  - cn-pipl-2021#art_73
+  - cn-pipl-2021#art_74
+  reason: The article units hold only the article numbers (第...条); every limb cites
+    the paragraph or item it reads. Document structure.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: territorial_scope_not_tested
+  units:
+  - cn-pipl-2021#art_3_p1
+  - cn-pipl-2021#art_3_p2
+  - cn-pipl-2021#art_3_p2_i1
+  - cn-pipl-2021#art_3_p2_i2
+  - cn-pipl-2021#art_3_p2_i3
+  reason: Article 3 sets the territorial scope of the Law; this order does not test
+    scope and every answer holds only where the Law applies (reading (1), Q9). The
+    units carry substantive words, so they are recorded as debt.
+  consequence: The answers do not say whether the Law reaches the processing.
+  declaration: not_an_exception
+  debt: true
+  open: 'Q9: the scope query of the cross-border order shows how Article 3 is formalised;
+    a later order may add one here.'
+- what: handler_definition_not_tested
+  units:
+  - cn-pipl-2021#art_73_p1
+  - cn-pipl-2021#art_73_p1_i1
+  reason: Article 73 item (1) defines the personal information handler; the order
+    takes it as the premise of every answer and has no key for it (reading (1), Q9).
+    The lead-in introduces the definitions. Substantive words, so recorded as debt.
+  consequence: The answers do not say whether the respondent is a personal information
+    handler.
+  declaration: not_an_exception
+  debt: true
+  open: Q9.
+- what: definitions_not_used
+  units:
+  - cn-pipl-2021#art_73_p1_i2
+  - cn-pipl-2021#art_73_p1_i3
+  - cn-pipl-2021#art_73_p1_i4
+  reason: Article 73 items (2) to (4) define automated decision-making, de-identification
+    and anonymisation; no limb of this order uses those terms. Substantive words,
+    so recorded as debt.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+  open: a later order that reads one of these definitions cites it there.
+- what: entry_into_force
+  units:
+  - cn-pipl-2021#art_74_p1
+  reason: Article 74 prints the date the Law takes effect, 1 November 2021; reading
+    (2) uses it to say what the caller's key pinned_text_in_force_on_reference_day
+    means, and no limb cites it (a false value can also come from an amendment). Substantive
+    words, so recorded as debt.
+  consequence: The caller states through pinned_text_in_force_on_reference_day whether
+    the pinned text is in force on the reference day.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q1.
+- what: pipl_articles_18_1_and_35
+  units: []
+  instrument: 中华人民共和国个人信息保护法 Article 18(1) and Article 35, named by Article 45(1)
+    and not pinned in this order (their conditions are not taken from the pin and
+    are not guessed)
+  reason: Whether the case is one of Article 18(1) or Article 35 is a crisp caller
+    statement (article_18_1_case, article_35_case; reading (5), Q5).
+  consequence: The answers rely on the caller's statement.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q5: pin those articles if a later order formalises them here.'
+- what: cyberspace_department_transfer_conditions
+  units: []
+  instrument: the conditions prescribed by the national cyberspace department for
+    the transfer of Article 45(3) (an instrument of the national cyberspace department,
+    not pinned; its title and content are not taken from the pin and are not guessed)
+  reason: Whether the conditions are met is a crisp caller statement (cyberspace_department_transfer_conditions_met;
+    reading (5), Q6).
+  consequence: The answers rely on the caller's statement; the order states no condition.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q6: pin the measure if a later order formalises it.'
+- what: other_laws_and_administrative_regulations
+  units: []
+  instrument: the laws and administrative regulations that Article 44 (provide otherwise),
+    Article 47(1) item (5) (other deletion cases) and Article 47(2) (retention periods)
+    refer to (not pinned; not named or guessed)
+  reason: Whether such a law provides otherwise, prescribes another deletion case
+    or sets an unexpired retention period is a crisp caller statement (laws_or_regulations_provide_otherwise,
+    other_deletion_case_prescribed_by_law, legal_retention_period_unexpired; readings
+    (4), (7)).
+  consequence: The answers rely on the caller's statements.
+  declaration: answered_with_caveat
+  debt: true
+  open: pin a law if a later order formalises it.
+- what: near_relatives_civil_code
+  units: []
+  instrument: the meaning of near relatives (近亲属) in the Civil Code of the PRC (not
+    pinned; not taken from the pin)
+  reason: Whether the requester is a near relative is a crisp caller statement (requester_is_near_relative;
+    reading (8), Q10).
+  consequence: The answers rely on the caller's statement.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q10.
+- what: pipl_articles_outside_the_pin
+  units: []
+  instrument: '中华人民共和国个人信息保护法: Articles 25, 26 and 39 (not pinned in this order),
+    the cross-border Articles 38 to 43 (formalised in a separate order), the lawful
+    bases, consent and notice (Articles 13 to 18), the State organs (Articles 33 to
+    37) and the handler''s other duties (Articles 51 to 59) (article numbers other
+    than those printed in the pinned text are the drafter''s knowledge)'
+  reason: None of these is read by a limb of this order; any point that turns on one
+    of them is outside the order (SCOPE).
+  consequence: The answers say nothing on those articles.
+  declaration: answered_with_caveat
+  debt: true
+  open: the sibling orders of the same law.
+- what: later_amendments
+  units: []
+  instrument: any later amendment of the PIPL (not established; the pinned page was
+    not compared with the official gazette text)
+  reason: Whether a later amendment changed the pinned articles is not established
+    (Q1).
+  consequence: The caller states it through pinned_text_in_force_on_reference_day.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q1.

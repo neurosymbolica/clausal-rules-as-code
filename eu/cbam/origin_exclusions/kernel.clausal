@@ -1,0 +1,228 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/cbam/origin_exclusions (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This order has ONE determination
+% slice (origin_exclusions.clausal), so the only shared predicate is the
+% order's input check origin_exclusions_input_problems/2. The scaffold
+% wrote it here from the order's typed input contract, and every file that
+% needs it imports it:
+%   :- use_module(eu/cbam/origin_exclusions/kernel, [origin_exclusions_input_problems/2]).
+%
+% Source: Regulation (EU) 2023/956 (CBAM), consolidated as amended to
+% 2025-10-20 (pin 02023R0956-20251020, Formex CL2023R0956EN0010010.0001.xml,
+% sha256 f5e08d041849ae9025dc60958d93595225d6d8de1dcdc2275656f98b2f132617):
+% Art 2(1), Art 2(3), Art 2(3a) lead and points (a) and (b), Art 2(4),
+% Art 2(5), Art 3 points (7), (8) and (9), and Annex III point 1. The input
+% check itself decides no statutory condition: it checks the PROFILE
+% against the order's typed input contract (INTERFACE - THE INPUT CHECK),
+% so it carries no provenance marker.
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. The Annex III point 1 list, the
+% key classifications, the decision table (THE LIMBS) and the checklist
+% requirements are owned by origin_exclusions.clausal, their only caller.
+%
+% RESULT TERMS (spelled exactly as the order pins them):
+%
+%   origin_exclusion(Profile, Result, Citations)
+%     Profile   -- [attribute(Key, Value), ...], read with profile_get/3;
+%                  keys military_activities, non_preferential_origin,
+%                  goods_kind, continental_shelf_or_eez_of (contract order).
+%     Result    -- ONE atom of the contract when final:
+%                    excluded_military_activities
+%                    excluded_origin_annex_iii_point_1
+%                    excluded_electricity_continental_shelf_or_eez
+%                    excluded_hydrogen_continental_shelf_or_eez
+%                    not_third_country_origin
+%                    no_origin_exclusion
+%                  or the status compound ITSELF when not final:
+%                    indeterminate([Key])      -- ONE bare key atom, the
+%                                                 first missing key
+%                    input_problems(Problems)  -- Problems non-empty, the
+%                                                 flat list of the input check
+%                  The bare atom indeterminate is NEVER written. There is no
+%                  needs_legal_review in this order.
+%     Citations -- ONE flat set-like list of cite(Key) terms, [] when the
+%                  answer is not final.
+%
+%   origin_exclusions_verdict(Status, Citations)
+%     The slice's folded verdict term: Status is the Result above,
+%     Citations the same cite(Key) list.
+%
+%   origin_exclusions_input_problems(Profile, Problems)
+%     Problems -- the BARE flat list: [] or duplicate_key(Key),
+%     wrong_type(Key) and unknown_key(Key) terms in the stated order, or
+%     [wrong_type(profile)] alone. Never wrapped in input_problems(...).
+%
+%   Checklist rows: item(RequirementId, Status, cite(Key)), Status met,
+%   unmet(Reason) or unknown([Key]) (formalize_lib item/3).
+%
+% No profile key here is a date: there is no as_of_date (open question Q3,
+% the lists are those of the pin).
+% =====================================================================
+
+:- module(kernel, [origin_exclusions_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% origin_exclusions_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+origin_exclusions_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [military_activities, non_preferential_origin, goods_kind, continental_shelf_or_eez_of],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(military_activities, yes_no_unsure).
+key_type(non_preferential_origin, origin).
+key_type(goods_kind, goods_kind).
+key_type(continental_shelf_or_eez_of, shelf_or_zone).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(yes_no_unsure, Value, T) :-
+    in_type_t(enum([yes, no, unsure]), Value, T).
+
+in_type_t(origin, Value, T) :-
+    in_type_t(enum([member_state, iceland, liechtenstein, norway, switzerland, busingen, heligoland, livigno, ceuta, melilla, other_third_country]), Value, T).
+
+in_type_t(goods_kind, Value, T) :-
+    in_type_t(enum([electricity, hydrogen, other_annex_i_goods]), Value, T).
+
+in_type_t(shelf_or_zone, Value, T) :-
+    in_type_t(enum([not_on_continental_shelf_or_eez, member_state, iceland, liechtenstein, norway, switzerland, busingen, heligoland, livigno, ceuta, melilla, other_third_country]), Value, T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+:- end_module(kernel).

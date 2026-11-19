@@ -1,0 +1,94 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one group per
+% predicate registered in manifest.yaml query_interface (#2 status, #13
+% compliance_check, #16 what-if), plus the profile key schema and the
+% re-exported input check.
+% Run: python -m clausal.testing eu/data_protection/gdpr_transfer_dpf/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/queries, [
+    gdpr_transfer_dpf_profile_keys/1,
+    gdpr_transfer_dpf_input_problems/2,
+    gdpr_transfer_dpf_what_if/4,
+    gdpr_transfer_dpf_compliance_check/2
+]).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/fixtures, [gdpr_transfer_dpf_profile_for/2]).
+
+compliance_answers(Subject, Answers) :-
+    gdpr_transfer_dpf_profile_for(Subject, Profile),
+    findall(Answer, gdpr_transfer_dpf_compliance_check(Profile, Answer), Answers).
+
+what_if_answers(Subject, Key, Value, Answers) :-
+    gdpr_transfer_dpf_profile_for(Subject, Profile),
+    findall(Status, gdpr_transfer_dpf_what_if(Profile, Key, Value, Status), Answers).
+
+% ---- schema and input check ---------------------------------------------
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_transfer_dpf_profile_keys(ProfileKeys),
+    ProfileKeys == [transfer_from_union, recipient_is_organisation_in_united_states, data_privacy_framework_decision_in_force, recipient_on_data_privacy_framework_list, certification_covers_transferred_data].
+
+test(the_re_exported_input_check_accepts_a_good_profile) :-
+    gdpr_transfer_dpf_profile_for(all_conditions_hold, Profile),
+    gdpr_transfer_dpf_input_problems(Profile, []).
+
+test(the_re_exported_input_check_names_a_partial_list) :-
+    gdpr_transfer_dpf_profile_for(partial_list_profile, Profile),
+    findall(Problems, gdpr_transfer_dpf_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+% ---- #16 what-if ----------------------------------------------------------
+test(what_if_stating_the_union_key_true_flips_to_covered) :-
+    what_if_answers(not_from_union, transfer_from_union, true, Answers),
+    Answers == [covered_by_data_privacy_framework_adequacy].
+
+test(what_if_denying_the_list_entry_flips_to_not_covered) :-
+    what_if_answers(all_conditions_hold, recipient_on_data_privacy_framework_list, attested(false, attestation(by, at, reason, none)), Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy].
+
+test(what_if_stating_the_absent_decision_fact_covers) :-
+    what_if_answers(decision_statement_absent, data_privacy_framework_decision_in_force, attested(true, attestation(by, at, reason, none)), Answers),
+    Answers == [covered_by_data_privacy_framework_adequacy].
+
+test(what_if_stating_the_absent_recipient_key_false_is_not_covered) :-
+    what_if_answers(recipient_absent, recipient_is_organisation_in_united_states, false, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy].
+
+test(what_if_with_a_malformed_new_value_gives_its_problem) :-
+    what_if_answers(all_conditions_hold, transfer_from_union, maybe, Answers),
+    Answers == [input_problems([wrong_type(transfer_from_union)])].
+
+test(what_if_on_a_malformed_profile_gives_its_problems) :-
+    what_if_answers(duplicate_and_unknown, transfer_from_union, true, Answers),
+    Answers == [input_problems([duplicate_key(transfer_from_union), unknown_key(colour)])].
+
+test(what_if_on_a_partial_list_gives_wrong_type_profile) :-
+    what_if_answers(partial_list_profile, transfer_from_union, true, Answers),
+    Answers == [input_problems([wrong_type(profile)])].
+
+% ---- #13 compliance check -------------------------------------------------
+test(compliance_covered_needs_no_specific_authorisation) :-
+    compliance_answers(all_conditions_hold, Answers),
+    Answers == [no_specific_authorisation_required].
+
+test(compliance_not_covered_is_not_established_by_this_decision) :-
+    compliance_answers(recipient_off_list, Answers),
+    Answers == [not_established_by_this_decision].
+
+test(compliance_not_covered_is_not_no_authorisation_required, fail) :-
+    gdpr_transfer_dpf_profile_for(recipient_off_list, Profile),
+    gdpr_transfer_dpf_compliance_check(Profile, no_specific_authorisation_required).
+
+test(compliance_passes_a_referral_through) :-
+    compliance_answers(coverage_statement_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_certification_coverage_statement)), [resolution(cite(data_privacy_framework_certification_coverage_statement), not_attempted), inputs_relied_on([certification_covers_transferred_data-absent])])].
+
+test(compliance_passes_indeterminate_through) :-
+    compliance_answers(union_absent, Answers),
+    Answers == [indeterminate([transfer_from_union])].
+
+test(compliance_passes_input_problems_through) :-
+    compliance_answers(bare_boolean_outside_fact, Answers),
+    Answers == [input_problems([wrong_type(recipient_on_data_privacy_framework_list)])].
+
+:- end_module(test_queries).

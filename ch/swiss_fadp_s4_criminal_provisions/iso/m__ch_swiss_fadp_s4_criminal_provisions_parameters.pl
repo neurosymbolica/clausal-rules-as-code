@@ -1,0 +1,6 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s4_criminal_provisions_parameters, []).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).

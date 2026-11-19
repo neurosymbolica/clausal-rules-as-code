@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_transfer_dpf.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% gdpr_transfer_dpf_profile_keys/1     top-level profile key schema (contract order)
+% gdpr_transfer_dpf_input_problems/2   the problems a profile has ([] = none), re-exported
+%                                      from the kernel as the scaffold wrote it
+% gdpr_transfer_dpf_what_if/4          (#16 what-if): override one key, re-evaluate
+% gdpr_transfer_dpf_compliance_check/2 (#13 compliance_check): may THIS proposed
+%                                      transfer take place without a specific
+%                                      authorisation on the strength of Commission
+%                                      Implementing Decision (EU) 2023/1795 Art 1
+%                                      read with Art 45(1) GDPR?
+%
+% The what-if overrides an ATTRIBUTE LIST, not a dict, so it uses a local
+% attribute override (kit/query_combinators override_key/4 works on dicts).
+% The compliance check is a projection of the one limb and adds no rule: a
+% covered transfer needs no specific authorisation; a not-covered answer
+% only says that THIS decision does not establish it, never that the
+% transfer is prohibited (reading (9), Q12). kit/compliance_lib is not used:
+% its closed-world modality lattice cannot carry the referral and the
+% indeterminate statuses (NOTES reuse notes). Every status is passed
+% through unchanged.
+%
+% RESULT CONSTRUCTORS AND RESULT ATOMS: the order exports them (never called
+% as queries). A constructor is data and has no clauses; its fields are
+% named by the constructors/1 directive below. The two result atoms are
+% declared by one fact each so that the package root resolves them.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_transfer_dpf_profile_keys/1,
+    gdpr_transfer_dpf_input_problems/2,
+    gdpr_transfer_dpf_what_if/4,
+    gdpr_transfer_dpf_compliance_check/2,
+    covered_by_data_privacy_framework_adequacy/0,
+    not_covered_by_data_privacy_framework_adequacy/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    cite/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_transfer_dpf/kernel, [gdpr_transfer_dpf_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/gdpr_transfer_dpf, [gdpr_transfer_dpf_status/2]).
+:- use_module(eu/data_protection/gdpr_transfer_dpf/citations, [implements/1]).
+
+:- constructors([indeterminate(missing_keys), needs_legal_review(reason, context), cross_reference_unresolved(citation, target), resolution(target, status), inputs_relied_on(pairs), outside_fact(key, attested), attested(value, attestation), attestation(by, at, reason, evidence), url(url, retrieved_at), document(upload_id, sha256), cite(key), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_transfer_dpf_profile_keys([transfer_from_union, recipient_is_organisation_in_united_states, data_privacy_framework_decision_in_force, recipient_on_data_privacy_framework_list, certification_covers_transferred_data]).
+
+% ---- result atoms (declared, never called) ----
+covered_by_data_privacy_framework_adequacy.
+not_covered_by_data_privacy_framework_adequacy.
+
+% ---- #16 what-if --------------------------------------------------------
+% A well-formed profile: replace (or add) the one key, then re-evaluate.
+gdpr_transfer_dpf_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    gdpr_transfer_dpf_input_problems(Profile, []),
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_transfer_dpf_status(Hypothesis, NewStatus).
+% A profile with input problems: no hypothesis is built; its problems answer.
+gdpr_transfer_dpf_what_if(Profile, _OverriddenKey, _NewValue, input_problems([Problem|Problems])) :-
+    gdpr_transfer_dpf_input_problems(Profile, [Problem|Problems]).
+
+% attribute_override(Profile, OverriddenKey, NewValue, NewProfile): every item
+% with the key (==) is dropped and attribute(OverriddenKey, NewValue) is added
+% at the end. Complementary clauses: one answer for a proper attribute list.
+attribute_override([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+attribute_override([attribute(ElementKey, _ElementValue)|Remaining], OverriddenKey, NewValue, NewProfile) :-
+    ElementKey == OverriddenKey,
+    attribute_override(Remaining, OverriddenKey, NewValue, NewProfile).
+attribute_override([attribute(ElementKey, ElementValue)|Remaining], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|NewProfile]) :-
+    ElementKey \== OverriddenKey,
+    attribute_override(Remaining, OverriddenKey, NewValue, NewProfile).
+
+% ---- #13 compliance check ---------------------------------------------
+% Is the proposed transfer allowed without a specific authorisation on the
+% strength of this decision? One answer per profile: the limb's RESULT,
+% projected.
+gdpr_transfer_dpf_compliance_check(Profile, Answer) :-
+    gdpr_transfer_dpf_status(Profile, Status),
+    compliance_answer(Status, Answer).
+
+% Art 45(1) GDPR: 'Such a transfer shall not require any specific authorisation.'
+compliance_answer(covered_by_data_privacy_framework_adequacy, no_specific_authorisation_required) :-
+    implements(eu_reg_2016_679_art_45_1).
+% Article 1 of the decision does not cover the transfer: nothing is established
+% by this decision, and nothing is prohibited by it (reading (9), Q12).
+compliance_answer(not_covered_by_data_privacy_framework_adequacy, not_established_by_this_decision) :-
+    implements(eu_dec_2023_1795_art_1).
+% Statuses pass through unchanged (plumbing, no provision).
+compliance_answer(input_problems(Problems), input_problems(Problems)).
+compliance_answer(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+compliance_answer(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+
+% ---- tests --------------------------------------------------------------
+test(the_profile_keys_are_the_five_contract_keys) :-
+    gdpr_transfer_dpf_profile_keys(ProfileKeys),
+    length(ProfileKeys, 5).
+
+test(what_if_stating_the_missing_crisp_key_true_covers) :-
+    Affirmed = attested(true, attestation(by, at, reason, none)),
+    findall(Status,
+            gdpr_transfer_dpf_what_if([attribute(recipient_is_organisation_in_united_states, true),
+                                       attribute(data_privacy_framework_decision_in_force, Affirmed),
+                                       attribute(recipient_on_data_privacy_framework_list, Affirmed),
+                                       attribute(certification_covers_transferred_data, Affirmed)],
+                                      transfer_from_union, true, Status),
+            Statuses),
+    Statuses == [covered_by_data_privacy_framework_adequacy].
+
+test(what_if_replaces_an_existing_value) :-
+    gdpr_transfer_dpf_what_if([attribute(transfer_from_union, true)], transfer_from_union, false, not_covered_by_data_privacy_framework_adequacy).
+
+test(what_if_on_a_malformed_profile_gives_its_problems) :-
+    gdpr_transfer_dpf_what_if([attribute(colour, red)], transfer_from_union, true, input_problems([unknown_key(colour)])).
+
+test(a_covered_transfer_needs_no_specific_authorisation) :-
+    Affirmed = attested(true, attestation(by, at, reason, none)),
+    gdpr_transfer_dpf_compliance_check([attribute(transfer_from_union, true),
+                                        attribute(recipient_is_organisation_in_united_states, true),
+                                        attribute(data_privacy_framework_decision_in_force, Affirmed),
+                                        attribute(recipient_on_data_privacy_framework_list, Affirmed),
+                                        attribute(certification_covers_transferred_data, Affirmed)],
+                                       no_specific_authorisation_required).
+
+test(a_not_covered_transfer_is_not_established_by_this_decision) :-
+    findall(Answer,
+            gdpr_transfer_dpf_compliance_check([attribute(transfer_from_union, false)], Answer),
+            Answers),
+    Answers == [not_established_by_this_decision].
+
+test(a_not_covered_transfer_is_not_reported_as_needing_no_authorisation, fail) :-
+    gdpr_transfer_dpf_compliance_check([attribute(transfer_from_union, false)], no_specific_authorisation_required).
+
+test(a_referral_passes_through_the_compliance_check) :-
+    gdpr_transfer_dpf_compliance_check([], needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_decision_in_force_statement)), [resolution(cite(data_privacy_framework_decision_in_force_statement), not_attempted), inputs_relied_on([data_privacy_framework_decision_in_force-absent])])).
+
+:- end_module(queries).

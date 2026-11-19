@@ -1,0 +1,127 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of cn/pipl_individual_rights
+% loads (kernel and citations), the result terms the order pins build and
+% destructure, the result atoms are distinct, and the real citation
+% records resolve. The determination slice does not exist yet, so this
+% file reads only the kernel and the citations module.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      cn/pipl_individual_rights/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(cn/pipl_individual_rights/kernel, [pipl_individual_rights_input_problems/2, pipl_individual_rights_key_state/3, pipl_individual_rights_relied_pairs/3]).
+:- use_module(cn/pipl_individual_rights/citations, [citation/2, implements/1]).
+
+% ---- the kernel loads and its input check answers ----------------------
+test(the_input_check_loads_and_passes_an_empty_profile) :-
+    pipl_individual_rights_input_problems([], []).
+
+test(the_input_check_has_exactly_one_answer_for_a_good_profile) :-
+    findall(
+        Problems,
+        pipl_individual_rights_input_problems(
+            [attribute(pinned_text_in_force_on_reference_day, true), attribute(convenient_mechanism_established, unsure)],
+            Problems
+        ),
+        Answers
+    ),
+    Answers == [[]].
+
+test(the_input_check_names_a_wrong_type_and_an_unknown_key) :-
+    pipl_individual_rights_input_problems(
+        [attribute(colour, red), attribute(request_refused, unsure)],
+        [wrong_type(request_refused), unknown_key(colour)]
+    ).
+
+test(a_crisp_key_given_unsure_is_not_well_formed, fail) :-
+    pipl_individual_rights_input_problems([attribute(request_refused, unsure)], []).
+
+test(a_non_list_profile_is_wrong_type_profile) :-
+    pipl_individual_rights_input_problems(not_a_profile, [wrong_type(profile)]).
+
+test(the_key_state_reads_absent_and_present_keys) :-
+    pipl_individual_rights_key_state([attribute(person_deceased, false)], person_deceased, false),
+    pipl_individual_rights_key_state([attribute(person_deceased, false)], request_refused, absent).
+
+test(the_pairs_rule_keeps_present_judgements_in_list_order) :-
+    pipl_individual_rights_relied_pairs(
+        [attribute(processing_violates_law_or_agreement, unsure), attribute(consent_withdrawn, true)],
+        [purpose_achieved_impossible_or_unnecessary, processing_violates_law_or_agreement, deletion_technically_difficult],
+        RelyPairs
+    ),
+    RelyPairs == [processing_violates_law_or_agreement-unsure].
+
+% ---- the result terms build and destructure ----------------------------
+test(the_indeterminate_compound_carries_one_key) :-
+    Result = indeterminate([pinned_text_in_force_on_reference_day]),
+    Result = indeterminate([MissingKey]),
+    MissingKey == pinned_text_in_force_on_reference_day.
+
+test(the_referral_compound_carries_reason_and_context) :-
+    Result = needs_legal_review(
+        open_textured(convenient_mechanism_established, cite(cn_pipl_art_50_p1)),
+        [inputs_relied_on([convenient_mechanism_established-unsure])]
+    ),
+    Result = needs_legal_review(open_textured(Input, cite(CitationKey)), [inputs_relied_on(RelyPairs)]),
+    Input == convenient_mechanism_established,
+    CitationKey == cn_pipl_art_50_p1,
+    RelyPairs == [convenient_mechanism_established-unsure].
+
+test(the_input_problems_compound_carries_its_problems) :-
+    Result = input_problems([duplicate_key(consent_withdrawn)]),
+    Result = input_problems([Problem]),
+    Problem == duplicate_key(consent_withdrawn).
+
+test(the_facade_verdict_term_carries_status_and_checklist) :-
+    Verdict = pipl_individual_rights_verdict(eligible, [item(convenient_mechanism, met, cite(cn_pipl_art_50_p1))]),
+    Verdict = pipl_individual_rights_verdict(Status, Checklist),
+    Status == eligible,
+    Checklist = [item(Requirement, ItemStatus, cite(CitationKey))],
+    Requirement == convenient_mechanism,
+    ItemStatus == met,
+    CitationKey == cn_pipl_art_50_p1.
+
+% ---- the result atoms are distinct --------------------------------------
+test(the_deletion_answers_are_distinct) :-
+    dif(not_owed, delete_personal_information),
+    dif(delete_personal_information, stop_processing_except_storage_and_security),
+    dif(not_owed, stop_processing_except_storage_and_security),
+    dif(pinned_text_not_applicable, not_owed).
+
+test(the_refusal_answers_are_distinct) :-
+    dif(not_refused, refused_with_reasons),
+    dif(refused_with_reasons, refused_without_reasons),
+    dif(not_refused, refused_without_reasons).
+
+test(the_other_answers_are_distinct) :-
+    dif(right_available, excluded_by_other_law),
+    dif(provide_in_time, provide_transfer_route),
+    dif(correct_or_supplement_in_time, no_correction_owed),
+    dif(near_relative_may_exercise, near_relative_may_not_exercise),
+    dif(requirement_met, requirement_not_met),
+    dif(explain_processing_rules, pinned_text_not_applicable).
+
+test(the_facade_statuses_are_distinct) :-
+    dif(eligible, ineligible),
+    dif(undetermined, referred_for_legal_review),
+    dif(text_not_in_force, input_rejected).
+
+% ---- the real citation records resolve ---------------------------------
+test(the_article_44_citation_is_recorded) :-
+    citation(cn_pipl_art_44_p1, Record),
+    member(label-_, Record),
+    member(ref-_, Record).
+
+test(the_article_47_2_citation_is_implemented) :-
+    implements(cn_pipl_art_47_p2).
+
+test(every_citation_vocabulary_key_is_recorded) :-
+    maplist(
+        implements,
+        [cn_pipl_art_44_p1, cn_pipl_art_45_p1, cn_pipl_art_45_p2, cn_pipl_art_45_p3, cn_pipl_art_46_p1, cn_pipl_art_46_p2, cn_pipl_art_47_p1, cn_pipl_art_47_p1_i1, cn_pipl_art_47_p1_i2, cn_pipl_art_47_p1_i3, cn_pipl_art_47_p1_i4, cn_pipl_art_47_p1_i5, cn_pipl_art_47_p2, cn_pipl_art_48_p1, cn_pipl_art_49_p1, cn_pipl_art_50_p1, cn_pipl_art_50_p2]
+    ).
+
+test(a_shortened_citation_key_is_not_recorded, fail) :-
+    citation(pipl_art_44, _).
+
+:- end_module(test_load).

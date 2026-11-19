@@ -1,0 +1,123 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for uk/uk_subject_access_requests.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The order's eight contract queries are public predicates of the slice
+% uk_subject_access_requests.clausal and serve the declared query types
+% directly; this layer adds no further public predicate (the order forbids
+% public predicates beyond the facade and its list). They are registered in
+% manifest.yaml query_interface:
+%   #3  status_determination  uk_access_entitlement/3 (also uk_applicable_time_period/3,
+%                             uk_clock_stop/3, uk_time_rules_regime/3)
+%   #5  comparison            compare_uk_eu_response_deadline/6
+%   #7  justification         uk_subject_access_requests_checklist/2 (cite(...) per row)
+%   #15 deadline              uk_response_deadline/5 (with uk_relevant_time/5)
+%   #23 calculation           uk_paused_days/4
+%   #16 what-if               uk_subject_access_requests_what_if/4 (this file)
+%
+% This file holds:
+%   uk_subject_access_requests_what_if/4      (#16 what-if): override one key -> re-evaluate
+%   uk_subject_access_requests_profile_keys/1: top-level profile key schema
+%   uk_subject_access_requests_input_problems/2: the problems a profile has ([] = none),
+%     re-exported from the kernel as the scaffold wrote it.
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], so the
+% what-if override is written for that shape here (the kit's override_key/4
+% works on a dict): every element giving the key is dropped and one
+% attribute(Key, Value) is added. Open-textured judgements stay the caller's:
+% the what-if never invents a value, it only re-asks the verdict with the
+% value the caller supplies (true, false, unsure).
+% =====================================================================
+
+:- module(queries, [
+    uk_subject_access_requests_profile_keys/1,
+    uk_subject_access_requests_input_problems/2,
+    uk_subject_access_requests_what_if/4
+]).
+
+:- use_module(uk/uk_subject_access_requests/kernel, [uk_subject_access_requests_input_problems/2]).
+:- use_module(uk/uk_subject_access_requests/uk_subject_access_requests, [uk_subject_access_requests_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+uk_subject_access_requests_profile_keys([item_described_in_article_15_1, item_within_reasonable_and_proportionate_search, extension_notice_given, extension_notice_given_before_end_of_first_month, extension_notice_states_reasons, extension_necessary_for_complexity_or_number, request_made_under_article_15, controller_asked_for_further_information, further_information_reasonably_required]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+uk_subject_access_requests_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    profile_with_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    uk_subject_access_requests_status(Hypothesis, NewStatus).
+
+% ---- attribute-list plumbing (decides nothing statutory) -------------
+% A proper list is overridden element by element; anything else is passed
+% on unchanged, so the verdict reports its input problems.
+profile_with_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    list_shape(Profile, Shape),
+    override_by_shape(Shape, Profile, OverriddenKey, NewValue, Hypothesis).
+
+override_by_shape(proper, Profile, OverriddenKey, NewValue, Hypothesis) :-
+    override_elements(Profile, OverriddenKey, NewValue, Hypothesis).
+override_by_shape(improper, Profile, _OverriddenKey, _NewValue, Profile).
+
+list_shape(Term, improper) :-
+    var(Term).
+list_shape(Term, proper) :-
+    Term == [].
+list_shape(Term, Shape) :-
+    nonvar(Term),
+    Term = [_Element|Elements],
+    list_shape(Elements, Shape).
+list_shape(Term, improper) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+override_elements([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_elements([Element|Elements], OverriddenKey, NewValue, Hypothesis) :-
+    element_match(Element, OverriddenKey, Match),
+    keep_element(Match, Element, KeptElements, Hypothesis),
+    override_elements(Elements, OverriddenKey, NewValue, KeptElements).
+
+element_match(Element, _OverriddenKey, keep) :-
+    var(Element).
+element_match(Element, _OverriddenKey, keep) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+element_match(Element, OverriddenKey, replace) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _ElementValue),
+    ElementKey == OverriddenKey.
+element_match(Element, OverriddenKey, keep) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _ElementValue),
+    ElementKey \== OverriddenKey.
+
+keep_element(keep, Element, KeptElements, [Element|KeptElements]).
+keep_element(replace, _Element, KeptElements, KeptElements).
+
+% ---- tests -------------------------------------------------------------
+test(what_if_search_turns_true_gives_item_due) :-
+    uk_subject_access_requests_what_if([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, false)], item_within_reasonable_and_proportionate_search, true, Status),
+    Status == item_due.
+test(what_if_search_turns_true_is_not_beyond, fail) :-
+    uk_subject_access_requests_what_if([attribute(item_described_in_article_15_1, true), attribute(item_within_reasonable_and_proportionate_search, false)], item_within_reasonable_and_proportionate_search, true, item_beyond_reasonable_and_proportionate_search).
+test(what_if_adds_an_absent_key) :-
+    uk_subject_access_requests_what_if([attribute(item_within_reasonable_and_proportionate_search, true)], item_described_in_article_15_1, false, Status),
+    Status == item_not_within_article_15_1.
+test(what_if_one_solution) :-
+    findall(Status, uk_subject_access_requests_what_if([attribute(item_described_in_article_15_1, true)], item_within_reasonable_and_proportionate_search, unsure, Status), Statuses),
+    length(Statuses, 1).
+test(what_if_on_a_non_list_reports_the_problem) :-
+    uk_subject_access_requests_what_if(not_a_profile, item_described_in_article_15_1, true, Status),
+    Status == input_problems([wrong_type(profile)]).
+test(what_if_replaces_a_duplicated_key) :-
+    uk_subject_access_requests_what_if([attribute(item_described_in_article_15_1, true), attribute(item_described_in_article_15_1, false), attribute(item_within_reasonable_and_proportionate_search, true)], item_described_in_article_15_1, true, Status),
+    Status == item_due.
+test(profile_keys_are_nine) :-
+    uk_subject_access_requests_profile_keys(Keys),
+    length(Keys, 9).
+test(input_problems_re_exported) :-
+    uk_subject_access_requests_input_problems([attribute(stray_key, true)], Problems),
+    Problems == [unknown_key(stray_key)].
+
+:- end_module(queries).

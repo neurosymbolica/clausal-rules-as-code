@@ -1,0 +1,69 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_cbam_origin_exclusions_fixtures, [origin_exclusions_subject/1, origin_exclusions_profile_for/2, origin_exclusions_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_cbam_origin_exclusions_origin_exclusions, [decide_origin_exclusions/2]).
+
+origin_exclusions_subject(military_activities_yes).
+origin_exclusions_subject(military_activities_no_control).
+origin_exclusions_subject(origin_norway).
+origin_exclusions_subject(origin_switzerland).
+origin_exclusions_subject(origin_busingen).
+origin_exclusions_subject(origin_other_third_country_control).
+origin_exclusions_subject(electricity_member_state_shelf).
+origin_exclusions_subject(electricity_other_third_country_shelf_control).
+origin_exclusions_subject(electricity_iceland_shelf).
+origin_exclusions_subject(electricity_not_on_shelf_control).
+origin_exclusions_subject(hydrogen_member_state_zone).
+origin_exclusions_subject(hydrogen_other_third_country_zone_control).
+origin_exclusions_subject(hydrogen_liechtenstein_shelf).
+origin_exclusions_subject(other_goods_liechtenstein_shelf_control).
+origin_exclusions_subject(member_state_origin).
+origin_exclusions_subject(military_activities_absent).
+origin_exclusions_subject(military_activities_unsure).
+origin_exclusions_subject(origin_absent).
+origin_exclusions_subject(goods_kind_absent_member_state_shelf).
+origin_exclusions_subject(goods_kind_absent_not_on_shelf_control).
+origin_exclusions_subject(electricity_shelf_absent).
+origin_exclusions_subject(other_goods_shelf_absent_control).
+origin_exclusions_subject(norway_origin_military_absent).
+origin_exclusions_subject(norway_hydrogen_norway_shelf).
+origin_exclusions_subject(unknown_key_profile).
+origin_exclusions_subject(duplicate_key_profile).
+origin_exclusions_subject(wrong_type_profile).
+origin_exclusions_subject(not_an_attribute_list_profile).
+
+origin_exclusions_profile_for(military_activities_yes, [attribute(military_activities, yes), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(military_activities_no_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(origin_norway, [attribute(military_activities, no), attribute(non_preferential_origin, norway), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(origin_switzerland, [attribute(military_activities, no), attribute(non_preferential_origin, switzerland), attribute(goods_kind, other_annex_i_goods)]).
+origin_exclusions_profile_for(origin_busingen, [attribute(military_activities, no), attribute(non_preferential_origin, busingen), attribute(goods_kind, electricity), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(origin_other_third_country_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(electricity_member_state_shelf, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, electricity), attribute(continental_shelf_or_eez_of, member_state)]).
+origin_exclusions_profile_for(electricity_other_third_country_shelf_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, electricity), attribute(continental_shelf_or_eez_of, other_third_country)]).
+origin_exclusions_profile_for(electricity_iceland_shelf, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, electricity), attribute(continental_shelf_or_eez_of, iceland)]).
+origin_exclusions_profile_for(electricity_not_on_shelf_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, electricity), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(hydrogen_member_state_zone, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, hydrogen), attribute(continental_shelf_or_eez_of, member_state)]).
+origin_exclusions_profile_for(hydrogen_other_third_country_zone_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, hydrogen), attribute(continental_shelf_or_eez_of, other_third_country)]).
+origin_exclusions_profile_for(hydrogen_liechtenstein_shelf, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, hydrogen), attribute(continental_shelf_or_eez_of, liechtenstein)]).
+origin_exclusions_profile_for(other_goods_liechtenstein_shelf_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, liechtenstein)]).
+origin_exclusions_profile_for(member_state_origin, [attribute(military_activities, no), attribute(non_preferential_origin, member_state), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(military_activities_absent, [attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(military_activities_unsure, [attribute(military_activities, unsure), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(origin_absent, [attribute(military_activities, no), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(goods_kind_absent_member_state_shelf, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(continental_shelf_or_eez_of, member_state)]).
+origin_exclusions_profile_for(goods_kind_absent_not_on_shelf_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(electricity_shelf_absent, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, electricity)]).
+origin_exclusions_profile_for(other_goods_shelf_absent_control, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods)]).
+origin_exclusions_profile_for(norway_origin_military_absent, [attribute(non_preferential_origin, norway)]).
+origin_exclusions_profile_for(norway_hydrogen_norway_shelf, [attribute(military_activities, no), attribute(non_preferential_origin, norway), attribute(goods_kind, hydrogen), attribute(continental_shelf_or_eez_of, norway)]).
+origin_exclusions_profile_for(unknown_key_profile, [attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez), attribute(colour, red)]).
+origin_exclusions_profile_for(duplicate_key_profile, [attribute(military_activities, no), attribute(military_activities, no), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(wrong_type_profile, [attribute(military_activities, maybe), attribute(non_preferential_origin, other_third_country), attribute(goods_kind, other_annex_i_goods), attribute(continental_shelf_or_eez_of, not_on_continental_shelf_or_eez)]).
+origin_exclusions_profile_for(not_an_attribute_list_profile, colour).
+
+origin_exclusions_assess(Subject, Result) :-
+    origin_exclusions_profile_for(Subject, Profile),
+    decide_origin_exclusions(Profile, Result).

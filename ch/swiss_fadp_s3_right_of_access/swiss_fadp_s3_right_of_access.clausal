@@ -1,0 +1,860 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% swiss_fadp_s3_right_of_access.clausal -- the "swiss_fadp_s3_right_of_access" DETERMINATION for
+% ch/swiss_fadp_s3_right_of_access, self-contained top to bottom: its statutory VALUE facts,
+% its derived arithmetic, its per-rule tests, its checklist and its verdict assembly.
+%
+% Sources (drafter's reading, not a lawyer's; the German text is authoritative,
+% the English glosses are our own unofficial translation):
+%   - DSG (SR 235.1, Stand 7 July 2025) Art 25(1), (6), (7); Art 26; Art 27.
+%   - DSV (SR 235.11, Stand 1 December 2025) Art 16(1), (3); Art 18(1), (3); Art 19.
+%   - Regulation (EU) 2016/679 Art 12(3); Regulation (EEC, Euratom) No 1182/71
+%     Art 3(1), 3(2)(c), 3(4) (the EU comparison limb, applied by analogy, Q9).
+%
+% THE STATUS RULE is computed exactly, not by enumerating every completion of
+% the profile. The answer of swiss_access_request_answer/3 depends on the FORM
+% (a block of request_form and controller_agreed_to_oral_request) and on the
+% disjunction of the grounds. The grounds split into INDEPENDENT blocks (no key
+% is shared between two blocks; controller_category is shared only inside the
+% block of DSG Art 26(2) letters a and b), so the values a disjunction of
+% blocks can take, whether a key matters, and the values another key takes in
+% the pairs that show a key matters, are all computed block by block, each
+% block by brute force over at most 32 assignments.
+% =====================================================================
+
+:- module(swiss_fadp_s3_right_of_access, [
+    decide_swiss_fadp_s3_right_of_access/2,
+    swiss_fadp_s3_right_of_access_status/2,
+    swiss_fadp_s3_right_of_access_checklist/2,
+    swiss_fadp_s3_right_of_access_decision_resolvable/1,
+    swiss_fadp_s3_right_of_access_status_values/1,
+    swiss_access_request_answer/3,
+    swiss_access_cost_contribution/3,
+    swiss_access_deadline/3,
+    swiss_access_deadline_after_cost_notice/3,
+    eu_access_response_deadline/3,
+    compare_swiss_eu_access_deadline/5,
+    access_request_not_in_required_form/0,
+    access_must_be_given/0,
+    access_may_be_refused_restricted_or_deferred/0,
+    access_free_of_charge/0,
+    cost_contribution_may_be_requested/0,
+    swiss_earlier/0,
+    same/0,
+    swiss_later/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(datetime), [timedelta/3, date_add/3, days_between/3]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/kernel, [swiss_fadp_s3_right_of_access_input_problems/2]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
+:- constructors([unknown_key(key)]).
+
+% ---- result atoms and constructors (the contract's vocabulary) --------
+access_request_not_in_required_form.
+access_must_be_given.
+access_may_be_refused_restricted_or_deferred.
+access_free_of_charge.
+cost_contribution_may_be_requested.
+swiss_earlier.
+same.
+swiss_later.
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    is_list(Context).
+open_textured(InputKey, Citation) :-
+    atom(InputKey),
+    compound(Citation).
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+provenance(Source, Detail) :-
+    nonvar(Source),
+    nonvar(Detail).
+input_problems(Problems) :-
+    is_list(Problems).
+wrong_type(InputKey) :-
+    atom(InputKey).
+duplicate_key(InputKey) :-
+    atom(InputKey).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+swiss_fadp_s3_right_of_access_status_values([access_request_not_in_required_form, access_must_be_given, access_may_be_refused_restricted_or_deferred]).
+
+% DSV Art 18(1): 30 days of receipt; DSV Art 19(3): ten days for reflection.
+time_limit_days(access_answer, 30, cite(ch_fadp_ord_art_18_1)).
+time_limit_days(reflection_after_cost_notice, 10, cite(ch_fadp_ord_art_19_3)).
+% GDPR Art 12(3): one month of receipt.
+period_months(eu_access_response, 1, cite(eu_reg_2016_679_art_12_3)).
+% DSV Art 19(2): the contribution is at most 300 francs (30000 Rappen).
+% Recorded as data; the order does not check the amount (Q8).
+cost_contribution_maximum_chf_rappen(30000, cite(ch_fadp_ord_art_19_2)).
+% The added check on date arguments (this order's own bound).
+earliest_accepted_year(1900).
+latest_accepted_year(2199).
+
+% The fixed citations of each final answer (Q11).
+answer_citations(access_request_not_in_required_form, [cite(ch_fadp_art_25_1), cite(ch_fadp_ord_art_16_1), cite(ch_fadp_ord_art_16_3)]).
+answer_citations(access_may_be_refused_restricted_or_deferred, [cite(ch_fadp_art_25_1), cite(ch_fadp_ord_art_16_1), cite(ch_fadp_ord_art_16_3), cite(ch_fadp_art_26_1), cite(ch_fadp_art_26_1_a), cite(ch_fadp_art_26_1_b), cite(ch_fadp_art_26_1_c), cite(ch_fadp_art_26_2), cite(ch_fadp_art_26_2_a), cite(ch_fadp_art_26_2_a_1), cite(ch_fadp_art_26_2_a_2), cite(ch_fadp_art_26_2_b), cite(ch_fadp_art_26_2_b_1), cite(ch_fadp_art_26_2_b_2), cite(ch_fadp_art_26_3), cite(ch_fadp_art_27_1), cite(ch_fadp_art_27_1_a), cite(ch_fadp_art_27_1_b), cite(ch_fadp_art_27_1_c), cite(ch_fadp_art_27_2), cite(ch_fadp_art_26_4), cite(ch_fadp_ord_art_18_3)]).
+answer_citations(access_must_be_given, [cite(ch_fadp_art_25_1), cite(ch_fadp_ord_art_16_1), cite(ch_fadp_ord_art_16_3), cite(ch_fadp_art_26_1), cite(ch_fadp_art_26_1_a), cite(ch_fadp_art_26_1_b), cite(ch_fadp_art_26_1_c), cite(ch_fadp_art_26_2), cite(ch_fadp_art_26_2_a), cite(ch_fadp_art_26_2_a_1), cite(ch_fadp_art_26_2_a_2), cite(ch_fadp_art_26_2_b), cite(ch_fadp_art_26_2_b_1), cite(ch_fadp_art_26_2_b_2), cite(ch_fadp_art_26_3), cite(ch_fadp_art_27_1), cite(ch_fadp_art_27_1_a), cite(ch_fadp_art_27_1_b), cite(ch_fadp_art_27_1_c), cite(ch_fadp_art_27_2)]).
+
+% The referral rows of swiss_access_request_answer/3.
+referral_row(formal_law_provides_for_restriction, cite(ch_fadp_art_26_1_a)).
+referral_row(restriction_required_by_overriding_third_party_interests, cite(ch_fadp_art_26_1_b)).
+referral_row(request_manifestly_unfounded_or_querulous, cite(ch_fadp_art_26_1_c)).
+referral_row(restriction_required_by_overriding_controller_interests, cite(ch_fadp_art_26_2_a_1)).
+referral_row(restriction_required_by_overriding_public_interests, cite(ch_fadp_art_26_2_b_1)).
+referral_row(information_could_endanger_investigation_or_proceedings, cite(ch_fadp_art_26_2_b_2)).
+referral_row(processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, cite(ch_fadp_art_27_1)).
+referral_row(data_reveal_information_sources, cite(ch_fadp_art_27_1_a)).
+referral_row(access_would_give_insight_into_drafts_for_publications, cite(ch_fadp_art_27_1_b)).
+referral_row(publication_would_endanger_free_formation_of_public_opinion, cite(ch_fadp_art_27_1_c)).
+referral_row(data_serve_media_professional_exclusively_as_personal_working_instrument, cite(ch_fadp_art_27_2)).
+
+% ---- the own keys of swiss_access_request_answer/3, root_exports order --
+own_keys([request_form, controller_agreed_to_oral_request, controller_category, formal_law_provides_for_restriction, restriction_required_by_overriding_third_party_interests, request_manifestly_unfounded_or_querulous, restriction_required_by_overriding_controller_interests, controller_discloses_the_personal_data_to_third_parties, restriction_required_by_overriding_public_interests, information_could_endanger_investigation_or_proceedings, processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, data_reveal_information_sources, access_would_give_insight_into_drafts_for_publications, publication_would_endanger_free_formation_of_public_opinion, data_serve_media_professional_exclusively_as_personal_working_instrument]).
+
+key_values(request_form, [written, electronic, oral]).
+key_values(controller_category, [private_person, federal_body]).
+key_values(InputKey, [true, false]) :-
+    two_valued_key(InputKey).
+
+two_valued_key(controller_agreed_to_oral_request).
+two_valued_key(formal_law_provides_for_restriction).
+two_valued_key(restriction_required_by_overriding_third_party_interests).
+two_valued_key(request_manifestly_unfounded_or_querulous).
+two_valued_key(restriction_required_by_overriding_controller_interests).
+two_valued_key(controller_discloses_the_personal_data_to_third_parties).
+two_valued_key(restriction_required_by_overriding_public_interests).
+two_valued_key(information_could_endanger_investigation_or_proceedings).
+two_valued_key(processed_exclusively_for_publication_in_editorial_part_of_periodical_medium).
+two_valued_key(data_reveal_information_sources).
+two_valued_key(access_would_give_insight_into_drafts_for_publications).
+two_valued_key(publication_would_endanger_free_formation_of_public_opinion).
+two_valued_key(data_serve_media_professional_exclusively_as_personal_working_instrument).
+
+% ---- the blocks: the form, and the independent blocks of grounds -------
+block_keys(form_of_request, [request_form, controller_agreed_to_oral_request]).
+block_keys(formal_law_ground, [formal_law_provides_for_restriction]).
+block_keys(third_party_ground, [restriction_required_by_overriding_third_party_interests]).
+block_keys(unfounded_request_ground, [request_manifestly_unfounded_or_querulous]).
+block_keys(controller_category_grounds, [controller_category, restriction_required_by_overriding_controller_interests, controller_discloses_the_personal_data_to_third_parties, restriction_required_by_overriding_public_interests, information_could_endanger_investigation_or_proceedings]).
+block_keys(media_ground, [processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, data_reveal_information_sources, access_would_give_insight_into_drafts_for_publications, publication_would_endanger_free_formation_of_public_opinion]).
+block_keys(media_professional_ground, [data_serve_media_professional_exclusively_as_personal_working_instrument]).
+
+ground_blocks([formal_law_ground, third_party_ground, unfounded_request_ground, controller_category_grounds, media_ground, media_professional_ground]).
+
+block_kind(form_of_request, form).
+block_kind(formal_law_ground, ground).
+block_kind(third_party_ground, ground).
+block_kind(unfounded_request_ground, ground).
+block_kind(controller_category_grounds, ground).
+block_kind(media_ground, ground).
+block_kind(media_professional_ground, ground).
+
+key_block(InputKey, Block) :-
+    block_keys(Block, BlockKeys),
+    member(InputKey, BlockKeys).
+
+% ---- truth plumbing -------------------------------------------------
+equals_truth(Value, Value, true).
+equals_truth(Value, Other, false) :-
+    dif(Value, Other).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+pair_value(Pairs, InputKey, Value) :-
+    member(InputKey-Value, Pairs).
+
+% ---- the statutory conditions, one block value per block -------------
+% DSV Art 16(1), (3): the FORM is met when the request is written or
+% electronic, or the controller agreed to an oral request.
+block_value(form_of_request, Pairs, Truth) :-
+    implements(ch_fadp_ord_art_16_1),
+    pair_value(Pairs, request_form, RequestForm),
+    pair_value(Pairs, controller_agreed_to_oral_request, Agreed),
+    allowed_form_truth(RequestForm, FormTruth),
+    oral_agreement_truth(Agreed, AgreedTruth),
+    truth_or(FormTruth, AgreedTruth, Truth).
+% DSG Art 26(1)(a): a law in the formal sense provides for the measure.
+block_value(formal_law_ground, Pairs, Truth) :-
+    implements(ch_fadp_art_26_1_a),
+    pair_value(Pairs, formal_law_provides_for_restriction, Value),
+    equals_truth(Value, true, Truth).
+% DSG Art 26(1)(b): overriding interests of third parties.
+block_value(third_party_ground, Pairs, Truth) :-
+    implements(ch_fadp_art_26_1_b),
+    pair_value(Pairs, restriction_required_by_overriding_third_party_interests, Value),
+    equals_truth(Value, true, Truth).
+% DSG Art 26(1)(c): manifestly unfounded or manifestly querulous request.
+block_value(unfounded_request_ground, Pairs, Truth) :-
+    implements(ch_fadp_art_26_1_c),
+    pair_value(Pairs, request_manifestly_unfounded_or_querulous, Value),
+    equals_truth(Value, true, Truth).
+% DSG Art 26(2): in addition, letter a (private person) or letter b
+% (federal body).
+block_value(controller_category_grounds, Pairs, Truth) :-
+    implements(ch_fadp_art_26_2),
+    private_controller_ground_truth(Pairs, PrivateTruth),
+    federal_body_ground_truth(Pairs, FederalTruth),
+    truth_or(PrivateTruth, FederalTruth, Truth).
+% DSG Art 27(1): editorial part of a periodically appearing medium.
+block_value(media_ground, Pairs, Truth) :-
+    implements(ch_fadp_art_27_1),
+    pair_value(Pairs, processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, Value),
+    equals_truth(Value, true, EditorialTruth),
+    media_reason_truth(Pairs, ReasonTruth),
+    truth_and(EditorialTruth, ReasonTruth, Truth).
+% DSG Art 27(2): personal working instrument of a media professional (Q5).
+block_value(media_professional_ground, Pairs, Truth) :-
+    implements(ch_fadp_art_27_2),
+    pair_value(Pairs, data_serve_media_professional_exclusively_as_personal_working_instrument, Value),
+    equals_truth(Value, true, Truth).
+
+allowed_form_truth(written, true) :-
+    implements(ch_fadp_ord_art_16_1).
+allowed_form_truth(electronic, true) :-
+    implements(ch_fadp_ord_art_16_3).
+allowed_form_truth(oral, false) :-
+    implements(ch_fadp_ord_art_16_1).
+
+oral_agreement_truth(Agreed, Truth) :-
+    implements(ch_fadp_ord_art_16_1),
+    equals_truth(Agreed, true, Truth).
+
+private_controller_ground_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_a),
+    pair_value(Pairs, controller_category, Category),
+    equals_truth(Category, private_person, PrivateTruth),
+    controller_interests_truth(Pairs, InterestsTruth),
+    no_disclosure_truth(Pairs, NoDisclosureTruth),
+    truth_and(PrivateTruth, InterestsTruth, FirstTruth),
+    truth_and(FirstTruth, NoDisclosureTruth, Truth).
+
+controller_interests_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_a_1),
+    pair_value(Pairs, restriction_required_by_overriding_controller_interests, Value),
+    equals_truth(Value, true, Truth).
+
+% DSG Art 26(2)(a) number 2, read with Art 26(3): a disclosure only within
+% the group is stated by the caller as false.
+no_disclosure_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_a_2),
+    implements(ch_fadp_art_26_3),
+    pair_value(Pairs, controller_discloses_the_personal_data_to_third_parties, Value),
+    equals_truth(Value, false, Truth).
+
+federal_body_ground_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_b),
+    pair_value(Pairs, controller_category, Category),
+    equals_truth(Category, federal_body, FederalTruth),
+    public_interest_truth(Pairs, PublicTruth),
+    proceedings_truth(Pairs, ProceedingsTruth),
+    truth_or(PublicTruth, ProceedingsTruth, ConditionTruth),
+    truth_and(FederalTruth, ConditionTruth, Truth).
+
+public_interest_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_b_1),
+    pair_value(Pairs, restriction_required_by_overriding_public_interests, Value),
+    equals_truth(Value, true, Truth).
+
+proceedings_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_26_2_b_2),
+    pair_value(Pairs, information_could_endanger_investigation_or_proceedings, Value),
+    equals_truth(Value, true, Truth).
+
+media_reason_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_27_1),
+    source_reason_truth(Pairs, SourceTruth),
+    draft_reason_truth(Pairs, DraftTruth),
+    opinion_reason_truth(Pairs, OpinionTruth),
+    truth_or(SourceTruth, DraftTruth, FirstTruth),
+    truth_or(FirstTruth, OpinionTruth, Truth).
+
+source_reason_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_27_1_a),
+    pair_value(Pairs, data_reveal_information_sources, Value),
+    equals_truth(Value, true, Truth).
+
+draft_reason_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_27_1_b),
+    pair_value(Pairs, access_would_give_insight_into_drafts_for_publications, Value),
+    equals_truth(Value, true, Truth).
+
+opinion_reason_truth(Pairs, Truth) :-
+    implements(ch_fadp_art_27_1_c),
+    pair_value(Pairs, publication_would_endanger_free_formation_of_public_opinion, Value),
+    equals_truth(Value, true, Truth).
+
+% ---- the profile as domains: one value, or every value of the type -----
+key_state(Profile, InputKey, absent) :-
+    profile_lacks(Profile, InputKey).
+key_state(Profile, InputKey, unsure) :-
+    profile_get(Profile, InputKey, unsure).
+key_state(Profile, InputKey, given(Value)) :-
+    profile_get(Profile, InputKey, Value),
+    dif(Value, unsure).
+
+state_domain(absent, InputKey, Values) :-
+    key_values(InputKey, Values).
+state_domain(unsure, _, [true, false]).
+state_domain(given(Value), _, [Value]).
+
+key_domain(Profile, InputKey, InputKey-Values) :-
+    key_state(Profile, InputKey, State),
+    state_domain(State, InputKey, Values).
+
+profile_domains(Profile, Domains) :-
+    own_keys(OwnKeys),
+    maplist(key_domain(Profile), OwnKeys, Domains).
+
+domain_of(Domains, InputKey, Values) :-
+    member(InputKey-Values, Domains).
+
+key_assignment(Domains, InputKey, InputKey-Value) :-
+    domain_of(Domains, InputKey, Values),
+    member(Value, Values).
+
+block_assignment(Domains, Block, Pairs) :-
+    block_keys(Block, BlockKeys),
+    maplist(key_assignment(Domains), BlockKeys, Pairs).
+
+% block_reachable(Domains, Block, Truths): the sorted set of values the block
+% takes over its completions: [false], [true] or [false, true].
+block_reachable(Domains, Block, Truths) :-
+    findall(Truth, (block_assignment(Domains, Block, Pairs), block_value(Block, Pairs, Truth)), TruthList),
+    sort(TruthList, Truths).
+
+% The disjunction of independent blocks.
+grounds_reachable(Domains, Truths) :-
+    ground_blocks(Blocks),
+    maplist(block_reachable(Domains), Blocks, TruthSets),
+    disjunction_reachable(TruthSets, Truths).
+
+disjunction_reachable([], [false]).
+disjunction_reachable([TruthSet|TruthSets], Truths) :-
+    disjunction_reachable(TruthSets, LaterTruths),
+    findall(Truth, (member(First, TruthSet), member(Second, LaterTruths), truth_or(First, Second, Truth)), TruthList),
+    sort(TruthList, Truths).
+
+% ---- the decision function: steps (1) to (3) of THE LIMBS --------------
+request_outcome([false], _, final(access_request_not_in_required_form, Citations)) :-
+    implements(ch_fadp_ord_art_16_1),
+    answer_citations(access_request_not_in_required_form, Citations).
+request_outcome([true], [true], final(access_may_be_refused_restricted_or_deferred, Citations)) :-
+    implements(ch_fadp_art_26_1),
+    answer_citations(access_may_be_refused_restricted_or_deferred, Citations).
+request_outcome([true], [false], final(access_must_be_given, Citations)) :-
+    implements(ch_fadp_art_25_1),
+    answer_citations(access_must_be_given, Citations).
+request_outcome([true], [false, true], open).
+request_outcome([false, true], _, open).
+
+% ---- query (A): swiss_access_request_answer/3 ------------------------
+swiss_access_request_answer(Profile, Result, Citations) :-
+    swiss_fadp_s3_right_of_access_input_problems(Profile, Problems),
+    request_answer_for_problems(Problems, Profile, Result, Citations).
+
+request_answer_for_problems([Problem|Problems], _, input_problems([Problem|Problems]), []).
+request_answer_for_problems([], Profile, Result, Citations) :-
+    profile_domains(Profile, Domains),
+    block_reachable(Domains, form_of_request, FormTruths),
+    grounds_reachable(Domains, GroundTruths),
+    request_outcome(FormTruths, GroundTruths, Outcome),
+    request_answer_from_outcome(Outcome, Profile, Domains, Result, Citations).
+
+request_answer_from_outcome(final(Result, Citations), _, _, Result, Citations).
+request_answer_from_outcome(open, Profile, Domains, Result, []) :-
+    request_status(Profile, Domains, Result).
+
+% ---- THE STATUS RULE (ii) and (iii) ----------------------------------
+request_status(Profile, Domains, Result) :-
+    own_keys(OwnKeys),
+    include(profile_lacks(Profile), OwnKeys, AbsentKeys),
+    include(global_matters(Domains), AbsentKeys, MatteringKeys),
+    status_from_mattering(MatteringKeys, Profile, Domains, Result).
+
+status_from_mattering([FirstKey|LaterKeys], _, Domains, indeterminate([ReportedKey])) :-
+    first_unblocked([FirstKey|LaterKeys], [FirstKey|LaterKeys], Domains, ReportedKey).
+status_from_mattering([], Profile, Domains, needs_legal_review(open_textured(ReferredKey, Citation), [inputs_relied_on(Pairs)])) :-
+    own_keys(OwnKeys),
+    include(unsure_in_profile(Profile), OwnKeys, UnsureKeys),
+    include(global_matters(Domains), UnsureKeys, [ReferredKey|_]),
+    referral_row(ReferredKey, Citation),
+    relied_pairs(Profile, OwnKeys, Pairs).
+
+unsure_in_profile(Profile, InputKey) :-
+    profile_get(Profile, InputKey, unsure).
+
+relied_pairs(Profile, OwnKeys, Pairs) :-
+    findall(InputKey-Value, (member(InputKey, OwnKeys), profile_get(Profile, InputKey, Value)), Pairs).
+
+% The first mattering key, in root order, behind no other mattering key.
+first_unblocked([], [FirstKey|_], _, FirstKey).
+first_unblocked([Candidate|Candidates], MatteringKeys, Domains, ReportedKey) :-
+    blockers(Candidate, MatteringKeys, Domains, Blockers),
+    choose_unblocked(Blockers, Candidate, Candidates, MatteringKeys, Domains, ReportedKey).
+
+choose_unblocked([], Candidate, _, _, _, Candidate).
+choose_unblocked([_|_], _, Candidates, MatteringKeys, Domains, ReportedKey) :-
+    first_unblocked(Candidates, MatteringKeys, Domains, ReportedKey).
+
+blockers(Candidate, MatteringKeys, Domains, Blockers) :-
+    findall(OtherKey, (member(OtherKey, MatteringKeys), dif(OtherKey, Candidate), behind(Domains, Candidate, OtherKey)), Blockers).
+
+% A key MATTERS when two completions differing only in it give different
+% answers. A form key changes the answer whenever it changes the FORM; a
+% ground key needs the FORM able to be met and every other ground block
+% able to fail.
+global_matters(Domains, InputKey) :-
+    key_block(InputKey, Block),
+    block_kind(Block, BlockKind),
+    kind_matters(BlockKind, Block, Domains, InputKey).
+
+kind_matters(form, Block, Domains, InputKey) :-
+    block_sensitive(Domains, Block, InputKey).
+kind_matters(ground, Block, Domains, InputKey) :-
+    block_reachable(Domains, form_of_request, FormTruths),
+    member(true, FormTruths),
+    ground_blocks(Blocks),
+    other_blocks_can_be_false(Blocks, Block, Domains),
+    block_sensitive(Domains, Block, InputKey).
+
+other_blocks_can_be_false([], _, _).
+other_blocks_can_be_false([Block|Blocks], Block, Domains) :-
+    other_blocks_can_be_false(Blocks, Block, Domains).
+other_blocks_can_be_false([OtherBlock|Blocks], Block, Domains) :-
+    dif(OtherBlock, Block),
+    block_reachable(Domains, OtherBlock, Truths),
+    member(false, Truths),
+    other_blocks_can_be_false(Blocks, Block, Domains).
+
+% witness_pair: an assignment of the block and another value of InputKey
+% that changes the block value.
+witness_pair(Domains, Block, InputKey, Pairs) :-
+    block_assignment(Domains, Block, Pairs),
+    block_value(Block, Pairs, Truth),
+    domain_of(Domains, InputKey, KeyValues),
+    member(KeyValue, KeyValues),
+    pair_value(Pairs, InputKey, CurrentValue),
+    dif(KeyValue, CurrentValue),
+    replace_pair(Pairs, InputKey, KeyValue, Changed),
+    block_value(Block, Changed, ChangedTruth),
+    dif(Truth, ChangedTruth).
+
+block_sensitive(Domains, Block, InputKey) :-
+    findall(Pairs, witness_pair(Domains, Block, InputKey, Pairs), Witnesses),
+    Witnesses = [_|_].
+
+replace_pair(Pairs, InputKey, Value, Changed) :-
+    maplist(replace_value(InputKey, Value), Pairs, Changed).
+
+replace_value(InputKey, Value, InputKey-_, InputKey-Value).
+replace_value(InputKey, _, OtherKey-OtherValue, OtherKey-OtherValue) :-
+    dif(InputKey, OtherKey).
+
+% BEHIND: every pair showing Key matters has Other at only
+% some of its values, while Other matters with Key fixed to each value.
+behind(Domains, InputKey, OtherKey) :-
+    witness_values(Domains, InputKey, OtherKey, WitnessValues),
+    domain_of(Domains, OtherKey, OtherValues),
+    length(WitnessValues, WitnessCount),
+    length(OtherValues, OtherCount),
+    WitnessCount #< OtherCount,
+    domain_of(Domains, InputKey, KeyValues),
+    maplist(matters_with_fixed(Domains, InputKey, OtherKey), KeyValues).
+
+matters_with_fixed(Domains, InputKey, OtherKey, Value) :-
+    replace_pair(Domains, InputKey, [Value], Fixed),
+    global_matters(Fixed, OtherKey).
+
+witness_values(Domains, InputKey, OtherKey, Values) :-
+    key_block(InputKey, KeyBlock),
+    key_block(OtherKey, OtherBlock),
+    block_witness_values(KeyBlock, OtherBlock, Domains, InputKey, OtherKey, Values).
+
+block_witness_values(Block, Block, Domains, InputKey, OtherKey, Values) :-
+    findall(OtherValue, (witness_pair(Domains, Block, InputKey, Pairs), pair_value(Pairs, OtherKey, OtherValue)), Found),
+    sort(Found, Values).
+block_witness_values(KeyBlock, OtherBlock, Domains, _, OtherKey, Values) :-
+    dif(KeyBlock, OtherBlock),
+    block_kind(KeyBlock, KeyKind),
+    block_kind(OtherBlock, OtherKind),
+    cross_witness_values(KeyKind, OtherKind, OtherBlock, Domains, OtherKey, Values).
+
+% A form key changes the answer whatever the grounds: every value appears.
+cross_witness_values(form, ground, _, Domains, OtherKey, Values) :-
+    domain_of(Domains, OtherKey, Values).
+% A ground key matters only with the FORM met.
+cross_witness_values(ground, form, OtherBlock, Domains, OtherKey, Values) :-
+    values_allowing(OtherBlock, true, Domains, OtherKey, Values).
+% A ground key matters only with every other ground block failing.
+cross_witness_values(ground, ground, OtherBlock, Domains, OtherKey, Values) :-
+    values_allowing(OtherBlock, false, Domains, OtherKey, Values).
+
+values_allowing(Block, Truth, Domains, InputKey, Values) :-
+    findall(Value, (block_assignment(Domains, Block, Pairs), block_value(Block, Pairs, Truth), pair_value(Pairs, InputKey, Value)), Found),
+    sort(Found, Values).
+
+% ---- query (B): swiss_access_cost_contribution/3 ---------------------
+swiss_access_cost_contribution(Profile, Result, Citations) :-
+    swiss_fadp_s3_right_of_access_input_problems(Profile, Problems),
+    cost_answer_for_problems(Problems, Profile, Result, Citations).
+
+cost_answer_for_problems([Problem|Problems], _, input_problems([Problem|Problems]), []).
+cost_answer_for_problems([], Profile, Result, Citations) :-
+    key_state(Profile, access_involves_disproportionate_effort, State),
+    cost_answer(State, Result, Citations).
+
+cost_answer(given(false), access_free_of_charge, [cite(ch_fadp_art_25_6), cite(ch_fadp_ord_art_19_1)]) :-
+    implements(ch_fadp_art_25_6).
+cost_answer(given(true), cost_contribution_may_be_requested, [cite(ch_fadp_art_25_6), cite(ch_fadp_ord_art_19_1), cite(ch_fadp_ord_art_19_2), cite(ch_fadp_ord_art_19_3)]) :-
+    implements(ch_fadp_ord_art_19_1).
+cost_answer(absent, indeterminate([access_involves_disproportionate_effort]), []).
+cost_answer(unsure, needs_legal_review(open_textured(access_involves_disproportionate_effort, cite(ch_fadp_ord_art_19_1)), [inputs_relied_on([access_involves_disproportionate_effort-unsure])]), []).
+
+% ---- date arguments: the input check of DATE ARGUMENTS ----------------
+date_argument_status(Argument, invalid) :-
+    var(Argument).
+date_argument_status(Argument, Status) :-
+    nonvar(Argument),
+    date_term_status(Argument, Status).
+
+date_term_status(date(CalendarYear, CalendarMonth, CalendarDay), Status) :-
+    integer_parts_truth([CalendarYear, CalendarMonth, CalendarDay], AllIntegers),
+    integer_date_status(AllIntegers, CalendarYear, CalendarMonth, CalendarDay, Status).
+date_term_status(Argument, invalid) :-
+    Argument \= date(_, _, _).
+
+integer_parts_truth(Parts, Truth) :-
+    findall(Part, (member(Part, Parts), integer(Part)), IntegerParts),
+    length(Parts, PartCount),
+    length(IntegerParts, IntegerCount),
+    count_truth(PartCount, IntegerCount, Truth).
+
+count_truth(PartCount, IntegerCount, true) :-
+    PartCount #= IntegerCount.
+count_truth(PartCount, IntegerCount, false) :-
+    PartCount #\= IntegerCount.
+
+integer_date_status(false, _, _, _, invalid).
+integer_date_status(true, CalendarYear, CalendarMonth, CalendarDay, Status) :-
+    year_status(CalendarYear, YearStatus),
+    month_status(CalendarMonth, MonthStatus),
+    ranged_date_status(YearStatus, MonthStatus, CalendarYear, CalendarMonth, CalendarDay, Status).
+
+year_status(CalendarYear, in_range) :-
+    earliest_accepted_year(EarliestYear),
+    latest_accepted_year(LatestYear),
+    CalendarYear #>= EarliestYear,
+    CalendarYear #=< LatestYear.
+year_status(CalendarYear, out_of_range) :-
+    earliest_accepted_year(EarliestYear),
+    CalendarYear #< EarliestYear.
+year_status(CalendarYear, out_of_range) :-
+    latest_accepted_year(LatestYear),
+    CalendarYear #> LatestYear.
+
+month_status(CalendarMonth, in_range) :-
+    CalendarMonth #>= 1,
+    CalendarMonth #=< 12.
+month_status(CalendarMonth, out_of_range) :-
+    CalendarMonth #< 1.
+month_status(CalendarMonth, out_of_range) :-
+    CalendarMonth #> 12.
+
+ranged_date_status(out_of_range, _, _, _, _, invalid).
+ranged_date_status(in_range, out_of_range, _, _, _, invalid).
+ranged_date_status(in_range, in_range, CalendarYear, CalendarMonth, CalendarDay, Status) :-
+    month_last_day(CalendarYear, CalendarMonth, LastDay),
+    day_status(CalendarDay, LastDay, Status).
+
+day_status(CalendarDay, LastDay, valid) :-
+    CalendarDay #>= 1,
+    CalendarDay #=< LastDay.
+day_status(CalendarDay, _, invalid) :-
+    CalendarDay #< 1.
+day_status(CalendarDay, LastDay, invalid) :-
+    CalendarDay #> LastDay.
+
+% ---- day arithmetic ------------------------------------------------
+add_days(CalendarDate, DayCount, date(LaterYear, LaterMonth, LaterDay)) :-
+    timedelta(DayCount, 0, Period),
+    date_add(CalendarDate, Period, date(LaterYear, LaterMonth, LaterDay)).
+
+% ---- query (C): swiss_access_deadline/3 ------------------------------
+swiss_access_deadline(Receipt, Deadline, Citations) :-
+    date_argument_status(Receipt, Status),
+    swiss_deadline_for_status(Status, Receipt, Deadline, Citations).
+
+swiss_deadline_for_status(invalid, _, input_problems([wrong_type(receipt_date)]), []).
+swiss_deadline_for_status(valid, Receipt, Deadline, [cite(ch_fadp_art_25_7), cite(ch_fadp_ord_art_18_1)]) :-
+    swiss_last_day(Receipt, Deadline).
+
+% Reading (8), Q1: the day of receipt is not counted; the last day is the
+% 30th calendar day after it and is never moved.
+swiss_last_day(Receipt, Deadline) :-
+    implements(ch_fadp_ord_art_18_1),
+    implements(ch_fadp_art_25_7),
+    time_limit_days(access_answer, DayCount, cite(ch_fadp_ord_art_18_1)),
+    add_days(Receipt, DayCount, Deadline).
+
+% ---- query (D): swiss_access_deadline_after_cost_notice/3 ------------
+swiss_access_deadline_after_cost_notice(Notice, Deadline, Citations) :-
+    date_argument_status(Notice, Status),
+    cost_notice_deadline_for_status(Status, Notice, Deadline, Citations).
+
+cost_notice_deadline_for_status(invalid, _, input_problems([wrong_type(cost_notice_date)]), []).
+cost_notice_deadline_for_status(valid, Notice, Deadline, [cite(ch_fadp_art_25_7), cite(ch_fadp_ord_art_18_1), cite(ch_fadp_ord_art_19_3)]) :-
+    swiss_last_day_after_cost_notice(Notice, Deadline).
+
+% Reading (9), Q2: the ten days run from the day after the notice; the 30
+% days run from the day after the period for reflection ends.
+swiss_last_day_after_cost_notice(Notice, Deadline) :-
+    implements(ch_fadp_ord_art_19_3),
+    time_limit_days(reflection_after_cost_notice, ReflectionDays, cite(ch_fadp_ord_art_19_3)),
+    add_days(Notice, ReflectionDays, ReflectionEnd),
+    swiss_last_day(ReflectionEnd, Deadline).
+
+% ---- query (E): eu_access_response_deadline/3 ------------------------
+eu_access_response_deadline(Receipt, Deadline, Citations) :-
+    date_argument_status(Receipt, Status),
+    eu_deadline_for_status(Status, Receipt, Deadline, Citations).
+
+eu_deadline_for_status(invalid, _, input_problems([wrong_type(receipt_date)]), []).
+eu_deadline_for_status(valid, Receipt, Deadline, [cite(eu_reg_2016_679_art_12_3), cite(eu_reg_1971_1182_art_3_1), cite(eu_reg_1971_1182_art_3_2_c), cite(eu_reg_1971_1182_art_3_4)]) :-
+    eu_last_day(Receipt, Deadline).
+
+eu_last_day(date(CalendarYear, CalendarMonth, CalendarDay), Deadline) :-
+    implements(eu_reg_2016_679_art_12_3),
+    period_months(eu_access_response, MonthCount, cite(eu_reg_2016_679_art_12_3)),
+    month_after(CalendarYear, CalendarMonth, MonthCount, NextYear, NextMonth),
+    corresponding_day(NextYear, NextMonth, CalendarDay, EndDay),
+    weekend_shift(date(NextYear, NextMonth, EndDay), Deadline).
+
+% Art 3(1): the day of receipt is not counted, so the month ends on the
+% same date of the following month.
+month_after(CalendarYear, CalendarMonth, MonthCount, NextYear, NextMonth) :-
+    implements(eu_reg_1971_1182_art_3_1),
+    MonthIndex #= CalendarYear * 12 + CalendarMonth - 1 + MonthCount,
+    NextYear #= MonthIndex // 12,
+    NextMonth #= MonthIndex mod 12 + 1.
+
+% Art 3(2)(c): the same date, or the last day of a month that lacks it.
+corresponding_day(CalendarYear, CalendarMonth, CalendarDay, CalendarDay) :-
+    implements(eu_reg_1971_1182_art_3_2_c),
+    month_last_day(CalendarYear, CalendarMonth, LastDay),
+    CalendarDay #=< LastDay.
+corresponding_day(CalendarYear, CalendarMonth, CalendarDay, LastDay) :-
+    implements(eu_reg_1971_1182_art_3_2_c),
+    month_last_day(CalendarYear, CalendarMonth, LastDay),
+    CalendarDay #> LastDay.
+
+% Art 3(4): a Saturday or Sunday moves to the Monday (no public holidays).
+weekend_shift(CalendarDate, Shifted) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    weekday_number(CalendarDate, Weekday),
+    weekend_days_to_add(Weekday, DayCount),
+    add_days(CalendarDate, DayCount, Shifted).
+
+% 1900-01-01 was a Monday: 0 Monday ... 5 Saturday, 6 Sunday.
+weekday_number(CalendarDate, Weekday) :-
+    days_between(CalendarDate, date(1900, 1, 1), DayCount),
+    Weekday #= DayCount mod 7.
+
+weekend_days_to_add(Weekday, 0) :-
+    implements(eu_reg_1971_1182_art_3_4),
+    Weekday #=< 4.
+weekend_days_to_add(5, 2) :-
+    implements(eu_reg_1971_1182_art_3_4).
+weekend_days_to_add(6, 1) :-
+    implements(eu_reg_1971_1182_art_3_4).
+
+% ---- query (F): compare_swiss_eu_access_deadline/5 -------------------
+compare_swiss_eu_access_deadline(Receipt, SwissDeadline, EuDeadline, Difference, ChangedBy) :-
+    date_argument_status(Receipt, Status),
+    comparison_for_status(Status, Receipt, SwissDeadline, EuDeadline, Difference, ChangedBy).
+
+comparison_for_status(invalid, _, input_problems([wrong_type(receipt_date)]), input_problems([wrong_type(receipt_date)]), input_problems([wrong_type(receipt_date)]), []).
+comparison_for_status(valid, Receipt, SwissDeadline, EuDeadline, Difference, ChangedBy) :-
+    swiss_last_day(Receipt, SwissDeadline),
+    eu_last_day(Receipt, EuDeadline),
+    days_between(EuDeadline, SwissDeadline, DayGap),
+    difference_by_gap(DayGap, Difference, ChangedBy).
+
+% DayGap is the EU last day minus the Swiss last day, in days.
+difference_by_gap(DayGap, swiss_earlier, [cite(ch_fadp_ord_art_18_1), cite(eu_reg_2016_679_art_12_3)]) :-
+    implements(ch_fadp_ord_art_18_1),
+    DayGap #> 0.
+difference_by_gap(DayGap, same, []) :-
+    implements(ch_fadp_ord_art_18_1),
+    DayGap #= 0.
+difference_by_gap(DayGap, swiss_later, [cite(ch_fadp_ord_art_18_1), cite(eu_reg_2016_679_art_12_3)]) :-
+    implements(ch_fadp_ord_art_18_1),
+    DayGap #< 0.
+
+% ---- facade: verdict and status projection ----------------------------
+decide_swiss_fadp_s3_right_of_access(Profile, swiss_fadp_s3_right_of_access_verdict(Status, Citations)) :-
+    swiss_access_request_answer(Profile, Status, Citations).
+
+swiss_fadp_s3_right_of_access_status(Profile, Status) :-
+    decide_swiss_fadp_s3_right_of_access(Profile, swiss_fadp_s3_right_of_access_verdict(Status, _Citations)).
+
+swiss_fadp_s3_right_of_access_decision_resolvable(Profile) :-
+    decide_swiss_fadp_s3_right_of_access(Profile, _Verdict).
+
+% ---- checklist: one row per requirement or ground ---------------------
+checklist_rows([
+    row(form_of_request, request_in_required_form, cite(ch_fadp_ord_art_16_1)),
+    row(formal_law_ground, formal_law_ground, cite(ch_fadp_art_26_1_a)),
+    row(third_party_ground, third_party_interest_ground, cite(ch_fadp_art_26_1_b)),
+    row(unfounded_request_ground, unfounded_or_querulous_ground, cite(ch_fadp_art_26_1_c)),
+    row(controller_category_grounds, controller_category_ground, cite(ch_fadp_art_26_2)),
+    row(media_ground, editorial_media_ground, cite(ch_fadp_art_27_1)),
+    row(media_professional_ground, personal_working_instrument_ground, cite(ch_fadp_art_27_2))
+]).
+
+swiss_fadp_s3_right_of_access_checklist(Profile, Items) :-
+    swiss_fadp_s3_right_of_access_input_problems(Profile, Problems),
+    checklist_for_problems(Problems, Profile, Items).
+
+checklist_for_problems([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(ch_fadp_art_25_1))]).
+checklist_for_problems([], Profile, Items) :-
+    profile_domains(Profile, Domains),
+    checklist_rows(Rows),
+    maplist(checklist_item(Profile, Domains), Rows, Items).
+
+checklist_item(Profile, Domains, row(Block, ItemName, Citation), item(ItemName, Status, Citation)) :-
+    block_reachable(Domains, Block, Truths),
+    block_keys(Block, BlockKeys),
+    include(open_in_profile(Profile), BlockKeys, OpenKeys),
+    block_item_status(Truths, OpenKeys, Status).
+
+open_in_profile(Profile, InputKey) :-
+    key_state(Profile, InputKey, State),
+    open_key_state(State).
+
+open_key_state(absent).
+open_key_state(unsure).
+
+block_item_status([true], _, met).
+block_item_status([false], _, unmet(condition_not_met)).
+block_item_status([false, true], OpenKeys, unknown(OpenKeys)).
+
+% ---- test fixtures ----------------------------------------------------
+all_grounds_fail_profile([
+    attribute(request_form, written),
+    attribute(controller_agreed_to_oral_request, false),
+    attribute(controller_category, private_person),
+    attribute(formal_law_provides_for_restriction, false),
+    attribute(restriction_required_by_overriding_third_party_interests, false),
+    attribute(request_manifestly_unfounded_or_querulous, false),
+    attribute(restriction_required_by_overriding_controller_interests, false),
+    attribute(controller_discloses_the_personal_data_to_third_parties, false),
+    attribute(restriction_required_by_overriding_public_interests, false),
+    attribute(information_could_endanger_investigation_or_proceedings, false),
+    attribute(processed_exclusively_for_publication_in_editorial_part_of_periodical_medium, false),
+    attribute(data_reveal_information_sources, false),
+    attribute(access_would_give_insight_into_drafts_for_publications, false),
+    attribute(publication_would_endanger_free_formation_of_public_opinion, false),
+    attribute(data_serve_media_professional_exclusively_as_personal_working_instrument, false)
+]).
+
+with_attribute(Profile, InputKey, Value, Changed) :-
+    maplist(replace_attribute(InputKey, Value), Profile, Changed).
+
+replace_attribute(InputKey, Value, attribute(InputKey, _), attribute(InputKey, Value)).
+replace_attribute(InputKey, _, attribute(OtherKey, OtherValue), attribute(OtherKey, OtherValue)) :-
+    dif(InputKey, OtherKey).
+
+% ---- tests ------------------------------------------------------------
+test(oral_request_without_agreement_is_not_in_required_form) :-
+    swiss_access_request_answer([attribute(request_form, oral), attribute(controller_agreed_to_oral_request, false)], access_request_not_in_required_form, [cite(ch_fadp_art_25_1), cite(ch_fadp_ord_art_16_1), cite(ch_fadp_ord_art_16_3)]).
+test(all_grounds_failing_gives_access) :-
+    all_grounds_fail_profile(Profile),
+    findall(Result, swiss_access_request_answer(Profile, Result, _), Results),
+    Results == [access_must_be_given].
+test(all_grounds_failing_is_not_a_permission, fail) :-
+    all_grounds_fail_profile(Profile),
+    swiss_access_request_answer(Profile, access_may_be_refused_restricted_or_deferred, _).
+test(a_formal_law_permits_restriction) :-
+    all_grounds_fail_profile(Base),
+    with_attribute(Base, formal_law_provides_for_restriction, true, Profile),
+    swiss_access_request_answer(Profile, access_may_be_refused_restricted_or_deferred, Citations),
+    length(Citations, 22).
+test(category_absent_with_both_letters_met_permits_restriction) :-
+    swiss_access_request_answer([attribute(request_form, electronic), attribute(formal_law_provides_for_restriction, false), attribute(restriction_required_by_overriding_third_party_interests, false), attribute(request_manifestly_unfounded_or_querulous, false), attribute(restriction_required_by_overriding_controller_interests, true), attribute(controller_discloses_the_personal_data_to_third_parties, false), attribute(restriction_required_by_overriding_public_interests, true)], access_may_be_refused_restricted_or_deferred, _).
+test(empty_profile_asks_for_the_form) :-
+    findall(Result, swiss_access_request_answer([], Result, _), Results),
+    Results == [indeterminate([request_form])].
+test(oral_request_asks_for_the_agreement) :-
+    swiss_access_request_answer([attribute(request_form, oral)], indeterminate([controller_agreed_to_oral_request]), []).
+test(a_written_request_alone_asks_for_the_formal_law_first) :-
+    swiss_access_request_answer([attribute(request_form, written)], indeterminate([formal_law_provides_for_restriction]), []).
+test(missing_category_named_beside_an_unsure_judgement) :-
+    all_grounds_fail_profile(Base),
+    with_attribute(Base, restriction_required_by_overriding_controller_interests, true, WithInterests),
+    with_attribute(WithInterests, formal_law_provides_for_restriction, unsure, WithUnsure),
+    exclude(==(attribute(controller_category, private_person)), WithUnsure, Profile),
+    swiss_access_request_answer(Profile, indeterminate([controller_category]), []).
+test(an_unsure_formal_law_goes_to_a_lawyer) :-
+    all_grounds_fail_profile(Base),
+    with_attribute(Base, formal_law_provides_for_restriction, unsure, Profile),
+    swiss_access_request_answer(Profile, needs_legal_review(open_textured(formal_law_provides_for_restriction, cite(ch_fadp_art_26_1_a)), [inputs_relied_on(Pairs)]), []),
+    member(formal_law_provides_for_restriction-unsure, Pairs),
+    length(Pairs, 15).
+test(an_unknown_key_is_an_input_problem) :-
+    swiss_access_request_answer([attribute(colour, red)], input_problems([unknown_key(colour)]), []).
+test(no_disproportionate_effort_is_free) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, false)], access_free_of_charge, [cite(ch_fadp_art_25_6), cite(ch_fadp_ord_art_19_1)]).
+test(disproportionate_effort_allows_a_contribution) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, true)], cost_contribution_may_be_requested, _).
+test(absent_effort_is_asked_for) :-
+    swiss_access_cost_contribution([], indeterminate([access_involves_disproportionate_effort]), []).
+test(unsure_effort_goes_to_a_lawyer) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, unsure)], needs_legal_review(open_textured(access_involves_disproportionate_effort, cite(ch_fadp_ord_art_19_1)), [inputs_relied_on([access_involves_disproportionate_effort-unsure])]), []).
+test(swiss_deadline_in_march) :-
+    swiss_access_deadline(date(2026, 3, 1), date(2026, 3, 31), [cite(ch_fadp_art_25_7), cite(ch_fadp_ord_art_18_1)]).
+test(swiss_deadline_on_a_saturday_is_not_moved) :-
+    swiss_access_deadline(date(2026, 1, 15), date(2026, 2, 14), _).
+test(swiss_deadline_after_cost_notice) :-
+    swiss_access_deadline_after_cost_notice(date(2026, 3, 1), date(2026, 4, 10), _).
+test(eu_deadline_moves_from_sunday) :-
+    eu_access_response_deadline(date(2026, 10, 29), date(2026, 11, 30), _).
+test(eu_deadline_month_end_moves_from_saturday) :-
+    eu_access_response_deadline(date(2026, 1, 31), date(2026, 3, 2), _).
+test(eu_deadline_leap_year) :-
+    eu_access_response_deadline(date(2028, 1, 31), date(2028, 2, 29), _).
+test(a_day_that_does_not_exist_is_refused) :-
+    swiss_access_deadline(date(2026, 2, 30), input_problems([wrong_type(receipt_date)]), []).
+test(a_year_outside_the_bound_is_refused) :-
+    swiss_access_deadline_after_cost_notice(date(2200, 1, 1), input_problems([wrong_type(cost_notice_date)]), []).
+test(comparison_swiss_earlier) :-
+    findall(Difference-ChangedBy, compare_swiss_eu_access_deadline(date(2026, 3, 1), date(2026, 3, 31), date(2026, 4, 1), Difference, ChangedBy), Answers),
+    Answers == [swiss_earlier-[cite(ch_fadp_ord_art_18_1), cite(eu_reg_2016_679_art_12_3)]].
+test(comparison_with_a_bad_date) :-
+    compare_swiss_eu_access_deadline(nonsense, input_problems([wrong_type(receipt_date)]), input_problems([wrong_type(receipt_date)]), input_problems([wrong_type(receipt_date)]), []).
+test(checklist_has_one_row_per_ground) :-
+    all_grounds_fail_profile(Profile),
+    swiss_fadp_s3_right_of_access_checklist(Profile, Items),
+    length(Items, 7),
+    member(item(request_in_required_form, met, cite(ch_fadp_ord_art_16_1)), Items).
+
+:- end_module(swiss_fadp_s3_right_of_access).

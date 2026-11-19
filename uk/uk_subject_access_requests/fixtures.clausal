@@ -1,0 +1,195 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative subjects for uk/uk_subject_access_requests.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+% Profile keys, subject ids and case terms are atoms and data: no import.
+%
+% PROFILE SUBJECTS (attribute lists): for every route of the three PROFILE
+% queries a positive case and a one-key near-miss control.
+%   uk_access_entitlement/3 (the facade verdict):
+%     access_item_due                 <-> access_search_false (near miss: search false)
+%     access_not_described            <-> access_item_due (near miss: described true)
+%     access_described_missing, access_search_missing (first missing key)
+%     access_search_unsure            (open-textured: lawyer)
+%     access_wrong_type, access_duplicate_key, access_unknown_key (input problems)
+%   uk_applicable_time_period/3:
+%     period_three_months             <-> period_late_notice (near miss: notice late)
+%     period_no_notice, period_notice_missing, period_reasons_missing,
+%     period_necessity_unsure
+%   uk_clock_stop/3:
+%     clock_stop_applies              <-> clock_not_access_request (near miss)
+%     clock_asked_missing, clock_further_unsure
+%
+% DATE CASES (uk_subject_access_requests_date_fixture/2): the five date
+% queries, with at-boundary / just-across pairs:
+%   regime: 5 February 2026 <-> 4 February 2026;
+%   relevant time: identity received <-> identity outstanding; fee paid <->
+%     fee outstanding;
+%   paused days: received same day <-> received the day before asked;
+%   deadline: 29 January 2028 (day before 29 February) <-> 30 January 2028
+%     (last day of February); worked examples of readings (6), (7), (8);
+%   comparison: worked examples of reading (10), a same-day case, a saved
+%     receipt and an argument problem.
+% =====================================================================
+
+:- module(fixtures, [
+    uk_subject_access_requests_subject/1,
+    uk_subject_access_requests_profile_for/2,
+    uk_subject_access_requests_assess/2,
+    uk_subject_access_requests_date_fixture/2
+]).
+
+:- use_module(uk/uk_subject_access_requests/uk_subject_access_requests, [decide_uk_subject_access_requests/2]).
+
+% ---- Subject registry ------------------------------------------------
+uk_subject_access_requests_subject(access_item_due).
+uk_subject_access_requests_subject(access_search_false).
+uk_subject_access_requests_subject(access_not_described).
+uk_subject_access_requests_subject(access_described_missing).
+uk_subject_access_requests_subject(access_search_missing).
+uk_subject_access_requests_subject(access_search_unsure).
+uk_subject_access_requests_subject(access_wrong_type).
+uk_subject_access_requests_subject(access_duplicate_key).
+uk_subject_access_requests_subject(access_unknown_key).
+uk_subject_access_requests_subject(period_three_months).
+uk_subject_access_requests_subject(period_late_notice).
+uk_subject_access_requests_subject(period_no_notice).
+uk_subject_access_requests_subject(period_notice_missing).
+uk_subject_access_requests_subject(period_reasons_missing).
+uk_subject_access_requests_subject(period_necessity_unsure).
+uk_subject_access_requests_subject(clock_stop_applies).
+uk_subject_access_requests_subject(clock_not_access_request).
+uk_subject_access_requests_subject(clock_asked_missing).
+uk_subject_access_requests_subject(clock_further_unsure).
+
+% ---- Profiles: access entitlement (UK GDPR Art 15(1), (1A)) -----------
+uk_subject_access_requests_profile_for(access_item_due, [
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_within_reasonable_and_proportionate_search, true)
+]).
+uk_subject_access_requests_profile_for(access_search_false, [
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_within_reasonable_and_proportionate_search, false)
+]).
+uk_subject_access_requests_profile_for(access_not_described, [
+    attribute(item_described_in_article_15_1, false),
+    attribute(item_within_reasonable_and_proportionate_search, true)
+]).
+uk_subject_access_requests_profile_for(access_described_missing, [
+    attribute(item_within_reasonable_and_proportionate_search, true)
+]).
+uk_subject_access_requests_profile_for(access_search_missing, [
+    attribute(item_described_in_article_15_1, true)
+]).
+uk_subject_access_requests_profile_for(access_search_unsure, [
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_within_reasonable_and_proportionate_search, unsure)
+]).
+uk_subject_access_requests_profile_for(access_wrong_type, [
+    attribute(item_described_in_article_15_1, unsure),
+    attribute(item_within_reasonable_and_proportionate_search, true)
+]).
+uk_subject_access_requests_profile_for(access_duplicate_key, [
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_within_reasonable_and_proportionate_search, true)
+]).
+uk_subject_access_requests_profile_for(access_unknown_key, [
+    attribute(item_described_in_article_15_1, true),
+    attribute(item_within_reasonable_and_proportionate_search, true),
+    attribute(subject_name, true)
+]).
+
+% ---- Profiles: applicable time period (Art 12A(1), (3), (4)) ----------
+uk_subject_access_requests_profile_for(period_three_months, [
+    attribute(extension_notice_given, true),
+    attribute(extension_notice_given_before_end_of_first_month, true),
+    attribute(extension_notice_states_reasons, true),
+    attribute(extension_necessary_for_complexity_or_number, true)
+]).
+uk_subject_access_requests_profile_for(period_late_notice, [
+    attribute(extension_notice_given, true),
+    attribute(extension_notice_given_before_end_of_first_month, false),
+    attribute(extension_notice_states_reasons, true),
+    attribute(extension_necessary_for_complexity_or_number, true)
+]).
+uk_subject_access_requests_profile_for(period_no_notice, [
+    attribute(extension_notice_given, false)
+]).
+uk_subject_access_requests_profile_for(period_notice_missing, [
+    attribute(extension_notice_given_before_end_of_first_month, true),
+    attribute(extension_notice_states_reasons, true),
+    attribute(extension_necessary_for_complexity_or_number, true)
+]).
+uk_subject_access_requests_profile_for(period_reasons_missing, [
+    attribute(extension_notice_given, true),
+    attribute(extension_notice_given_before_end_of_first_month, true),
+    attribute(extension_necessary_for_complexity_or_number, true)
+]).
+uk_subject_access_requests_profile_for(period_necessity_unsure, [
+    attribute(extension_notice_given, true),
+    attribute(extension_notice_given_before_end_of_first_month, true),
+    attribute(extension_notice_states_reasons, true),
+    attribute(extension_necessary_for_complexity_or_number, unsure)
+]).
+
+% ---- Profiles: stop the clock (Art 12A(5)) ----------------------------
+uk_subject_access_requests_profile_for(clock_stop_applies, [
+    attribute(request_made_under_article_15, true),
+    attribute(controller_asked_for_further_information, true),
+    attribute(further_information_reasonably_required, true)
+]).
+uk_subject_access_requests_profile_for(clock_not_access_request, [
+    attribute(request_made_under_article_15, false),
+    attribute(controller_asked_for_further_information, true),
+    attribute(further_information_reasonably_required, true)
+]).
+uk_subject_access_requests_profile_for(clock_asked_missing, [
+    attribute(request_made_under_article_15, true),
+    attribute(further_information_reasonably_required, true)
+]).
+uk_subject_access_requests_profile_for(clock_further_unsure, [
+    attribute(request_made_under_article_15, true),
+    attribute(controller_asked_for_further_information, true),
+    attribute(further_information_reasonably_required, unsure)
+]).
+
+% ---- Date cases (the five date queries) --------------------------------
+% uk_time_rules_regime/3: commencement day and the day before.
+uk_subject_access_requests_date_fixture(regime_on_commencement_day, regime_case(date(2026, 2, 5))).
+uk_subject_access_requests_date_fixture(regime_day_before_commencement, regime_case(date(2026, 2, 4))).
+uk_subject_access_requests_date_fixture(regime_impossible_date, regime_case(date(2026, 2, 30))).
+% uk_relevant_time/5.
+uk_subject_access_requests_date_fixture(relevant_plain_request, relevant_time_case(date(2026, 3, 1), not_requested, no_fee)).
+uk_subject_access_requests_date_fixture(relevant_identity_received_latest, relevant_time_case(date(2026, 3, 1), date(2026, 3, 10), date(2026, 3, 5))).
+uk_subject_access_requests_date_fixture(relevant_identity_outstanding, relevant_time_case(date(2026, 3, 1), requested_not_received, date(2026, 3, 5))).
+uk_subject_access_requests_date_fixture(relevant_fee_paid, relevant_time_case(date(2026, 3, 1), not_requested, date(2026, 3, 5))).
+uk_subject_access_requests_date_fixture(relevant_fee_outstanding, relevant_time_case(date(2026, 3, 1), not_requested, fee_not_paid)).
+uk_subject_access_requests_date_fixture(relevant_argument_problems, relevant_time_case(receipt_unknown, not_requested, unpaid)).
+% uk_paused_days/4.
+uk_subject_access_requests_date_fixture(paused_same_day, paused_days_case(date(2026, 3, 10), date(2026, 3, 10))).
+uk_subject_access_requests_date_fixture(paused_received_day_before_asked, paused_days_case(date(2026, 3, 10), date(2026, 3, 9))).
+uk_subject_access_requests_date_fixture(paused_ten_days, paused_days_case(date(2026, 3, 1), date(2026, 3, 10))).
+% uk_response_deadline/5: worked examples of readings (6), (7), (8).
+uk_subject_access_requests_date_fixture(deadline_5_february_2026, deadline_case(date(2026, 2, 5), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_1_march_2026, deadline_case(date(2026, 3, 1), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_31_january_2027, deadline_case(date(2027, 1, 31), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_29_january_2028, deadline_case(date(2028, 1, 29), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_30_january_2028, deadline_case(date(2028, 1, 30), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_29_january_2027, deadline_case(date(2027, 1, 29), one_month, 0)).
+uk_subject_access_requests_date_fixture(deadline_three_months_30_november_2026, deadline_case(date(2026, 11, 30), three_months, 0)).
+uk_subject_access_requests_date_fixture(deadline_paused_three_days, deadline_case(date(2026, 2, 5), one_month, 3)).
+uk_subject_access_requests_date_fixture(deadline_wrong_period, deadline_case(date(2026, 2, 5), two_months, 0)).
+% compare_uk_eu_response_deadline/6: reading (10).
+uk_subject_access_requests_date_fixture(compare_5_february_2026, comparison_case(date(2026, 2, 5), one_month)).
+uk_subject_access_requests_date_fixture(compare_30_november_2026_three_months, comparison_case(date(2026, 11, 30), three_months)).
+uk_subject_access_requests_date_fixture(compare_31_march_2026_same_day, comparison_case(date(2026, 3, 31), one_month)).
+uk_subject_access_requests_date_fixture(compare_saved_receipt, comparison_case(date(2026, 2, 4), one_month)).
+uk_subject_access_requests_date_fixture(compare_argument_problem, comparison_case(date(2026, 13, 1), one_month)).
+
+% ---- Convenience wrapper ---------------------------------------------
+uk_subject_access_requests_assess(Subject, Result) :-
+    uk_subject_access_requests_profile_for(Subject, Profile),
+    decide_uk_subject_access_requests(Profile, Result).
+
+:- end_module(fixtures).

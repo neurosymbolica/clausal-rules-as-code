@@ -1,0 +1,245 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/cbam/origin_exclusions
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "origin_exclusions"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # origin_exclusions_input_problems/2 is defined in the kernel and
+  # re-exported by queries.clausal (listed once, below).
+  # -- citations.clausal --
+  - "citation/2"
+  # -- origin_exclusions.clausal --
+  - "origin_exclusion/3"
+  - "decide_origin_exclusions/2"
+  - "origin_exclusions_status/2"
+  - "origin_exclusions_checklist/2"
+  - "origin_exclusions_decision_resolvable/1"
+  - "origin_exclusions_status_values/1"
+  - "excluded_military_activities/0"
+  - "excluded_origin_annex_iii_point_1/0"
+  - "excluded_electricity_continental_shelf_or_eez/0"
+  - "excluded_hydrogen_continental_shelf_or_eez/0"
+  - "not_third_country_origin/0"
+  - "no_origin_exclusion/0"
+  - "indeterminate/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "origin_exclusions_profile_keys/1"
+  - "origin_exclusions_input_problems/2"
+  - "origin_exclusions_what_if/4"
+  - "origin_exclusions_eligibility/2"
+  # -- fixtures.clausal --
+  - "origin_exclusions_subject/1"
+  - "origin_exclusions_profile_for/2"
+  - "origin_exclusions_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This package imports only kit modules (formalize_lib,
+# library(reif)), no shared backbone package.
+uses: []
+
+scope: "For ONE customs line of goods the caller treats as goods listed in Annex I
+  of Regulation (EU) 2023/956 (CBAM), whether one of the exclusions of Article 2
+  by use, origin or place of production takes those goods outside the Regulation:
+  goods for military activities (Art 2(3)), goods originating in a country or territory
+  of Annex III point 1 (Art 2(4), Art 2(5)), electricity generated and hydrogen originating
+  on the continental shelf or in the exclusive economic zone of a Member State or
+  of an Annex III point 1 country or territory (Art 2(3a) points (a) and (b), Art
+  3 points (8) and (9)), or goods not originating in a third country (Art 2(1), Art
+  3 point (7)). One answer, the first exclusion the keys present decide, in the fixed
+  order of THE LIMBS; a missing key is named, one at a time. Annex III is read as
+  pinned on 20 October 2025. Out of scope: whether goods are Annex I goods (package
+  P4), the non-preferential origin rules of Regulation (EU) No 952/2013 Art 59, the
+  definition of military activities in Delegated Regulation (EU) 2015/2446, the law
+  of the sea, the route of Art 2(2), the electricity exemption of Art 2(7) and Annex
+  III point 2 (empty on the pin), and the application dates of Art 36. The order never
+  says goods are in scope."
+
+sources:
+  - "Regulation (EU) 2023/956 of the European Parliament and of the Council of 10 May
+    2023 establishing a carbon border adjustment mechanism (OJ L 130, 16.5.2023, p.
+    52), consolidated as amended to 2025-10-20 (02023R0956-20251020, Formex CL2023R0956EN0010010.0001.xml,
+    sha256 f5e08d041849ae9025dc60958d93595225d6d8de1dcdc2275656f98b2f132617): Article
+    2(1), 2(3), 2(3a) lead and points (a) and (b), 2(4) and 2(5); Article 3 points
+    (7), (8) and (9); Annex III point 1."
+
+query_interface:
+  2: "origin_exclusions_eligibility/2"   # eligibility verdict triad; cited checklist origin_exclusions_checklist/2
+  16: "origin_exclusions_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings_and_containers
+  units:
+  - 02023R0956-20251020#art_002
+  - 02023R0956-20251020#art_003
+  - 02023R0956-20251020#art_036
+  - 02023R0956-20251020#division_annex_iii
+  - 02023R0956-20251020#point_annex_iii-1_third_countries_and_territories_outside_the_scope_of_this_regulation_1
+  - 02023R0956-20251020#point_annex_iii-2_third_countries_and_territories_outside_the_scope_of_this_regulation_with_regard_to_the_importation_of_electricity_into_the_customs_territory_of_the_union_2
+  reason: 'The headings of Articles 2 and 36, the heading and lead text of Article
+    3 (''the following definitions apply''), the title of Annex III and the numbered
+    headings of its points 1 and 2 carry no rule of their own: document structure.
+    Point 1''s heading is quoted with its body because reading (5) reads the body
+    under it.'
+  consequence: 'None for a caller: the headings carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: scope_route_continental_shelf_structures
+  units:
+  - 02023R0956-20251020#parag_002.002
+  reason: Art 2(2) applies the Regulation to goods brought to an artificial island
+    or a structure on the continental shelf or in the exclusive economic zone of a
+    Member State. It is a route into the Regulation, not an exclusion, and this order
+    answers only the exclusions (reading (11)). Quoted because reading (11) relies
+    on it.
+  consequence: The answers never say whether goods enter the Regulation through Art
+    2(2).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable with the scope routes in a later package; the deferral stands
+    for this run.
+- what: listing_conditions_annex_iii_point_1
+  units:
+  - 02023R0956-20251020#parag_002.006
+  - 02023R0956-20251020#point_002.006_a
+  - 02023R0956-20251020#point_002.006_b
+  reason: Art 2(6) and its points state when a third country or territory 'shall be
+    listed' in point 1 of Annex III. Listing is an act of the Commission (Art 2(11));
+    a caller does not apply the conditions (reading (6)). Quoted because reading (6)
+    relies on it.
+  consequence: A country that meets the conditions of Art 2(6) but is not listed in
+    point 1 is not excluded by this order.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: electricity_market_coupling_and_annex_iii_point_2
+  units:
+  - 02023R0956-20251020#parag_002.007
+  - 02023R0956-20251020#parag_002.008
+  - 02023R0956-20251020#parag_002.009
+  - 02023R0956-20251020#parag_002.010
+  - 02023R0956-20251020#point_002.007_a
+  - 02023R0956-20251020#point_002.007_b
+  - 02023R0956-20251020#point_002.007_c
+  - 02023R0956-20251020#point_002.007_d
+  - 02023R0956-20251020#point_002.007_e
+  - 02023R0956-20251020#point_002.007_f
+  - 02023R0956-20251020#point_002.009_a
+  - 02023R0956-20251020#point_002.009_b
+  - 02023R0956-20251020#point_002.009_c
+  - 02023R0956-20251020#point_003_11
+  - 02023R0956-20251020#division_annex_iii-2_third_countries_and_territories_outside_the_scope_of_this_regulation_with_regard_to_the_importation_of_electricity_into_the_customs_territory_of_the_union
+  reason: Art 2(7) and its points (exemption of electricity from a market-coupled
+    third country, 'provided that the Commission has assessed' the conditions), Art
+    2(8) (such a country 'shall be listed in point 2 of Annex III' and reports), Art
+    2(9) and its points (removal from point 2), Art 2(10) (delegated acts after removal)
+    and Art 3, point (11) (market coupling) are assessments, listings and acts of
+    the Commission. Point 2 of Annex III is an empty placeholder on the pin, so no
+    country qualifies (reading (8), open question Q2). Art 2(7), lead, Art 2(8) and
+    point 2 are quoted because reading (8) relies on them.
+  consequence: The answers give no exclusion for electricity under Art 2(7) or through
+    point 2 of Annex III; a later listing needs a new pin.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: delegated_acts_and_agreements
+  units:
+  - 02023R0956-20251020#parag_002.011
+  - 02023R0956-20251020#parag_002.012
+  reason: 'Art 2(11) empowers the Commission to amend the lists of Annex III by delegated
+    act, and Art 2(12) lets the Union conclude agreements on carbon pricing for Art
+    9: acts of the Commission and the Union. Art 2(11) is quoted because reading (2)
+    relies on it.'
+  consequence: The answers follow Annex III as pinned; a later delegated act is not
+    seen until a new pin.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: importation_and_customs_territory_definitions
+  units:
+  - 02023R0956-20251020#point_003_4
+  - 02023R0956-20251020#point_003_6
+  reason: 'Art 3, point (4) (importation is release for free circulation) and point
+    (6) (the customs territory of the Union is the territory defined in Article 4
+    of Regulation (EU) No 952/2013) are not read by any limb: the order takes origin
+    and place of production as the caller''s keys and never decides whether goods
+    are imported. Point (6) is quoted because reading (9) relies on point (7), which
+    uses its term.'
+  consequence: The answers never say whether goods are imported or where the customs
+    territory ends.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable with the customs-law pin in a later package; the deferral stands
+    for this run.
+- what: application_dates
+  units:
+  - 02023R0956-20251020#parag_036.002
+  - 02023R0956-20251020#point_036.002_a
+  - 02023R0956-20251020#point_036.002_b
+  - 02023R0956-20251020#point_036.002_c
+  - 02023R0956-20251020#point_036.002_d
+  reason: Art 36(2), lead (the Regulation applies from 1 October 2023) and points
+    (a) to (d) (later dates for named articles, Art 2(2) from 1 January 2026 under
+    point (b)). The exclusions of Art 2(3), (3a) and (4) apply from the general date;
+    the order has no date key (reading (2)) and does not answer Art 2(2) (reading
+    (11)).
+  consequence: The answers say nothing about the dates from which the articles apply.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as dates per article; not needed while the order has no date
+    key.
+
+excluded_set:
+- what: annex_i_goods
+  instrument: Regulation (EU) 2023/956 Annex I (package P4)
+  cites:
+  - 02023R0956-20251020#point_annex_i_1
+  reason: Which goods are listed in Annex I is decided by the Annex I package (P4),
+    not here; the caller states the kind of goods and every answer is about goods
+    the caller treats as Annex I goods (reading (1)).
+  consequence: The answers never classify goods by CN code.
+- what: non_preferential_origin_rules
+  instrument: Regulation (EU) No 952/2013 (Union Customs Code) Article 59 and the
+    rules it refers to
+  cites:
+  - 32013R0952#art_059
+  reason: The non-preferential origin rules to which Art 2(5) refers are not pinned;
+    the caller states the origin (reading (3)).
+  consequence: The answers never compute origin; a wrong origin given by the caller
+    gives a wrong answer.
+- what: military_activities_definition
+  instrument: Commission Delegated Regulation (EU) 2015/2446 Article 1, point (49)
+  cites:
+  - 32015R2446#art_001
+  reason: The definition to which Art 2(3) refers is not pinned; the caller states
+    whether the goods are for military activities (reading (4)).
+  consequence: The answers never decide what counts as military activities.
+- what: law_of_the_sea_zones
+  instrument: United Nations Convention on the Law of the Sea Articles 55 and 76
+  cites:
+  - UNCLOS#art_076
+  reason: Art 3, points (8) and (9) define the continental shelf and the exclusive
+    economic zone by reference to the Convention, which is not pinned; the caller
+    states whose shelf or zone the goods came from (reading (7)).
+  consequence: The answers never decide where a continental shelf or an exclusive
+    economic zone lies.

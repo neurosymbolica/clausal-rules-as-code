@@ -1,0 +1,524 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% virginia_vcdpa.clausal -- the virginia_vcdpa DETERMINATION for us/virginia_vcdpa,
+% self-contained top to bottom: its statutory VALUE facts, its derived
+% arithmetic, its per-rule tests, its checklist and its verdict assembly.
+%
+% Source: Consumer Data Protection Act, Code of Virginia Title 59.1
+% chapter 53, pinned unit text from the Virginia LIS web copy fetched
+% 2026-11-16 (document va-code-59-1-ch53-2026-11-16-lis-copy). The copy is
+% secondary and carries no in-force-as-of line (open question Q13).
+% Provisions formalised: Va. Code 59.1-576(A), (B); 59.1-577(B)(1),
+% (B)(2), (C); 59.1-584(B), (C).
+%
+% The seven queries of THE CALLED CONTRACT:
+%   applicability_status/3          59.1-576(A), (B)
+%   response_deadline/4             59.1-577(B)(1), (B)(2)
+%   extended_response_deadline/4    59.1-577(B)(1)
+%   appeal_response_deadline/4      59.1-577(C)
+%   cure_period_last_day/4          59.1-584(B)
+%   attorney_general_action_status/5  59.1-584(B), (C)
+%   civil_penalty_maximum/3         59.1-584(C)
+% Each takes step (0) first (query_problems/3 of the kernel), then its
+% limbs in the order of THE LIMBS, by disjoint guarded clauses; each
+% yields exactly one solution.
+%
+% Counting days (reading (4)): N days after a date is the date N calendar
+% days later; the day of the event is not counted and the last day is
+% never moved for a weekend or holiday (open questions Q1, Q2).
+% =====================================================================
+
+:- module(virginia_vcdpa, [
+    applicability_status/3,
+    response_deadline/4,
+    extended_response_deadline/4,
+    appeal_response_deadline/4,
+    cure_period_last_day/4,
+    attorney_general_action_status/5,
+    civil_penalty_maximum/3,
+    in_scope/0,
+    out_of_scope/0,
+    exempt_entity/0,
+    no_extension_available/0,
+    notice_not_yet_provided/0,
+    cure_period_running/0,
+    action_may_be_initiated/0,
+    no_action_for_cured_violation/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    decide_virginia_vcdpa/2,
+    virginia_vcdpa_status/2,
+    virginia_vcdpa_checklist/2,
+    virginia_vcdpa_decision_resolvable/1,
+    virginia_vcdpa_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(datetime), [timedelta/3, date_add/3]).
+:- use_module(us/virginia_vcdpa/kernel, [query_problems/3, value_or_absent/3]).
+:- use_module(us/virginia_vcdpa/citations, [implements/1]).
+
+% ---- result constructors (exported, data only: no clauses) -----------
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% Va. Code 59.1-576(A): at least 100,000 consumers; at least 25,000
+% consumers with over 50 percent of gross revenue from sale.
+:- constant_value(general_consumer_threshold, 100000).
+:- constant_value(sale_consumer_threshold, 25000).
+% Va. Code 59.1-577(B)(1), (B)(2): 45 days; extended once by 45 days.
+:- constant_value(response_period_days, 45).
+:- constant_value(extension_period_days, 45).
+% Va. Code 59.1-577(C): 60 days.
+:- constant_value(appeal_period_days, 60).
+% Va. Code 59.1-584(B): 30 days' written notice.
+:- constant_value(cure_period_days, 30).
+% Va. Code 59.1-584(C): up to $7,500 for each violation (whole dollars).
+:- constant_value(civil_penalty_per_violation_dollars, 7500).
+
+% statutory_figure(ConstantName, Citation): each figure and its provision.
+statutory_figure(general_consumer_threshold, cite(us_va_code_59_1_576_a)).
+statutory_figure(sale_consumer_threshold, cite(us_va_code_59_1_576_a)).
+statutory_figure(response_period_days, cite(us_va_code_59_1_577_b_1)).
+statutory_figure(response_period_days, cite(us_va_code_59_1_577_b_2)).
+statutory_figure(extension_period_days, cite(us_va_code_59_1_577_b_1)).
+statutory_figure(appeal_period_days, cite(us_va_code_59_1_577_c)).
+statutory_figure(cure_period_days, cite(us_va_code_59_1_584_b)).
+statutory_figure(civil_penalty_per_violation_dollars, cite(us_va_code_59_1_584_c)).
+
+% exempt_category(Category, Citation): the five exempt persons of
+% Va. Code 59.1-576(B) (reading (3)).
+% lint: allow-abbreviation(contract atom)
+exempt_category(public_body_of_the_commonwealth, cite(us_va_code_59_1_576_b)).
+% lint: allow-abbreviation(contract atom)
+exempt_category(financial_institution_subject_to_glba, cite(us_va_code_59_1_576_b)).
+% lint: allow-abbreviation(contract atom)
+exempt_category(hipaa_covered_entity_or_business_associate, cite(us_va_code_59_1_576_b)).
+exempt_category(nonprofit_organization, cite(us_va_code_59_1_576_b)).
+exempt_category(institution_of_higher_education, cite(us_va_code_59_1_576_b)).
+
+% The verdict vocabulary of applicability_status/3 (property tests).
+virginia_vcdpa_status_values([in_scope, out_of_scope, exempt_entity]).
+
+% ---- answer atoms (exported, never called as queries) ----------------
+in_scope.
+out_of_scope.
+exempt_entity.
+no_extension_available.
+notice_not_yet_provided.
+cure_period_running.
+action_may_be_initiated.
+no_action_for_cured_violation.
+
+% ---- counting days (reading (4)) -------------------------------------
+% days_after(StartDate, PeriodDays, EndDate): EndDate is PeriodDays
+% calendar days after StartDate; StartDate itself is not counted.
+days_after(StartDate, PeriodDays, EndDate) :-
+    timedelta(PeriodDays, 0, PeriodDelta),
+    date_add(StartDate, PeriodDelta, EndDate).
+
+% =====================================================================
+% APPLICABILITY_STATUS -- Va. Code 59.1-576(A), (B)
+% =====================================================================
+applicability_status(Profile, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [], [Problem|Problems]).
+applicability_status(Profile, Result, Citations) :-
+    query_problems(Profile, [], []),
+    value_or_absent(Profile, entity_category, Category),
+    entity_route(Category, Profile, Result, Citations).
+
+% Step (1): entity_category absent.
+entity_route(absent, _, indeterminate([entity_category]), []) :-
+    implements(us_va_code_59_1_576_b).
+% Step (2): an exempt category decides alone. The caller applies the
+% 59.1-575 definitions of nonprofit organization and institution of higher
+% education when it states the category (deferred).
+entity_route(Category, _, exempt_entity, [cite(us_va_code_59_1_576_b)]) :-
+    implements(us_va_code_59_1_576_b),
+    implements(us_va_code_59_1_575_nonprofit_organization),
+    implements(us_va_code_59_1_575_institution_of_higher_education),
+    exempt_category(Category, _).
+% Steps (3) to (6): a non-exempt person. The caller applies the 59.1-575
+% definitions of consumer, personal data and sale of personal data when it
+% states the count and the revenue share (deferred).
+entity_route(none_of_the_exempt_categories, Profile, Result, Citations) :-
+    implements(us_va_code_59_1_576_a),
+    implements(us_va_code_59_1_575_consumer),
+    implements(us_va_code_59_1_575_personal_data),
+    implements(us_va_code_59_1_575_sale_of_personal_data),
+    value_or_absent(Profile, conducts_business_in_or_targets_virginia, BusinessLink),
+    value_or_absent(Profile, consumer_count, ConsumerCount),
+    value_or_absent(Profile, over_half_of_gross_revenue_from_sale, OverHalf),
+    count_band(ConsumerCount, CountBand),
+    threshold_status(CountBand, OverHalf, ThresholdStatus),
+    business_route(BusinessLink, ThresholdStatus, Result, Citations).
+
+% count_band(ConsumerCount, CountBand): where the count falls against the
+% two thresholds of 59.1-576(A) (at least 25,000; at least 100,000).
+count_band(absent, count_absent).
+count_band(ConsumerCount, below_sale_threshold) :-
+    implements(us_va_code_59_1_576_a),
+    integer(ConsumerCount),
+    ConsumerCount #< constant(sale_consumer_threshold).
+count_band(ConsumerCount, sale_threshold_band) :-
+    implements(us_va_code_59_1_576_a),
+    integer(ConsumerCount),
+    ConsumerCount #>= constant(sale_consumer_threshold),
+    ConsumerCount #< constant(general_consumer_threshold).
+count_band(ConsumerCount, general_threshold_met) :-
+    implements(us_va_code_59_1_576_a),
+    integer(ConsumerCount),
+    ConsumerCount #>= constant(general_consumer_threshold).
+
+% threshold_status(CountBand, OverHalf, Status): clause (i) or (ii) of
+% 59.1-576(A) met, unmet, or a missing key (the revenue share is
+% needed only for a count from 25,000 to 99,999).
+threshold_status(count_absent, _, missing(consumer_count)) :-
+    implements(us_va_code_59_1_576_a).
+threshold_status(below_sale_threshold, _, unmet) :-
+    implements(us_va_code_59_1_576_a).
+threshold_status(sale_threshold_band, false, unmet) :-
+    implements(us_va_code_59_1_576_a).
+threshold_status(sale_threshold_band, true, met) :-
+    implements(us_va_code_59_1_576_a).
+threshold_status(sale_threshold_band, absent, missing(over_half_of_gross_revenue_from_sale)) :-
+    implements(us_va_code_59_1_576_a).
+threshold_status(general_threshold_met, _, met) :-
+    implements(us_va_code_59_1_576_a).
+
+% business_route(BusinessLink, ThresholdStatus, Result, Citations).
+% Step (3): a false business link or an unmet threshold decides.
+business_route(false, _, out_of_scope, [cite(us_va_code_59_1_576_a)]) :-
+    implements(us_va_code_59_1_576_a).
+business_route(BusinessLink, unmet, out_of_scope, [cite(us_va_code_59_1_576_a)]) :-
+    implements(us_va_code_59_1_576_a),
+    dif(BusinessLink, false).
+% Step (4): the first absent key in root_exports order.
+business_route(absent, ThresholdStatus, indeterminate([conducts_business_in_or_targets_virginia]), []) :-
+    implements(us_va_code_59_1_576_a),
+    dif(ThresholdStatus, unmet).
+business_route(true, missing(MissingKey), indeterminate([MissingKey]), []) :-
+    implements(us_va_code_59_1_576_a).
+business_route(unsure, missing(MissingKey), indeterminate([MissingKey]), []) :-
+    implements(us_va_code_59_1_576_a).
+% Step (5): the judgement is unsure and nothing else is missing.
+business_route(unsure,
+               met,
+               needs_legal_review(open_textured(conducts_business_in_or_targets_virginia, cite(us_va_code_59_1_576_a)),
+                                  [inputs_relied_on([conducts_business_in_or_targets_virginia-unsure])]),
+               []) :-
+    implements(us_va_code_59_1_576_a).
+% Step (6): covered.
+business_route(true, met, in_scope, [cite(us_va_code_59_1_576_a)]) :-
+    implements(us_va_code_59_1_576_a).
+
+% =====================================================================
+% RESPONSE_DEADLINE -- Va. Code 59.1-577(B)(1), (B)(2)
+% =====================================================================
+response_deadline(Profile, ReceivedDate, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [received_date-ReceivedDate], [Problem|Problems]).
+response_deadline(Profile,
+                  ReceivedDate,
+                  DeadlineDate,
+                  [cite(us_va_code_59_1_577_b_1), cite(us_va_code_59_1_577_b_2)]) :-
+    implements(us_va_code_59_1_577_b_2),
+    query_problems(Profile, [received_date-ReceivedDate], []),
+    response_period_last_day(ReceivedDate, DeadlineDate).
+
+% Step (7): RECEIVED plus 45 days, the latest day for both duties. The
+% lead-in of 59.1-577(B) ('except as otherwise provided') is deferred.
+response_period_last_day(ReceivedDate, DeadlineDate) :-
+    implements(us_va_code_59_1_577_b),
+    implements(us_va_code_59_1_577_b_1),
+    PeriodDays #= constant(response_period_days),
+    days_after(ReceivedDate, PeriodDays, DeadlineDate).
+
+% =====================================================================
+% EXTENDED_RESPONSE_DEADLINE -- Va. Code 59.1-577(B)(1)
+% =====================================================================
+extended_response_deadline(Profile, ReceivedDate, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [received_date-ReceivedDate], [Problem|Problems]).
+extended_response_deadline(Profile, ReceivedDate, DeadlineDate, Citations) :-
+    query_problems(Profile, [received_date-ReceivedDate], []),
+    value_or_absent(Profile, extension_reasonably_necessary, Necessary),
+    value_or_absent(Profile, extension_notice_given_within_initial_period, NoticeGiven),
+    extension_route(Necessary, NoticeGiven, ReceivedDate, DeadlineDate, Citations).
+
+% Step (8): no timely notice of the extension.
+extension_route(_, false, _, no_extension_available, [cite(us_va_code_59_1_577_b_1)]) :-
+    implements(us_va_code_59_1_577_b_1).
+% Step (9): the extension is not reasonably necessary.
+extension_route(false, NoticeGiven, _, no_extension_available, [cite(us_va_code_59_1_577_b_1)]) :-
+    implements(us_va_code_59_1_577_b_1),
+    dif(NoticeGiven, false).
+% Step (10): the first absent key in root_exports order.
+extension_route(absent, NoticeGiven, _, indeterminate([extension_reasonably_necessary]), []) :-
+    implements(us_va_code_59_1_577_b_1),
+    dif(NoticeGiven, false).
+extension_route(true, absent, _, indeterminate([extension_notice_given_within_initial_period]), []) :-
+    implements(us_va_code_59_1_577_b_1).
+extension_route(unsure, absent, _, indeterminate([extension_notice_given_within_initial_period]), []) :-
+    implements(us_va_code_59_1_577_b_1).
+% Step (11): the judgement is unsure and nothing else is missing.
+extension_route(unsure,
+                true,
+                _,
+                needs_legal_review(open_textured(extension_reasonably_necessary, cite(us_va_code_59_1_577_b_1)),
+                                   [inputs_relied_on([extension_reasonably_necessary-unsure])]),
+                []) :-
+    implements(us_va_code_59_1_577_b_1).
+% Step (12): RECEIVED plus 45 plus 45 additional days.
+extension_route(true, true, ReceivedDate, DeadlineDate, [cite(us_va_code_59_1_577_b_1)]) :-
+    implements(us_va_code_59_1_577_b_1),
+    extended_period_last_day(ReceivedDate, DeadlineDate).
+
+extended_period_last_day(ReceivedDate, DeadlineDate) :-
+    implements(us_va_code_59_1_577_b_1),
+    PeriodDays #= constant(response_period_days) + constant(extension_period_days),
+    days_after(ReceivedDate, PeriodDays, DeadlineDate).
+
+% =====================================================================
+% APPEAL_RESPONSE_DEADLINE -- Va. Code 59.1-577(C)
+% =====================================================================
+appeal_response_deadline(Profile, AppealReceivedDate, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [appeal_received_date-AppealReceivedDate], [Problem|Problems]).
+appeal_response_deadline(Profile, AppealReceivedDate, DeadlineDate, [cite(us_va_code_59_1_577_c)]) :-
+    implements(us_va_code_59_1_577_c),
+    query_problems(Profile, [appeal_received_date-AppealReceivedDate], []),
+    appeal_period_last_day(AppealReceivedDate, DeadlineDate).
+
+% Step (13): APPEAL_RECEIVED plus 60 days; no extension.
+appeal_period_last_day(AppealReceivedDate, DeadlineDate) :-
+    implements(us_va_code_59_1_577_c),
+    PeriodDays #= constant(appeal_period_days),
+    days_after(AppealReceivedDate, PeriodDays, DeadlineDate).
+
+% =====================================================================
+% CURE_PERIOD_LAST_DAY -- Va. Code 59.1-584(B)
+% =====================================================================
+cure_period_last_day(Profile, NoticeDate, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [notice_date-NoticeDate], [Problem|Problems]).
+cure_period_last_day(Profile, NoticeDate, LastDay, [cite(us_va_code_59_1_584_b)]) :-
+    implements(us_va_code_59_1_584_b),
+    query_problems(Profile, [notice_date-NoticeDate], []),
+    cure_period_end(NoticeDate, LastDay).
+
+% Step (14): NOTICE_DATE plus 30 days.
+cure_period_end(NoticeDate, LastDay) :-
+    implements(us_va_code_59_1_584_b),
+    PeriodDays #= constant(cure_period_days),
+    days_after(NoticeDate, PeriodDays, LastDay).
+
+% =====================================================================
+% ATTORNEY_GENERAL_ACTION_STATUS -- Va. Code 59.1-584(B), (C)
+% =====================================================================
+attorney_general_action_status(Profile, NoticeDate, ReferenceDate, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [notice_date-NoticeDate, reference_date-ReferenceDate], [Problem|Problems]).
+attorney_general_action_status(Profile, NoticeDate, ReferenceDate, Result, Citations) :-
+    query_problems(Profile, [notice_date-NoticeDate, reference_date-ReferenceDate], []),
+    cure_period_end(NoticeDate, LastDay),
+    period_position(NoticeDate, LastDay, ReferenceDate, Position),
+    action_route(Position, Profile, Result, Citations).
+
+% period_position(NoticeDate, LastDay, ReferenceDate, Position).
+period_position(NoticeDate, _, ReferenceDate, before_notice) :-
+    implements(us_va_code_59_1_584_b),
+    ReferenceDate @< NoticeDate.
+period_position(NoticeDate, LastDay, ReferenceDate, within_cure_period) :-
+    implements(us_va_code_59_1_584_b),
+    ReferenceDate @>= NoticeDate,
+    ReferenceDate @=< LastDay.
+period_position(_, LastDay, ReferenceDate, after_cure_period) :-
+    implements(us_va_code_59_1_584_b),
+    ReferenceDate @> LastDay.
+
+% Step (15): before the notice.
+action_route(before_notice, _, notice_not_yet_provided, [cite(us_va_code_59_1_584_b)]) :-
+    implements(us_va_code_59_1_584_b).
+% Step (16): the cure period runs, both ends included (Q9).
+action_route(within_cure_period, _, cure_period_running, [cite(us_va_code_59_1_584_b)]) :-
+    implements(us_va_code_59_1_584_b).
+% Steps (17) to (19): after the cure period.
+action_route(after_cure_period, Profile, Result, Citations) :-
+    implements(us_va_code_59_1_584_c),
+    value_or_absent(Profile, cured_with_express_written_statement, Cured),
+    value_or_absent(Profile, continued_violation_or_statement_breached, Continued),
+    after_cure_route(Cured, Continued, Result, Citations).
+
+% Step (17): not cured with a statement, or continued or breached (Q10).
+after_cure_route(false, _, action_may_be_initiated, [cite(us_va_code_59_1_584_b), cite(us_va_code_59_1_584_c)]) :-
+    implements(us_va_code_59_1_584_c).
+after_cure_route(Cured, true, action_may_be_initiated, [cite(us_va_code_59_1_584_b), cite(us_va_code_59_1_584_c)]) :-
+    implements(us_va_code_59_1_584_c),
+    dif(Cured, false).
+% Step (18): the first absent key in root_exports order.
+after_cure_route(absent, Continued, indeterminate([cured_with_express_written_statement]), []) :-
+    implements(us_va_code_59_1_584_b),
+    dif(Continued, true).
+after_cure_route(true, absent, indeterminate([continued_violation_or_statement_breached]), []) :-
+    implements(us_va_code_59_1_584_c).
+% Step (19): cured in time with a statement, not continued.
+after_cure_route(true, false, no_action_for_cured_violation, [cite(us_va_code_59_1_584_b)]) :-
+    implements(us_va_code_59_1_584_b).
+
+% =====================================================================
+% CIVIL_PENALTY_MAXIMUM -- Va. Code 59.1-584(C)
+% =====================================================================
+civil_penalty_maximum(Profile, input_problems([Problem|Problems]), []) :-
+    query_problems(Profile, [], [Problem|Problems]).
+civil_penalty_maximum(Profile, Maximum, Citations) :-
+    query_problems(Profile, [], []),
+    value_or_absent(Profile, violation_count, ViolationCount),
+    penalty_route(ViolationCount, Maximum, Citations).
+
+% Step (20): violation_count absent.
+penalty_route(absent, indeterminate([violation_count]), []) :-
+    implements(us_va_code_59_1_584_c).
+% Step (21): 7,500 dollars times violation_count, an exact integer.
+penalty_route(ViolationCount, MaximumDollars, [cite(us_va_code_59_1_584_c)]) :-
+    implements(us_va_code_59_1_584_c),
+    integer(ViolationCount),
+    MaximumDollars #= ViolationCount * constant(civil_penalty_per_violation_dollars).
+
+% =====================================================================
+% FACADE: verdict, status projection, checklist
+% =====================================================================
+decide_virginia_vcdpa(Profile, virginia_vcdpa_verdict(Status, Citations)) :-
+    applicability_status(Profile, Status, Citations).
+
+virginia_vcdpa_status(Profile, Status) :-
+    decide_virginia_vcdpa(Profile, virginia_vcdpa_verdict(Status, _Citations)).
+
+virginia_vcdpa_decision_resolvable(Profile) :-
+    decide_virginia_vcdpa(Profile, _Verdict).
+
+% virginia_vcdpa_checklist(Profile, Items): one item/3 row per ground of
+% 59.1-576: not an exempt person (B), business link (A), threshold (A).
+% A profile with input problems has no checklist rows.
+virginia_vcdpa_checklist(Profile, []) :-
+    query_problems(Profile, [], [_|_]).
+virginia_vcdpa_checklist(Profile, [ExemptionItem, BusinessItem, ThresholdItem]) :-
+    query_problems(Profile, [], []),
+    value_or_absent(Profile, entity_category, Category),
+    value_or_absent(Profile, conducts_business_in_or_targets_virginia, BusinessLink),
+    value_or_absent(Profile, consumer_count, ConsumerCount),
+    value_or_absent(Profile, over_half_of_gross_revenue_from_sale, OverHalf),
+    exemption_item(Category, ExemptionItem),
+    business_item(BusinessLink, BusinessItem),
+    count_band(ConsumerCount, CountBand),
+    threshold_status(CountBand, OverHalf, ThresholdStatus),
+    threshold_item(ThresholdStatus, ThresholdItem).
+
+exemption_item(absent, item(not_an_exempt_person, unknown([entity_category]), cite(us_va_code_59_1_576_b))) :-
+    implements(us_va_code_59_1_576_b).
+exemption_item(Category, item(not_an_exempt_person, unmet(exempt_category(Category)), cite(us_va_code_59_1_576_b))) :-
+    implements(us_va_code_59_1_576_b),
+    exempt_category(Category, _).
+exemption_item(none_of_the_exempt_categories, item(not_an_exempt_person, met, cite(us_va_code_59_1_576_b))) :-
+    implements(us_va_code_59_1_576_b).
+
+business_item(true, item(business_link_to_virginia, met, cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+business_item(false, item(business_link_to_virginia, unmet(no_business_link), cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+business_item(unsure, item(business_link_to_virginia, unknown([conducts_business_in_or_targets_virginia]), cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+business_item(absent, item(business_link_to_virginia, unknown([conducts_business_in_or_targets_virginia]), cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+
+threshold_item(met, item(consumer_threshold, met, cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+threshold_item(unmet, item(consumer_threshold, unmet(below_consumer_threshold), cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+threshold_item(missing(MissingKey), item(consumer_threshold, unknown([MissingKey]), cite(us_va_code_59_1_576_a))) :-
+    implements(us_va_code_59_1_576_a).
+
+% ---- tests ---------------------------------------------------------
+test(an_exempt_category_decides_alone) :-
+    findall(Result-Citations,
+            applicability_status([attribute(entity_category, nonprofit_organization), attribute(consumer_count, 5)], Result, Citations),
+            Answers),
+    Answers == [exempt_entity-[cite(us_va_code_59_1_576_b)]].
+test(entity_category_is_asked_first) :-
+    findall(Result, applicability_status([], Result, []), Results),
+    Results == [indeterminate([entity_category])].
+test(exactly_one_hundred_thousand_is_in_scope) :-
+    findall(Result-Citations,
+            applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(consumer_count, 100000)], Result, Citations),
+            Answers),
+    Answers == [in_scope-[cite(us_va_code_59_1_576_a)]].
+test(exactly_twenty_five_thousand_with_revenue_is_in_scope) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(consumer_count, 25000), attribute(over_half_of_gross_revenue_from_sale, true)], in_scope, _).
+test(middle_band_without_revenue_names_revenue) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(consumer_count, 99999)], indeterminate([over_half_of_gross_revenue_from_sale]), []).
+test(middle_band_without_revenue_is_not_in_scope, fail) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(consumer_count, 99999)], in_scope, _).
+test(a_small_count_is_out_of_scope_even_when_unsure) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, unsure), attribute(consumer_count, 24999)], out_of_scope, [cite(us_va_code_59_1_576_a)]).
+test(an_absent_count_is_named_not_the_revenue) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true)], indeterminate([consumer_count]), []).
+test(an_absent_business_link_is_named_first) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories)], indeterminate([conducts_business_in_or_targets_virginia]), []).
+test(an_unsure_business_link_goes_to_a_lawyer) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, unsure), attribute(consumer_count, 200000)], needs_legal_review(open_textured(conducts_business_in_or_targets_virginia, cite(us_va_code_59_1_576_a)), [inputs_relied_on([conducts_business_in_or_targets_virginia-unsure])]), []).
+test(input_problems_come_first) :-
+    applicability_status([attribute(colour, red)], input_problems([unknown_key(colour)]), []).
+test(response_deadline_is_forty_five_days_later) :-
+    findall(Deadline, response_deadline([], date(2026, 1, 1), Deadline, _), Deadlines),
+    length(Deadlines, 1),
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 15), [cite(us_va_code_59_1_577_b_1), cite(us_va_code_59_1_577_b_2)]).
+test(an_unreal_date_is_a_problem) :-
+    response_deadline([], date(2026, 2, 30), input_problems([wrong_type(received_date)]), []).
+test(extension_gives_ninety_days) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, true), attribute(extension_notice_given_within_initial_period, true)], date(2026, 1, 1), date(2026, 4, 1), [cite(us_va_code_59_1_577_b_1)]).
+test(late_notice_means_no_extension) :-
+    extended_response_deadline([attribute(extension_notice_given_within_initial_period, false)], date(2026, 1, 1), no_extension_available, [cite(us_va_code_59_1_577_b_1)]).
+test(late_notice_gives_no_date, fail) :-
+    extended_response_deadline([attribute(extension_notice_given_within_initial_period, false)], date(2026, 1, 1), date(2026, 4, 1), _).
+test(unsure_need_with_absent_notice_names_the_notice) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, unsure)], date(2026, 1, 1), indeterminate([extension_notice_given_within_initial_period]), []).
+test(appeal_deadline_is_sixty_days_later) :-
+    appeal_response_deadline([], date(2026, 1, 1), date(2026, 3, 2), [cite(us_va_code_59_1_577_c)]).
+test(cure_period_ends_thirty_days_later) :-
+    cure_period_last_day([], date(2026, 1, 1), date(2026, 1, 31), [cite(us_va_code_59_1_584_b)]).
+test(the_last_day_of_the_cure_period_is_running) :-
+    attorney_general_action_status([], date(2026, 1, 1), date(2026, 1, 31), cure_period_running, [cite(us_va_code_59_1_584_b)]).
+test(before_the_notice_no_notice_is_provided) :-
+    attorney_general_action_status([], date(2026, 1, 10), date(2026, 1, 9), notice_not_yet_provided, _).
+test(after_the_cure_period_an_uncured_violation_allows_action) :-
+    findall(Result, attorney_general_action_status([attribute(cured_with_express_written_statement, false)], date(2026, 1, 1), date(2026, 2, 1), Result, _), Results),
+    Results == [action_may_be_initiated].
+test(after_the_cure_period_a_cured_violation_bars_action) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, true), attribute(continued_violation_or_statement_breached, false)], date(2026, 1, 1), date(2026, 2, 1), no_action_for_cured_violation, [cite(us_va_code_59_1_584_b)]).
+test(after_the_cure_period_absent_facts_name_the_cure) :-
+    attorney_general_action_status([], date(2026, 1, 1), date(2026, 2, 1), indeterminate([cured_with_express_written_statement]), []).
+test(penalty_is_seven_thousand_five_hundred_each) :-
+    civil_penalty_maximum([attribute(violation_count, 3)], Maximum, [cite(us_va_code_59_1_584_c)]),
+    Maximum =:= 22500.
+test(zero_violations_give_zero) :-
+    civil_penalty_maximum([attribute(violation_count, 0)], Maximum, _),
+    Maximum =:= 0.
+test(penalty_needs_the_count) :-
+    civil_penalty_maximum([], indeterminate([violation_count]), []).
+test(checklist_has_three_rows) :-
+    virginia_vcdpa_checklist([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(consumer_count, 100000)], Items),
+    length(Items, 3).
+
+:- end_module(virginia_vcdpa).

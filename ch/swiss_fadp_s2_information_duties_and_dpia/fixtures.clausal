@@ -1,0 +1,187 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for ch/swiss_fadp_s2_information_duties_and_dpia.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...]. Most
+% subjects are the BASELINE (a private controller collecting data from the
+% data subject, every other key false: all forty-two keys present, so every
+% query is final) with a few keys changed. Each route has a positive case
+% and a near-miss control that changes one fact and gets the other answer:
+%   already_informed_exception           / private_controller_must_inform
+%   private_secrecy_exception            / federal_body_secrecy_near_miss
+%   indirect_collection_disproportionate_effort
+%                                        / direct_collection_disproportionate_effort_near_miss
+%   private_interests_without_disclosure / private_interests_with_disclosure_near_miss
+%   federal_investigation_restriction    / federal_body_without_restriction_ground
+%   automated_decision_contract_request_granted
+%                                        / automated_decision_contract_request_refused
+%   federal_automated_decision_without_hearing
+%                                        / federal_automated_decision_with_hearing
+%   private_controller_obliged_by_law    / federal_body_obliged_by_law_near_miss
+%   complete_code_of_conduct_may_omit_assessment
+%                                        / code_of_conduct_not_submitted_near_miss
+%   eu_article_35_10_exemption           / eu_listed_case_without_exemption
+%   eu_indirect_professional_secrecy     / eu_direct_professional_secrecy_near_miss
+%   disclosure_abroad_with_safeguards    / reliance_without_disclosure_abroad
+% plus the status subjects (already_informed_unsure,
+% malformed_federal_body_value). The empty profile is exercised directly
+% in the tests, not as a fixture: every fixture is a populated profile, so
+% its one-key neighbours stay cheap for the comparison queries. There is no
+% numeric threshold.
+% =====================================================================
+
+:- module(fixtures, [
+    swiss_fadp_s2_information_duties_and_dpia_subject/1,
+    swiss_fadp_s2_information_duties_and_dpia_profile_for/2,
+    swiss_fadp_s2_information_duties_and_dpia_assess/2
+]).
+
+:- use_module(ch/swiss_fadp_s2_information_duties_and_dpia/swiss_fadp_s2_information_duties_and_dpia, [decide_swiss_fadp_s2_information_duties_and_dpia/2]).
+
+% ---- Subject registry ------------------------------------------------
+swiss_fadp_s2_information_duties_and_dpia_subject(private_controller_must_inform).
+swiss_fadp_s2_information_duties_and_dpia_subject(already_informed_exception).
+swiss_fadp_s2_information_duties_and_dpia_subject(private_secrecy_exception).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_body_secrecy_near_miss).
+swiss_fadp_s2_information_duties_and_dpia_subject(indirect_collection_disproportionate_effort).
+swiss_fadp_s2_information_duties_and_dpia_subject(direct_collection_disproportionate_effort_near_miss).
+swiss_fadp_s2_information_duties_and_dpia_subject(third_party_interests_restriction).
+swiss_fadp_s2_information_duties_and_dpia_subject(private_interests_without_disclosure).
+swiss_fadp_s2_information_duties_and_dpia_subject(private_interests_with_disclosure_near_miss).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_investigation_restriction).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_body_without_restriction_ground).
+swiss_fadp_s2_information_duties_and_dpia_subject(exception_prevails_over_restriction).
+swiss_fadp_s2_information_duties_and_dpia_subject(already_informed_unsure).
+swiss_fadp_s2_information_duties_and_dpia_subject(malformed_federal_body_value).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_private_controller).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_explicit_consent).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_contract_request_granted).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_contract_request_refused).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_automated_decision_without_hearing).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_automated_decision_with_hearing).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_both_regimes).
+swiss_fadp_s2_information_duties_and_dpia_subject(automated_decision_eu_already_informed).
+swiss_fadp_s2_information_duties_and_dpia_subject(high_risk_both_regimes).
+swiss_fadp_s2_information_duties_and_dpia_subject(private_controller_obliged_by_law).
+swiss_fadp_s2_information_duties_and_dpia_subject(federal_body_obliged_by_law_near_miss).
+swiss_fadp_s2_information_duties_and_dpia_subject(certified_system_may_omit_assessment).
+swiss_fadp_s2_information_duties_and_dpia_subject(complete_code_of_conduct_may_omit_assessment).
+swiss_fadp_s2_information_duties_and_dpia_subject(code_of_conduct_not_submitted_near_miss).
+swiss_fadp_s2_information_duties_and_dpia_subject(eu_article_35_10_exemption).
+swiss_fadp_s2_information_duties_and_dpia_subject(eu_listed_case_without_exemption).
+swiss_fadp_s2_information_duties_and_dpia_subject(disclosure_abroad_with_safeguards).
+swiss_fadp_s2_information_duties_and_dpia_subject(reliance_without_disclosure_abroad).
+swiss_fadp_s2_information_duties_and_dpia_subject(both_regimes_already_informed).
+swiss_fadp_s2_information_duties_and_dpia_subject(eu_indirect_professional_secrecy).
+swiss_fadp_s2_information_duties_and_dpia_subject(eu_direct_professional_secrecy_near_miss).
+
+% ---- Changes to the baseline, per subject -----------------------------
+subject_overrides(private_controller_must_inform, []).
+subject_overrides(already_informed_exception, [data_subject_already_has_information-true]).
+subject_overrides(private_secrecy_exception, [controller_bound_by_statutory_secrecy-true]).
+subject_overrides(federal_body_secrecy_near_miss, [controller_is_federal_body-true, controller_bound_by_statutory_secrecy-true]).
+subject_overrides(indirect_collection_disproportionate_effort, [personal_data_collected_from_data_subject-false, information_impossible_or_requires_disproportionate_effort-true]).
+subject_overrides(direct_collection_disproportionate_effort_near_miss, [information_impossible_or_requires_disproportionate_effort-true]).
+subject_overrides(third_party_interests_restriction, [overriding_third_party_interests_require_restriction-true]).
+subject_overrides(private_interests_without_disclosure, [overriding_controller_interests_require_restriction-true]).
+subject_overrides(private_interests_with_disclosure_near_miss, [overriding_controller_interests_require_restriction-true, controller_discloses_personal_data_to_third_parties-true]).
+subject_overrides(federal_investigation_restriction, [controller_is_federal_body-true, information_may_endanger_investigation_or_proceedings-true]).
+subject_overrides(federal_body_without_restriction_ground, [controller_is_federal_body-true]).
+subject_overrides(exception_prevails_over_restriction, [data_subject_already_has_information-true, overriding_third_party_interests_require_restriction-true]).
+subject_overrides(already_informed_unsure, [data_subject_already_has_information-unsure]).
+subject_overrides(automated_decision_private_controller, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true]).
+subject_overrides(automated_decision_explicit_consent, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, data_subject_explicitly_consented_to_automated_decision-true]).
+subject_overrides(automated_decision_contract_request_granted, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, decision_directly_related_to_contract_with_data_subject-true, data_subject_request_granted-true]).
+subject_overrides(automated_decision_contract_request_refused, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, decision_directly_related_to_contract_with_data_subject-true]).
+subject_overrides(federal_automated_decision_without_hearing, [controller_is_federal_body-true, decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, data_subject_need_not_be_heard_before_decision-true]).
+subject_overrides(federal_automated_decision_with_hearing, [controller_is_federal_body-true, decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true]).
+subject_overrides(automated_decision_both_regimes, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, eu_decision_based_solely_on_automated_processing-true, eu_decision_has_legal_or_similarly_significant_effects-true]).
+subject_overrides(automated_decision_eu_already_informed, [decision_based_solely_on_automated_processing-true, decision_has_legal_consequence_or_significantly_impairs_data_subject-true, eu_decision_based_solely_on_automated_processing-true, eu_decision_has_legal_or_similarly_significant_effects-true, eu_data_subject_already_has_information-true]).
+subject_overrides(high_risk_both_regimes, [processing_may_entail_high_risk_to_personality_or_fundamental_rights-true, eu_processing_likely_to_result_in_high_risk-true]).
+subject_overrides(private_controller_obliged_by_law, [large_scale_processing_of_sensitive_personal_data-true, controller_legally_obliged_to_process_data-true]).
+subject_overrides(federal_body_obliged_by_law_near_miss, [controller_is_federal_body-true, large_scale_processing_of_sensitive_personal_data-true, controller_legally_obliged_to_process_data-true]).
+subject_overrides(certified_system_may_omit_assessment, [large_scale_processing_of_sensitive_personal_data-true, system_product_or_service_certified_for_intended_use-true]).
+subject_overrides(complete_code_of_conduct_may_omit_assessment, [systematic_large_scale_monitoring_of_public_areas-true, controller_complies_with_code_of_conduct-true, code_of_conduct_based_on_impact_assessment-true, code_of_conduct_provides_protective_measures-true, code_of_conduct_submitted_to_commissioner-true]).
+subject_overrides(code_of_conduct_not_submitted_near_miss, [systematic_large_scale_monitoring_of_public_areas-true, controller_complies_with_code_of_conduct-true, code_of_conduct_based_on_impact_assessment-true, code_of_conduct_provides_protective_measures-true]).
+subject_overrides(eu_article_35_10_exemption, [eu_large_scale_processing_of_special_categories_or_criminal_data-true, eu_article_35_10_exemption_applies-true]).
+subject_overrides(eu_listed_case_without_exemption, [eu_large_scale_processing_of_special_categories_or_criminal_data-true]).
+subject_overrides(disclosure_abroad_with_safeguards, [personal_data_collected_from_data_subject-false, personal_data_disclosed_to_recipients-true, personal_data_disclosed_abroad-true, disclosure_abroad_relies_on_safeguards_or_exception-true]).
+subject_overrides(reliance_without_disclosure_abroad, [disclosure_abroad_relies_on_safeguards_or_exception-true]).
+subject_overrides(both_regimes_already_informed, [data_subject_already_has_information-true, eu_data_subject_already_has_information-true]).
+subject_overrides(eu_indirect_professional_secrecy, [personal_data_collected_from_data_subject-false, eu_personal_data_confidential_under_professional_secrecy-true]).
+subject_overrides(eu_direct_professional_secrecy_near_miss, [eu_personal_data_confidential_under_professional_secrecy-true]).
+
+% ---- Profiles --------------------------------------------------------
+swiss_fadp_s2_information_duties_and_dpia_profile_for(Subject, Profile) :-
+    subject_overrides(Subject, Overrides),
+    baseline_private_profile(Baseline),
+    override_attributes(Baseline, Overrides, Profile).
+swiss_fadp_s2_information_duties_and_dpia_profile_for(malformed_federal_body_value, [attribute(controller_is_federal_body, maybe)]).
+
+% The baseline: a private controller collecting from the data subject;
+% every other fact false. All forty-two keys, in contract order.
+baseline_private_profile([
+    attribute(controller_is_federal_body, false),
+    attribute(personal_data_collected_from_data_subject, true),
+    attribute(data_subject_already_has_information, false),
+    attribute(processing_provided_for_by_law, false),
+    attribute(controller_bound_by_statutory_secrecy, false),
+    attribute(article_27_conditions_met, false),
+    attribute(information_impossible_or_requires_disproportionate_effort, false),
+    attribute(overriding_third_party_interests_require_restriction, false),
+    attribute(information_defeats_purpose_of_processing, false),
+    attribute(overriding_controller_interests_require_restriction, false),
+    attribute(controller_discloses_personal_data_to_third_parties, false),
+    attribute(overriding_public_interests_require_restriction, false),
+    attribute(information_may_endanger_investigation_or_proceedings, false),
+    attribute(personal_data_disclosed_to_recipients, false),
+    attribute(personal_data_disclosed_abroad, false),
+    attribute(disclosure_abroad_relies_on_safeguards_or_exception, false),
+    attribute(decision_based_solely_on_automated_processing, false),
+    attribute(decision_has_legal_consequence_or_significantly_impairs_data_subject, false),
+    attribute(decision_directly_related_to_contract_with_data_subject, false),
+    attribute(data_subject_request_granted, false),
+    attribute(data_subject_explicitly_consented_to_automated_decision, false),
+    attribute(data_subject_need_not_be_heard_before_decision, false),
+    attribute(processing_may_entail_high_risk_to_personality_or_fundamental_rights, false),
+    attribute(large_scale_processing_of_sensitive_personal_data, false),
+    attribute(systematic_large_scale_monitoring_of_public_areas, false),
+    attribute(controller_legally_obliged_to_process_data, false),
+    attribute(system_product_or_service_certified_for_intended_use, false),
+    attribute(controller_complies_with_code_of_conduct, false),
+    attribute(code_of_conduct_based_on_impact_assessment, false),
+    attribute(code_of_conduct_provides_protective_measures, false),
+    attribute(code_of_conduct_submitted_to_commissioner, false),
+    attribute(eu_data_subject_already_has_information, false),
+    attribute(eu_information_impossible_disproportionate_or_seriously_impairing, false),
+    attribute(eu_obtaining_or_disclosure_expressly_laid_down_by_law, false),
+    attribute(eu_personal_data_confidential_under_professional_secrecy, false),
+    attribute(eu_decision_based_solely_on_automated_processing, false),
+    attribute(eu_decision_has_legal_or_similarly_significant_effects, false),
+    attribute(eu_processing_likely_to_result_in_high_risk, false),
+    attribute(eu_systematic_extensive_evaluation_with_significant_automated_decisions, false),
+    attribute(eu_large_scale_processing_of_special_categories_or_criminal_data, false),
+    attribute(eu_systematic_large_scale_monitoring_of_publicly_accessible_area, false),
+    attribute(eu_article_35_10_exemption_applies, false)
+]).
+
+% Replace the value of each baseline key named in Overrides (list plumbing).
+override_attributes([], _, []).
+override_attributes([attribute(AttributeKey, AttributeValue)|Attributes], Overrides, [attribute(AttributeKey, ChosenValue)|Changed]) :-
+    chosen_value(Overrides, AttributeKey, AttributeValue, ChosenValue),
+    override_attributes(Attributes, Overrides, Changed).
+
+chosen_value([], _, AttributeValue, AttributeValue).
+chosen_value([OverrideKey-OverrideValue|_], AttributeKey, _, OverrideValue) :-
+    OverrideKey == AttributeKey.
+chosen_value([OverrideKey-_|Overrides], AttributeKey, AttributeValue, ChosenValue) :-
+    OverrideKey \== AttributeKey,
+    chosen_value(Overrides, AttributeKey, AttributeValue, ChosenValue).
+
+% ---- Convenience wrapper ---------------------------------------------
+swiss_fadp_s2_information_duties_and_dpia_assess(Subject, Result) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(Subject, Profile),
+    decide_swiss_fadp_s2_information_duties_and_dpia(Profile, Result).
+
+:- end_module(fixtures).

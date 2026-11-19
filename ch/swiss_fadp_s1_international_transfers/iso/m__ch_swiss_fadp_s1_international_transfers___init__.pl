@@ -1,0 +1,67 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s1_international_transfers___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_kernel, [inputs_relied_on_pairs/4, key_state/3, profile_key/3, swiss_fadp_s1_international_transfers_input_problems/2]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_citations, [citation/2, implements/1]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_swiss_fadp_s1_international_transfers, [compare_swiss_eu_transfer_routes/5, decide_swiss_fadp_s1_international_transfers/2, eu_transfer_under_articles_45_and_46/3, outside_facts_supplied/2, swiss_disclosure_abroad/3, swiss_disclosure_under_article_16/3, swiss_fadp_s1_international_transfers_checklist/2, swiss_fadp_s1_international_transfers_decision_resolvable/1, swiss_fadp_s1_international_transfers_status/2, swiss_fadp_s1_international_transfers_status_values/1, swiss_information_of_commissioner_on_request/3]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_queries, [differs/0, disclosure_abroad_not_permitted/0, information_of_commissioner_not_required/0, information_of_commissioner_required/0, no_adequacy_decision_or_safeguards/0, permitted_by_adequacy_decision/0, permitted_by_derogation/0, permitted_by_safeguards/0, same/0, swiss_fadp_s1_international_transfers_profile_keys/1, swiss_fadp_s1_international_transfers_what_if/4]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_fixtures, [swiss_fadp_s1_international_transfers_assess/2, swiss_fadp_s1_international_transfers_profile_for/2, swiss_fadp_s1_international_transfers_subject/1]).
+
+root_export(absent).
+root_export(appropriate_safeguards_provided).
+root_export(attestation).
+root_export(attested).
+root_export(binding_corporate_rules_approved_beforehand).
+root_export(binding_corporate_rules_ensure_suitable_protection).
+root_export(certification_backed_by_binding_enforceable_commitment).
+root_export(certification_ensures_suitable_protection).
+root_export(code_of_conduct_backed_by_binding_enforceable_commitment).
+root_export(code_of_conduct_ensures_suitable_protection).
+root_export(code_of_conduct_submitted_to_commissioner_for_approval_beforehand).
+root_export(commission_adequacy_decision_covers_transfer).
+root_export(commissioner_requested_information_on_disclosure).
+root_export(contract_clauses_ensure_suitable_protection).
+root_export(contract_clauses_notified_to_commissioner_beforehand).
+root_export(cross_reference_unresolved).
+root_export(data_from_statutory_register_and_inspection_conditions_met).
+root_export(data_made_generally_accessible_and_processing_not_expressly_prohibited).
+root_export(data_subject_explicitly_consented).
+root_export(differs).
+root_export(disclosure_abroad_not_permitted).
+root_export(disclosure_directly_connected_with_contract_in_interest_of_data_subject).
+root_export(disclosure_directly_connected_with_contract_with_data_subject).
+root_export(disclosure_necessary_for_legal_claims_before_court_or_foreign_authority).
+root_export(disclosure_necessary_for_overriding_public_interest).
+root_export(disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable).
+root_export(document).
+root_export(duplicate_key).
+root_export(enforceable_rights_and_effective_remedies_available).
+root_export(federal_council_adequacy_listing_covers_disclosure).
+root_export(indeterminate).
+root_export(information_of_commissioner_not_required).
+root_export(information_of_commissioner_required).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(international_treaty_ensures_suitable_protection).
+root_export(needs_legal_review).
+root_export(no_adequacy_decision_or_safeguards).
+root_export(not_attempted).
+root_export(open_textured).
+root_export(outside_fact).
+root_export(permitted_by_adequacy_decision).
+root_export(permitted_by_derogation).
+root_export(permitted_by_safeguards).
+root_export(provenance).
+root_export(resolution).
+root_export(same).
+root_export(specific_guarantees_ensure_suitable_protection).
+root_export(specific_guarantees_notified_to_commissioner_beforehand).
+root_export(standard_clauses_approved_issued_or_recognised_by_commissioner).
+root_export(standard_clauses_ensure_suitable_protection).
+root_export(unknown_key).
+root_export(unsure).
+root_export(url).
+root_export(wrong_type).

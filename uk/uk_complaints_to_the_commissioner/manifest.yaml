@@ -1,0 +1,305 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: uk/uk_complaints_to_the_commissioner
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "uk_complaints_to_the_commissioner"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (uk_complaints_to_the_commissioner_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- uk_complaints_to_the_commissioner.clausal --
+  - "decide_uk_complaints_to_the_commissioner/2"
+  - "uk_complaints_to_the_commissioner_status/2"
+  - "uk_complaints_to_the_commissioner_checklist/2"
+  - "uk_complaints_to_the_commissioner_decision_resolvable/1"
+  - "uk_complaints_to_the_commissioner_status_values/1"
+  - "controller_complaint_right/3"
+  - "commission_complaint_right/3"
+  - "acknowledgement_last_day/3"
+  # -- queries.clausal --
+  - "uk_complaints_to_the_commissioner_profile_keys/1"
+  - "uk_complaints_to_the_commissioner_input_problems/2"
+  - "uk_complaints_to_the_commissioner_what_if/4"
+  - "complaint_under_section_164a/0"
+  - "not_a_complaint_under_section_164a/0"
+  - "complaint_under_section_165_2/0"
+  - "not_a_complaint_under_section_165_2/0"
+  - "acknowledgement_duty_does_not_apply/0"
+  - "indeterminate/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "uk_complaints_to_the_commissioner_subject/1"
+  - "uk_complaints_to_the_commissioner_profile_for/2"
+  - "uk_complaints_to_the_commissioner_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib,
+# kit/deadline_lib) and libraries, no shared backbone package.
+uses: []
+
+scope: >-
+  UK law in force (drafter's reading, not a lawyer's): the Data Protection Act 2018
+  as amended by the Data (Use and Access) Act 2025 s.103, in force from 19 June 2026
+  (S.I. 2026/82 reg 3(a)). Decided here: (a) whether a complaint is one a data
+  subject makes to the controller under s.164A(1) - a data subject, about personal
+  data relating to them, considering an infringement of the UK GDPR or Part 3, made
+  to the controller (controller_complaint_right/3); (b) whether a complaint is one a
+  data subject may make to the Commission under s.165(2) as amended - UK GDPR or
+  Part 3 or 4, no prior complaint to the controller required
+  (commission_complaint_right/3); (c) the last day of the period of 30 days beginning
+  when the controller receives a s.164A complaint within which it must acknowledge
+  receipt (s.164A(3)), the day of receipt counted as day one and no weekend or bank
+  holiday shift, and the transitional limit of S.I. 2026/82 reg 7 (the duty applies
+  only to a complaint received on or after 19 June 2026)
+  (acknowledgement_last_day/3); with a cited checklist for s.164A(1). Out of scope
+  (deferred or excluded set): the controller's duties of s.164A(2), (4) and (5); the
+  s.164B regulations; the Commission's duties under s.165(3) to (5) and (7); UK GDPR
+  Art 57; Schedule 10 of the Act of 2025; complaints made before 19 June 2026 under
+  the earlier rules (UK GDPR Art 77, s.165(1)); any EU GDPR comparison; any
+  consequence of missing the acknowledgement period (the pinned text states none).
+
+sources:
+  - "Data Protection Act 2018 (c. 12) s.164A(1), (3) and s.165(2), legislation.gov.uk Latest available (Revised) text, expression dated 2026-09-30, fetched 2026-11-15"
+  - "Data (Use and Access) Act 2025 (c. 18) s.103(3), (6) and s.142(1), (2)(h), as enacted (provenance of the amendments; deferred)"
+  - "UK GDPR Art 77 (omitted by the Data (Use and Access) Act 2025 s.103(6); deferred)"
+  - "The Data (Use and Access) Act 2025 (Commencement No. 6 and Transitional and Saving Provisions) Regulations 2026 (S.I. 2026/82 (C. 10)) reg 3, reg 3(a) and reg 7, as made"
+
+query_interface:
+  2: "controller_complaint_right/3"                      # eligibility: s.164A(1) verdict (commission_complaint_right/3 serves s.165(2))
+  7: "uk_complaints_to_the_commissioner_checklist/2"     # justification: checklist items carry cite(...) per item
+  15: "acknowledgement_last_day/3"                       # deadline: last day to acknowledge receipt (s.164A(3), S.I. 2026/82 reg 7)
+  16: "uk_complaints_to_the_commissioner_what_if/4"      # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-164A
+  - ukpga-2018-12-revised-2026-09-30#section-164B
+  - ukpga-2018-12-revised-2026-09-30#section-165
+  - ukpga-2025-18-enacted#section-103
+  - ukpga-2025-18-enacted#section-142
+  reason: 'The title lines of the pinned sections carry no rule: document structure.
+    Not quoted; deferred so every unit of the pinned extracts is accounted for.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: dpa_164a_facilitation_and_response_duties
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-164A-2
+  - ukpga-2018-12-revised-2026-09-30#section-164A-4
+  - ukpga-2018-12-revised-2026-09-30#section-164A-4-a
+  - ukpga-2018-12-revised-2026-09-30#section-164A-4-b
+  - ukpga-2018-12-revised-2026-09-30#section-164A-5
+  - ukpga-2018-12-revised-2026-09-30#section-164A-5-a
+  - ukpga-2018-12-revised-2026-09-30#section-164A-5-b
+  instrument: Data Protection Act 2018 s.164A(2), (4) and (5)
+  reason: s.164A(2) requires the controller to facilitate complaints by steps such
+    as an electronic complaint form; s.164A(4) requires it, without undue delay, to
+    take appropriate steps to respond and to inform the complainant of the outcome;
+    s.164A(5) says those steps include enquiries to the extent appropriate and informing
+    the complainant about progress. These are open-textured duties ('steps such as',
+    'without undue delay', 'appropriate') with no fixed time; this small order does
+    not formalise them. Quoted for context with the deferred marker.
+  consequence: No answer says whether a controller facilitated, responded to or reported
+    the outcome of a complaint as s.164A(2), (4) and (5) require.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later UK order with caller judgements; the deferral stands
+    for this run.
+- what: dpa_164b_complaint_number_regulations
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-164B-1
+  - ukpga-2018-12-revised-2026-09-30#section-164B-2
+  - ukpga-2018-12-revised-2026-09-30#section-164B-3
+  - ukpga-2018-12-revised-2026-09-30#section-164B-3-a
+  - ukpga-2018-12-revised-2026-09-30#section-164B-3-b
+  - ukpga-2018-12-revised-2026-09-30#section-164B-4
+  - ukpga-2018-12-revised-2026-09-30#section-164B-4-a
+  - ukpga-2018-12-revised-2026-09-30#section-164B-4-b
+  - ukpga-2018-12-revised-2026-09-30#section-164B-4-c
+  - ukpga-2018-12-revised-2026-09-30#section-164B-5
+  reason: s.164B gives the Secretary of State power to make regulations requiring
+    a controller to notify the Commission of the number of complaints under s.164A,
+    with their form, timing and counting; no such regulations are pinned, so there
+    is no duty to formalise.
+  consequence: No answer says whether a controller must notify the number of complaints.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: dpa_165_omitted_subsections
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-165-1
+  - ukpga-2018-12-revised-2026-09-30#section-165-6
+  reason: 's.165(1) (omitted by the Data (Use and Access) Act 2025 s.103(3)(a)) and
+    s.165(6) read as dots in the revised text: no words to formalise.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: dpa_165_commission_duties
+  instrument: Data Protection Act 2018 s.165(3) to (5) and (7)
+  units:
+  - ukpga-2018-12-revised-2026-09-30#section-165-3
+  - ukpga-2018-12-revised-2026-09-30#section-165-4
+  - ukpga-2018-12-revised-2026-09-30#section-165-4-a
+  - ukpga-2018-12-revised-2026-09-30#section-165-4-b
+  - ukpga-2018-12-revised-2026-09-30#section-165-4-c
+  - ukpga-2018-12-revised-2026-09-30#section-165-4-d
+  - ukpga-2018-12-revised-2026-09-30#section-165-5
+  - ukpga-2018-12-revised-2026-09-30#section-165-5-a
+  - ukpga-2018-12-revised-2026-09-30#section-165-5-b
+  - ukpga-2018-12-revised-2026-09-30#section-165-7
+  reason: s.165(3) to (5) set the Commission's duties on a complaint (facilitating
+    complaints, responding, informing of the outcome and of the rights under s.166,
+    further information on request, investigating to the extent appropriate and informing
+    of progress); s.165(7) defines 'foreign designated authority' used by s.165(5)(b).
+    This order says only whether a complaint may be made to the Commission.
+  consequence: No answer says what the Commission must do with a complaint.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later UK order; the deferral stands for this run.
+- what: uk_gdpr_article_77_omitted
+  units:
+  - uk-eur-2016-679-revised-2026-09-30#article-77
+  reason: UK GDPR Art 77 is omitted by the Data (Use and Access) Act 2025 s.103(6)
+    from 19 June 2026 (S.I. 2026/82 reg 3(a)); the pinned revised text is its title
+    line and dots, with no operative words (reading (4)). Quoted with the deferred
+    marker to show the omission.
+  consequence: 'None for a caller: a complaint to the Commission is answered under
+    s.165(2).'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: duaa_103_amending_words
+  units:
+  - ukpga-2025-18-enacted#section-103-1
+  - ukpga-2025-18-enacted#section-103-2
+  - ukpga-2025-18-enacted#section-103-3
+  - ukpga-2025-18-enacted#section-103-3-a
+  - ukpga-2025-18-enacted#section-103-3-b
+  - ukpga-2025-18-enacted#section-103-4
+  - ukpga-2025-18-enacted#section-103-6
+  - ukpga-2025-18-enacted#section-103-7
+  - ukpga-2025-18-enacted#d24e195
+  - ukpga-2025-18-enacted#d24e217
+  - ukpga-2025-18-enacted#d24e223
+  - ukpga-2025-18-enacted#d24e261
+  - ukpga-2025-18-enacted#d24e301
+  reason: 'The amending words of s.103(1) to (4), (6) and (7) and the text of ss.164A
+    and 164B as inserted (as enacted): the order reads the Data Protection Act 2018
+    and the UK GDPR as amended (the revised texts quoted above); the amending provisions
+    are provenance only. s.103(3) and (6) are quoted with the deferred marker because
+    readings (4) and (6) name them; s.103(7) names Schedule 10, which is not pinned
+    (excluded set).'
+  consequence: 'None for a caller: the amended text is read.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: duaa_103_article_57_amendments
+  instrument: UK GDPR Art 57 (as amended by the Data (Use and Access) Act 2025 s.103(5))
+  units:
+  - ukpga-2025-18-enacted#section-103-5
+  - ukpga-2025-18-enacted#section-103-5-a
+  - ukpga-2025-18-enacted#section-103-5-b
+  reason: s.103(5) omits Art 57(1)(f) and Art 57(2) of the UK GDPR (the Commissioner's
+    tasks on complaints); Art 57 is not pinned and is not asked by this order.
+  consequence: No answer says what the Commission's tasks under Art 57 are.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable in a later UK order; the deferral stands for this run.
+- what: duaa_142_commencement
+  units:
+  - ukpga-2025-18-enacted#section-142-1
+  - ukpga-2025-18-enacted#section-142-2
+  - ukpga-2025-18-enacted#section-142-2-a
+  - ukpga-2025-18-enacted#section-142-2-b
+  - ukpga-2025-18-enacted#section-142-2-c
+  - ukpga-2025-18-enacted#section-142-2-d
+  - ukpga-2025-18-enacted#section-142-2-e
+  - ukpga-2025-18-enacted#section-142-2-f
+  - ukpga-2025-18-enacted#section-142-2-g
+  - ukpga-2025-18-enacted#section-142-2-h
+  - ukpga-2025-18-enacted#section-142-3
+  - ukpga-2025-18-enacted#section-142-3-a
+  - ukpga-2025-18-enacted#section-142-3-b
+  - ukpga-2025-18-enacted#section-142-3-c
+  - ukpga-2025-18-enacted#section-142-3-d
+  - ukpga-2025-18-enacted#section-142-4
+  - ukpga-2025-18-enacted#section-142-5
+  reason: 's.142 is the commencement section of the Act of 2025. s.142(1), (2) and
+    (2)(h) are quoted with the deferred marker because reading (7) names them: s.103
+    came into force on the day the Act was passed so far as it confers power to make
+    regulations (s.164B), and otherwise on the day appointed by regulations (S.I.
+    2026/82 reg 3(a), quoted and cited). The other points bring other provisions into
+    force; none is read by this order.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: si_2026_82_schedule_10_commencement
+  units:
+  - uksi-2026-82-made#regulation-3-b
+  reason: 'reg 3(b) brings Schedule 10 to the Act of 2025 (complaints: minor and consequential
+    amendments) into force on 19 June 2026; Schedule 10 is not pinned (excluded set)
+    and no answer reads it.'
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: duaa_schedule_10_consequential_amendments
+  instrument: Data (Use and Access) Act 2025 Schedule 10
+  cites:
+  - ukpga-2025-18-enacted#schedule-10
+  reason: 'Schedule 10 (complaints: minor and consequential amendments), named by
+    s.103(7) and brought into force by S.I. 2026/82 reg 3(b), is not pinned; not pinned;
+    named here as a limit of this order.'
+  consequence: No answer reflects a consequential amendment made by Schedule 10.
+- what: si_2026_386_name_change
+  instrument: S.I. 2026/386 (changes from 30 September 2026 to the headings of ss.164B
+    and 165 of the Data Protection Act 2018)
+  cites:
+  - uksi-2026-386-made#whole-instrument
+  reason: The revised text says 'Commission' where s.103 as enacted says 'Commissioner';
+    the instrument that made the change was not read (reading (4)); not pinned; named
+    here as a limit of this order.
+  consequence: 'None for a caller: the order uses the word of the pinned revised text
+    and nothing turns on the name.'
+- what: earlier_uk_complaint_rules
+  instrument: UK GDPR Art 77 and Data Protection Act 2018 s.165(1) as they stood before
+    19 June 2026
+  cites:
+  - uk-eur-2016-679-revised-2026-06-18#article-77
+  - ukpga-2018-12-revised-2026-06-18#section-165-1
+  reason: Before 19 June 2026 a complaint to the Commissioner rested on UK GDPR Art
+    77 and s.165(1); that earlier text is not pinned (reading (6)); not pinned; named
+    here as a limit of this order.
+  consequence: controller_complaint_right/3 and commission_complaint_right/3 answer
+    under the law as it now stands; no answer is given for a complaint made before
+    19 June 2026 under the earlier rules.
+- what: eu_gdpr_article_77_comparison
+  instrument: Regulation (EU) 2016/679 Art 77
+  cites:
+  - 02016R0679-20160504#art_077
+  reason: The EU counterpart of s.165(2) (a complaint to a supervisory authority)
+    is not compared in this order (reading (8)); the EU GDPR has no counterpart of
+    s.164A (a complaint to the controller).
+  consequence: No answer compares the UK and EU complaint rules.

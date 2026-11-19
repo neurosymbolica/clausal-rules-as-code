@@ -1,0 +1,135 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_transfer_scc.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls (and implements/1 for its provenance markers).
+%
+% Source: Commission Implementing Decision (EU) 2021/914, Article 1(1)
+% (eu_dec_2021_914_art_1) and its Annex, read with Regulation (EU)
+% 2016/679, Article 46(2)(c) (eu_reg_2016_679_art_46_2_c).
+%
+% gdpr_transfer_scc_profile_keys/1    the eighteen contract keys, in order
+% gdpr_transfer_scc_input_problems/2  the problems a profile has ([] = none)
+%                                     (re-exported from the kernel)
+% gdpr_transfer_scc_what_if/4         (#16 what-if): override one key of the
+%                                     attribute list, re-evaluate the
+%                                     safeguard status (query C)
+% gdpr_transfer_scc_reliance_check/2  (#13 compliance check): may the Parties
+%                                     rely on these clauses as the Article
+%                                     46(2)(c) safeguard for this transfer?
+%
+% Query type #3 (status determination) is gdpr_transfer_scc_status/2 and
+% query type #7 (justification) is gdpr_transfer_scc_checklist/2, both in
+% the determination slice and re-exported by the package facade.
+%
+% The what-if overrides the key in the ATTRIBUTE LIST itself (the order's
+% profile is [attribute(Key, Value), ...], not a dict), so the override is
+% local list plumbing rather than query_combinators' dict override_key/4.
+% The reliance check is a projection of query C: it never says that the
+% transfer is lawful (reading (13)).
+%
+% RESULT CONSTRUCTORS: the order exports the terms of its answers
+% (indeterminate/1, needs_legal_review/2, ...). They are data, never called
+% as queries. Those whose shape constrains an argument keep one clause
+% stating it; the others are declared as constructors and have no clauses.
+% They decide nothing statutory and carry no marker.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_transfer_scc_profile_keys/1,
+    gdpr_transfer_scc_input_problems/2,
+    gdpr_transfer_scc_what_if/4,
+    gdpr_transfer_scc_reliance_check/2,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_transfer_scc/kernel, [gdpr_transfer_scc_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_transfer_scc/gdpr_transfer_scc, [gdpr_transfer_scc_status/2]).
+:- use_module(eu/data_protection/gdpr_transfer_scc/citations, [implements/1]).
+
+:- constructors([
+    needs_legal_review(reason, context),
+    inputs_relied_on(pairs),
+    attestation(by, at, reason, evidence),
+    url(url, retrieved_at),
+    document(upload_id, sha256),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_transfer_scc_profile_keys([standard_contractual_clauses_decision_in_force, exporter_processing_subject_to_gdpr, importer_processing_subject_to_gdpr, no_reason_to_believe_local_laws_prevent_compliance, exporter_role, importer_role, standard_contractual_clauses_concluded, module_selected, clauses_modified, added_clauses_contradict_clauses, local_laws_assessment_documented, processor_combines_received_data_with_data_collected_in_union, annex_i_a_list_of_parties_completed, annex_i_b_description_of_transfer_completed, annex_i_c_competent_supervisory_authority_identified, annex_ii_measures_described_in_specific_terms, sub_processor_authorisation_option, annex_iii_list_of_sub_processors_completed]).
+
+% ---- #16 what-if ---------------------------------------------------------
+% gdpr_transfer_scc_what_if(Profile, OverriddenKey, NewValue, NewStatus):
+% the safeguard status of Profile with OverriddenKey set to NewValue (the key
+% is replaced where it occurs, or added when absent). A profile with input
+% problems keeps them: the hypothesis is not built on a malformed profile.
+gdpr_transfer_scc_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    gdpr_transfer_scc_input_problems(Profile, Problems),
+    what_if_status(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_status([Problem|Problems], _, _, _, input_problems([Problem|Problems])).
+what_if_status([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_transfer_scc_status(Hypothesis, NewStatus).
+
+% override_attribute(Elements, OverriddenKey, NewValue, NewElements): list
+% plumbing over a well-formed attribute list; the first occurrence takes the
+% new value, any later occurrence is dropped, an absent key is appended.
+override_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_attribute([attribute(OverriddenKey, _)|Elements], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|RemainingElements]) :-
+    without_key(Elements, OverriddenKey, RemainingElements).
+override_attribute([attribute(OtherKey, OtherValue)|Elements], OverriddenKey, NewValue, [attribute(OtherKey, OtherValue)|RemainingElements]) :-
+    dif(OtherKey, OverriddenKey),
+    override_attribute(Elements, OverriddenKey, NewValue, RemainingElements).
+
+without_key([], _, []).
+without_key([attribute(OverriddenKey, _)|Elements], OverriddenKey, RemainingElements) :-
+    without_key(Elements, OverriddenKey, RemainingElements).
+without_key([attribute(OtherKey, OtherValue)|Elements], OverriddenKey, [attribute(OtherKey, OtherValue)|RemainingElements]) :-
+    dif(OtherKey, OverriddenKey),
+    without_key(Elements, OverriddenKey, RemainingElements).
+
+% ---- #13 compliance check ------------------------------------------------
+% The proposed action: rely on the standard contractual clauses of Decision
+% (EU) 2021/914 as the appropriate safeguard of Article 46(2)(c) GDPR for
+% this one transfer. Allowed exactly when query C gives
+% appropriate_safeguards_provided; a status compound passes through as it is.
+gdpr_transfer_scc_reliance_check(Profile, Verdict) :-
+    gdpr_transfer_scc_status(Profile, Status),
+    reliance_verdict(Status, Verdict).
+
+reliance_verdict(appropriate_safeguards_provided, may_rely_on_clauses) :-
+    implements(eu_reg_2016_679_art_46_2_c).
+reliance_verdict(appropriate_safeguards_not_provided, may_not_rely_on_clauses) :-
+    implements(eu_reg_2016_679_art_46_2_c).
+reliance_verdict(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+reliance_verdict(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+reliance_verdict(input_problems(Problems), input_problems(Problems)).
+
+% ---- result constructors (data shapes, never called as queries) ----------
+indeterminate([_MissingProfileKey]).
+open_textured(_JudgementKey, cite(_CitationKey)).
+cross_reference_unresolved(cite(_CitationKey), cite(_TargetKey)).
+resolution(cite(_TargetKey), not_attempted).
+outside_fact(_OutsideFactKey, attested(_AttestedValue, _AttestationRecord)).
+attested(_AttestedValue, attestation(_AttestedBy, _AttestedAt, _AttestedReason, _AttestedEvidence)).
+input_problems([_FirstProblem|_OtherProblems]).
+
+:- end_module(queries).

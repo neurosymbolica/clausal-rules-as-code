@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_transfer_dpf_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_transfer_dpf_gdpr_transfer_dpf, [data_privacy_framework_adequacy/4, decide_gdpr_transfer_dpf/2, gdpr_transfer_dpf_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_transfer_dpf_fixtures, [gdpr_transfer_dpf_profile_for/2]).
+
+answers_for(Subject, Answers) :-
+    gdpr_transfer_dpf_profile_for(Subject, Profile),
+    findall(Result - Basis - Citations, data_privacy_framework_adequacy(Profile, Result, Basis, Citations), Answers).
+
+stated_value(Subject, Key, Value) :-
+    gdpr_transfer_dpf_profile_for(Subject, Profile),
+    member(attribute(Key, Value), Profile).
+
+test(covered_answer_in_full) :-
+    stated_value(all_conditions_hold, data_privacy_framework_decision_in_force, Force),
+    stated_value(all_conditions_hold, recipient_on_data_privacy_framework_list, Listed),
+    stated_value(all_conditions_hold, certification_covers_transferred_data, Coverage),
+    answers_for(all_conditions_hold, Answers),
+    Answers == [covered_by_data_privacy_framework_adequacy - [outside_fact(data_privacy_framework_decision_in_force, Force), outside_fact(recipient_on_data_privacy_framework_list, Listed), outside_fact(certification_covers_transferred_data, Coverage)] - [cite(eu_dec_2023_1795_art_1), cite(eu_reg_2016_679_art_45_1)]].
+test(not_from_union_answer_in_full) :-
+    answers_for(not_from_union, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [] - [cite(eu_dec_2023_1795_art_1)]].
+test(recipient_outside_united_states_answer_in_full) :-
+    answers_for(recipient_outside_united_states, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [] - [cite(eu_dec_2023_1795_art_1)]].
+test(decision_not_in_force_answer_in_full) :-
+    stated_value(decision_not_in_force, data_privacy_framework_decision_in_force, Denied),
+    answers_for(decision_not_in_force, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [outside_fact(data_privacy_framework_decision_in_force, Denied)] - [cite(eu_dec_2023_1795_art_1)]].
+test(recipient_off_list_answer_in_full) :-
+    stated_value(recipient_off_list, recipient_on_data_privacy_framework_list, Denied),
+    answers_for(recipient_off_list, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [outside_fact(recipient_on_data_privacy_framework_list, Denied)] - [cite(eu_dec_2023_1795_art_1)]].
+test(human_resources_data_not_declared_answer_in_full) :-
+    stated_value(human_resources_data_not_declared, certification_covers_transferred_data, Denied),
+    answers_for(human_resources_data_not_declared, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [outside_fact(certification_covers_transferred_data, Denied)] - [cite(eu_dec_2023_1795_art_1)]].
+test(two_facts_denied_answer_in_full) :-
+    stated_value(two_facts_denied, data_privacy_framework_decision_in_force, ForceDenied),
+    stated_value(two_facts_denied, certification_covers_transferred_data, CoverageDenied),
+    answers_for(two_facts_denied, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [outside_fact(data_privacy_framework_decision_in_force, ForceDenied), outside_fact(certification_covers_transferred_data, CoverageDenied)] - [cite(eu_dec_2023_1795_art_1)]].
+test(crisp_false_with_facts_absent_answer_in_full) :-
+    answers_for(crisp_false_with_facts_absent, Answers),
+    Answers == [not_covered_by_data_privacy_framework_adequacy - [] - [cite(eu_dec_2023_1795_art_1)]].
+test(decision_statement_absent_answer_in_full) :-
+    answers_for(decision_statement_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_decision_in_force_statement)), [resolution(cite(data_privacy_framework_decision_in_force_statement), not_attempted), inputs_relied_on([data_privacy_framework_decision_in_force - absent])]) - [] - []].
+test(list_statement_absent_union_absent_answer_in_full) :-
+    answers_for(list_statement_absent_union_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_list_entry_statement)), [resolution(cite(data_privacy_framework_list_entry_statement), not_attempted), inputs_relied_on([recipient_on_data_privacy_framework_list - absent])]) - [] - []].
+test(coverage_statement_absent_answer_in_full) :-
+    answers_for(coverage_statement_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_dec_2023_1795_art_1), cite(data_privacy_framework_certification_coverage_statement)), [resolution(cite(data_privacy_framework_certification_coverage_statement), not_attempted), inputs_relied_on([certification_covers_transferred_data - absent])]) - [] - []].
+test(union_absent_answer_in_full) :-
+    answers_for(union_absent, Answers),
+    Answers == [indeterminate([transfer_from_union]) - [] - []].
+test(recipient_absent_answer_in_full) :-
+    answers_for(recipient_absent, Answers),
+    Answers == [indeterminate([recipient_is_organisation_in_united_states]) - [] - []].
+test(bare_boolean_outside_fact_answer_in_full) :-
+    answers_for(bare_boolean_outside_fact, Answers),
+    Answers == [input_problems([wrong_type(recipient_on_data_privacy_framework_list)]) - [] - []].
+test(duplicate_and_unknown_answer_in_full) :-
+    answers_for(duplicate_and_unknown, Answers),
+    Answers == [input_problems([duplicate_key(transfer_from_union), unknown_key(colour)]) - [] - []].
+test(unbound_attestation_argument_answer_in_full) :-
+    answers_for(unbound_attestation_argument, Answers),
+    Answers == [input_problems([wrong_type(certification_covers_transferred_data)]) - [] - []].
+test(partial_list_profile_answer_in_full) :-
+    answers_for(partial_list_profile, Answers),
+    Answers == [input_problems([wrong_type(profile)]) - [] - []].
+test(the_facade_verdict_carries_the_result_and_citations) :-
+    gdpr_transfer_dpf_profile_for(all_conditions_hold, Profile),
+    findall(Verdict, decide_gdpr_transfer_dpf(Profile, Verdict), Verdicts),
+    Verdicts == [gdpr_transfer_dpf_verdict(covered_by_data_privacy_framework_adequacy, [cite(eu_dec_2023_1795_art_1), cite(eu_reg_2016_679_art_45_1)])].
+test(the_checklist_of_a_covered_transfer_is_all_met) :-
+    gdpr_transfer_dpf_profile_for(all_conditions_hold, Profile),
+    findall(Checklist, gdpr_transfer_dpf_checklist(Profile, Checklist), Checklists),
+    Checklists == [[item(transfer_from_union, met, cite(eu_dec_2023_1795_art_1)), item(recipient_is_organisation_in_united_states, met, cite(eu_dec_2023_1795_art_1)), item(data_privacy_framework_decision_in_force, met, cite(eu_dec_2023_1795_art_1)), item(recipient_on_data_privacy_framework_list, met, cite(eu_dec_2023_1795_art_1)), item(certification_covers_transferred_data, met, cite(eu_dec_2023_1795_art_1))]].
+test(the_checklist_of_a_malformed_profile_names_its_problems) :-
+    gdpr_transfer_dpf_profile_for(partial_list_profile, Profile),
+    gdpr_transfer_dpf_checklist(Profile, [item(input_check, unmet(input_problems([wrong_type(profile)])), cite(eu_dec_2023_1795_art_1))]).
+
+cp_test_names([covered_answer_in_full, not_from_union_answer_in_full, recipient_outside_united_states_answer_in_full, decision_not_in_force_answer_in_full, recipient_off_list_answer_in_full, human_resources_data_not_declared_answer_in_full, two_facts_denied_answer_in_full, crisp_false_with_facts_absent_answer_in_full, decision_statement_absent_answer_in_full, list_statement_absent_union_absent_answer_in_full, coverage_statement_absent_answer_in_full, union_absent_answer_in_full, recipient_absent_answer_in_full, bare_boolean_outside_fact_answer_in_full, duplicate_and_unknown_answer_in_full, unbound_attestation_argument_answer_in_full, partial_list_profile_answer_in_full, the_facade_verdict_carries_the_result_and_citations, the_checklist_of_a_covered_transfer_is_all_met, the_checklist_of_a_malformed_profile_names_its_problems]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

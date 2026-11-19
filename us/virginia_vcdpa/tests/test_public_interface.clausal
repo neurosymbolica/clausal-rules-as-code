@@ -1,0 +1,240 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees).
+% Run: python -m clausal.testing us/virginia_vcdpa/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(us/virginia_vcdpa, [
+    decide_virginia_vcdpa/2,
+    virginia_vcdpa_status/2,
+    virginia_vcdpa_checklist/2,
+    virginia_vcdpa_decision_resolvable/1,
+    virginia_vcdpa_status_values/1,
+    virginia_vcdpa_subject/1,
+    virginia_vcdpa_profile_for/2,
+    virginia_vcdpa_assess/2,
+    applicability_status/3,
+    response_deadline/4,
+    extended_response_deadline/4,
+    appeal_response_deadline/4,
+    cure_period_last_day/4,
+    attorney_general_action_status/5,
+    civil_penalty_maximum/3,
+    virginia_vcdpa_input_problems/2
+]).
+:- use_module(us/virginia_vcdpa/queries, [
+    virginia_vcdpa_applicability_threshold/3,
+    virginia_vcdpa_consumer_count_boundary/2
+]).
+
+% ---- expected verdict per fixture subject ----------------------------
+expected_verdict(large_virginia_controller, in_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(exactly_general_threshold, in_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(just_below_general_threshold, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(exactly_sale_threshold, in_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(just_below_sale_threshold, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(data_broker_mid_size, in_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(mid_size_not_broker, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(no_business_link, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(hospital_hipaa, exempt_entity, [cite(us_va_code_59_1_576_b)]).
+expected_verdict(state_agency, exempt_entity, [cite(us_va_code_59_1_576_b)]).
+expected_verdict(charity_nonprofit, exempt_entity, [cite(us_va_code_59_1_576_b)]).
+expected_verdict(unsure_business_link,
+                 needs_legal_review(open_textured(conducts_business_in_or_targets_virginia, cite(us_va_code_59_1_576_a)),
+                                    [inputs_relied_on([conducts_business_in_or_targets_virginia-unsure])]),
+                 []).
+expected_verdict(unsure_business_link_small_count, out_of_scope, [cite(us_va_code_59_1_576_a)]).
+expected_verdict(empty_profile, indeterminate([entity_category]), []).
+expected_verdict(missing_consumer_count, indeterminate([consumer_count]), []).
+expected_verdict(missing_revenue_share, indeterminate([over_half_of_gross_revenue_from_sale]), []).
+expected_verdict(missing_business_link, indeterminate([conducts_business_in_or_targets_virginia]), []).
+expected_verdict(malformed_profile, input_problems([unknown_key(colour)]), []).
+
+cited_item(item(_, _, cite(_))).
+
+% ---- fixtures: each subject, exactly one expected verdict -------------
+test(every_subject_resolves_to_its_expected_verdict) :-
+    findall(Subject-Answers,
+            ( virginia_vcdpa_subject(Subject),
+              findall(Verdict, virginia_vcdpa_assess(Subject, Verdict), Answers) ),
+            Got),
+    findall(Subject-[virginia_vcdpa_verdict(Status, Citations)],
+            ( virginia_vcdpa_subject(Subject),
+              expected_verdict(Subject, Status, Citations) ),
+            Want),
+    Got == Want.
+
+test(large_controller_is_in_scope) :-
+    virginia_vcdpa_assess(large_virginia_controller, virginia_vcdpa_verdict(in_scope, [cite(us_va_code_59_1_576_a)])).
+test(exactly_general_threshold_is_in_scope) :-
+    virginia_vcdpa_assess(exactly_general_threshold, virginia_vcdpa_verdict(in_scope, _)).
+test(just_below_general_threshold_is_out_of_scope) :-
+    virginia_vcdpa_assess(just_below_general_threshold, virginia_vcdpa_verdict(out_of_scope, _)).
+test(just_below_general_threshold_is_not_in_scope, fail) :-
+    virginia_vcdpa_assess(just_below_general_threshold, virginia_vcdpa_verdict(in_scope, _)).
+test(exactly_sale_threshold_is_in_scope) :-
+    virginia_vcdpa_assess(exactly_sale_threshold, virginia_vcdpa_verdict(in_scope, _)).
+test(just_below_sale_threshold_is_out_of_scope) :-
+    virginia_vcdpa_assess(just_below_sale_threshold, virginia_vcdpa_verdict(out_of_scope, _)).
+test(just_below_sale_threshold_is_not_in_scope, fail) :-
+    virginia_vcdpa_assess(just_below_sale_threshold, virginia_vcdpa_verdict(in_scope, _)).
+test(mid_size_not_broker_is_not_in_scope, fail) :-
+    virginia_vcdpa_assess(mid_size_not_broker, virginia_vcdpa_verdict(in_scope, _)).
+test(no_business_link_is_out_of_scope) :-
+    virginia_vcdpa_assess(no_business_link, virginia_vcdpa_verdict(out_of_scope, _)).
+test(hospital_is_exempt) :-
+    virginia_vcdpa_assess(hospital_hipaa, virginia_vcdpa_verdict(exempt_entity, [cite(us_va_code_59_1_576_b)])).
+test(hospital_is_not_in_scope, fail) :-
+    virginia_vcdpa_assess(hospital_hipaa, virginia_vcdpa_verdict(in_scope, _)).
+test(unsure_link_small_count_is_not_referred, fail) :-
+    virginia_vcdpa_assess(unsure_business_link_small_count, virginia_vcdpa_verdict(needs_legal_review(_, _), _)).
+
+test(final_statuses_are_in_the_vocabulary) :-
+    virginia_vcdpa_status_values(StatusValues),
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    virginia_vcdpa_status(Profile, Status),
+    member(Status, StatusValues).
+
+test(decide_matches_applicability_status) :-
+    virginia_vcdpa_profile_for(data_broker_mid_size, Profile),
+    decide_virginia_vcdpa(Profile, virginia_vcdpa_verdict(Status, Citations)),
+    applicability_status(Profile, Status, Citations),
+    virginia_vcdpa_decision_resolvable(Profile).
+
+% ---- justification: checklist non-empty, every item cited --------------
+test(every_well_formed_subject_has_a_checklist) :-
+    findall(Subject,
+            ( virginia_vcdpa_subject(Subject),
+              virginia_vcdpa_profile_for(Subject, Profile),
+              virginia_vcdpa_checklist(Profile, []) ),
+            WithoutChecklist),
+    WithoutChecklist == [malformed_profile].
+test(checklist_items_carry_citations) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    virginia_vcdpa_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(cited_item, [FirstItem|OtherItems]).
+
+% ---- the optional provenance constructor of a referral context --------
+% provenance/2 is a constructor (data, no clauses): the tests build and
+% destructure the term, they do not call it.
+test(provenance_builds_a_context_element) :-
+    Element = provenance(step_5, [cite(us_va_code_59_1_576_a)]),
+    Element = provenance(Clause, Citations),
+    Clause == step_5,
+    Citations == [cite(us_va_code_59_1_576_a)].
+test(provenance_trails_the_relied_on_pairs) :-
+    Context = [inputs_relied_on([extension_reasonably_necessary-unsure]),
+               provenance(step_11, [cite(us_va_code_59_1_577_b_1)])],
+    Context = [_, provenance(Clause, _)],
+    Clause == step_11.
+
+% ---- applicability limbs -------------------------------------------
+test(revenue_share_is_not_asked_before_the_count) :-
+    findall(Result-Citations,
+            applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(conducts_business_in_or_targets_virginia, true), attribute(over_half_of_gross_revenue_from_sale, true)], Result, Citations),
+            Answers),
+    Answers == [indeterminate([consumer_count])-[]].
+test(exempt_category_wins_over_a_false_link) :-
+    applicability_status([attribute(entity_category, institution_of_higher_education), attribute(conducts_business_in_or_targets_virginia, false)], exempt_entity, [cite(us_va_code_59_1_576_b)]).
+
+% ---- deadlines (#15) -----------------------------------------------
+test(response_deadline_is_forty_five_days_after_receipt) :-
+    findall(Deadline-Citations, response_deadline([], date(2026, 1, 1), Deadline, Citations), Answers),
+    Answers == [date(2026, 2, 15)-[cite(us_va_code_59_1_577_b_1), cite(us_va_code_59_1_577_b_2)]].
+test(response_deadline_in_a_leap_year) :-
+    response_deadline([], date(2028, 2, 1), date(2028, 3, 17), _).
+test(response_deadline_in_a_common_year) :-
+    response_deadline([], date(2027, 2, 1), date(2027, 3, 18), _).
+test(response_deadline_is_not_the_forty_fourth_day, fail) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 14), _).
+test(extended_deadline_is_ninety_days_after_receipt) :-
+    findall(Deadline-Citations,
+            extended_response_deadline([attribute(extension_reasonably_necessary, true), attribute(extension_notice_given_within_initial_period, true)], date(2026, 1, 1), Deadline, Citations),
+            Answers),
+    Answers == [date(2026, 4, 1)-[cite(us_va_code_59_1_577_b_1)]].
+test(late_extension_notice_gives_no_extension) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, unsure), attribute(extension_notice_given_within_initial_period, false)], date(2026, 1, 1), no_extension_available, [cite(us_va_code_59_1_577_b_1)]).
+test(unnecessary_extension_gives_no_extension) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, false)], date(2026, 1, 1), no_extension_available, [cite(us_va_code_59_1_577_b_1)]).
+test(extension_with_no_facts_names_the_need) :-
+    extended_response_deadline([], date(2026, 1, 1), indeterminate([extension_reasonably_necessary]), []).
+test(unsure_need_with_notice_goes_to_a_lawyer) :-
+    extended_response_deadline([attribute(extension_reasonably_necessary, unsure), attribute(extension_notice_given_within_initial_period, true)],
+                               date(2026, 1, 1),
+                               needs_legal_review(open_textured(extension_reasonably_necessary, cite(us_va_code_59_1_577_b_1)),
+                                                  [inputs_relied_on([extension_reasonably_necessary-unsure])]),
+                               []).
+test(appeal_deadline_is_sixty_days_after_receipt) :-
+    findall(Deadline-Citations, appeal_response_deadline([], date(2026, 3, 1), Deadline, Citations), Answers),
+    Answers == [date(2026, 4, 30)-[cite(us_va_code_59_1_577_c)]].
+test(cure_period_crosses_the_year_end) :-
+    findall(LastDay-Citations, cure_period_last_day([], date(2026, 12, 15), LastDay, Citations), Answers),
+    Answers == [date(2027, 1, 14)-[cite(us_va_code_59_1_584_b)]].
+
+% ---- Attorney General action: the four reference-day boundaries -------
+test(the_day_before_the_notice) :-
+    attorney_general_action_status([], date(2026, 1, 1), date(2025, 12, 31), notice_not_yet_provided, [cite(us_va_code_59_1_584_b)]).
+test(the_day_of_the_notice) :-
+    attorney_general_action_status([], date(2026, 1, 1), date(2026, 1, 1), cure_period_running, [cite(us_va_code_59_1_584_b)]).
+test(the_last_day_of_the_cure_period) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, false)], date(2026, 1, 1), date(2026, 1, 31), cure_period_running, [cite(us_va_code_59_1_584_b)]).
+test(the_last_day_of_the_cure_period_allows_no_action, fail) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, false)], date(2026, 1, 1), date(2026, 1, 31), action_may_be_initiated, _).
+test(the_day_after_the_cure_period_uncured) :-
+    findall(Result-Citations,
+            attorney_general_action_status([attribute(cured_with_express_written_statement, false)], date(2026, 1, 1), date(2026, 2, 1), Result, Citations),
+            Answers),
+    Answers == [action_may_be_initiated-[cite(us_va_code_59_1_584_b), cite(us_va_code_59_1_584_c)]].
+test(a_breached_statement_allows_action) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, true), attribute(continued_violation_or_statement_breached, true)], date(2026, 1, 1), date(2026, 2, 1), action_may_be_initiated, _).
+test(a_cured_violation_bars_action) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, true), attribute(continued_violation_or_statement_breached, false)], date(2026, 1, 1), date(2026, 2, 1), no_action_for_cured_violation, [cite(us_va_code_59_1_584_b)]).
+test(a_cure_without_later_facts_names_them) :-
+    attorney_general_action_status([attribute(cured_with_express_written_statement, true)], date(2026, 1, 1), date(2026, 2, 1), indeterminate([continued_violation_or_statement_breached]), []).
+
+% ---- calculation (#23) ---------------------------------------------
+test(penalty_is_seven_thousand_five_hundred_per_violation) :-
+    findall(Maximum-Citations, civil_penalty_maximum([attribute(violation_count, 3)], Maximum, Citations), Answers),
+    Answers = [Found-[cite(us_va_code_59_1_584_c)]],
+    Found =:= 22500.
+test(zero_violations_give_zero) :-
+    civil_penalty_maximum([attribute(violation_count, 0)], Maximum, _),
+    Maximum =:= 0.
+test(penalty_needs_the_count) :-
+    civil_penalty_maximum([], indeterminate([violation_count]), []).
+
+% ---- threshold (#6) ------------------------------------------------
+test(general_threshold_is_one_hundred_thousand) :-
+    virginia_vcdpa_applicability_threshold(general_threshold, Minimum, cite(us_va_code_59_1_576_a)),
+    Minimum =:= 100000.
+test(sale_threshold_is_twenty_five_thousand) :-
+    virginia_vcdpa_applicability_threshold(sale_of_personal_data_threshold, Minimum, cite(us_va_code_59_1_576_a)),
+    Minimum =:= 25000.
+test(boundary_for_a_data_broker_profile) :-
+    virginia_vcdpa_profile_for(data_broker_mid_size, Profile),
+    virginia_vcdpa_consumer_count_boundary(Profile, Boundary),
+    Boundary =:= 25000.
+
+% ---- input problems ------------------------------------------------
+test(input_problems_come_in_the_stated_order) :-
+    virginia_vcdpa_input_problems([attribute(colour, red), attribute(consumer_count, 1), attribute(consumer_count, 2), attribute(violation_count, minus)], Problems),
+    Problems == [duplicate_key(consumer_count), wrong_type(violation_count), unknown_key(colour)].
+test(a_well_formed_profile_has_no_problems) :-
+    virginia_vcdpa_profile_for(large_virginia_controller, Profile),
+    virginia_vcdpa_input_problems(Profile, []).
+test(a_non_list_is_not_a_profile) :-
+    virginia_vcdpa_input_problems(nonsense, [wrong_type(profile)]).
+test(the_twenty_ninth_of_february_2100_is_not_a_date) :-
+    response_deadline([], date(2100, 2, 29), input_problems([wrong_type(received_date)]), []).
+test(a_year_before_2000_follows_profile_problems) :-
+    findall(Result-Citations, response_deadline([attribute(colour, red)], date(1999, 12, 31), Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour), wrong_type(received_date)])-[]].
+test(a_date_with_two_parts_is_a_problem) :-
+    appeal_response_deadline([], date(2026, 1), input_problems([wrong_type(appeal_received_date)]), []).
+test(date_problems_follow_signature_order) :-
+    attorney_general_action_status([], nothing, date(2026, 2, 30), input_problems([wrong_type(notice_date), wrong_type(reference_date)]), []).
+test(an_unread_key_is_still_checked) :-
+    civil_penalty_maximum([attribute(violation_count, 1), attribute(consumer_count, -1)], input_problems([wrong_type(consumer_count)]), []).
+
+:- end_module(test_public_interface).

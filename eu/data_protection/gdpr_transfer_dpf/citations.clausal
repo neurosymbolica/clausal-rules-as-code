@@ -1,0 +1,66 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% citations.clausal -- statutory citation records for eu/data_protection/gdpr_transfer_dpf.
+%
+% citation/2 record form: a FACT, the key an atom, the second argument a
+% pair list with keys exactly label, ref, verbatim, in that order:
+%   citation(Key, [label-'...', ref-'...', verbatim-'...']).
+% The verbatim-'...' pair is OMITTED while the key's entry in
+% citations-sources.yaml is `status: unverified`; `status: verified`
+% requires a non-empty ref AND a verbatim that is an exact substring of
+% the source.
+%
+% The two operative keys (the only citation atoms an answer returns):
+%   eu_dec_2023_1795_art_1    Commission Implementing Decision (EU) 2023/1795 Art 1
+%                             (unit 32023D1795#art1), the one operative rule.
+%   eu_reg_2016_679_art_45_1  Regulation (EU) 2016/679 Art 45(1)
+%                             (unit 02016R0679-20160504#parag_045.001), the effect of
+%                             a covered transfer: no specific authorisation.
+%
+% The three referral targets (cite(TARGET) inside needs_legal_review only;
+% never returned as a CITATIONS item). Each names the statement a human makes
+% for an outside fact the order never decides (readings (3), (4), (5), (10)):
+%   data_privacy_framework_decision_in_force_statement
+%   data_privacy_framework_list_entry_statement
+%   data_privacy_framework_certification_coverage_statement
+%
+% The deferred units (Arts 2 to 4, recitals (7) to (10) and (52) to (55),
+% footnote (14), Annex I Section I points 3 and 6) are quoted in NOTES.md for
+% readings and open questions; no rule applies them, so no key is recorded
+% for them (Q10).
+%
+% PROVENANCE: every operative clause opens its body with implements(Key).
+% =====================================================================
+
+:- module(citations, [
+    citation/2,
+    implements/1
+]).
+
+citation(eu_dec_2023_1795_art_1, [label-'Commission Implementing Decision (EU) 2023/1795 (EU-US Data Privacy Framework) Art 1', ref-'https://eur-lex.europa.eu/eli/dec_impl/2023/1795/oj', verbatim-'the United States ensures an adequate level of protection for personal data transferred from the Union to organisations in the United States']).
+
+citation(eu_reg_2016_679_art_45_1, [label-'Regulation (EU) 2016/679 (GDPR) Art 45(1)', ref-'https://eur-lex.europa.eu/eli/reg/2016/679/oj', verbatim-'Such a transfer shall not require any specific authorisation.']).
+
+citation(data_privacy_framework_decision_in_force_statement, [label-'Commission Implementing Decision (EU) 2023/1795 Art 1 read with Art 3(5): attested statement that the decision is in force for the transfer (not repealed, suspended, amended or limited so as to exclude it, and not declared invalid)', ref-'https://eur-lex.europa.eu/eli/dec_impl/2023/1795/oj']).
+
+citation(data_privacy_framework_list_entry_statement, [label-'Commission Implementing Decision (EU) 2023/1795 Art 1 read with Annex I Section I.3: attested statement that the recipient is included in the Data Privacy Framework List at the time of the transfer', ref-'https://eur-lex.europa.eu/eli/dec_impl/2023/1795/oj']).
+
+citation(data_privacy_framework_certification_coverage_statement, [label-'Commission Implementing Decision (EU) 2023/1795 Art 1 read with Annex I Section I.6 and recital (10): attested statement that the data of the transfer fall within what the recipient certification covers', ref-'https://eur-lex.europa.eu/eli/dec_impl/2023/1795/oj']).
+
+% implements(Key): the provenance marker. It succeeds for every recorded key
+% and fails for a key this module does not record.
+implements(Key) :-
+    citation(Key, _).
+
+test(the_operative_rule_is_recorded) :-
+    implements(eu_dec_2023_1795_art_1).
+test(the_effect_is_recorded) :-
+    implements(eu_reg_2016_679_art_45_1).
+test(each_referral_target_is_recorded) :-
+    implements(data_privacy_framework_decision_in_force_statement),
+    implements(data_privacy_framework_list_entry_statement),
+    implements(data_privacy_framework_certification_coverage_statement).
+test(a_shortened_key_is_not_recorded, fail) :-
+    implements(eu_dec_2023_1795).
+
+:- end_module(citations).

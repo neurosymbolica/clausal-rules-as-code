@@ -1,0 +1,186 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s1_international_transfers_fixtures, [swiss_fadp_s1_international_transfers_subject/1, swiss_fadp_s1_international_transfers_profile_for/2, swiss_fadp_s1_international_transfers_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_keys/2]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_swiss_fadp_s1_international_transfers, [decide_swiss_fadp_s1_international_transfers/2]).
+
+swiss_fadp_s1_international_transfers_subject(adequacy_finding_covers_disclosure).
+swiss_fadp_s1_international_transfers_subject(nothing_permits_disclosure).
+swiss_fadp_s1_international_transfers_subject(international_treaty_ensures_protection).
+swiss_fadp_s1_international_transfers_subject(contract_clauses_notified).
+swiss_fadp_s1_international_transfers_subject(contract_clauses_not_notified).
+swiss_fadp_s1_international_transfers_subject(specific_guarantees_notified).
+swiss_fadp_s1_international_transfers_subject(specific_guarantees_not_notified).
+swiss_fadp_s1_international_transfers_subject(standard_clauses_approved).
+swiss_fadp_s1_international_transfers_subject(standard_clauses_not_approved).
+swiss_fadp_s1_international_transfers_subject(binding_corporate_rules_approved).
+swiss_fadp_s1_international_transfers_subject(binding_corporate_rules_not_approved).
+swiss_fadp_s1_international_transfers_subject(code_of_conduct_backed).
+swiss_fadp_s1_international_transfers_subject(code_of_conduct_without_commitment).
+swiss_fadp_s1_international_transfers_subject(certification_backed).
+swiss_fadp_s1_international_transfers_subject(certification_without_commitment).
+swiss_fadp_s1_international_transfers_subject(explicit_consent_given).
+swiss_fadp_s1_international_transfers_subject(contract_with_data_subject).
+swiss_fadp_s1_international_transfers_subject(contract_in_interest_of_data_subject).
+swiss_fadp_s1_international_transfers_subject(overriding_public_interest).
+swiss_fadp_s1_international_transfers_subject(legal_claims_abroad).
+swiss_fadp_s1_international_transfers_subject(life_or_physical_integrity).
+swiss_fadp_s1_international_transfers_subject(data_made_generally_accessible).
+swiss_fadp_s1_international_transfers_subject(statutory_register_data).
+swiss_fadp_s1_international_transfers_subject(safeguard_preferred_over_consent).
+swiss_fadp_s1_international_transfers_subject(finding_preferred_over_safeguard).
+swiss_fadp_s1_international_transfers_subject(empty_profile).
+swiss_fadp_s1_international_transfers_subject(contract_clauses_notification_unknown).
+swiss_fadp_s1_international_transfers_subject(standard_clauses_approval_not_stated).
+swiss_fadp_s1_international_transfers_subject(adequacy_finding_not_stated).
+swiss_fadp_s1_international_transfers_subject(treaty_suitability_unsure).
+swiss_fadp_s1_international_transfers_subject(treaty_unsure_and_notification_unknown).
+swiss_fadp_s1_international_transfers_subject(commissioner_must_be_informed).
+swiss_fadp_s1_international_transfers_subject(commissioner_did_not_request).
+swiss_fadp_s1_international_transfers_subject(consent_only_information_requested).
+swiss_fadp_s1_international_transfers_subject(consent_and_legal_claims_information_requested).
+swiss_fadp_s1_international_transfers_subject(information_request_not_stated).
+swiss_fadp_s1_international_transfers_subject(eu_adequacy_decision).
+swiss_fadp_s1_international_transfers_subject(eu_safeguards_with_remedies).
+swiss_fadp_s1_international_transfers_subject(eu_safeguards_without_remedies).
+swiss_fadp_s1_international_transfers_subject(eu_decision_not_stated).
+swiss_fadp_s1_international_transfers_subject(swiss_and_eu_adequacy).
+swiss_fadp_s1_international_transfers_subject(swiss_adequacy_eu_no_route).
+swiss_fadp_s1_international_transfers_subject(swiss_and_eu_safeguards).
+swiss_fadp_s1_international_transfers_subject(unknown_destination_key).
+swiss_fadp_s1_international_transfers_subject(unsure_crisp_fact).
+swiss_fadp_s1_international_transfers_subject(repeated_consent_key).
+swiss_fadp_s1_international_transfers_subject(bare_outside_fact_value).
+swiss_fadp_s1_international_transfers_subject(profile_not_attribute_list).
+
+closed_baseline_pairs([federal_council_adequacy_listing_covers_disclosure - attested(false, attestation(by, at, reason, none)), international_treaty_ensures_suitable_protection - false, contract_clauses_ensure_suitable_protection - false, specific_guarantees_ensure_suitable_protection - false, standard_clauses_ensure_suitable_protection - false, binding_corporate_rules_ensure_suitable_protection - false, code_of_conduct_ensures_suitable_protection - false, certification_ensures_suitable_protection - false, data_subject_explicitly_consented - false, disclosure_directly_connected_with_contract_with_data_subject - false, disclosure_directly_connected_with_contract_in_interest_of_data_subject - false, disclosure_necessary_for_overriding_public_interest - false, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - false, disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable - false, data_made_generally_accessible_and_processing_not_expressly_prohibited - false, data_from_statutory_register_and_inspection_conditions_met - false]).
+
+fixture_profile(Overrides, Dropped, Profile) :-
+    closed_baseline_pairs(Baseline),
+    pairs_keys(Overrides, OverrideKeys),
+    append(OverrideKeys, Dropped, RemovedKeys),
+    kept_pairs(Baseline, RemovedKeys, Kept),
+    append(Kept, Overrides, Pairs),
+    maplist(pair_attribute, Pairs, Profile).
+
+kept_pairs([], _, []).
+kept_pairs([Key - Value|Pairs], RemovedKeys, Kept) :-
+    memberd_t(Key, RemovedKeys, Removed),
+    keep_pair(Removed, Key - Value, LaterKept, Kept),
+    kept_pairs(Pairs, RemovedKeys, LaterKept).
+
+keep_pair(true, _, LaterKept, LaterKept).
+keep_pair(false, Pair, LaterKept, [Pair|LaterKept]).
+
+pair_attribute(Key - Value, attribute(Key, Value)).
+
+swiss_fadp_s1_international_transfers_profile_for(adequacy_finding_covers_disclosure, Profile) :-
+    fixture_profile([federal_council_adequacy_listing_covers_disclosure - attested(true, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile) :-
+    fixture_profile([], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(international_treaty_ensures_protection, Profile) :-
+    fixture_profile([international_treaty_ensures_suitable_protection - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(contract_clauses_notified, Profile) :-
+    fixture_profile([contract_clauses_ensure_suitable_protection - true, contract_clauses_notified_to_commissioner_beforehand - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(contract_clauses_not_notified, Profile) :-
+    fixture_profile([contract_clauses_ensure_suitable_protection - true, contract_clauses_notified_to_commissioner_beforehand - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(specific_guarantees_notified, Profile) :-
+    fixture_profile([specific_guarantees_ensure_suitable_protection - true, specific_guarantees_notified_to_commissioner_beforehand - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(specific_guarantees_not_notified, Profile) :-
+    fixture_profile([specific_guarantees_ensure_suitable_protection - true, specific_guarantees_notified_to_commissioner_beforehand - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(standard_clauses_approved, Profile) :-
+    fixture_profile([standard_clauses_ensure_suitable_protection - true, standard_clauses_approved_issued_or_recognised_by_commissioner - attested(true, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(standard_clauses_not_approved, Profile) :-
+    fixture_profile([standard_clauses_ensure_suitable_protection - true, standard_clauses_approved_issued_or_recognised_by_commissioner - attested(false, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(binding_corporate_rules_approved, Profile) :-
+    fixture_profile([binding_corporate_rules_ensure_suitable_protection - true, binding_corporate_rules_approved_beforehand - attested(true, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(binding_corporate_rules_not_approved, Profile) :-
+    fixture_profile([binding_corporate_rules_ensure_suitable_protection - true, binding_corporate_rules_approved_beforehand - attested(false, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(code_of_conduct_backed, Profile) :-
+    fixture_profile([code_of_conduct_ensures_suitable_protection - true, code_of_conduct_submitted_to_commissioner_for_approval_beforehand - true, code_of_conduct_backed_by_binding_enforceable_commitment - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(code_of_conduct_without_commitment, Profile) :-
+    fixture_profile([code_of_conduct_ensures_suitable_protection - true, code_of_conduct_submitted_to_commissioner_for_approval_beforehand - true, code_of_conduct_backed_by_binding_enforceable_commitment - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(certification_backed, Profile) :-
+    fixture_profile([certification_ensures_suitable_protection - true, certification_backed_by_binding_enforceable_commitment - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(certification_without_commitment, Profile) :-
+    fixture_profile([certification_ensures_suitable_protection - true, certification_backed_by_binding_enforceable_commitment - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(explicit_consent_given, Profile) :-
+    fixture_profile([data_subject_explicitly_consented - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(contract_with_data_subject, Profile) :-
+    fixture_profile([disclosure_directly_connected_with_contract_with_data_subject - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(contract_in_interest_of_data_subject, Profile) :-
+    fixture_profile([disclosure_directly_connected_with_contract_in_interest_of_data_subject - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(overriding_public_interest, Profile) :-
+    fixture_profile([disclosure_necessary_for_overriding_public_interest - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(legal_claims_abroad, Profile) :-
+    fixture_profile([disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(life_or_physical_integrity, Profile) :-
+    fixture_profile([disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(data_made_generally_accessible, Profile) :-
+    fixture_profile([data_made_generally_accessible_and_processing_not_expressly_prohibited - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(statutory_register_data, Profile) :-
+    fixture_profile([data_from_statutory_register_and_inspection_conditions_met - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(safeguard_preferred_over_consent, Profile) :-
+    fixture_profile([international_treaty_ensures_suitable_protection - true, data_subject_explicitly_consented - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(finding_preferred_over_safeguard, Profile) :-
+    fixture_profile([federal_council_adequacy_listing_covers_disclosure - attested(true, attestation(by, at, reason, none)), international_treaty_ensures_suitable_protection - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(empty_profile, []).
+swiss_fadp_s1_international_transfers_profile_for(contract_clauses_notification_unknown, Profile) :-
+    fixture_profile([contract_clauses_ensure_suitable_protection - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(standard_clauses_approval_not_stated, Profile) :-
+    fixture_profile([standard_clauses_ensure_suitable_protection - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(adequacy_finding_not_stated, Profile) :-
+    fixture_profile([], [federal_council_adequacy_listing_covers_disclosure], Profile).
+swiss_fadp_s1_international_transfers_profile_for(treaty_suitability_unsure, Profile) :-
+    fixture_profile([international_treaty_ensures_suitable_protection - unsure], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(treaty_unsure_and_notification_unknown, Profile) :-
+    fixture_profile([international_treaty_ensures_suitable_protection - unsure, contract_clauses_ensure_suitable_protection - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(commissioner_must_be_informed, Profile) :-
+    fixture_profile([disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - true, commissioner_requested_information_on_disclosure - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(commissioner_did_not_request, Profile) :-
+    fixture_profile([disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - true, commissioner_requested_information_on_disclosure - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(consent_only_information_requested, Profile) :-
+    fixture_profile([data_subject_explicitly_consented - true, commissioner_requested_information_on_disclosure - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(consent_and_legal_claims_information_requested, Profile) :-
+    fixture_profile([data_subject_explicitly_consented - true, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - true, commissioner_requested_information_on_disclosure - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(information_request_not_stated, Profile) :-
+    fixture_profile([disclosure_necessary_for_legal_claims_before_court_or_foreign_authority - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(eu_adequacy_decision, Profile) :-
+    fixture_profile([commission_adequacy_decision_covers_transfer - attested(true, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(eu_safeguards_with_remedies, Profile) :-
+    fixture_profile([commission_adequacy_decision_covers_transfer - attested(false, attestation(by, at, reason, none)), appropriate_safeguards_provided - true, enforceable_rights_and_effective_remedies_available - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(eu_safeguards_without_remedies, Profile) :-
+    fixture_profile([commission_adequacy_decision_covers_transfer - attested(false, attestation(by, at, reason, none)), appropriate_safeguards_provided - true, enforceable_rights_and_effective_remedies_available - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(eu_decision_not_stated, Profile) :-
+    fixture_profile([appropriate_safeguards_provided - true, enforceable_rights_and_effective_remedies_available - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(swiss_and_eu_adequacy, Profile) :-
+    fixture_profile([federal_council_adequacy_listing_covers_disclosure - attested(true, attestation(by, at, reason, none)), commission_adequacy_decision_covers_transfer - attested(true, attestation(by, at, reason, none))], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(swiss_adequacy_eu_no_route, Profile) :-
+    fixture_profile([federal_council_adequacy_listing_covers_disclosure - attested(true, attestation(by, at, reason, none)), commission_adequacy_decision_covers_transfer - attested(false, attestation(by, at, reason, none)), appropriate_safeguards_provided - false], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(swiss_and_eu_safeguards, Profile) :-
+    fixture_profile([international_treaty_ensures_suitable_protection - true, commission_adequacy_decision_covers_transfer - attested(false, attestation(by, at, reason, none)), appropriate_safeguards_provided - true, enforceable_rights_and_effective_remedies_available - true], [], Profile).
+swiss_fadp_s1_international_transfers_profile_for(unknown_destination_key, [attribute(destination_country, che)]).
+swiss_fadp_s1_international_transfers_profile_for(unsure_crisp_fact, [attribute(commissioner_requested_information_on_disclosure, unsure)]).
+swiss_fadp_s1_international_transfers_profile_for(repeated_consent_key, [attribute(data_subject_explicitly_consented, true), attribute(data_subject_explicitly_consented, false)]).
+swiss_fadp_s1_international_transfers_profile_for(bare_outside_fact_value, [attribute(federal_council_adequacy_listing_covers_disclosure, true)]).
+swiss_fadp_s1_international_transfers_profile_for(profile_not_attribute_list, not_a_list).
+
+swiss_fadp_s1_international_transfers_assess(Subject, Result) :-
+    swiss_fadp_s1_international_transfers_profile_for(Subject, Profile),
+    decide_swiss_fadp_s1_international_transfers(Profile, Result).
+
+test(every_subject_has_exactly_one_profile) :-
+    findall(Subject, swiss_fadp_s1_international_transfers_subject(Subject), Subjects),
+    maplist(one_profile, Subjects).
+test(an_override_replaces_the_baseline_value) :-
+    swiss_fadp_s1_international_transfers_profile_for(explicit_consent_given, Profile),
+    findall(Value, member(attribute(data_subject_explicitly_consented, Value), Profile), Values),
+    Values == [true].
+
+one_profile(Subject) :-
+    findall(Profile, swiss_fadp_s1_international_transfers_profile_for(Subject, Profile), Profiles),
+    length(Profiles, 1).

@@ -1,0 +1,203 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative subjects for ind/dpdp_transfer.
+% A TOP-LAYER consumer: it imports the one query it calls.
+%
+% Each subject is a REQUEST restriction_request(Restriction, Profile): the
+% restriction asked about and the attribute-list profile
+% [attribute(Key, Value), ...] of the order's typed input contract. Dates
+% are date(Y, M, D) terms.
+%
+% Every ladder step of both restrictions has a positive case, paired with
+% a one-key near-miss control; the rule 15 start (13 May 2027, CALCULATED
+% by the drafter from rule 1(4), Q4) has an at-boundary case and a
+% day-before case; the input check has a case for each problem kind and a
+% real leap day as its near-miss control.
+% =====================================================================
+
+:- module(fixtures, [
+    dpdp_transfer_subject/1,
+    dpdp_transfer_profile_for/2,
+    dpdp_transfer_assess/2
+]).
+
+:- use_module(ind/dpdp_transfer/queries, [restriction_status/4]).
+
+% ---- Subject registry ------------------------------------------------
+dpdp_transfer_subject(notified_destination_restricted).
+dpdp_transfer_subject(notified_destination_no_notification).
+dpdp_transfer_subject(notified_destination_section_16_not_in_force).
+dpdp_transfer_subject(notified_destination_section_16_unstated).
+dpdp_transfer_subject(notified_destination_notification_unstated).
+dpdp_transfer_subject(notified_destination_notification_unclear).
+dpdp_transfer_subject(foreign_state_requirements_apply_on_commencement_day).
+dpdp_transfer_subject(foreign_state_day_before_commencement).
+dpdp_transfer_subject(foreign_state_section_16_not_in_force).
+dpdp_transfer_subject(foreign_state_section_16_unstated).
+dpdp_transfer_subject(foreign_state_section_16_unstated_day_before_commencement).
+dpdp_transfer_subject(foreign_state_reference_date_unstated).
+dpdp_transfer_subject(foreign_state_recipient_not_foreign_state).
+dpdp_transfer_subject(foreign_state_no_order_specified).
+dpdp_transfer_subject(foreign_state_recipient_unstated).
+dpdp_transfer_subject(foreign_state_order_unstated).
+dpdp_transfer_subject(foreign_state_order_unstated_recipient_unsure).
+dpdp_transfer_subject(foreign_state_recipient_unclear).
+dpdp_transfer_subject(input_crisp_key_given_unsure).
+dpdp_transfer_subject(input_duplicate_key).
+dpdp_transfer_subject(input_unknown_key).
+dpdp_transfer_subject(input_not_a_real_day).
+dpdp_transfer_subject(input_real_leap_day).
+dpdp_transfer_subject(input_not_an_attribute_list).
+
+% ---- Requests: THE NOTIFIED DESTINATION (s 16(1), with s 16(2)) -------
+% step 6: restricted by the notification.
+dpdp_transfer_profile_for(notified_destination_restricted,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(destination_restricted_by_notification, true)])).
+% step 3, near-miss of step 6 (N false).
+dpdp_transfer_profile_for(notified_destination_no_notification,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(destination_restricted_by_notification, false)])).
+% step 1, near-miss of step 6 (F false).
+dpdp_transfer_profile_for(notified_destination_section_16_not_in_force,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, false),
+                         attribute(destination_restricted_by_notification, true)])).
+% step 2, near-miss of step 6 (F absent).
+dpdp_transfer_profile_for(notified_destination_section_16_unstated,
+    restriction_request(notified_destination,
+                        [attribute(destination_restricted_by_notification, true)])).
+% step 4, near-miss of step 6 (N absent).
+dpdp_transfer_profile_for(notified_destination_notification_unstated,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true)])).
+% step 5, near-miss of step 6 (N unsure).
+dpdp_transfer_profile_for(notified_destination_notification_unclear,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(destination_restricted_by_notification, unsure)])).
+
+% ---- Requests: THE FOREIGN STATE REQUIREMENTS (rule 15, rule 1(4), s 16)
+% step 10 at the boundary: the day rule 15 starts.
+dpdp_transfer_profile_for(foreign_state_requirements_apply_on_commencement_day,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 2, the day just before (near-miss of the boundary).
+dpdp_transfer_profile_for(foreign_state_day_before_commencement,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 12)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 1, near-miss of step 10 (F false).
+dpdp_transfer_profile_for(foreign_state_section_16_not_in_force,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, false),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 3, near-miss of step 10 (F absent).
+dpdp_transfer_profile_for(foreign_state_section_16_unstated,
+    restriction_request(foreign_state_requirements,
+                        [attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 2 with F absent: the day before settles not_in_force.
+dpdp_transfer_profile_for(foreign_state_section_16_unstated_day_before_commencement,
+    restriction_request(foreign_state_requirements,
+                        [attribute(reference_date, date(2027, 5, 12)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 4, near-miss of step 10 (D absent).
+dpdp_transfer_profile_for(foreign_state_reference_date_unstated,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 5, near-miss of step 10 (G false).
+dpdp_transfer_profile_for(foreign_state_recipient_not_foreign_state,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, false),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 6, near-miss of step 10 (R false).
+dpdp_transfer_profile_for(foreign_state_no_order_specified,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, false)])).
+% step 7, near-miss of step 10 (G absent).
+dpdp_transfer_profile_for(foreign_state_recipient_unstated,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(foreign_state_requirements_specified, true)])).
+% step 8, near-miss of step 10 (R absent).
+dpdp_transfer_profile_for(foreign_state_order_unstated,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true)])).
+% step 8 with G unsure: R is named before any referral.
+dpdp_transfer_profile_for(foreign_state_order_unstated_recipient_unsure,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, unsure)])).
+% step 9, near-miss of step 10 (G unsure).
+dpdp_transfer_profile_for(foreign_state_recipient_unclear,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 5, 13)),
+                         attribute(recipient_is_foreign_state_or_its_entity, unsure),
+                         attribute(foreign_state_requirements_specified, true)])).
+
+% ---- Requests: THE INPUT CHECK (step 0) ------------------------------
+% a crisp key given unsure: wrong_type.
+dpdp_transfer_profile_for(input_crisp_key_given_unsure,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, unsure),
+                         attribute(destination_restricted_by_notification, true)])).
+% a contract key twice with equal values: duplicate_key.
+dpdp_transfer_profile_for(input_duplicate_key,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(section_16_in_force_on_reference_date, true),
+                         attribute(destination_restricted_by_notification, true)])).
+% a key outside the five: unknown_key.
+dpdp_transfer_profile_for(input_unknown_key,
+    restriction_request(notified_destination,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(destination_restricted_by_notification, true),
+                         attribute(colour, blue)])).
+% 29 February 2027 is not a real day.
+dpdp_transfer_profile_for(input_not_a_real_day,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2027, 2, 29)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% near-miss: 29 February 2028 is a real day (a leap year).
+dpdp_transfer_profile_for(input_real_leap_day,
+    restriction_request(foreign_state_requirements,
+                        [attribute(section_16_in_force_on_reference_date, true),
+                         attribute(reference_date, date(2028, 2, 29)),
+                         attribute(recipient_is_foreign_state_or_its_entity, true),
+                         attribute(foreign_state_requirements_specified, true)])).
+% a term that is not an attribute list.
+dpdp_transfer_profile_for(input_not_an_attribute_list,
+    restriction_request(foreign_state_requirements, not_a_list)).
+
+% ---- Convenience wrapper: the called contract on a subject -----------
+dpdp_transfer_assess(Subject, dpdp_transfer_verdict(Result, Citations)) :-
+    dpdp_transfer_profile_for(Subject, restriction_request(Restriction, Profile)),
+    restriction_status(Restriction, Profile, Result, Citations).
+
+:- end_module(fixtures).

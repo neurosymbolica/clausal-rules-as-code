@@ -1,0 +1,81 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s1_international_transfers_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_queries, [swiss_fadp_s1_international_transfers_profile_keys/1, swiss_fadp_s1_international_transfers_what_if/4]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_kernel, [swiss_fadp_s1_international_transfers_input_problems/2]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_swiss_fadp_s1_international_transfers, [swiss_fadp_s1_international_transfers_status/2, swiss_fadp_s1_international_transfers_checklist/2, swiss_information_of_commissioner_on_request/3, compare_swiss_eu_transfer_routes/5]).
+:- use_module(m__ch_swiss_fadp_s1_international_transfers_fixtures, [swiss_fadp_s1_international_transfers_profile_for/2]).
+
+item_has_citation(item(_, _, cite(_))).
+
+test(profile_keys_are_the_contract_keys) :-
+    swiss_fadp_s1_international_transfers_profile_keys(ProfileKeys),
+    ProfileKeys == [federal_council_adequacy_listing_covers_disclosure, international_treaty_ensures_suitable_protection, contract_clauses_ensure_suitable_protection, contract_clauses_notified_to_commissioner_beforehand, specific_guarantees_ensure_suitable_protection, specific_guarantees_notified_to_commissioner_beforehand, standard_clauses_ensure_suitable_protection, standard_clauses_approved_issued_or_recognised_by_commissioner, binding_corporate_rules_ensure_suitable_protection, binding_corporate_rules_approved_beforehand, code_of_conduct_ensures_suitable_protection, code_of_conduct_submitted_to_commissioner_for_approval_beforehand, code_of_conduct_backed_by_binding_enforceable_commitment, certification_ensures_suitable_protection, certification_backed_by_binding_enforceable_commitment, data_subject_explicitly_consented, disclosure_directly_connected_with_contract_with_data_subject, disclosure_directly_connected_with_contract_in_interest_of_data_subject, disclosure_necessary_for_overriding_public_interest, disclosure_necessary_for_legal_claims_before_court_or_foreign_authority, disclosure_necessary_to_protect_life_or_physical_integrity_and_consent_not_obtainable, data_made_generally_accessible_and_processing_not_expressly_prohibited, data_from_statutory_register_and_inspection_conditions_met, commissioner_requested_information_on_disclosure, commission_adequacy_decision_covers_transfer, appropriate_safeguards_provided, enforceable_rights_and_effective_remedies_available].
+test(the_reexported_input_check_accepts_a_fixture) :-
+    swiss_fadp_s1_international_transfers_profile_for(commissioner_must_be_informed, Profile),
+    swiss_fadp_s1_international_transfers_input_problems(Profile, Problems),
+    Problems == [].
+test(the_reexported_input_check_names_a_problem) :-
+    swiss_fadp_s1_international_transfers_profile_for(repeated_consent_key, Profile),
+    swiss_fadp_s1_international_transfers_input_problems(Profile, Problems),
+    Problems == [duplicate_key(data_subject_explicitly_consented)].
+test(consent_turns_no_route_into_a_derogation) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    findall(Status, swiss_fadp_s1_international_transfers_what_if(Profile, data_subject_explicitly_consented, true, Status), Statuses),
+    Statuses == [permitted_by_derogation].
+test(a_finding_turns_no_route_into_adequacy) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    swiss_fadp_s1_international_transfers_what_if(Profile, federal_council_adequacy_listing_covers_disclosure, attested(true, attestation(by, at, reason, none)), permitted_by_adequacy_decision).
+test(a_notification_added_permits_on_safeguards) :-
+    swiss_fadp_s1_international_transfers_profile_for(contract_clauses_not_notified, Profile),
+    swiss_fadp_s1_international_transfers_what_if(Profile, contract_clauses_notified_to_commissioner_beforehand, true, permitted_by_safeguards).
+test(a_badly_typed_override_is_an_input_problem) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    swiss_fadp_s1_international_transfers_what_if(Profile, data_subject_explicitly_consented, maybe, Status),
+    Status == input_problems([wrong_type(data_subject_explicitly_consented)]).
+test(the_what_if_leaves_the_original_status) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    swiss_fadp_s1_international_transfers_what_if(Profile, data_subject_explicitly_consented, true, _),
+    swiss_fadp_s1_international_transfers_status(Profile, disclosure_abroad_not_permitted).
+test(the_comparison_lists_what_makes_the_difference) :-
+    swiss_fadp_s1_international_transfers_profile_for(swiss_adequacy_eu_no_route, Profile),
+    compare_swiss_eu_transfer_routes(Profile, SwissResult, EuropeanResult, Difference, ChangedBy),
+    SwissResult == permitted_by_adequacy_decision,
+    EuropeanResult == no_adequacy_decision_or_safeguards,
+    Difference == differs,
+    ChangedBy == [cite(ch_fadp_art_16_1), cite(ch_fadp_art_16_2), cite(eu_reg_2016_679_art_45_1), cite(eu_reg_2016_679_art_46_1)].
+test(an_open_comparison_refers_on_the_commission_decision_first) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    compare_swiss_eu_transfer_routes(Profile, SwissResult, _, Difference, ChangedBy),
+    SwissResult == no_adequacy_decision_or_safeguards,
+    Difference = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_45_1), cite(commission_adequacy_decision_statement)), _),
+    ChangedBy == [].
+test(every_checklist_item_carries_a_citation) :-
+    swiss_fadp_s1_international_transfers_profile_for(nothing_permits_disclosure, Profile),
+    swiss_fadp_s1_international_transfers_checklist(Profile, Items),
+    length(Items, 16),
+    maplist(item_has_citation, Items),
+    Items = [item(federal_council_finding, unmet(key_false), cite(ch_fadp_art_16_1))|_].
+test(a_finding_is_a_met_checklist_item) :-
+    swiss_fadp_s1_international_transfers_profile_for(adequacy_finding_covers_disclosure, Profile),
+    swiss_fadp_s1_international_transfers_checklist(Profile, [item(federal_council_finding, met, cite(ch_fadp_art_16_1))|_]).
+test(the_duty_to_inform_is_surfaced) :-
+    swiss_fadp_s1_international_transfers_profile_for(consent_and_legal_claims_information_requested, Profile),
+    findall(Result - Citations, swiss_information_of_commissioner_on_request(Profile, Result, Citations), Answers),
+    Answers == [information_of_commissioner_required - [cite(ch_fadp_art_17_1), cite(ch_fadp_art_17_2)]].
+
+test(a_notification_added_is_not_no_route, fail) :-
+    swiss_fadp_s1_international_transfers_profile_for(contract_clauses_not_notified, Profile),
+    swiss_fadp_s1_international_transfers_what_if(Profile, contract_clauses_notified_to_commissioner_beforehand, true, disclosure_abroad_not_permitted).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_reexported_input_check_accepts_a_fixture, the_reexported_input_check_names_a_problem, consent_turns_no_route_into_a_derogation, a_finding_turns_no_route_into_adequacy, a_notification_added_permits_on_safeguards, a_badly_typed_override_is_an_input_problem, the_what_if_leaves_the_original_status, the_comparison_lists_what_makes_the_difference, an_open_comparison_refers_on_the_commission_decision_first, every_checklist_item_carries_a_citation, a_finding_is_a_met_checklist_item, the_duty_to_inform_is_surfaced]).
+cp_test_fail_names([a_notification_added_is_not_no_route]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

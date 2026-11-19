@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the input check pipl_handler_duties_input_problems/2 for a
+% PROFILE that is an attribute list [attribute(Key, Value), ...]: an empty list, a
+% value that is not a list, an unknown key and a value outside its type each get exactly
+% one answer. Written by the scaffold from the order's typed input contract
+% (input_contract.types.profile: attribute_list), not by the producer;
+% do not edit or delete.
+% Run: python -m clausal.testing cn/pipl_handler_duties/tests/test_robustness.clausal
+% =====================================================================
+:- module(test_robustness, []).
+:- use_module(cn/pipl_handler_duties/queries, [pipl_handler_duties_input_problems/2]).
+
+test(an_empty_attribute_list_gets_exactly_one_answer) :-
+    findall(Problems, pipl_handler_duties_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_profile_that_is_not_a_list_gets_one_non_empty_answer) :-
+    findall(Problems, pipl_handler_duties_input_problems(not_a_profile, Problems), Answers),
+    Answers = [[_|_]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, pipl_handler_duties_input_problems([attribute(not_a_key_of_the_contract, true)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(unknown_key(not_a_key_of_the_contract), Problems).
+
+test(a_value_outside_the_type_of_reference_date_is_named) :-
+    findall(Problems, pipl_handler_duties_input_problems([attribute(reference_date, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(reference_date), Problems).
+
+test(a_value_outside_the_type_of_pinned_articles_unamended_on_reference_date_is_named) :-
+    findall(Problems, pipl_handler_duties_input_problems([attribute(pinned_articles_unamended_on_reference_date, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(pinned_articles_unamended_on_reference_date), Problems).
+
+test(a_value_outside_the_type_of_decides_purposes_and_means_is_named) :-
+    findall(Problems, pipl_handler_duties_input_problems([attribute(decides_purposes_and_means, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(decides_purposes_and_means), Problems).
+
+:- end_module(test_robustness).

@@ -1,0 +1,276 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for ch/swiss_fadp_s4_criminal_provisions (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+%
+% Source: Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, Arts 60 to 66
+% (German text authoritative, fedlex consolidation Stand 7 July 2025), and
+% Regulation (EU) 2016/679 (GDPR) Art 83(4) to (6). The input check below
+% decides no statutory condition: it checks the PROFILE alone against the
+% order's typed input contract (INTERFACE - THE INPUT CHECK), so it carries
+% no provenance marker.
+%
+% The one shared predicate is the order's input check
+% swiss_fadp_s4_criminal_provisions_input_problems/2, written by the scaffold
+% from the typed input contract. It is called by the slice
+% (swiss_fadp_s4_criminal_provisions.clausal) and re-exported by
+% queries.clausal and the package facade. Import it by full path:
+%   :- use_module(ch/swiss_fadp_s4_criminal_provisions/kernel,
+%                 [swiss_fadp_s4_criminal_provisions_input_problems/2]).
+% Nothing single-caller lives here: the PAIRS helper, the offence tables, the
+% date arithmetic and the comparison resolver are local to the slice.
+%
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS (built in the slice; the answer is folded into clause heads):
+%   swiss_fadp_s4_criminal_provisions_verdict(Status, Citations)
+%     the facade verdict. Status is the RESULT of swiss_offence_punishable/3
+%     (one of punishable_by_fine_under_article_60_1_a,
+%     punishable_by_fine_under_article_60_1_b_1,
+%     punishable_by_fine_under_article_60_1_b_2,
+%     punishable_by_fine_under_article_60_2,
+%     punishable_by_fine_under_article_61_a,
+%     punishable_by_fine_under_article_61_b,
+%     punishable_by_fine_under_article_61_c,
+%     punishable_by_fine_under_article_62_1,
+%     punishable_by_fine_under_article_62_2,
+%     punishable_by_fine_under_article_63,
+%     not_punishable_under_examined_offence, or a status compound ITSELF);
+%     Citations a flat set-like list of cite(Key) terms, [] when not final.
+%   Contract query answers (each query: exactly ONE solution):
+%     swiss_offence_punishable(Profile, Result, Citations)
+%     swiss_prosecution_complaint_condition(Profile, Result, Citations)
+%       Result prosecuted_ex_officio | complaint_offence_complaint_filed |
+%       complaint_offence_no_complaint_filed | status compound.
+%     swiss_prosecution_limitation(Profile, OffenceDate, AssessmentDate,
+%                                  Result, Citations)
+%       Result five_year_limitation_period_expired |
+%       five_year_limitation_period_not_expired | input_problems(Problems).
+%     swiss_business_ordered_to_pay_fine(Profile, Result, Citations)
+%       Result business_may_be_ordered_to_pay_fine |
+%       business_substitution_not_available | status compound.
+%     eu_administrative_fine_ceiling(Profile, Result, Citations)
+%       Result fine_up_to_10_million_euro_or_2_percent_of_turnover |
+%       fine_up_to_20_million_euro_or_4_percent_of_turnover |
+%       no_administrative_fine_under_article_83_4_to_83_6 | status compound.
+%     compare_swiss_eu_fine_provided(Profile, SwissResult, EuResult,
+%                                    Difference, ChangedBy)
+%       Difference same | differs | status compound; ChangedBy [] unless
+%       Difference is differs.
+%   STATUS COMPOUNDS (never written bare, never inside a list):
+%     indeterminate([Key])                       one bare key atom
+%     needs_legal_review(open_textured(Key, cite(CiteKey)),
+%                        [inputs_relied_on(Pairs)])  Pairs: Key-Value terms
+%     input_problems(Problems)                   Problems: duplicate_key(Key),
+%                                                wrong_type(Key), unknown_key(Key)
+%   The input check itself returns the BARE Problems list (never wrapped).
+% =====================================================================
+
+:- module(kernel, [swiss_fadp_s4_criminal_provisions_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+swiss_fadp_s4_criminal_provisions_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [conduct_meets_offence_description, acted_wilfully, examined_offence, offender_is_private_person, criminal_complaint_filed, offence_committed_in_business, fine_in_consideration_in_francs, identifying_punishable_persons_requires_disproportionate_investigation, eu_infringement_established, eu_infringed_obligation_listed_in],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(conduct_meets_offence_description, judgement).
+key_type(acted_wilfully, judgement).
+key_type(examined_offence, examined_offence_value).
+key_type(offender_is_private_person, judgement).
+key_type(criminal_complaint_filed, boolean).
+key_type(offence_committed_in_business, judgement).
+key_type(fine_in_consideration_in_francs, non_negative_integer).
+key_type(identifying_punishable_persons_requires_disproportionate_investigation, judgement).
+key_type(eu_infringement_established, judgement).
+key_type(eu_infringed_obligation_listed_in, listing_value).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(examined_offence_value, Value, T) :-
+    in_type_t(enum([article_60_1_a, article_60_1_b_1, article_60_1_b_2, article_60_2, article_61_a, article_61_b, article_61_c, article_62_1, article_62_2, article_63]), Value, T).
+
+in_type_t(listing_value, Value, T) :-
+    in_type_t(enum([listed_in_article_83_4, listed_in_article_83_5_or_83_6, not_listed_in_article_83_4_to_83_6]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+:- end_module(kernel).

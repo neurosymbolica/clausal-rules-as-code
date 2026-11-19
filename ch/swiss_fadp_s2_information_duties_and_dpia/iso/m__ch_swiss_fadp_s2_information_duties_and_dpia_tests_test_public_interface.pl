@@ -1,0 +1,282 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ch_swiss_fadp_s2_information_duties_and_dpia_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__ch_swiss_fadp_s2_information_duties_and_dpia_swiss_fadp_s2_information_duties_and_dpia, [decide_swiss_fadp_s2_information_duties_and_dpia/2, swiss_fadp_s2_information_duties_and_dpia_status/2, swiss_fadp_s2_information_duties_and_dpia_checklist/2, swiss_fadp_s2_information_duties_and_dpia_decision_resolvable/1, swiss_fadp_s2_information_duties_and_dpia_status_values/1, swiss_information_duty/3, swiss_minimum_information_item/4, swiss_automated_decision_information/3, swiss_automated_decision_review/3, swiss_automated_decision_marking/3, swiss_impact_assessment/3, eu_information_duty/3, eu_automated_decision_information/3, eu_impact_assessment/3, compare_swiss_eu_information_duty/5, compare_swiss_eu_automated_decision_information/5, compare_swiss_eu_impact_assessment/5]).
+:- use_module(m__ch_swiss_fadp_s2_information_duties_and_dpia_fixtures, [swiss_fadp_s2_information_duties_and_dpia_subject/1, swiss_fadp_s2_information_duties_and_dpia_profile_for/2, swiss_fadp_s2_information_duties_and_dpia_assess/2]).
+:- use_module(m__ch_swiss_fadp_s2_information_duties_and_dpia_kernel, [swiss_fadp_s2_information_duties_and_dpia_input_problems/2]).
+:- use_module(m__ch_swiss_fadp_s2_information_duties_and_dpia_queries, [provenance/2]).
+:- use_module(m__ch_swiss_fadp_s2_information_duties_and_dpia_queries, [swiss_fadp_s2_information_duties_and_dpia_what_if/4, swiss_fadp_s2_information_duties_and_dpia_obligations/2]).
+
+expected_headline(private_controller_must_inform, information_required).
+expected_headline(already_informed_exception, information_not_required).
+expected_headline(private_secrecy_exception, information_not_required).
+expected_headline(federal_body_secrecy_near_miss, information_required).
+expected_headline(indirect_collection_disproportionate_effort, information_not_required).
+expected_headline(direct_collection_disproportionate_effort_near_miss, information_required).
+expected_headline(third_party_interests_restriction, information_may_be_restricted_deferred_or_omitted).
+expected_headline(private_interests_without_disclosure, information_may_be_restricted_deferred_or_omitted).
+expected_headline(private_interests_with_disclosure_near_miss, information_required).
+expected_headline(federal_investigation_restriction, information_may_be_restricted_deferred_or_omitted).
+expected_headline(federal_body_without_restriction_ground, information_required).
+expected_headline(exception_prevails_over_restriction, information_not_required).
+expected_headline(already_informed_unsure, needs_legal_review(open_textured(data_subject_already_has_information, cite(ch_fadp_art_20_1_a)), [inputs_relied_on([controller_is_federal_body - false, personal_data_collected_from_data_subject - true, data_subject_already_has_information - unsure, processing_provided_for_by_law - false, controller_bound_by_statutory_secrecy - false, article_27_conditions_met - false, information_impossible_or_requires_disproportionate_effort - false, overriding_third_party_interests_require_restriction - false, information_defeats_purpose_of_processing - false, overriding_controller_interests_require_restriction - false, controller_discloses_personal_data_to_third_parties - false, overriding_public_interests_require_restriction - false, information_may_endanger_investigation_or_proceedings - false])])).
+expected_headline(malformed_federal_body_value, input_problems([wrong_type(controller_is_federal_body)])).
+expected_headline(automated_decision_private_controller, information_required).
+expected_headline(automated_decision_explicit_consent, information_required).
+expected_headline(automated_decision_contract_request_granted, information_required).
+expected_headline(automated_decision_contract_request_refused, information_required).
+expected_headline(federal_automated_decision_without_hearing, information_required).
+expected_headline(federal_automated_decision_with_hearing, information_required).
+expected_headline(automated_decision_both_regimes, information_required).
+expected_headline(automated_decision_eu_already_informed, information_required).
+expected_headline(high_risk_both_regimes, information_required).
+expected_headline(private_controller_obliged_by_law, information_required).
+expected_headline(federal_body_obliged_by_law_near_miss, information_required).
+expected_headline(certified_system_may_omit_assessment, information_required).
+expected_headline(complete_code_of_conduct_may_omit_assessment, information_required).
+expected_headline(code_of_conduct_not_submitted_near_miss, information_required).
+expected_headline(eu_article_35_10_exemption, information_required).
+expected_headline(eu_listed_case_without_exemption, information_required).
+expected_headline(disclosure_abroad_with_safeguards, information_required).
+expected_headline(reliance_without_disclosure_abroad, information_required).
+expected_headline(both_regimes_already_informed, information_not_required).
+expected_headline(eu_indirect_professional_secrecy, information_required).
+expected_headline(eu_direct_professional_secrecy_near_miss, information_required).
+
+expected_answer(private_controller_must_inform, item(identity_and_contact_details_of_controller), information_item_required).
+expected_answer(private_controller_must_inform, item(processing_purpose), information_item_required).
+expected_answer(private_controller_must_inform, item(recipients_or_categories_of_recipients), information_item_not_required).
+expected_answer(private_controller_must_inform, item(categories_of_personal_data_processed), information_item_not_required).
+expected_answer(private_controller_must_inform, item(state_or_international_body), information_item_not_required).
+expected_answer(private_controller_must_inform, item(safeguards_or_exception_relied_on), information_item_not_required).
+expected_answer(private_controller_must_inform, swiss_automated_decision_information, automated_decision_information_not_required).
+expected_answer(private_controller_must_inform, swiss_automated_decision_review, view_and_review_rights_do_not_apply).
+expected_answer(private_controller_must_inform, swiss_automated_decision_marking, decision_marking_not_required).
+expected_answer(private_controller_must_inform, swiss_impact_assessment, impact_assessment_not_required).
+expected_answer(private_controller_must_inform, eu_information_duty, information_required).
+expected_answer(private_controller_must_inform, eu_automated_decision_information, automated_decision_information_not_required).
+expected_answer(private_controller_must_inform, eu_impact_assessment, impact_assessment_not_required).
+expected_answer(private_controller_must_inform, compare_information_duty, comparison(information_required, information_required, same)).
+expected_answer(private_controller_must_inform, compare_automated_decision_information, comparison(automated_decision_information_not_required, automated_decision_information_not_required, same)).
+expected_answer(private_controller_must_inform, compare_impact_assessment, comparison(impact_assessment_not_required, impact_assessment_not_required, same)).
+expected_answer(already_informed_exception, compare_information_duty, comparison(information_not_required, information_required, differs)).
+expected_answer(third_party_interests_restriction, compare_information_duty, comparison(information_may_be_restricted_deferred_or_omitted, information_required, differs)).
+expected_answer(both_regimes_already_informed, compare_information_duty, comparison(information_not_required, information_not_required, same)).
+expected_answer(eu_indirect_professional_secrecy, eu_information_duty, information_not_required).
+expected_answer(eu_indirect_professional_secrecy, compare_information_duty, comparison(information_required, information_not_required, differs)).
+expected_answer(eu_direct_professional_secrecy_near_miss, eu_information_duty, information_required).
+expected_answer(indirect_collection_disproportionate_effort, item(categories_of_personal_data_processed), information_item_required).
+expected_answer(automated_decision_private_controller, swiss_automated_decision_information, automated_decision_information_required).
+expected_answer(automated_decision_private_controller, swiss_automated_decision_review, view_and_review_rights_apply).
+expected_answer(automated_decision_private_controller, swiss_automated_decision_marking, decision_marking_not_required).
+expected_answer(automated_decision_private_controller, compare_automated_decision_information, comparison(automated_decision_information_required, automated_decision_information_not_required, differs)).
+expected_answer(automated_decision_explicit_consent, swiss_automated_decision_information, automated_decision_information_not_required).
+expected_answer(automated_decision_explicit_consent, swiss_automated_decision_review, view_and_review_rights_do_not_apply).
+expected_answer(automated_decision_contract_request_granted, swiss_automated_decision_information, automated_decision_information_not_required).
+expected_answer(automated_decision_contract_request_granted, swiss_automated_decision_review, view_and_review_rights_do_not_apply).
+expected_answer(automated_decision_contract_request_refused, swiss_automated_decision_information, automated_decision_information_required).
+expected_answer(automated_decision_contract_request_refused, swiss_automated_decision_review, view_and_review_rights_apply).
+expected_answer(federal_automated_decision_without_hearing, swiss_automated_decision_information, automated_decision_information_required).
+expected_answer(federal_automated_decision_without_hearing, swiss_automated_decision_review, view_and_review_rights_do_not_apply).
+expected_answer(federal_automated_decision_without_hearing, swiss_automated_decision_marking, decision_marking_required).
+expected_answer(federal_automated_decision_with_hearing, swiss_automated_decision_review, view_and_review_rights_apply).
+expected_answer(federal_automated_decision_with_hearing, swiss_automated_decision_marking, decision_marking_required).
+expected_answer(automated_decision_both_regimes, eu_automated_decision_information, automated_decision_information_required).
+expected_answer(automated_decision_both_regimes, compare_automated_decision_information, comparison(automated_decision_information_required, automated_decision_information_required, same)).
+expected_answer(automated_decision_eu_already_informed, eu_automated_decision_information, automated_decision_information_not_required).
+expected_answer(automated_decision_eu_already_informed, eu_information_duty, information_not_required).
+expected_answer(automated_decision_eu_already_informed, compare_automated_decision_information, comparison(automated_decision_information_required, automated_decision_information_not_required, differs)).
+expected_answer(high_risk_both_regimes, swiss_impact_assessment, impact_assessment_required).
+expected_answer(high_risk_both_regimes, eu_impact_assessment, impact_assessment_required).
+expected_answer(high_risk_both_regimes, compare_impact_assessment, comparison(impact_assessment_required, impact_assessment_required, same)).
+expected_answer(private_controller_obliged_by_law, swiss_impact_assessment, impact_assessment_not_required).
+expected_answer(private_controller_obliged_by_law, compare_impact_assessment, comparison(impact_assessment_not_required, impact_assessment_not_required, same)).
+expected_answer(federal_body_obliged_by_law_near_miss, swiss_impact_assessment, impact_assessment_required).
+expected_answer(federal_body_obliged_by_law_near_miss, compare_impact_assessment, comparison(impact_assessment_required, impact_assessment_not_required, differs)).
+expected_answer(certified_system_may_omit_assessment, swiss_impact_assessment, impact_assessment_may_be_omitted).
+expected_answer(certified_system_may_omit_assessment, compare_impact_assessment, comparison(impact_assessment_may_be_omitted, impact_assessment_not_required, differs)).
+expected_answer(complete_code_of_conduct_may_omit_assessment, swiss_impact_assessment, impact_assessment_may_be_omitted).
+expected_answer(code_of_conduct_not_submitted_near_miss, swiss_impact_assessment, impact_assessment_required).
+expected_answer(eu_article_35_10_exemption, eu_impact_assessment, impact_assessment_not_required).
+expected_answer(eu_article_35_10_exemption, compare_impact_assessment, comparison(impact_assessment_not_required, impact_assessment_not_required, same)).
+expected_answer(eu_listed_case_without_exemption, eu_impact_assessment, impact_assessment_required).
+expected_answer(eu_listed_case_without_exemption, compare_impact_assessment, comparison(impact_assessment_not_required, impact_assessment_required, differs)).
+expected_answer(disclosure_abroad_with_safeguards, item(identity_and_contact_details_of_controller), information_item_required).
+expected_answer(disclosure_abroad_with_safeguards, item(processing_purpose), information_item_required).
+expected_answer(disclosure_abroad_with_safeguards, item(recipients_or_categories_of_recipients), information_item_required).
+expected_answer(disclosure_abroad_with_safeguards, item(categories_of_personal_data_processed), information_item_required).
+expected_answer(disclosure_abroad_with_safeguards, item(state_or_international_body), information_item_required).
+expected_answer(disclosure_abroad_with_safeguards, item(safeguards_or_exception_relied_on), information_item_required).
+expected_answer(reliance_without_disclosure_abroad, item(safeguards_or_exception_relied_on), information_item_not_required).
+expected_answer(reliance_without_disclosure_abroad, item(state_or_international_body), information_item_not_required).
+expected_answer(malformed_federal_body_value, swiss_impact_assessment, input_problems([wrong_type(controller_is_federal_body)])).
+expected_answer(malformed_federal_body_value, eu_information_duty, input_problems([wrong_type(controller_is_federal_body)])).
+expected_answer(malformed_federal_body_value, compare_information_duty, comparison(input_problems([wrong_type(controller_is_federal_body)]), input_problems([wrong_type(controller_is_federal_body)]), input_problems([wrong_type(controller_is_federal_body)]))).
+
+query_result(swiss_automated_decision_information, Profile, Result) :-
+    swiss_automated_decision_information(Profile, Result, _).
+query_result(swiss_automated_decision_review, Profile, Result) :-
+    swiss_automated_decision_review(Profile, Result, _).
+query_result(swiss_automated_decision_marking, Profile, Result) :-
+    swiss_automated_decision_marking(Profile, Result, _).
+query_result(swiss_impact_assessment, Profile, Result) :-
+    swiss_impact_assessment(Profile, Result, _).
+query_result(eu_information_duty, Profile, Result) :-
+    eu_information_duty(Profile, Result, _).
+query_result(eu_automated_decision_information, Profile, Result) :-
+    eu_automated_decision_information(Profile, Result, _).
+query_result(eu_impact_assessment, Profile, Result) :-
+    eu_impact_assessment(Profile, Result, _).
+query_result(item(Item), Profile, Result) :-
+    swiss_minimum_information_item(Profile, Item, Result, _).
+query_result(compare_information_duty, Profile, comparison(SwissResult, EuResult, Difference)) :-
+    compare_swiss_eu_information_duty(Profile, SwissResult, EuResult, Difference, _).
+query_result(compare_automated_decision_information, Profile, comparison(SwissResult, EuResult, Difference)) :-
+    compare_swiss_eu_automated_decision_information(Profile, SwissResult, EuResult, Difference, _).
+query_result(compare_impact_assessment, Profile, comparison(SwissResult, EuResult, Difference)) :-
+    compare_swiss_eu_impact_assessment(Profile, SwissResult, EuResult, Difference, _).
+
+subject_matches_headline(Subject) :-
+    expected_headline(Subject, Expected),
+    findall(Status, swiss_fadp_s2_information_duties_and_dpia_assess(Subject, swiss_fadp_s2_information_duties_and_dpia_verdict(Status, _)), Statuses),
+    Statuses == [Expected].
+
+expected_row_holds(Subject - Query - Expected) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(Subject, Profile),
+    findall(Actual, query_result(Query, Profile, Actual), Actuals),
+    Actuals == [Expected].
+
+subject_has_checklist(Subject) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(Subject, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_checklist(Profile, [item(_, _, _)|_]).
+
+all_subjects(Subjects) :-
+    findall(Subject, swiss_fadp_s2_information_duties_and_dpia_subject(Subject), Subjects).
+
+test(every_subject_resolves_to_its_expected_headline_once) :-
+    all_subjects(Subjects),
+    Subjects = [_|_],
+    maplist(subject_matches_headline, Subjects).
+test(every_expected_answer_holds_with_one_solution) :-
+    findall(Subject - Query - Expected, expected_answer(Subject, Query, Expected), Rows),
+    Rows = [_|_],
+    maplist(expected_row_holds, Rows).
+test(every_subject_has_a_non_empty_checklist) :-
+    all_subjects(Subjects),
+    maplist(subject_has_checklist, Subjects).
+test(empty_profile_headline_names_the_first_missing_key) :-
+    findall(Status, swiss_fadp_s2_information_duties_and_dpia_status([], Status), Statuses),
+    Statuses == [indeterminate([data_subject_already_has_information])].
+test(already_informed_gives_the_nine_exception_citations) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(already_informed_exception, Profile),
+    decide_swiss_fadp_s2_information_duties_and_dpia(Profile, swiss_fadp_s2_information_duties_and_dpia_verdict(information_not_required, Citations)),
+    Citations == [cite(ch_fadp_art_19_1), cite(ch_fadp_art_20_1), cite(ch_fadp_art_20_1_a), cite(ch_fadp_art_20_1_b), cite(ch_fadp_art_20_1_c), cite(ch_fadp_art_20_1_d), cite(ch_fadp_art_20_2), cite(ch_fadp_art_20_2_a), cite(ch_fadp_art_20_2_b)].
+test(near_miss_of_already_informed_must_inform) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_status(Profile, information_required).
+test(restriction_cites_the_group_rule) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_interests_without_disclosure, Profile),
+    swiss_information_duty(Profile, information_may_be_restricted_deferred_or_omitted, Citations),
+    member(cite(ch_fadp_art_20_4), Citations).
+test(differing_comparison_lists_the_fixed_changed_by) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(third_party_interests_restriction, Profile),
+    compare_swiss_eu_information_duty(Profile, _, _, differs, ChangedBy),
+    ChangedBy == [cite(ch_fadp_art_19_1), cite(ch_fadp_art_20_1), cite(ch_fadp_art_20_2), cite(ch_fadp_art_20_3), cite(eu_reg_2016_679_art_13_4), cite(eu_reg_2016_679_art_14_5)].
+test(same_comparison_lists_no_changed_by) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    compare_swiss_eu_information_duty(Profile, information_required, information_required, same, []).
+test(certified_system_permission_cites_article_22_5) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(certified_system_may_omit_assessment, Profile),
+    swiss_impact_assessment(Profile, impact_assessment_may_be_omitted, Citations),
+    Citations == [cite(ch_fadp_art_22_1), cite(ch_fadp_art_22_5), cite(ch_fadp_art_22_5_a), cite(ch_fadp_art_22_5_b), cite(ch_fadp_art_22_5_c)].
+test(marking_cites_article_21_4) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(federal_automated_decision_without_hearing, Profile),
+    swiss_automated_decision_marking(Profile, decision_marking_required, [cite(ch_fadp_art_21_1), cite(ch_fadp_art_21_4)]).
+test(safeguards_item_settled_by_one_false_key) :-
+    swiss_minimum_information_item([attribute(disclosure_abroad_relies_on_safeguards_or_exception, false)], safeguards_or_exception_relied_on, information_item_not_required, [cite(ch_fadp_art_19_4)]).
+test(state_item_on_empty_profile_names_the_missing_key) :-
+    swiss_minimum_information_item([], state_or_international_body, indeterminate([personal_data_disclosed_abroad]), []).
+test(unlisted_item_is_an_input_problem) :-
+    swiss_minimum_information_item([], unlisted_item_atom, input_problems([wrong_type(information_item)]), []).
+test(duplicate_and_unknown_keys_are_reported_in_order) :-
+    swiss_fadp_s2_information_duties_and_dpia_input_problems([attribute(controller_is_federal_body, true), attribute(controller_is_federal_body, true), attribute(colour, red)], Problems),
+    Problems == [duplicate_key(controller_is_federal_body), unknown_key(colour)].
+test(a_non_list_is_not_a_profile) :-
+    swiss_fadp_s2_information_duties_and_dpia_input_problems(not_a_profile, [wrong_type(profile)]).
+test(a_well_formed_profile_has_no_problems) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_input_problems(Profile, []).
+test(malformed_comparison_gives_no_changed_by) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(malformed_federal_body_value, Profile),
+    compare_swiss_eu_impact_assessment(Profile, input_problems(_), input_problems(_), input_problems(_), []).
+test(provenance_constructor_accepts_a_source_and_detail) :-
+    provenance(fedlex_consolidation_2025_07_07, cite(ch_fadp_art_19_1)).
+test(final_headline_is_resolvable) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_decision_resolvable(Profile).
+test(status_values_are_the_three_duty_atoms) :-
+    swiss_fadp_s2_information_duties_and_dpia_status_values(Values),
+    clausal_msort(Values, Sorted),
+    Sorted == [information_may_be_restricted_deferred_or_omitted, information_not_required, information_required].
+test(checklist_starts_with_the_headline_row) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(already_informed_exception, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_checklist(Profile, [item(swiss_information_duty, information_not_required, [cite(ch_fadp_art_19_1)|_])|_]).
+test(what_if_already_informed_flips_the_duty) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_what_if(Profile, data_subject_already_has_information, true, Status),
+    Status == information_not_required.
+test(what_if_unchanged_value_keeps_the_duty) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_what_if(Profile, data_subject_already_has_information, false, Status),
+    Status == information_required.
+test(obligations_surface_the_marking_duty_and_minimum_items) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(federal_automated_decision_without_hearing, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(obligation(decision_marking_required, [cite(ch_fadp_art_21_1), cite(ch_fadp_art_21_4)]), Obligations),
+    member(obligation(information_item(processing_purpose), _), Obligations).
+test(baseline_obligations_hold_the_duty_to_inform) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(obligation(information_required, _), Obligations).
+test(malformed_profile_obligations_are_open) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(malformed_federal_body_value, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(open(swiss_information_duty, input_problems([wrong_type(controller_is_federal_body)])), Obligations).
+
+test(near_miss_of_already_informed_is_not_exempt, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_status(Profile, information_not_required).
+test(disclosure_to_third_parties_is_not_a_restriction, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_interests_with_disclosure_near_miss, Profile),
+    swiss_information_duty(Profile, information_may_be_restricted_deferred_or_omitted, _).
+test(federal_body_secrecy_is_not_an_exception, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(federal_body_secrecy_near_miss, Profile),
+    swiss_information_duty(Profile, information_not_required, _).
+test(unsubmitted_code_does_not_permit_omission, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(code_of_conduct_not_submitted_near_miss, Profile),
+    swiss_impact_assessment(Profile, impact_assessment_may_be_omitted, _).
+test(private_controller_need_not_mark, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(automated_decision_private_controller, Profile),
+    swiss_automated_decision_marking(Profile, decision_marking_required, _).
+test(provenance_constructor_needs_a_bound_source, fail) :-
+    provenance(_, cite(ch_fadp_art_19_1)).
+test(referred_headline_is_not_resolvable, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(already_informed_unsure, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_decision_resolvable(Profile).
+test(baseline_obligations_hold_no_marking_duty, fail) :-
+    swiss_fadp_s2_information_duties_and_dpia_profile_for(private_controller_must_inform, Profile),
+    swiss_fadp_s2_information_duties_and_dpia_obligations(Profile, Obligations),
+    member(obligation(decision_marking_required, _), Obligations).
+
+cp_test_names([every_subject_resolves_to_its_expected_headline_once, every_expected_answer_holds_with_one_solution, every_subject_has_a_non_empty_checklist, empty_profile_headline_names_the_first_missing_key, already_informed_gives_the_nine_exception_citations, near_miss_of_already_informed_must_inform, restriction_cites_the_group_rule, differing_comparison_lists_the_fixed_changed_by, same_comparison_lists_no_changed_by, certified_system_permission_cites_article_22_5, marking_cites_article_21_4, safeguards_item_settled_by_one_false_key, state_item_on_empty_profile_names_the_missing_key, unlisted_item_is_an_input_problem, duplicate_and_unknown_keys_are_reported_in_order, a_non_list_is_not_a_profile, a_well_formed_profile_has_no_problems, malformed_comparison_gives_no_changed_by, provenance_constructor_accepts_a_source_and_detail, final_headline_is_resolvable, status_values_are_the_three_duty_atoms, checklist_starts_with_the_headline_row, what_if_already_informed_flips_the_duty, what_if_unchanged_value_keeps_the_duty, obligations_surface_the_marking_duty_and_minimum_items, baseline_obligations_hold_the_duty_to_inform, malformed_profile_obligations_are_open]).
+cp_test_fail_names([near_miss_of_already_informed_is_not_exempt, disclosure_to_third_parties_is_not_a_restriction, federal_body_secrecy_is_not_an_exception, unsubmitted_code_does_not_permit_omission, private_controller_need_not_mark, provenance_constructor_needs_a_bound_source, referred_headline_is_not_resolvable, baseline_obligations_hold_no_marking_duty]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

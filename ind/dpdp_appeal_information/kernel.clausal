@@ -1,0 +1,340 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for ind/dpdp_appeal_information (deontic family).
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> dpdp_appeal_information -> queries
+%   -> fixtures -> package facade
+%
+% Source: Digital Personal Data Protection Act, 2023 (No. 22 of 2023),
+% s 29(1) to (3), (6) and (7) and s 36, with the Digital Personal Data
+% Protection Rules, 2025 (G.S.R. 846(E)), rule 1(4), rule 22(1) and (2),
+% rule 23(1) and (2) and the Seventh Schedule; MeitY website copies
+% fetched 2026-11-13 (not India Code, not compared with the gazette).
+% The input check below is structural (the order's INTERFACE - THE INPUT
+% CHECK): it decides no statutory condition and carries no marker.
+%
+% This file holds ONLY what more than one file calls. The scaffold writes
+% the order's input check dpdp_appeal_information_input_problems/2 here,
+% exported, for the slice (and queries.clausal, which re-exports it) to
+% import:
+%   :- use_module(ind/dpdp_appeal_information/kernel,
+%                 [dpdp_appeal_information_input_problems/2]).
+% There is ONE determination slice (dpdp_appeal_information.clausal), so
+% every other helper (the PAIRS builder, the sixty-day and six-month date
+% arithmetic, the referral rows, the value facts) is single-caller and
+% lives in that slice, not here. The kernel holds NO statutory value.
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms, so every file spells them
+% alike (the scorer compares them verbatim).
+%
+% RESULT TERMS (each query: Query(Profile, Result, Citations); Citations a
+% set-like list of cite(Key); a non-final Result always has Citations []):
+%   appeal_period/3 Result:
+%     in_time(LastDay)                              LastDay a date(Y, M, D)
+%     out_of_time_sufficient_cause_needed(LastDay)  LastDay a date(Y, M, D)
+%     not_appealable | not_in_force
+%   appeal_filing_requirements/3 Result:
+%     filing_requirements(Items)   Items exactly [digital_form,
+%       fee_as_for_trai_act_appeal_unless_reduced_or_waived,
+%       fee_paid_by_upi_or_rbi_authorised_payment_system], in that order
+%     not_yet_prescribed | not_in_force
+%   appeal_disposal_target/3 Result:
+%     disposed_within_target(TargetDay)
+%     disposal_target_not_yet_passed(TargetDay)
+%     reasons_in_writing_required(TargetDay)        TargetDay a date(Y, M, D)
+%     not_in_force
+%   information_call_status/3 Result:
+%     required_to_furnish_within_specified_period
+%     required_to_furnish_under_section_36 | not_covered | not_in_force
+%   non_disclosure_status/3 Result:
+%     disclosure_barred_without_written_permission
+%     disclosure_permitted_by_written_permission
+%     not_barred_by_rule_23 | not_in_force
+%   Non-final statuses, every query (never the bare atom indeterminate):
+%     input_problems(Problems)   Problems the non-empty list of
+%       duplicate_key(Key) | wrong_type(Key) | unknown_key(Key) |
+%       wrong_type(profile)
+%     indeterminate([Key])       exactly one missing key, the first the
+%       ladder names
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%     needs_legal_review(not_governed_here([cite(in_dpdp_rules_2025_r_23_1),
+%                                           cite(in_dpdp_act_2023_s_36)]),
+%                        [inputs_relied_on(Pairs)])
+%       Pairs: Key-Value terms of the referral row's inputs present in the
+%       profile, in root_exports order.
+% FACADE VERDICT (query types #2 and #7), built from appeal_period/3:
+%   dpdp_appeal_information_verdict(Status, Citations)
+%     Status: eligible | ineligible | indeterminate
+%     Citations: those appeal_period/3 gives ([] when non-final).
+%   Checklist items: item(RequirementId, ItemStatus, cite(Key)), ItemStatus
+%   met | unmet(Reason) | unknown([Key]).
+% =====================================================================
+
+:- module(kernel, [dpdp_appeal_information_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dpdp_appeal_information_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dpdp_appeal_information_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [section_29_in_force_on_filing_date, appeal_against_board_order_or_direction, appellant_aggrieved, order_receipt_date, appeal_filing_date, appeal_disposed_of_within_six_months, reference_date, section_36_in_force_on_call_date, call_date, recipient_kind, call_for_seventh_schedule_purpose, called_through_authorised_person, non_disclosure_required, written_permission_to_disclose],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(section_29_in_force_on_filing_date, boolean).
+key_type(appeal_against_board_order_or_direction, judgement).
+key_type(appellant_aggrieved, judgement).
+key_type(order_receipt_date, date).
+key_type(appeal_filing_date, date).
+key_type(appeal_disposed_of_within_six_months, boolean).
+key_type(reference_date, date).
+key_type(section_36_in_force_on_call_date, boolean).
+key_type(call_date, date).
+key_type(recipient_kind, recipient_kind_value).
+key_type(call_for_seventh_schedule_purpose, judgement).
+key_type(called_through_authorised_person, judgement).
+key_type(non_disclosure_required, boolean).
+key_type(written_permission_to_disclose, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(recipient_kind_value, Value, T) :-
+    in_type_t(enum([data_fiduciary_or_intermediary, board, other_recipient]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(date, Value, T) :-
+    calendar_date_t(Value, T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% calendar_date_t(Value, T): T is true when Value is date(Year, Month, DayNumber), three
+% integers that name a real day of the proleptic Gregorian calendar with Year from 1 to
+% 9999 (the order's INTERFACE - THE PROFILE AND THE ATOMS: a date key is a real day,
+% Y from 1 to 9999).
+calendar_date_t(date(Year, Month, DayNumber), T) :-
+    integer_t(Year, YearIsInteger),
+    integer_t(Month, MonthIsInteger),
+    integer_t(DayNumber, DayNumberIsInteger),
+    truth_and(YearIsInteger, MonthIsInteger, YearAndMonthAreIntegers),
+    truth_and(YearAndMonthAreIntegers, DayNumberIsInteger, AllAreIntegers),
+    calendar_day_t(AllAreIntegers, Year, Month, DayNumber, T).
+calendar_date_t(Value, false) :-
+    Value \= date(_, _, _).
+
+calendar_day_t(false, _, _, _, false).
+calendar_day_t(true, Year, Month, DayNumber, T) :-
+    between_t(1, 9999, Year, IsYear),
+    calendar_month_t(IsYear, Year, Month, DayNumber, T).
+
+calendar_month_t(false, _, _, _, false).
+calendar_month_t(true, Year, Month, DayNumber, T) :-
+    between_t(1, 12, Month, IsMonth),
+    day_of_month_t(IsMonth, Year, Month, DayNumber, T).
+
+day_of_month_t(false, _, _, _, false).
+day_of_month_t(true, Year, Month, DayNumber, T) :-
+    month_length(Year, Month, Length),
+    between_t(1, Length, DayNumber, T).
+
+between_t(Lowest, Highest, Number, true) :-
+    Number >= Lowest,
+    Number =< Highest.
+between_t(Lowest, _, Number, false) :-
+    Number < Lowest.
+between_t(_, Highest, Number, false) :-
+    Number > Highest.
+
+month_length(_, 1, 31).
+month_length(Year, 2, Length) :-
+    leap_year_t(Year, IsLeapYear),
+    february_length(IsLeapYear, Length).
+month_length(_, 3, 31).
+month_length(_, 4, 30).
+month_length(_, 5, 31).
+month_length(_, 6, 30).
+month_length(_, 7, 31).
+month_length(_, 8, 31).
+month_length(_, 9, 30).
+month_length(_, 10, 31).
+month_length(_, 11, 30).
+month_length(_, 12, 31).
+
+february_length(true, 29).
+february_length(false, 28).
+
+% The remainders are computed first and compared one at a time.
+leap_year_t(Year, IsLeapYear) :-
+    FourYearRemainder is Year mod 4,
+    CenturyRemainder is Year mod 100,
+    FourCenturyRemainder is Year mod 400,
+    gregorian_leap_year_t(FourYearRemainder, CenturyRemainder, FourCenturyRemainder,
+                          IsLeapYear).
+
+gregorian_leap_year_t(_, _, 0, true).
+gregorian_leap_year_t(0, CenturyRemainder, _, true) :-
+    CenturyRemainder =\= 0.
+gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
+    FourCenturyRemainder =\= 0.
+gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
+    FourYearRemainder =\= 0.
+
+:- end_module(kernel).

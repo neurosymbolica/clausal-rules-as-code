@@ -1,0 +1,190 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed -> a different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states "no
+% solution" as `test(Name, fail) :- Goal.`; every atom a fail test names
+% is also named by a positive test, so a misspelling shows up.
+% Run: python -m clausal.testing ch/swiss_fadp_s3_right_of_access/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(ch/swiss_fadp_s3_right_of_access/swiss_fadp_s3_right_of_access, [
+    swiss_access_request_answer/3,
+    swiss_access_cost_contribution/3,
+    swiss_access_deadline/3,
+    swiss_access_deadline_after_cost_notice/3,
+    eu_access_response_deadline/3,
+    compare_swiss_eu_access_deadline/5,
+    swiss_fadp_s3_right_of_access_status/2,
+    swiss_fadp_s3_right_of_access_status_values/1
+]).
+:- use_module(ch/swiss_fadp_s3_right_of_access/fixtures, [swiss_fadp_s3_right_of_access_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    swiss_fadp_s3_right_of_access_profile_for(Subject, Profile),
+    swiss_fadp_s3_right_of_access_status(Profile, Status).
+
+edited_status(Subject, InputKey, Value, Status) :-
+    swiss_fadp_s3_right_of_access_profile_for(Subject, Profile),
+    maplist(replace_attribute(InputKey, Value), Profile, Changed),
+    swiss_access_request_answer(Changed, Status, _).
+
+replace_attribute(InputKey, Value, attribute(InputKey, _), attribute(InputKey, Value)).
+replace_attribute(InputKey, _, attribute(OtherKey, OtherValue), attribute(OtherKey, OtherValue)) :-
+    dif(InputKey, OtherKey).
+
+% ---- the near-miss atoms are the slice's own atoms -------------------
+test(the_status_table_holds_the_three_final_atoms) :-
+    swiss_fadp_s3_right_of_access_status_values(StatusValues),
+    StatusValues == [access_request_not_in_required_form, access_must_be_given, access_may_be_refused_restricted_or_deferred].
+
+% ---- DSV Art 16(1): the FORM ------------------------------------------
+test(form_oral_without_agreement_fails) :-
+    subject_status(oral_request_without_agreement, access_request_not_in_required_form).
+test(form_oral_with_agreement_is_met) :-
+    subject_status(oral_request_with_agreement, access_must_be_given).
+test(form_oral_with_agreement_is_not_a_form_failure, fail) :-
+    subject_status(oral_request_with_agreement, access_request_not_in_required_form).
+test(form_oral_without_agreement_is_not_an_obligation, fail) :-
+    subject_status(oral_request_without_agreement, access_must_be_given).
+
+% ---- DSV Art 16(3): an electronic request ----------------------------
+test(electronic_request_is_in_the_required_form) :-
+    subject_status(electronic_request_no_ground, access_must_be_given).
+test(electronic_request_is_not_a_form_failure, fail) :-
+    subject_status(electronic_request_no_ground, access_request_not_in_required_form).
+
+% ---- DSG Art 26(1)(a): a formal law ----------------------------------
+test(formal_law_permits_restriction) :-
+    edited_status(written_request_no_ground, formal_law_provides_for_restriction, true, access_may_be_refused_restricted_or_deferred).
+test(no_formal_law_gives_access) :-
+    edited_status(written_request_no_ground, formal_law_provides_for_restriction, false, access_must_be_given).
+test(no_formal_law_is_not_a_permission, fail) :-
+    edited_status(written_request_no_ground, formal_law_provides_for_restriction, false, access_may_be_refused_restricted_or_deferred).
+
+% ---- DSG Art 26(1)(b): third-party interests -------------------------
+test(third_party_interests_permit_restriction) :-
+    subject_status(written_request_third_party_interests, access_may_be_refused_restricted_or_deferred).
+test(no_third_party_interests_gives_access) :-
+    subject_status(written_request_no_ground, access_must_be_given).
+test(third_party_interests_are_not_an_obligation, fail) :-
+    subject_status(written_request_third_party_interests, access_must_be_given).
+
+% ---- DSG Art 26(1)(c): a manifestly unfounded request ----------------
+test(unfounded_request_permits_restriction) :-
+    edited_status(written_request_no_ground, request_manifestly_unfounded_or_querulous, true, access_may_be_refused_restricted_or_deferred).
+test(founded_request_is_not_a_permission, fail) :-
+    edited_status(written_request_no_ground, request_manifestly_unfounded_or_querulous, false, access_may_be_refused_restricted_or_deferred).
+
+% ---- DSG Art 26(2)(a): a private controller --------------------------
+test(private_controller_interests_permit_restriction) :-
+    subject_status(private_controller_overriding_interests, access_may_be_refused_restricted_or_deferred).
+test(private_controller_disclosing_gives_access) :-
+    subject_status(private_controller_discloses_to_third_parties, access_must_be_given).
+test(private_controller_disclosing_is_not_a_permission, fail) :-
+    subject_status(private_controller_discloses_to_third_parties, access_may_be_refused_restricted_or_deferred).
+test(private_letter_does_not_serve_a_federal_body, fail) :-
+    edited_status(private_controller_overriding_interests, controller_category, federal_body, access_may_be_refused_restricted_or_deferred).
+
+% ---- DSG Art 26(2)(b): a federal body --------------------------------
+test(federal_body_endangered_investigation_permits_restriction) :-
+    subject_status(federal_body_investigation_endangered, access_may_be_refused_restricted_or_deferred).
+test(federal_body_without_condition_gives_access) :-
+    subject_status(federal_body_no_condition, access_must_be_given).
+test(federal_body_without_condition_is_not_a_permission, fail) :-
+    subject_status(federal_body_no_condition, access_may_be_refused_restricted_or_deferred).
+test(federal_letter_does_not_serve_a_private_person, fail) :-
+    subject_status(private_person_investigation_endangered, access_may_be_refused_restricted_or_deferred).
+test(federal_public_interest_alone_permits_restriction) :-
+    edited_status(federal_body_no_condition, restriction_required_by_overriding_public_interests, true, access_may_be_refused_restricted_or_deferred).
+
+% ---- controller_category absent --------------------------------------
+test(category_absent_with_both_letters_permits_restriction) :-
+    subject_status(category_absent_both_letters_met, access_may_be_refused_restricted_or_deferred).
+test(category_absent_with_one_letter_asks_for_the_category) :-
+    subject_status(category_absent_private_letter_only, indeterminate([controller_category])).
+test(category_absent_with_one_letter_is_not_a_permission, fail) :-
+    subject_status(category_absent_private_letter_only, access_may_be_refused_restricted_or_deferred).
+
+% ---- DSG Art 27(1): the editorial part of a periodical medium --------
+test(editorial_sources_permit_restriction) :-
+    subject_status(editorial_media_sources_revealed, access_may_be_refused_restricted_or_deferred).
+test(sources_outside_editorial_media_give_access) :-
+    subject_status(sources_revealed_not_editorial_media, access_must_be_given).
+test(sources_outside_editorial_media_are_not_a_permission, fail) :-
+    subject_status(sources_revealed_not_editorial_media, access_may_be_refused_restricted_or_deferred).
+test(editorial_media_without_a_reason_is_not_a_permission, fail) :-
+    edited_status(sources_revealed_not_editorial_media, data_reveal_information_sources, false, access_may_be_refused_restricted_or_deferred).
+
+% ---- DSG Art 27(2): a personal working instrument --------------------
+test(working_instrument_permits_restriction) :-
+    subject_status(media_professional_working_instrument, access_may_be_refused_restricted_or_deferred).
+test(no_working_instrument_is_not_a_permission, fail) :-
+    edited_status(media_professional_working_instrument, data_serve_media_professional_exclusively_as_personal_working_instrument, false, access_may_be_refused_restricted_or_deferred).
+
+% ---- THE STATUS RULE -------------------------------------------------
+test(unsure_formal_law_that_matters_goes_to_a_lawyer) :-
+    subject_status(formal_law_unsure, needs_legal_review(open_textured(formal_law_provides_for_restriction, cite(ch_fadp_art_26_1_a)), [inputs_relied_on(_)])).
+test(unsure_formal_law_that_does_not_matter_is_settled) :-
+    subject_status(formal_law_unsure_third_party_interests, access_may_be_refused_restricted_or_deferred).
+test(unsure_formal_law_that_does_not_matter_is_not_referred, fail) :-
+    subject_status(formal_law_unsure_third_party_interests, needs_legal_review(_, _)).
+test(empty_profile_names_the_form_first) :-
+    subject_status(empty_profile, indeterminate([request_form])).
+test(empty_profile_does_not_name_a_ground_first, fail) :-
+    subject_status(empty_profile, indeterminate([formal_law_provides_for_restriction])).
+
+% ---- DSG Art 25(6), DSV Art 19(1): costs -----------------------------
+test(disproportionate_effort_permits_a_contribution) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, true)], cost_contribution_may_be_requested, _).
+test(proportionate_effort_is_free) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, false)], access_free_of_charge, _).
+test(proportionate_effort_permits_no_contribution, fail) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, false)], cost_contribution_may_be_requested, _).
+test(disproportionate_effort_is_not_free, fail) :-
+    swiss_access_cost_contribution([attribute(access_involves_disproportionate_effort, true)], access_free_of_charge, _).
+
+% ---- DSV Art 18(1): the 30 days --------------------------------------
+test(swiss_limit_ends_on_the_thirtieth_day) :-
+    swiss_access_deadline(date(2026, 3, 1), date(2026, 3, 31), _).
+test(swiss_limit_does_not_end_on_the_thirty_first_day, fail) :-
+    swiss_access_deadline(date(2026, 3, 1), date(2026, 4, 1), _).
+test(swiss_limit_on_a_saturday_is_not_moved, fail) :-
+    swiss_access_deadline(date(2026, 1, 15), date(2026, 2, 16), _).
+
+% ---- DSV Art 19(3): after a cost notice ------------------------------
+test(cost_notice_limit_ends_on_the_fortieth_day) :-
+    swiss_access_deadline_after_cost_notice(date(2026, 3, 1), date(2026, 4, 10), _).
+test(cost_notice_limit_is_not_the_plain_limit, fail) :-
+    swiss_access_deadline_after_cost_notice(date(2026, 3, 1), date(2026, 3, 31), _).
+
+% ---- GDPR Art 12(3) with Regulation No 1182/71 Art 3 -----------------
+test(eu_month_ending_on_sunday_moves_to_monday) :-
+    eu_access_response_deadline(date(2026, 10, 29), date(2026, 11, 30), _).
+test(eu_month_ending_on_sunday_is_not_kept, fail) :-
+    eu_access_response_deadline(date(2026, 10, 29), date(2026, 11, 29), _).
+test(eu_month_on_a_weekday_is_not_moved) :-
+    eu_access_response_deadline(date(2028, 1, 31), date(2028, 2, 29), _).
+
+% ---- the comparison --------------------------------------------------
+test(comparison_swiss_earlier_cites_both_limits) :-
+    compare_swiss_eu_access_deadline(date(2026, 3, 1), _, _, swiss_earlier, [cite(ch_fadp_ord_art_18_1), cite(eu_reg_2016_679_art_12_3)]).
+test(comparison_same_cites_nothing) :-
+    compare_swiss_eu_access_deadline(date(2026, 4, 15), _, _, same, []).
+test(comparison_swiss_later) :-
+    compare_swiss_eu_access_deadline(date(2026, 2, 10), _, _, swiss_later, _).
+test(comparison_swiss_earlier_is_not_same, fail) :-
+    compare_swiss_eu_access_deadline(date(2026, 3, 1), _, _, same, _).
+test(comparison_swiss_later_is_not_swiss_earlier, fail) :-
+    compare_swiss_eu_access_deadline(date(2026, 2, 10), _, _, swiss_earlier, _).
+
+% ---- the date input check --------------------------------------------
+test(a_real_leap_day_is_a_receipt_date) :-
+    swiss_access_deadline(date(2028, 2, 29), date(2028, 3, 30), _).
+test(a_nonexistent_leap_day_is_refused) :-
+    swiss_access_deadline(date(2026, 2, 29), input_problems([wrong_type(receipt_date)]), []).
+test(a_nonexistent_leap_day_gives_no_date, fail) :-
+    swiss_access_deadline(date(2026, 2, 29), date(_, _, _), _).
+
+:- end_module(test_negative_controls).
