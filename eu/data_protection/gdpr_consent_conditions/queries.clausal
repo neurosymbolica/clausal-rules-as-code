@@ -1,32 +1,238 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY layer for eu/data_protection/gdpr_consent_conditions.
-% gdpr_consent_conditions_profile_keys/1: the thirteen profile keys in contract order
-% gdpr_consent_conditions_input_problems/2: the problems a profile has ([] = none)
-% gdpr_consent_conditions_what_if/4: override one attribute, re-evaluate the status
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_consent_conditions.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls (and the kernel's input check, which it re-exports as
+% the scaffold wrote it), and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 7(1) to 7(4), Art 11(1) and
+% Art 11(2), pinned unit text of 02016R0679-20160504 (consolidated English
+% Formex text, fetched 2026-11-11).
+%
+% gdpr_consent_conditions_profile_keys/1   top-level profile key schema
+% gdpr_consent_conditions_input_problems/2 the problems a profile has ([] = none)
+% gdpr_consent_conditions_what_if/4        (#16 what-if) override one key, re-decide
+% gdpr_consent_conditions_eligibility/2    (#2 eligibility) verdict + cited checklist
+%     assessment(consent, Decision, Checklist), Decision eligible | undecided
+%     | ineligible (the bare atom indeterminate is never written).
+% gdpr_consent_conditions_obligations/2    (#14 obligation surfacing) ONE list of
+%     obligation(Duty, cite(Key)), or input_problems(Problems) alone.
+% gdpr_consent_conditions_compliance/3     (#13 compliance check) Verdict
+%     compliant | non_compliant | undecided for a proposed Action.
+% Every predicate here yields exactly one solution for a well-formed call.
+% Open-textured limbs are never decided here: each comes from the slice,
+% which only copies the attested outside facts the caller states.
+%
+% The status atoms of the called contract are exported from here as defining
+% facts; the result constructors are exported as DATA: they have no clauses
+% and are never called as queries (their fields are named by the
+% constructors/1 declaration below).
 % =====================================================================
 
 :- module(queries, [
     gdpr_consent_conditions_profile_keys/1,
     gdpr_consent_conditions_input_problems/2,
-    gdpr_consent_conditions_what_if/4
+    gdpr_consent_conditions_what_if/4,
+    gdpr_consent_conditions_eligibility/2,
+    gdpr_consent_conditions_obligations/2,
+    gdpr_consent_conditions_compliance/3,
+    not_applicable/0,
+    conditions_met/0,
+    conditions_not_met/0,
+    part_not_binding/0,
+    no_part_infringing/0,
+    not_obliged_to_acquire_identifying_information/0,
+    art11_1_not_engaged/0,
+    art11_2_not_engaged/0,
+    must_inform_data_subject/0,
+    need_not_inform_data_subject/0,
+    articles_15_to_20_apply/0,
+    articles_15_to_20_do_not_apply/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    factor/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
 ]).
 
+:- use_module(formalize_lib, [profile_get/3]).
 :- use_module(eu/data_protection/gdpr_consent_conditions/kernel, [gdpr_consent_conditions_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_consent_conditions/gdpr_consent_conditions, [gdpr_consent_conditions_status/2]).
+:- use_module(eu/data_protection/gdpr_consent_conditions/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_consent_conditions/gdpr_consent_conditions, [
+    gdpr_consent_conditions_status/2,
+    gdpr_consent_conditions_checklist/2,
+    consent_conditions_status/4,
+    consent_declaration_effect/3,
+    identification_information_duty/4,
+    identification_rights_effect/4
+]).
 
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    factor(factor_name, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, outcome),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(attester, moment, reason, evidence),
+    url(location, retrieved_moment),
+    document(upload_identifier, digest)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
 gdpr_consent_conditions_profile_keys([processing_based_on_consent, consent_demonstrable, consent_in_declaration_with_other_matters, request_clearly_distinguishable_and_intelligible, declaration_part_infringes_regulation, informed_of_withdrawal_right_before_consent, withdrawal_as_easy_as_giving_consent, contract_conditional_on_unneeded_consent, consent_freely_given, purposes_do_not_require_identification, able_to_demonstrate_not_in_position_to_identify, informing_data_subject_possible, additional_identifying_information_provided]).
 
-% what-if: a well-formed profile with one attribute replaced (or added), re-evaluated.
+% =====================================================================
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% The profile is an ATTRIBUTE LIST, so the override is written for it here:
+% every attribute(Key, _) is dropped and attribute(Key, NewValue) is added
+% once at the end (one solution; list plumbing, no statutory decision).
+% =====================================================================
 gdpr_consent_conditions_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    gdpr_consent_conditions_input_problems(Profile, []),
-    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    profile_with_override(Profile, OverriddenKey, NewValue, Hypothesis),
     gdpr_consent_conditions_status(Hypothesis, NewStatus).
 
-override_attribute([], Key, Value, [attribute(Key, Value)]).
-override_attribute([attribute(Key, _)|Rest], Key, Value, [attribute(Key, Value)|Rest]).
-override_attribute([attribute(ElementKey, Other)|Rest], Key, Value, [attribute(ElementKey, Other)|NewRest]) :-
-    dif(ElementKey, Key),
-    override_attribute(Rest, Key, Value, NewRest).
+profile_with_override([], Key, Value, [attribute(Key, Value)]).
+profile_with_override([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
+    ElementKey == Key,
+    profile_with_override(Elements, Key, Value, Hypothesis).
+profile_with_override([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== Key,
+    profile_with_override(Elements, Key, Value, Hypothesis).
+
+% =====================================================================
+% #2 eligibility: may processing rest on this consent as far as the
+% conditions of Art 7 go? (conditions_met means only that; Q3.)
+% =====================================================================
+gdpr_consent_conditions_eligibility(Profile, assessment(consent, Decision, Checklist)) :-
+    gdpr_consent_conditions_status(Profile, Status),
+    eligibility_decision(Status, Decision),
+    gdpr_consent_conditions_checklist(Profile, Checklist).
+
+% One clause per status shape; the status is bound, so one clause holds.
+eligibility_decision(conditions_met, eligible) :-
+    implements(eu_reg_2016_679_art_7_1).
+eligibility_decision(conditions_not_met, ineligible) :-
+    implements(eu_reg_2016_679_art_7_1).
+% Processing not based on consent: there is no consent to rely on (reading 1).
+eligibility_decision(not_applicable, ineligible) :-
+    implements(eu_reg_2016_679_art_7_1).
+eligibility_decision(indeterminate(_), undecided).
+eligibility_decision(needs_legal_review(_, _), undecided).
+eligibility_decision(input_problems(_), undecided).
+
+% =====================================================================
+% #14 obligation surfacing: what the controller must do on the stated facts.
+% =====================================================================
+gdpr_consent_conditions_obligations(Profile, Obligations) :-
+    gdpr_consent_conditions_input_problems(Profile, Problems),
+    obligations_answer(Problems, Profile, Obligations).
+
+obligations_answer([Problem|Problems], _, input_problems([Problem|Problems])).
+obligations_answer([], Profile, Obligations) :-
+    findall(Obligation, obligation_due(Profile, Obligation), Obligations).
+
+% Each row is read after a clean input check, so each key occurs at most once
+% and each row holds at most once.
+% Art 7(1): be able to demonstrate the consent.
+obligation_due(Profile, obligation(demonstrate_consent, cite(eu_reg_2016_679_art_7_1))) :-
+    implements(eu_reg_2016_679_art_7_1),
+    profile_get(Profile, processing_based_on_consent, true).
+% Art 7(2): present the request clearly distinguishable from the other matters.
+obligation_due(Profile, obligation(present_consent_request_distinguishably, cite(eu_reg_2016_679_art_7_2))) :-
+    implements(eu_reg_2016_679_art_7_2),
+    profile_get(Profile, processing_based_on_consent, true),
+    profile_get(Profile, consent_in_declaration_with_other_matters, true).
+% Art 7(3) third sentence: inform of the right to withdraw before consent.
+obligation_due(Profile, obligation(inform_of_withdrawal_right_before_consent, cite(eu_reg_2016_679_art_7_3))) :-
+    implements(eu_reg_2016_679_art_7_3),
+    profile_get(Profile, processing_based_on_consent, true).
+% Art 7(3) fourth sentence: as easy to withdraw as to give consent.
+obligation_due(Profile, obligation(make_withdrawal_as_easy_as_giving_consent, cite(eu_reg_2016_679_art_7_3))) :-
+    implements(eu_reg_2016_679_art_7_3),
+    profile_get(Profile, processing_based_on_consent, true).
+% Art 11(2) first sentence: inform the data subject accordingly, if possible.
+obligation_due(Profile, obligation(inform_data_subject_not_in_position_to_identify, cite(eu_reg_2016_679_art_11_2))) :-
+    implements(eu_reg_2016_679_art_11_2),
+    identification_information_duty(Profile, must_inform_data_subject, _, _).
+
+% =====================================================================
+% #13 compliance check: is a proposed action allowed in the current state?
+% =====================================================================
+gdpr_consent_conditions_compliance(Profile, rely_on_consent_for_processing, Verdict) :-
+    consent_conditions_status(Profile, Status, _, _),
+    consent_reliance_verdict(Status, Verdict).
+gdpr_consent_conditions_compliance(Profile, enforce_infringing_declaration_part, Verdict) :-
+    consent_declaration_effect(Profile, Status, _),
+    declaration_enforcement_verdict(Status, Verdict).
+gdpr_consent_conditions_compliance(Profile, decline_request_under_articles_15_to_20, Verdict) :-
+    identification_rights_effect(Profile, Status, _, _),
+    request_decline_verdict(Status, Verdict).
+
+% Art 7(1) to (4): relying on consent is compliant only when the conditions are met.
+consent_reliance_verdict(conditions_met, compliant) :-
+    implements(eu_reg_2016_679_art_7_1).
+consent_reliance_verdict(conditions_not_met, non_compliant) :-
+    implements(eu_reg_2016_679_art_7_1).
+consent_reliance_verdict(not_applicable, undecided).
+consent_reliance_verdict(indeterminate(_), undecided).
+consent_reliance_verdict(needs_legal_review(_, _), undecided).
+consent_reliance_verdict(input_problems(_), undecided).
+
+% Art 7(2) last sentence: an infringing part is not binding, so enforcing it is not allowed.
+declaration_enforcement_verdict(part_not_binding, non_compliant) :-
+    implements(eu_reg_2016_679_art_7_2).
+declaration_enforcement_verdict(no_part_infringing, compliant) :-
+    implements(eu_reg_2016_679_art_7_2).
+declaration_enforcement_verdict(not_applicable, undecided).
+declaration_enforcement_verdict(indeterminate(_), undecided).
+declaration_enforcement_verdict(input_problems(_), undecided).
+
+% Art 11(2) second sentence: a request may be declined only where Arts 15 to 20 do not apply.
+request_decline_verdict(articles_15_to_20_do_not_apply, compliant) :-
+    implements(eu_reg_2016_679_art_11_2).
+request_decline_verdict(articles_15_to_20_apply, non_compliant) :-
+    implements(eu_reg_2016_679_art_11_2).
+request_decline_verdict(art11_2_not_engaged, undecided).
+request_decline_verdict(indeterminate(_), undecided).
+request_decline_verdict(needs_legal_review(_, _), undecided).
+request_decline_verdict(input_problems(_), undecided).
+
+% =====================================================================
+% STATUS ATOMS of the called contract (export requirement of the order).
+% Defining facts only: never called as queries, no statutory decision, no
+% marker. The result constructors exported above are data and have no
+% clauses.
+% =====================================================================
+not_applicable.
+conditions_met.
+conditions_not_met.
+part_not_binding.
+no_part_infringing.
+not_obliged_to_acquire_identifying_information.
+art11_1_not_engaged.
+art11_2_not_engaged.
+must_inform_data_subject.
+need_not_inform_data_subject.
+articles_15_to_20_apply.
+articles_15_to_20_do_not_apply.
 
 :- end_module(queries).

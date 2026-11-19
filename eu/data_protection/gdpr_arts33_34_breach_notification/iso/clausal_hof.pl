@@ -16,7 +16,7 @@
 % (kit/formalize_lib.clausal's eval_requirements/4, query_combinators'
 % flip_scan/bisect_flip/what_if, ...).
 % Measured, Scryer cargo:0.10.0: `existence_error(procedure, call_goal/5)`.
-% The design note (clausal/implementation_plans/
+% The design note (implementation_plans/
 % prolog-lambda-lowering.md) §5 records the same for include/3 and widens it:
 % include/3, exclude/3, partition/4, msort/2, last/2, max_by/3, min_by/3,
 % take_while/3, drop_while/3, span/4, group_by/3, sort_by/3, filter_map/3,
@@ -38,8 +38,9 @@
 % exclude/3 and partition/4 were therefore left out: nothing in the kit
 % consumed them, and a companion predicate no program reaches is a dead
 % instrument that reads as a passing test. They were added 2026-11-09 when a
-% producer package did reach one (queries.clausal: exclude(has_attribute_key(Key), ...);
-% 8 Scryer existence_errors, the build process). They follow the engine
+% producer package did reach one (a GDPR special-categories package,
+% queries.clausal: exclude(has_attribute_key(Key), ...);
+% 8 Scryer existence_errors). They follow the engine
 % exactly, measured on it: the test's FIRST solution decides each element, a
 % successful test keeps its bindings, a failed one leaves none, and the
 % predicate has one answer. findall(X/R, exclude(pair, [X-a, 3-b], R), L)

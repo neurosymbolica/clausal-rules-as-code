@@ -14,9 +14,8 @@ profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
     Keys = [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, delay_justified_by_reasons, party_role, notification_made_without_undue_delay, notification_accompanied_by_reasons_for_delay, supervisory_authority_decision_on_communication, appropriate_protection_measures_applied_to_affected_data, subsequent_measures_ensure_high_risk_no_longer_likely, communication_would_involve_disproportionate_effort, notification_describes_nature_of_breach, notification_gives_categories_and_approximate_numbers, categories_and_approximate_numbers_possible, notification_gives_contact_point, notification_describes_likely_consequences, notification_describes_measures_taken_or_proposed, notification_describes_mitigation_measures, mitigation_measures_appropriate, information_not_possible_to_provide_at_the_same_time, communication_made_without_undue_delay, communication_describes_nature_in_clear_and_plain_language, communication_gives_contact_point, communication_describes_likely_consequences, communication_describes_measures_taken_or_proposed, communication_describes_mitigation_measures],
     unknown_keys(Profile, Keys, UnknownKeyProblems),
-    contradictory_combinations(Combinations),
-    contradiction_problems(Combinations, Profile, ContradictionProblems),
-    append(UnknownKeyProblems, ContradictionProblems, LaterProblems),
+    contradictory_problems(Profile, ContradictoryProblems),
+    append(UnknownKeyProblems, ContradictoryProblems, LaterProblems),
     key_problems(Keys, Profile, LaterProblems, Problems).
 
 key_type(breach_unlikely_to_result_in_risk, judgement).
@@ -44,8 +43,6 @@ key_type(communication_gives_contact_point, boolean).
 key_type(communication_describes_likely_consequences, boolean).
 key_type(communication_describes_measures_taken_or_proposed, boolean).
 key_type(communication_describes_mitigation_measures, boolean).
-
-contradictory_combinations([contradictory_combination(breach_unlikely_to_result_in_risk, true, breach_likely_to_result_in_high_risk, true), contradictory_combination(delay_justified_by_reasons, true, notification_accompanied_by_reasons_for_delay, false)]).
 
 attribute_list_t(Term, false) :-
     var(Term).
@@ -85,38 +82,6 @@ name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).
 name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
     unknown_keys(Elements, [Key|Known], Problems).
-
-contradiction_problems([], _, []).
-contradiction_problems([contradictory_combination(FirstKey, FirstValue, SecondKey, SecondValue)|Combinations], Profile, Problems) :-
-    sole_value_is_t(Profile, FirstKey, FirstValue, FirstHolds),
-    sole_value_is_t(Profile, SecondKey, SecondValue, SecondHolds),
-    truth_and(FirstHolds, SecondHolds, BothHold),
-    contradiction_problems(Combinations, Profile, LaterProblems),
-    name_contradiction(BothHold, FirstKey, SecondKey, LaterProblems, Problems).
-
-name_contradiction(true, FirstKey, SecondKey, Problems, [contradictory_inputs([FirstKey, SecondKey])|Problems]).
-name_contradiction(false, _, _, Problems, Problems).
-
-sole_value_is_t(Profile, Key, Wanted, Truth) :-
-    key_occurrences(Profile, Key, Occurrences),
-    occurrence_value_is_t(Occurrences, Profile, Key, Wanted, Truth).
-
-occurrence_value_is_t(none, _, _, _, false).
-occurrence_value_is_t(many, _, _, _, false).
-occurrence_value_is_t(one, Profile, Key, Wanted, Truth) :-
-    sole_key_value(Profile, Key, Value),
-    value_is_t(Value, Wanted, Truth).
-
-sole_key_value([attribute(ElementKey, Value)|_], Key, Value) :-
-    ElementKey == Key.
-sole_key_value([attribute(ElementKey, _)|Elements], Key, Value) :-
-    ElementKey \== Key,
-    sole_key_value(Elements, Key, Value).
-
-value_is_t(Value, Wanted, true) :-
-    Value == Wanted.
-value_is_t(Value, Wanted, false) :-
-    Value \== Wanted.
 
 key_problems([], _, Problems, Problems).
 key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
@@ -186,33 +151,55 @@ in_some_type_t([Type|Types], Value, T) :-
 truth_or(true, _, true).
 truth_or(false, T, T).
 
+contradictory_problems(Profile, Problems) :-
+    pair_problems(Profile, breach_unlikely_to_result_in_risk, true, breach_likely_to_result_in_high_risk, true, FirstProblems),
+    pair_problems(Profile, delay_justified_by_reasons, true, notification_accompanied_by_reasons_for_delay, false, SecondProblems),
+    append(FirstProblems, SecondProblems, Problems).
+
+pair_problems(Profile, FirstKey, FirstValue, SecondKey, SecondValue, Problems) :-
+    single_value_t(Profile, FirstKey, FirstValue, FirstHolds),
+    single_value_t(Profile, SecondKey, SecondValue, SecondHolds),
+    truth_and(FirstHolds, SecondHolds, BothHold),
+    name_contradiction(BothHold, [FirstKey, SecondKey], Problems).
+
+single_value_t(Profile, Key, Wanted, T) :-
+    key_occurrences(Profile, Key, Occurrences),
+    occurrence_value_t(Occurrences, Profile, Key, Wanted, T).
+
+occurrence_value_t(none, _, _, _, false).
+occurrence_value_t(many, _, _, _, false).
+occurrence_value_t(one, Profile, Key, Wanted, T) :-
+    values_in_type_t(Profile, Key, enum([Wanted]), T).
+
+name_contradiction(true, Keys, [contradictory_inputs(Keys)]).
+name_contradiction(false, _, []).
+
 test(an_empty_profile_has_no_problem) :-
     gdpr_arts33_34_breach_notification_input_problems([], []).
 test(a_well_formed_profile_has_no_problem) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, unsure), attribute(party_role, controller)], []).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, false), attribute(party_role, controller), attribute(notification_made_without_undue_delay, unsure)], []).
 test(a_non_list_is_wrong_type_profile) :-
-    gdpr_arts33_34_breach_notification_input_problems(profile, [wrong_type(profile)]).
-test(a_non_attribute_element_is_wrong_type_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems(controller, [wrong_type(profile)]).
+test(a_list_with_a_non_attribute_is_wrong_type_profile) :-
     gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), party_role], [wrong_type(profile)]).
-test(a_duplicate_with_equal_values_is_only_duplicate) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(party_role, controller)], [duplicate_key(party_role)]).
-test(a_mistyped_value_is_wrong_type) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_accompanied_by_reasons_for_delay, unsure)], [wrong_type(notification_accompanied_by_reasons_for_delay)]).
-test(a_repeated_unknown_key_is_named_once) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(an_enumeration_value_outside_its_atoms_is_wrong_type) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, auditor)], [wrong_type(party_role)]).
+test(unsure_is_not_a_crisp_value) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_gives_contact_point, unsure)], [wrong_type(notification_gives_contact_point)]).
+test(a_repeated_key_is_one_duplicate_key) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(party_role, nobody)], [duplicate_key(party_role)]).
+test(an_unknown_key_is_named_once) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_colour, red), attribute(party_role, controller), attribute(breach_colour, blue)], [unknown_key(breach_colour)]).
 test(the_risk_pair_is_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], [contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_likely_to_result_in_high_risk, true), attribute(breach_unlikely_to_result_in_risk, true)], [contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
 test(the_reasons_pair_is_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_accompanied_by_reasons_for_delay, false), attribute(delay_justified_by_reasons, true)], [contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])]).
-test(an_unsure_high_risk_is_not_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, unsure)], []).
-test(a_duplicated_pair_key_is_not_contradictory) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, false)], [contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])]).
+test(an_unsure_judgement_is_not_contradictory) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, unsure), attribute(breach_likely_to_result_in_high_risk, true)], []).
+test(a_duplicated_key_does_not_form_a_contradictory_pair) :-
     gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], [duplicate_key(breach_unlikely_to_result_in_risk)]).
 test(problems_come_in_contract_then_unknown_then_contradiction_order) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red), attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true), attribute(party_role, auditor)], [wrong_type(party_role), unknown_key(colour), contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_colour, red), attribute(breach_unlikely_to_result_in_risk, true), attribute(party_role, auditor), attribute(breach_likely_to_result_in_high_risk, true)], [wrong_type(party_role), unknown_key(breach_colour), contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
 test(the_check_has_exactly_one_answer) :-
-    findall(Problems, gdpr_arts33_34_breach_notification_input_problems([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, false)], Problems), Answers),
-    length(Answers, 1).
-
-test(a_consistent_reasons_pair_is_not_refused, fail) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, true)], [_|_]).
+    findall(Problems, gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, processor)], Problems), Answers),
+    Answers == [[]].

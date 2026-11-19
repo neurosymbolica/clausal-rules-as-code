@@ -189,8 +189,8 @@ tri_get(P, K, undefined) :- \+ tri_profile_has(P, K).
 
 attrs_put(D, [], D).
 attrs_put(D, [attribute(K, V)|T], Out) :-
-    attrs_put_one(D, K, V, Dnew),
-    attrs_put(Dnew, T, Out).
+    attrs_put_one(D, K, V, D1),
+    attrs_put(D1, T, Out).
 
 attrs_put_one([], K, V, [attribute(K, V)]).
 attrs_put_one([attribute(K, _)|T], K, V, [attribute(K, V)|T]).

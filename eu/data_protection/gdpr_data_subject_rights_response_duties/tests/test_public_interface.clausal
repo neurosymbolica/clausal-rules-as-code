@@ -1,4 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees).
+% Each fixture subject resolves to its expected status; near-miss controls
+% get the opposite status; the three order queries give their expected
+% answers and exactly one solution for every subject.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_response_duties/tests/test_public_interface.clausal
+% =====================================================================
 :- module(test_public_interface, []).
 :- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties, [
     decide_gdpr_data_subject_rights_response_duties/2,
@@ -10,261 +18,335 @@
     gdpr_data_subject_rights_response_duties_profile_for/2,
     gdpr_data_subject_rights_response_duties_assess/2,
     gdpr_data_subject_rights_response_duties_what_if/4,
+    gdpr_data_subject_rights_response_duties_input_problems/2,
     request_response_deadline/2,
     response_duties/2,
-    recipient_notification/2
+    recipient_notification/2,
+    provenance/2,
+    url/2,
+    document/2
 ]).
 
-% ---- verdicts per subject ----
-test(access_basic_must_comply) :-
-    gdpr_data_subject_rights_response_duties_assess(access_basic, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
-test(access_excessive_need_not_comply) :-
-    gdpr_data_subject_rights_response_duties_assess(access_excessive, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art12_5_manifestly_unfounded_or_excessive, [reasonable_fee_may_be_charged], _)).
-test(access_not_excessive_must_comply) :-
-    gdpr_data_subject_rights_response_duties_assess(access_not_excessive, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
-test(access_excessive_is_not_must_comply, fail) :-
-    gdpr_data_subject_rights_response_duties_assess(access_excessive, gdpr_data_subject_request_verdict(must_comply, _, _, _, _)).
-test(access_unable_to_identify) :-
-    gdpr_data_subject_rights_response_duties_assess(access_unable_to_identify, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art12_2_unable_to_identify, [], _)).
-test(access_identity_suspended) :-
-    gdpr_data_subject_rights_response_duties_assess(access_identity_suspended, gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], [])).
-test(access_identity_confirmed_must_comply) :-
-    gdpr_data_subject_rights_response_duties_assess(access_identity_confirmed, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
-test(access_restricted_by_law) :-
-    gdpr_data_subject_rights_response_duties_assess(access_restricted_by_law, gdpr_data_subject_request_verdict(need_not_comply, art15_1, art23_legislative_restriction, [], _)).
-test(access_not_restricted_by_law) :-
-    gdpr_data_subject_rights_response_duties_assess(access_not_restricted_by_law, gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], _)).
-test(missing_request_type) :-
-    gdpr_data_subject_rights_response_duties_assess(missing_request_type, gdpr_data_subject_request_verdict(indeterminate([request_type]), none, none, [], [])).
-test(objection_without_ground) :-
-    gdpr_data_subject_rights_response_duties_assess(objection_without_ground, gdpr_data_subject_request_verdict(indeterminate([objection_ground_claimed]), none, none, [], [])).
-test(request_type_invalid) :-
-    gdpr_data_subject_rights_response_duties_assess(request_type_invalid, gdpr_data_subject_request_verdict(input_problems([wrong_type(request_type)]), none, none, [], [])).
-test(unknown_key_profile) :-
-    gdpr_data_subject_rights_response_duties_assess(unknown_key_profile, gdpr_data_subject_request_verdict(input_problems([unknown_key(bogus_key)]), none, none, [], [])).
-test(duplicate_key_profile) :-
-    gdpr_data_subject_rights_response_duties_assess(duplicate_key_profile, gdpr_data_subject_request_verdict(input_problems([duplicate_key(request_type)]), none, none, [], [])).
-test(rectification_inaccurate) :-
-    gdpr_data_subject_rights_response_duties_assess(rectification_inaccurate, gdpr_data_subject_request_verdict(must_comply, art16_inaccurate_data, none, [], _)).
-test(rectification_nothing_wrong) :-
-    gdpr_data_subject_rights_response_duties_assess(rectification_nothing_wrong, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [])).
-test(rectification_keys_absent) :-
-    gdpr_data_subject_rights_response_duties_assess(rectification_keys_absent, gdpr_data_subject_request_verdict(indeterminate([personal_data_inaccurate, personal_data_incomplete_in_light_of_purposes]), none, none, [], [])).
-test(erasure_no_longer_necessary) :-
-    gdpr_data_subject_rights_response_duties_assess(erasure_no_longer_necessary, gdpr_data_subject_request_verdict(must_comply, art17_1_a, none, [], [cite(eu_reg_2016_679_art_17_1_a)])).
-test(erasure_legal_claims_exception) :-
-    gdpr_data_subject_rights_response_duties_assess(erasure_legal_claims_exception, gdpr_data_subject_request_verdict(need_not_comply, art17_1_a, art17_3_e, [], [cite(eu_reg_2016_679_art_17_1_a), cite(eu_reg_2016_679_art_17_3_e)])).
-test(restriction_accuracy_contested) :-
-    gdpr_data_subject_rights_response_duties_assess(restriction_accuracy_contested, gdpr_data_subject_request_verdict(must_comply, art18_1_a, none, [], _)).
-test(restriction_no_ground) :-
-    gdpr_data_subject_rights_response_duties_assess(restriction_no_ground, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [])).
-test(portability_engaged) :-
-    gdpr_data_subject_rights_response_duties_assess(portability_engaged, gdpr_data_subject_request_verdict(must_comply, art20_1, none, [], _)).
-test(portability_not_automated) :-
-    gdpr_data_subject_rights_response_duties_assess(portability_not_automated, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [])).
-test(portability_public_task) :-
-    gdpr_data_subject_rights_response_duties_assess(portability_public_task, gdpr_data_subject_request_verdict(need_not_comply, art20_1, art20_3_public_task, [], _)).
-test(objection_marketing) :-
-    gdpr_data_subject_rights_response_duties_assess(objection_marketing, gdpr_data_subject_request_verdict(must_comply, art21_2, none, [], _)).
-test(objection_not_marketing) :-
-    gdpr_data_subject_rights_response_duties_assess(objection_not_marketing, gdpr_data_subject_request_verdict(need_not_comply, none, none, [], [])).
-test(objection_art21_1_compelling) :-
-    gdpr_data_subject_rights_response_duties_assess(objection_art21_1_compelling, gdpr_data_subject_request_verdict(need_not_comply, art21_1, art21_1_compelling_legitimate_grounds, [], _)).
-test(automated_decision_consent) :-
-    gdpr_data_subject_rights_response_duties_assess(automated_decision_consent, gdpr_data_subject_request_verdict(need_not_comply, art22_1, art22_2_c, [human_intervention, express_point_of_view, contest_decision], _)).
-test(automated_decision_no_consent) :-
-    gdpr_data_subject_rights_response_duties_assess(automated_decision_no_consent, gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], _)).
-test(automated_decision_special_bar) :-
-    gdpr_data_subject_rights_response_duties_assess(automated_decision_special_bar, gdpr_data_subject_request_verdict(must_comply, art22_1, none, [], _)).
+% ---- expected answers ------------------------------------------------
 
-% ---- status values, resolvable, checklist ----
-test(status_is_within_the_status_values) :-
-    gdpr_data_subject_rights_response_duties_status_values(StatusValues),
-    gdpr_data_subject_rights_response_duties_assess(access_basic, gdpr_data_subject_request_verdict(Status, _, _, _, _)),
-    member(Status, StatusValues).
-test(status_projection) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_status(Profile, must_comply).
-test(status_projection_is_not_need_not_comply, fail) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_status(Profile, need_not_comply).
-test(decision_resolvable) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_decision_resolvable(Profile).
-test(checklist_is_not_empty) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_checklist(Profile, [_FirstItem|_OtherItems]).
-test(checklist_and_resolvable_hold_on_the_baseline_fixture) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_decision_resolvable(Profile),
-    gdpr_data_subject_rights_response_duties_checklist(Profile, [_FirstItem|_OtherItems]).
-test(the_public_interface_resolves_on_the_baseline_fixture) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_request_verdict(Status, _, _, _, _)),
+expected_status(access_plain_must_comply, must_comply).
+expected_status(access_manifestly_excessive_refused, need_not_comply).
+expected_status(access_public_holiday_shift, must_comply).
+expected_status(access_holiday_elsewhere_no_shift, must_comply).
+expected_status(access_extension_necessary, must_comply).
+expected_status(access_extension_not_necessary, must_comply).
+expected_status(access_extension_unsure, must_comply).
+expected_status(access_identity_doubts_suspended, suspended).
+expected_status(access_identity_confirmed_complies, must_comply).
+expected_status(access_legislative_restriction_attested, need_not_comply).
+expected_status(access_legislative_restriction_denied, must_comply).
+expected_status(access_unable_to_identify_refused, need_not_comply).
+expected_status(erasure_legal_claims_exception, need_not_comply).
+expected_status(erasure_without_exception_complies, must_comply).
+expected_status(erasure_legal_obligation_not_attested, needs_legal_review).
+expected_status(erasure_legal_obligation_attested, must_comply).
+expected_status(rectification_recipients_informed, must_comply).
+expected_status(rectification_recipients_excused, must_comply).
+expected_status(rectification_grounds_missing, indeterminate).
+expected_status(judgement_given_unsure_refers, needs_legal_review).
+expected_status(crisp_key_given_unsure, input_problems).
+expected_status(restriction_accuracy_contested, must_comply).
+expected_status(restriction_not_engaged, need_not_comply).
+expected_status(portability_engaged, must_comply).
+expected_status(portability_rights_of_others, need_not_comply).
+expected_status(objection_direct_marketing, must_comply).
+expected_status(objection_not_direct_marketing, need_not_comply).
+expected_status(objection_ground_missing, indeterminate).
+expected_status(automated_decision_explicit_consent, need_not_comply).
+expected_status(automated_decision_special_category_bar, must_comply).
+expected_status(request_type_absent_manifestly_excessive, indeterminate).
+expected_status(request_type_absent_not_excessive, indeterminate).
+expected_status(duplicate_request_type, input_problems).
+expected_status(unknown_key_given, input_problems).
+expected_status(profile_not_a_list, input_problems).
+
+expected_deadline(access_plain_must_comply, date(2026, 11, 30)).
+expected_deadline(access_manifestly_excessive_refused, date(2026, 11, 30)).
+expected_deadline(access_public_holiday_shift, date(2026, 12, 1)).
+expected_deadline(access_holiday_elsewhere_no_shift, date(2026, 11, 30)).
+expected_deadline(access_extension_necessary, date(2026, 4, 30)).
+expected_deadline(access_extension_not_necessary, date(2026, 3, 2)).
+expected_deadline(access_extension_unsure, needs_legal_review(open_textured(extension_necessary_for_complexity_and_number, cite(eu_reg_2016_679_art_12_3)), [inputs_relied_on([extension_necessary_for_complexity_and_number-unsure])])).
+expected_deadline(access_identity_doubts_suspended, suspended(art12_6_identity_not_confirmed)).
+expected_deadline(access_identity_confirmed_complies, date(2026, 11, 30)).
+expected_deadline(request_type_absent_manifestly_excessive, date(2026, 11, 30)).
+expected_deadline(duplicate_request_type, input_problems([duplicate_key(request_type)])).
+
+expected_duties(access_plain_must_comply, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
+expected_duties(access_manifestly_excessive_refused, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(access_extension_necessary, [inform_of_extension_with_reasons(first_period, cite(eu_reg_2016_679_art_12_3)), respond_with_action_taken(extended_period, cite(eu_reg_2016_679_art_12_3))]).
+expected_duties(access_extension_not_necessary, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
+expected_duties(access_extension_unsure, needs_legal_review(open_textured(extension_necessary_for_complexity_and_number, cite(eu_reg_2016_679_art_12_3)), [inputs_relied_on([extension_necessary_for_complexity_and_number-unsure])])).
+expected_duties(access_identity_doubts_suspended, suspended(art12_6_identity_not_confirmed)).
+expected_duties(erasure_legal_claims_exception, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(erasure_without_exception_complies, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
+expected_duties(rectification_grounds_missing, indeterminate([personal_data_inaccurate, personal_data_incomplete_in_light_of_purposes])).
+expected_duties(restriction_not_engaged, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(portability_rights_of_others, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(objection_direct_marketing, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
+expected_duties(automated_decision_explicit_consent, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(request_type_absent_manifestly_excessive, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
+expected_duties(request_type_absent_not_excessive, indeterminate([request_type])).
+expected_duties(duplicate_request_type, input_problems([duplicate_key(request_type)])).
+expected_duties(profile_not_a_list, input_problems([wrong_type(profile)])).
+
+expected_recipients(access_plain_must_comply, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(erasure_legal_claims_exception, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(erasure_without_exception_complies, [communicate_to_each_recipient(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(rectification_recipients_informed, [communicate_to_each_recipient(cite(eu_reg_2016_679_art_19)), inform_data_subject_of_recipients(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(rectification_recipients_excused, [recipient_notification_excused(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(restriction_accuracy_contested, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(access_identity_doubts_suspended, suspended(art12_6_identity_not_confirmed)).
+expected_recipients(request_type_absent_manifestly_excessive, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
+expected_recipients(unknown_key_given, input_problems([unknown_key(favourite_colour)])).
+
+% ---- helpers ---------------------------------------------------------
+
+subject_status(Subject, Status) :-
+    gdpr_data_subject_rights_response_duties_profile_for(Subject, Profile),
     gdpr_data_subject_rights_response_duties_status(Profile, Status).
-test(every_subject_resolves) :-
-    findall(Subject, gdpr_data_subject_rights_response_duties_subject(Subject), Subjects),
-    Subjects = [_|_],
-    findall(Subject, (gdpr_data_subject_rights_response_duties_subject(Subject), gdpr_data_subject_rights_response_duties_assess(Subject, _)), Resolved),
-    Resolved == Subjects.
 
-% ---- what-if ----
-test(what_if_excessive_flips_to_need_not_comply) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, true, need_not_comply).
-test(what_if_unchanged_stays_must_comply) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, false, must_comply).
+subject_answer(QueryName, Subject, Answer) :-
+    gdpr_data_subject_rights_response_duties_profile_for(Subject, Profile),
+    call(QueryName, Profile, Answer).
 
-% ---- deadlines ----
-test(deadline_moves_off_sunday) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    request_response_deadline(Profile, date(2026, 11, 30)).
-test(deadline_is_not_the_sunday, fail) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    request_response_deadline(Profile, date(2026, 11, 29)).
-test(deadline_holiday_shift) :-
-    gdpr_data_subject_rights_response_duties_profile_for(holiday_shift, Profile),
-    request_response_deadline(Profile, date(2026, 12, 1)).
-test(deadline_empty_holiday_list_no_shift) :-
-    gdpr_data_subject_rights_response_duties_profile_for(no_holiday_shift, Profile),
-    request_response_deadline(Profile, date(2026, 11, 30)).
-test(deadline_extended) :-
-    gdpr_data_subject_rights_response_duties_profile_for(extension_necessary, Profile),
-    request_response_deadline(Profile, date(2026, 4, 30)).
-test(deadline_extension_not_necessary_first_period) :-
-    gdpr_data_subject_rights_response_duties_profile_for(extension_not_necessary, Profile),
-    request_response_deadline(Profile, date(2026, 3, 2)).
-test(deadline_leap_year) :-
-    gdpr_data_subject_rights_response_duties_profile_for(leap_year, Profile),
-    request_response_deadline(Profile, date(2028, 2, 29)).
-test(deadline_year_end) :-
-    gdpr_data_subject_rights_response_duties_profile_for(year_end, Profile),
-    request_response_deadline(Profile, date(2027, 2, 1)).
-test(deadline_refusal_uses_first_period) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_excessive, Profile),
-    request_response_deadline(Profile, date(2026, 11, 30)).
-test(deadline_suspended) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_identity_suspended, Profile),
-    request_response_deadline(Profile, suspended(art12_6_identity_not_confirmed)).
-test(deadline_without_receipt) :-
-    request_response_deadline([attribute(request_type, access)], indeterminate([request_received_on])).
-test(deadline_input_problems) :-
-    gdpr_data_subject_rights_response_duties_profile_for(request_type_invalid, Profile),
-    request_response_deadline(Profile, input_problems([wrong_type(request_type)])).
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_data_subject_rights_response_duties_subject(Subject), Subjects).
 
-% ---- duties ----
-test(duties_first_period) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    response_duties(Profile, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
-test(duties_extended) :-
-    gdpr_data_subject_rights_response_duties_profile_for(extension_necessary, Profile),
-    response_duties(Profile, [inform_of_extension_with_reasons(first_period, cite(eu_reg_2016_679_art_12_3)), respond_with_action_taken(extended_period, cite(eu_reg_2016_679_art_12_3))]).
-test(duties_extension_not_necessary) :-
-    gdpr_data_subject_rights_response_duties_profile_for(extension_not_necessary, Profile),
-    response_duties(Profile, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
-test(duties_extension_unsure) :-
-    gdpr_data_subject_rights_response_duties_profile_for(extension_unsure, Profile),
-    response_duties(Profile, needs_legal_review(open_textured(extension_necessary_for_complexity_and_number, cite(eu_reg_2016_679_art_12_3)), _)).
-test(duties_refusal) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_excessive, Profile),
-    response_duties(Profile, [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]).
-test(duties_suspended) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_identity_suspended, Profile),
-    response_duties(Profile, suspended(art12_6_identity_not_confirmed)).
+single_answer_subjects(QueryName, Subjects) :-
+    findall(Subject, single_answer_subject(QueryName, Subject), Subjects).
 
-% ---- recipient notification ----
-test(recipients_communicate_and_inform) :-
-    gdpr_data_subject_rights_response_duties_profile_for(erasure_no_longer_necessary, Profile),
-    recipient_notification(Profile, [communicate_to_each_recipient(cite(eu_reg_2016_679_art_19)), inform_data_subject_of_recipients(cite(eu_reg_2016_679_art_19))]).
-test(recipients_excused) :-
-    gdpr_data_subject_rights_response_duties_profile_for(erasure_effort_excused, Profile),
-    recipient_notification(Profile, [recipient_notification_excused(cite(eu_reg_2016_679_art_19))]).
-test(recipients_not_disclosed) :-
-    gdpr_data_subject_rights_response_duties_profile_for(rectification_inaccurate, Profile),
-    recipient_notification(Profile, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
-test(recipients_access_not_applicable) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    recipient_notification(Profile, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
-test(recipients_refusal_not_applicable) :-
-    gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_claims_exception, Profile),
-    recipient_notification(Profile, [recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19))]).
-test(recipients_missing_disclosure_key) :-
-    recipient_notification([attribute(request_type, rectification), attribute(personal_data_inaccurate, true)], indeterminate([personal_data_disclosed_to_recipients])).
+single_answer_subject(QueryName, Subject) :-
+    gdpr_data_subject_rights_response_duties_subject(Subject),
+    findall(Answer, subject_answer(QueryName, Subject, Answer), Answers),
+    length(Answers, 1).
 
-% ---- result constructors are data: the absent enabling outside fact refers ----
-test(erasure_without_attested_law_refers_across_the_reference) :-
-    Profile = [
-        attribute(request_type, erasure),
-        attribute(data_no_longer_necessary_for_purposes, false),
-        attribute(consent_is_the_basis_of_processing, false),
-        attribute(objection_under_art21_1_made, false),
-        attribute(objection_under_art21_2_made, false),
-        attribute(personal_data_unlawfully_processed, false),
-        attribute(collected_in_relation_to_information_society_services_offer, false)
-    ],
-    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_request_verdict(Comply, none, none, [], [])),
-    Comply = needs_legal_review(Reason, Context),
-    Reason = cross_reference_unresolved(Citation, Target),
-    Citation == cite(eu_reg_2016_679_art_17_1_e),
-    Target == cite(union_or_member_state_law_requiring_erasure),
-    Context = [ResolutionItem, ReliedItem],
-    ResolutionItem = resolution(ResolvedTarget, Status),
-    ResolvedTarget == Target,
-    Status == not_attempted,
-    ReliedItem = inputs_relied_on(Pairs),
-    member(request_type-erasure, Pairs),
-    member(erasure_required_by_union_or_member_state_law-absent, Pairs).
-test(erasure_with_attested_law_does_not_refer) :-
-    Profile = [
-        attribute(request_type, erasure),
-        attribute(erasure_required_by_union_or_member_state_law, attested(true, attestation(host, fixture_time, fixture_reason, none)))
-    ],
-    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_request_verdict(must_comply, art17_1_e, none, [], _)).
-test(a_referral_is_not_a_final_answer, fail) :-
-    Profile = [
-        attribute(request_type, erasure),
-        attribute(data_no_longer_necessary_for_purposes, false),
-        attribute(consent_is_the_basis_of_processing, false),
-        attribute(objection_under_art21_1_made, false),
-        attribute(objection_under_art21_2_made, false),
-        attribute(personal_data_unlawfully_processed, false),
-        attribute(collected_in_relation_to_information_society_services_offer, false)
-    ],
-    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_request_verdict(must_comply, _, _, _, _)).
-test(provenance_marks_the_deciding_clause) :-
-    Term = provenance(art17_1_e_enabling_fact, [cite(eu_reg_2016_679_art_17_1)]),
-    Term = provenance(art17_1_e_enabling_fact, [cite(eu_reg_2016_679_art_17_1)]).
-test(provenance_with_the_extension_clause) :-
-    Term = provenance(art12_3_extension, [cite(eu_reg_2016_679_art_12_3)]),
-    Term = provenance(art12_3_extension, [cite(eu_reg_2016_679_art_12_3)]).
-test(attestation_with_no_evidence) :-
-    Term = attestation(host, fixture_time, fixture_reason, none),
-    Term = attestation(_, _, _, none).
-test(attested_true_with_no_evidence) :-
-    Attestation = attestation(host, fixture_time, fixture_reason, none),
-    Term = attested(true, Attestation),
-    Term = attested(true, attestation(host, fixture_time, fixture_reason, none)).
-test(attested_false_with_url_evidence) :-
-    Evidence = url('https://eur-lex.europa.eu/eli/reg/2016/679/oj', '2026-11-10T00:00:00Z'),
-    Term = attested(false, attestation(host, fixture_time, fixture_reason, Evidence)),
-    Term = attested(false, attestation(_, _, _, url(_, _))).
-test(attested_holiday_list_with_document_evidence) :-
-    Evidence = document(upload_one, sha256_digest),
-    Term = attested([date(2026, 12, 25)], attestation(host, fixture_time, fixture_reason, Evidence)),
-    Term = attested([date(2026, 12, 25)], attestation(_, _, _, document(upload_one, sha256_digest))).
-test(an_attested_holiday_list_is_read_by_the_deadline) :-
-    Profile = [
-        attribute(request_type, access),
-        attribute(request_received_on, date(2026, 10, 29)),
-        attribute(public_holidays, attested([date(2026, 11, 30)], attestation(host, fixture_time, fixture_reason, document(upload_one, sha256_digest))))
-    ],
-    request_response_deadline(Profile, date(2026, 12, 1)).
-test(an_attested_value_that_is_not_attested_is_an_input_problem) :-
-    Profile = [
-        attribute(request_type, access),
-        attribute(legislative_restriction_applies_to_the_right, true)
-    ],
-    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_request_verdict(input_problems([wrong_type(legislative_restriction_applies_to_the_right)]), none, none, [], [])).
+matched_expectations(deadline, Matched) :-
+    findall(Subject, (expected_deadline(Subject, Wanted), subject_answer(request_response_deadline, Subject, Got), Got == Wanted), Matched).
+matched_expectations(duties, Matched) :-
+    findall(Subject, (expected_duties(Subject, Wanted), subject_answer(response_duties, Subject, Got), Got == Wanted), Matched).
+matched_expectations(recipients, Matched) :-
+    findall(Subject, (expected_recipients(Subject, Wanted), subject_answer(recipient_notification, Subject, Got), Got == Wanted), Matched).
+
+% ---- every subject: status, checklist, resolvability, one answer ------
+
+test(every_subject_resolves_to_its_expected_status) :-
+    findall(Subject-Status, (gdpr_data_subject_rights_response_duties_subject(Subject), subject_status(Subject, Status)), Got),
+    findall(Subject-Status, expected_status(Subject, Status), Expected),
+    msort(Got, SortedGot),
+    msort(Expected, SortedExpected),
+    SortedGot == SortedExpected.
+
+test(every_status_is_a_declared_status_value) :-
+    gdpr_data_subject_rights_response_duties_status_values(StatusValues),
+    findall(Subject, (gdpr_data_subject_rights_response_duties_subject(Subject), subject_status(Subject, Status), member(Status, StatusValues)), Declared),
+    all_subjects(Subjects),
+    Declared == Subjects.
+
+test(every_subject_has_a_non_empty_checklist_and_is_resolvable) :-
+    findall(Subject, (gdpr_data_subject_rights_response_duties_profile_for(Subject, Profile), gdpr_data_subject_rights_response_duties_decision_resolvable(Profile), gdpr_data_subject_rights_response_duties_checklist(Profile, [_|_])), Checked),
+    all_subjects(Subjects),
+    msort(Checked, SortedChecked),
+    msort(Subjects, SortedSubjects),
+    SortedChecked == SortedSubjects.
+
+test(every_subject_gets_exactly_one_deadline_answer) :-
+    single_answer_subjects(request_response_deadline, Single),
+    all_subjects(Subjects),
+    Single == Subjects.
+
+test(every_subject_gets_exactly_one_duties_answer) :-
+    single_answer_subjects(response_duties, Single),
+    all_subjects(Subjects),
+    Single == Subjects.
+
+test(every_subject_gets_exactly_one_recipient_answer) :-
+    single_answer_subjects(recipient_notification, Single),
+    all_subjects(Subjects),
+    Single == Subjects.
+
+% ---- the three order queries -----------------------------------------
+
+test(deadlines_match_their_expectations) :-
+    matched_expectations(deadline, Matched),
+    findall(Subject, expected_deadline(Subject, _), Expected),
+    Matched == Expected.
+
+test(response_duties_match_their_expectations) :-
+    matched_expectations(duties, Matched),
+    findall(Subject, expected_duties(Subject, _), Expected),
+    Matched == Expected.
+
+test(recipient_notifications_match_their_expectations) :-
+    matched_expectations(recipients, Matched),
+    findall(Subject, expected_recipients(Subject, _), Expected),
+    Matched == Expected.
+
+test(deadline_is_read_element_wise) :-
+    subject_answer(request_response_deadline, access_plain_must_comply, date(Year, Month, Day)),
+    Year =:= 2026,
+    Month =:= 11,
+    Day =:= 30.
+
+test(attested_holiday_on_the_last_day_moves_the_deadline) :-
+    subject_answer(request_response_deadline, access_public_holiday_shift, Deadline),
+    Deadline == date(2026, 12, 1).
+test(holiday_elsewhere_does_not_move_the_deadline, fail) :-
+    subject_answer(request_response_deadline, access_holiday_elsewhere_no_shift, date(2026, 12, 1)).
+
+test(extension_is_three_months_from_receipt) :-
+    subject_answer(request_response_deadline, access_extension_necessary, Deadline),
+    Deadline == date(2026, 4, 30).
+test(extension_is_not_the_step_by_step_date, fail) :-
+    subject_answer(request_response_deadline, access_extension_necessary, date(2026, 4, 28)).
+
+test(refusal_owes_reasons_and_remedies) :-
+    subject_answer(response_duties, access_manifestly_excessive_refused, Duties),
+    Duties == [inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))].
+test(refusal_owes_no_response_with_action_taken, fail) :-
+    subject_answer(response_duties, access_manifestly_excessive_refused, [respond_with_action_taken(_, _)]).
+
+test(excused_communication_gives_no_duty_to_inform_about_recipients) :-
+    subject_answer(recipient_notification, rectification_recipients_excused, Duties),
+    Duties == [recipient_notification_excused(cite(eu_reg_2016_679_art_19))].
+test(excused_communication_is_not_the_communicate_list, fail) :-
+    subject_answer(recipient_notification, rectification_recipients_excused, [communicate_to_each_recipient(_)|_]).
+
+% ---- positive cases and their near-miss controls ----------------------
+
+test(access_plain_must_comply) :-
+    subject_status(access_plain_must_comply, must_comply).
+test(access_plain_is_not_refused, fail) :-
+    subject_status(access_plain_must_comply, need_not_comply).
+test(access_manifestly_excessive_is_refused) :-
+    subject_status(access_manifestly_excessive_refused, need_not_comply).
+test(access_manifestly_excessive_is_not_must_comply, fail) :-
+    subject_status(access_manifestly_excessive_refused, must_comply).
+
+test(identity_doubts_suspend) :-
+    subject_status(access_identity_doubts_suspended, suspended).
+test(identity_confirmed_complies) :-
+    subject_status(access_identity_confirmed_complies, must_comply).
+test(identity_confirmed_is_not_suspended, fail) :-
+    subject_status(access_identity_confirmed_complies, suspended).
+
+test(legislative_restriction_attested_relieves) :-
+    subject_status(access_legislative_restriction_attested, need_not_comply).
+test(legislative_restriction_denied_complies) :-
+    subject_status(access_legislative_restriction_denied, must_comply).
+
+test(erasure_legal_claims_relieves) :-
+    subject_status(erasure_legal_claims_exception, need_not_comply).
+test(erasure_without_exception_complies) :-
+    subject_status(erasure_without_exception_complies, must_comply).
+test(erasure_without_exception_is_not_refused, fail) :-
+    subject_status(erasure_without_exception_complies, need_not_comply).
+
+test(erasure_ground_e_not_attested_refers_as_cross_reference) :-
+    gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_obligation_not_attested, Profile),
+    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_rights_response_duties_verdict(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e), Target), _), _)),
+    Target == cite(union_or_member_state_law_requiring_erasure).
+test(erasure_ground_e_attested_complies) :-
+    subject_status(erasure_legal_obligation_attested, must_comply).
+
+test(unsure_judgement_refers_on_article_16) :-
+    gdpr_data_subject_rights_response_duties_profile_for(judgement_given_unsure_refers, Profile),
+    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_rights_response_duties_verdict(Comply, _)),
+    Comply == needs_legal_review(open_textured(personal_data_incomplete_in_light_of_purposes, cite(eu_reg_2016_679_art_16)), [inputs_relied_on([request_type-rectification, personal_data_incomplete_in_light_of_purposes-unsure])]).
+test(unsure_crisp_key_is_an_input_problem) :-
+    gdpr_data_subject_rights_response_duties_profile_for(crisp_key_given_unsure, Profile),
+    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+    Problems == [wrong_type(personal_data_inaccurate)].
+
+test(restriction_accuracy_contested_complies) :-
+    subject_status(restriction_accuracy_contested, must_comply).
+test(restriction_not_engaged_is_refused) :-
+    subject_status(restriction_not_engaged, need_not_comply).
+
+test(portability_engaged_complies) :-
+    subject_status(portability_engaged, must_comply).
+test(portability_rights_of_others_is_refused) :-
+    subject_status(portability_rights_of_others, need_not_comply).
+
+test(objection_to_direct_marketing_complies) :-
+    subject_status(objection_direct_marketing, must_comply).
+test(objection_without_direct_marketing_is_refused) :-
+    subject_status(objection_not_direct_marketing, need_not_comply).
+test(objection_ground_missing_is_indeterminate) :-
+    gdpr_data_subject_rights_response_duties_profile_for(objection_ground_missing, Profile),
+    decide_gdpr_data_subject_rights_response_duties(Profile, gdpr_data_subject_rights_response_duties_verdict(Comply, _)),
+    Comply == indeterminate([objection_ground_claimed]).
+
+test(automated_decision_with_explicit_consent_is_refused) :-
+    subject_status(automated_decision_explicit_consent, need_not_comply).
+test(special_category_bar_restores_the_duty) :-
+    subject_status(automated_decision_special_category_bar, must_comply).
+test(special_category_bar_is_not_refused, fail) :-
+    subject_status(automated_decision_special_category_bar, need_not_comply).
+
+% ---- input check -------------------------------------------------------
+
+test(well_formed_profile_has_no_problem) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_plain_must_comply, Profile),
+    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+    Problems == [].
+test(duplicate_key_is_named_once) :-
+    gdpr_data_subject_rights_response_duties_profile_for(duplicate_request_type, Profile),
+    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+    Problems == [duplicate_key(request_type)].
+test(unknown_key_is_named) :-
+    gdpr_data_subject_rights_response_duties_profile_for(unknown_key_given, Profile),
+    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+    Problems == [unknown_key(favourite_colour)].
+test(non_list_profile_is_wrong_type) :-
+    gdpr_data_subject_rights_response_duties_profile_for(profile_not_a_list, Profile),
+    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+    Problems == [wrong_type(profile)].
+
+% ---- result constructors: provenance/2, url/2, document/2 -------------
+
+test(provenance_accepts_a_clause_and_a_citation_list) :-
+    provenance(open_comply, [cite(eu_reg_2016_679_art_17_1_e)]).
+test(provenance_rejects_a_citation_that_is_not_a_list, fail) :-
+    provenance(open_comply, cite(eu_reg_2016_679_art_17_1_e)).
+
+test(url_accepts_a_location_and_a_retrieval_time) :-
+    url('https://eur-lex.europa.eu/eli/reg/2016/679/oj', retrieved_at).
+test(url_rejects_an_unbound_location, fail) :-
+    url(_, retrieved_at).
+
+test(document_accepts_an_upload_and_a_checksum) :-
+    document(upload_identifier, checksum).
+test(document_rejects_an_unbound_checksum, fail) :-
+    document(upload_identifier, _).
+
+test(attested_fact_with_url_evidence_is_read_like_bare_evidence) :-
+    request_response_deadline([attribute(request_type, access), attribute(request_received_on, date(2026, 10, 29)), attribute(public_holidays, attested([date(2026, 11, 30)], attestation(by, at, reason, url('https://eur-lex.europa.eu', retrieved_at))))], Deadline),
+    Deadline == date(2026, 12, 1).
+test(attested_fact_with_document_evidence_is_read_like_bare_evidence) :-
+    request_response_deadline([attribute(request_type, access), attribute(request_received_on, date(2026, 10, 29)), attribute(public_holidays, attested([date(2026, 11, 30)], attestation(by, at, reason, document(upload_identifier, checksum))))], Deadline),
+    Deadline == date(2026, 12, 1).
+
+% ---- facade verdict and what-if ---------------------------------------
+
+test(facade_verdict_cites_the_article_15_basis) :-
+    gdpr_data_subject_rights_response_duties_assess(access_plain_must_comply, Verdict),
+    Verdict == gdpr_data_subject_rights_response_duties_verdict(must_comply, [eu_reg_2016_679_art_15_1]).
+test(facade_verdict_of_a_refusal_is_need_not_comply) :-
+    gdpr_data_subject_rights_response_duties_assess(access_manifestly_excessive_refused, gdpr_data_subject_rights_response_duties_verdict(need_not_comply, _)).
+
+test(what_if_manifestly_excessive_refuses) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_plain_must_comply, Profile),
+    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, true, Status),
+    Status == need_not_comply.
+test(what_if_identity_confirmed_lifts_the_suspension) :-
+    gdpr_data_subject_rights_response_duties_profile_for(access_identity_doubts_suspended, Profile),
+    gdpr_data_subject_rights_response_duties_what_if(Profile, identity_confirmed, true, Status),
+    Status == must_comply.
 
 :- end_module(test_public_interface).

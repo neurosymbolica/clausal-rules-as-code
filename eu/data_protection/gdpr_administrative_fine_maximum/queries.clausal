@@ -1,38 +1,147 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY layer for eu/data_protection/gdpr_administrative_fine_maximum.
-% A top-layer consumer of the determination slice's public predicates.
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_administrative_fine_maximum.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
 %
-% #23 calculation: administrative_fine_maximum/3 (slice) gives the cap in euro cents.
-% #7 justification: gdpr_administrative_fine_maximum_checklist/2 (slice) carries cite(...) per item.
-% #16 what-if: gdpr_administrative_fine_maximum_what_if/4 overrides one attribute and re-evaluates.
-%     The profile is an attribute list, not a dict, so the override is written here
-%     over attribute(Key, Value) items.
-% gdpr_administrative_fine_maximum_profile_keys/1: the profile key schema
-% gdpr_administrative_fine_maximum_input_problems/2: the problems a profile has ([] = none)
+% gdpr_administrative_fine_maximum_profile_keys/1: the five profile keys of the
+%     order's typed input contract, in contract (root_exports) order.
+% gdpr_administrative_fine_maximum_input_problems/2: the problems a profile has
+%     ([] = none); the kernel's typed input check, re-exported as written.
+% gdpr_administrative_fine_maximum_what_if/4 (#16 what-if): replace (or add)
+%     one attribute(Key, Value) and re-evaluate the facade status. The profile
+%     is an ATTRIBUTE LIST, not a dict, so query_combinators' override_key/4
+%     (a dict operation) does not apply: the override is a local replace that
+%     removes every earlier occurrence of the key (never a duplicate_key).
+% gdpr_administrative_fine_maximum_cap_in_euro_cents/2 (#23 calculation): the
+%     integer cap in euro cents when the contract verdict is fine_maximum/3
+%     (Art 83(4)-(6), and Art 83(3) in combined mode); no solution for any
+%     other verdict (separate maxima are read from the verdict itself).
+% Justification (#7) is the slice's gdpr_administrative_fine_maximum_checklist/2:
+%     every row carries cite(...) provenance.
+%
+% ROOT EXPORTS: the five profile key atoms and the judgement value unsure
+% are read by the scorer as package-root attributes. An export list holds
+% only name/arity entries, so they are listed under root_atoms in
+% manifest.yaml (the generated package facade carries them), not here.
 % =====================================================================
 
 :- module(queries, [
     gdpr_administrative_fine_maximum_profile_keys/1,
     gdpr_administrative_fine_maximum_input_problems/2,
-    gdpr_administrative_fine_maximum_what_if/4
+    gdpr_administrative_fine_maximum_what_if/4,
+    gdpr_administrative_fine_maximum_cap_in_euro_cents/2
 ]).
 
 :- use_module(eu/data_protection/gdpr_administrative_fine_maximum/kernel, [gdpr_administrative_fine_maximum_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/gdpr_administrative_fine_maximum, [administrative_fine_maximum/3]).
+:- use_module(eu/data_protection/gdpr_administrative_fine_maximum/gdpr_administrative_fine_maximum, [
+    administrative_fine_maximum/3,
+    gdpr_administrative_fine_maximum_status/2
+]).
 
-% schema of top-level profile keys, in the order of the typed input contract
-gdpr_administrative_fine_maximum_profile_keys([infringed_provisions, infringer_is_undertaking, total_worldwide_annual_turnover_in_euros, infringements_concern_same_or_linked_processing_operations, infringements_intentional_or_negligent]).
+% Schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order.
+gdpr_administrative_fine_maximum_profile_keys([
+    infringed_provisions,
+    infringer_is_undertaking,
+    total_worldwide_annual_turnover_in_euros,
+    infringements_concern_same_or_linked_processing_operations,
+    infringements_intentional_or_negligent
+]).
 
-% what-if: re-evaluate with one attribute hypothetically overridden (or added)
-gdpr_administrative_fine_maximum_what_if(Profile, OverriddenKey, NewValue, NewVerdict) :-
-    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
-    administrative_fine_maximum(Hypothesis, NewVerdict, _).
+% #16 what-if: re-evaluate with one key hypothetically replaced.
+gdpr_administrative_fine_maximum_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attributes_with_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_administrative_fine_maximum_status(Hypothesis, NewStatus).
 
-override_attribute([], Key, Value, [attribute(Key, Value)]).
-override_attribute([attribute(Key, _)|Attributes], Key, Value, [attribute(Key, Value)|Attributes]).
-override_attribute([attribute(Other, Existing)|Attributes], Key, Value, [attribute(Other, Existing)|Overridden]) :-
-    dif(Other, Key),
-    override_attribute(Attributes, Key, Value, Overridden).
+% attributes_with_override(Attributes, OverriddenKey, NewValue, Hypothesis):
+% every attribute of OverriddenKey is dropped, the new one is appended last.
+% List plumbing only: it decides nothing statutory.
+attributes_with_override([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+attributes_with_override([attribute(ElementKey, _)|Elements], OverriddenKey, NewValue, Hypothesis) :-
+    ElementKey == OverriddenKey,
+    attributes_with_override(Elements, OverriddenKey, NewValue, Hypothesis).
+attributes_with_override([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== OverriddenKey,
+    attributes_with_override(Elements, OverriddenKey, NewValue, Hypothesis).
+
+% #23 calculation: the cap of a fine_maximum/3 verdict, an integer number of
+% euro cents, computed by the slice; compare it by value (=:=).
+gdpr_administrative_fine_maximum_cap_in_euro_cents(Profile, CapInEuroCents) :-
+    administrative_fine_maximum(Profile, fine_maximum(_, _, CapInEuroCents), _).
+
+% ---- tests ---------------------------------------------------------------
+test(profile_keys_are_the_five_contract_keys) :-
+    gdpr_administrative_fine_maximum_profile_keys(ProfileKeys),
+    length(ProfileKeys, 5).
+
+test(cap_of_a_lower_tier_undertaking_above_the_tie) :-
+    gdpr_administrative_fine_maximum_cap_in_euro_cents(
+        [attribute(infringed_provisions, [article_32]),
+         attribute(infringer_is_undertaking, true),
+         attribute(total_worldwide_annual_turnover_in_euros, 1000000000)],
+        CapInEuroCents),
+    CapInEuroCents =:= 2000000000.
+
+test(cap_one_euro_above_the_lower_tie) :-
+    gdpr_administrative_fine_maximum_cap_in_euro_cents(
+        [attribute(infringed_provisions, [article_30]),
+         attribute(infringer_is_undertaking, true),
+         attribute(total_worldwide_annual_turnover_in_euros, 500000001)],
+        CapInEuroCents),
+    CapInEuroCents =:= 1000000002.
+
+test(cap_answers_exactly_once) :-
+    findall(CapInEuroCents,
+            gdpr_administrative_fine_maximum_cap_in_euro_cents(
+                [attribute(infringed_provisions, [article_6]),
+                 attribute(infringer_is_undertaking, false)],
+                CapInEuroCents),
+            Caps),
+    length(Caps, 1).
+
+test(separate_maxima_have_a_separate_status) :-
+    gdpr_administrative_fine_maximum_status(
+        [attribute(infringed_provisions, [article_6, article_33]),
+         attribute(infringer_is_undertaking, false),
+         attribute(infringements_concern_same_or_linked_processing_operations, false)],
+        Status),
+    Status == separate_fine_maxima_determined.
+
+test(separate_maxima_have_no_single_cap, fail) :-
+    gdpr_administrative_fine_maximum_cap_in_euro_cents(
+        [attribute(infringed_provisions, [article_6, article_33]),
+         attribute(infringer_is_undertaking, false),
+         attribute(infringements_concern_same_or_linked_processing_operations, false)],
+        _).
+
+test(what_if_settling_the_undertaking_gives_a_maximum) :-
+    gdpr_administrative_fine_maximum_what_if(
+        [attribute(infringed_provisions, [article_6]),
+         attribute(infringer_is_undertaking, unsure),
+         attribute(total_worldwide_annual_turnover_in_euros, 100)],
+        infringer_is_undertaking,
+        false,
+        NewStatus),
+    NewStatus == fine_maximum_determined.
+
+test(what_if_unchanged_profile_still_refers) :-
+    gdpr_administrative_fine_maximum_status(
+        [attribute(infringed_provisions, [article_6]),
+         attribute(infringer_is_undertaking, unsure),
+         attribute(total_worldwide_annual_turnover_in_euros, 100)],
+        Status),
+    Status == referred_for_legal_review.
+
+test(what_if_replaces_and_never_duplicates_a_key) :-
+    findall(NewStatus,
+            gdpr_administrative_fine_maximum_what_if(
+                [attribute(infringed_provisions, [article_6]),
+                 attribute(infringer_is_undertaking, false)],
+                infringer_is_undertaking,
+                false,
+                NewStatus),
+            Statuses),
+    Statuses == [fine_maximum_determined].
 
 :- end_module(queries).

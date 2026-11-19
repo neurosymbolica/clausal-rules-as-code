@@ -1,4 +1,4 @@
-# Swiss law in force (a reading, not a lawyer's). The breach-reporting duties of the Swiss Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex consolidation ...
+# Swiss law in force (drafter's reading, not a lawyer's): the breach-reporting duties of the Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex ...
 
 `ch/swiss_fadp_art24_breach_notification`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 199/199 | none (no provision-tracking ledger) | pass | pass | pass |
+| 192/192 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Swiss law in force (a reading, not a lawyer's). The breach-reporting duties of the Swiss Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex consolidation Stand 7 July 2025, authoritative; English glosses unofficial) Art 24: the controller's report to the Federal Data Protection and Information Commissioner (EDOeB) under Art 24(1), the processor's report to the controller under Art 24(3), and the information of the data subject under Art 24(4) with its restriction, deferral or omission under Art 24(5), with the definition of a breach of data security in DSG Art 5 letter h. For comparison its own limb for Regulation (EU) 2016/679 (GDPR) Art 33(1), the controller's notification to the supervisory authority, compared on the same facts with the Swiss authority duty (the two threshold provisions make any difference). Every open-textured matter (breach, likely high risk, necessity, the Art 24(5) grounds, the EU breach and unlikely-risk judgements) is a tri-state judgement of the caller; an unsure one that decides goes to a lawyer as needs_legal_review. No date argument and no deadline: 'so rasch als moeglich' has no number and the EU 72 hours are not read. Out of scope: ...
+Swiss law in force (drafter's reading, not a lawyer's): the breach-reporting duties of the Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex consolidation Stand 7 July 2025, authoritative): whether the controller must report a breach of data security (DSG Art 5 letter h) to the Commissioner (EDOEB) under DSG Art 24(1), whether the processor must report it to the controller under DSG Art 24(3), and whether the controller must inform the data subject under DSG Art 24(4) or may restrict, defer or dispense with that information under DSG Art 24(5) letters a to c. For comparison, its own limb for EU GDPR Art 33(1) (the controller's notification to the supervisory authority) and a side-by-side comparison of the two authority duties on the same facts. Open-textured judgements (breach, high risk, necessity, the Art 24(5) grounds, personal data breach, unlikely risk) are handed to the caller as tri-state values; an unsure judgement that decides goes to a lawyer (needs_legal_review). Out of scope: timing ('so rasch als moeglich', the EU 72 hours), the content of a report or information (DSG Art 24(2), DSV Art 15), documentation, the Commissioner's forwarding (Art 24(5bis)), ...
 
 ## Pinned sources
 

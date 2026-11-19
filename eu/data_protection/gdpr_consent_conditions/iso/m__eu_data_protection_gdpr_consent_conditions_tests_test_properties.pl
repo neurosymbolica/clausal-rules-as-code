@@ -4,91 +4,168 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
+:- use_module(formalize_lib, [not_member/2]).
 :- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [decide_gdpr_consent_conditions/2, consent_conditions_status/4, consent_declaration_effect/3, consent_assessment_factors/2, identification_obligation/4, identification_information_duty/4, identification_rights_effect/4]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_subject/1, gdpr_consent_conditions_profile_for/2]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_subject/1, gdpr_consent_conditions_profile_for/2, gdpr_consent_conditions_expected/3]).
+
+fixture_profile(Subject, Profile) :-
+    gdpr_consent_conditions_subject(Subject),
+    gdpr_consent_conditions_profile_for(Subject, Profile).
+
+query_name(consent_conditions_status).
+query_name(consent_declaration_effect).
+query_name(consent_assessment_factors).
+query_name(identification_obligation).
+query_name(identification_information_duty).
+query_name(identification_rights_effect).
+
+query_answer(consent_conditions_status, Profile, Status) :-
+    consent_conditions_status(Profile, Status, _, _).
+query_answer(consent_declaration_effect, Profile, Status) :-
+    consent_declaration_effect(Profile, Status, _).
+query_answer(consent_assessment_factors, Profile, Factors) :-
+    consent_assessment_factors(Profile, Factors).
+query_answer(identification_obligation, Profile, Status) :-
+    identification_obligation(Profile, Status, _, _).
+query_answer(identification_information_duty, Profile, Status) :-
+    identification_information_duty(Profile, Status, _, _).
+query_answer(identification_rights_effect, Profile, Status) :-
+    identification_rights_effect(Profile, Status, _, _).
+
+answer_citations(Profile, Citations) :-
+    consent_conditions_status(Profile, _, _, Citations).
+answer_citations(Profile, Citations) :-
+    consent_declaration_effect(Profile, _, Citations).
+answer_citations(Profile, Citations) :-
+    identification_obligation(Profile, _, _, Citations).
+answer_citations(Profile, Citations) :-
+    identification_information_duty(Profile, _, _, Citations).
+answer_citations(Profile, Citations) :-
+    identification_rights_effect(Profile, _, _, Citations).
+
+answer_status_basis(Profile, Status, Basis) :-
+    consent_conditions_status(Profile, Status, Basis, _).
+answer_status_basis(Profile, Status, Basis) :-
+    identification_obligation(Profile, Status, Basis, _).
+answer_status_basis(Profile, Status, Basis) :-
+    identification_information_duty(Profile, Status, Basis, _).
+answer_status_basis(Profile, Status, Basis) :-
+    identification_rights_effect(Profile, Status, Basis, _).
+
+vocabulary_citations([cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_2), cite(eu_reg_2016_679_art_7_3), cite(eu_reg_2016_679_art_7_4), cite(eu_reg_2016_679_art_11_1), cite(eu_reg_2016_679_art_11_2)]).
+
+outside_fact_keys([consent_demonstrable, request_clearly_distinguishable_and_intelligible, withdrawal_as_easy_as_giving_consent, consent_freely_given, purposes_do_not_require_identification, able_to_demonstrate_not_in_position_to_identify, informing_data_subject_possible]).
+
+non_final_status(indeterminate(_)).
+non_final_status(needs_legal_review(_, _)).
+non_final_status(input_problems(_)).
 
 subject_classifies(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
+    fixture_profile(Subject, Profile),
     decide_gdpr_consent_conditions(Profile, _Verdict).
 
-subject_set(SubjectSet) :-
-    findall(Subject, gdpr_consent_conditions_subject(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-
-subject_conditions_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Status, consent_conditions_status(Profile, Status, _, _), Statuses),
-    length(Statuses, 1).
-
-subject_effect_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Status, consent_declaration_effect(Profile, Status, _), Statuses),
-    length(Statuses, 1).
-
-subject_factors_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Factors, consent_assessment_factors(Profile, Factors), FactorLists),
-    length(FactorLists, 1).
-
-subject_obligation_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Status, identification_obligation(Profile, Status, _, _), Statuses),
-    length(Statuses, 1).
-
-subject_duty_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Status, identification_information_duty(Profile, Status, _, _), Statuses),
-    length(Statuses, 1).
-
-subject_rights_once(Subject) :-
-    gdpr_consent_conditions_subject(Subject),
-    gdpr_consent_conditions_profile_for(Subject, Profile),
-    findall(Status, identification_rights_effect(Profile, Status, _, _), Statuses),
-    length(Statuses, 1).
-
 test(totality_every_subject_classifies) :-
-    subject_set(SubjectSet),
+    findall(Subject, gdpr_consent_conditions_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
-test(determinism_conditions_status_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_conditions_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(determinism_declaration_effect_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_effect_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(determinism_factors_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_factors_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(determinism_obligation_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_obligation_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(determinism_duty_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_duty_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(determinism_rights_exactly_one_solution) :-
-    subject_set(SubjectSet),
-    findall(Subject, subject_rights_once(Subject), Subjects),
-    sort(Subjects, SubjectSet).
-test(invariant_met_has_basis_and_citations) :-
-    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
-    consent_conditions_status(Profile, conditions_met, [_|_], [_|_]).
-test(invariant_not_applicable_has_empty_basis) :-
-    gdpr_consent_conditions_profile_for(processing_not_on_consent, Profile),
-    consent_conditions_status(Profile, not_applicable, [], []).
+test(determinism_every_subject_yields_exactly_one_verdict) :-
+    findall(Subject, gdpr_consent_conditions_subject(Subject), Subjects),
+    findall(Subject, single_verdict(Subject), SingleSubjects),
+    SingleSubjects == Subjects.
+test(every_query_yields_one_answer_on_the_empty_profile) :-
+    findall(Query - Answer, (query_name(Query), query_answer(Query, [], Answer)), Answers),
+    length(Answers, 6).
+test(every_fixture_gets_its_expected_answer_exactly_once) :-
+    findall(Subject, gdpr_consent_conditions_expected(Subject, _, _), Expected),
+    findall(Subject, expected_answer_holds(Subject), Held),
+    Held == Expected.
+test(the_fixtures_cite_the_vocabulary) :-
+    vocabulary_citation_used(informing_data_subject_is_possible, cite(eu_reg_2016_679_art_11_2)).
+test(a_four_limb_citation_list_has_four_distinct_citations) :-
+    gdpr_consent_conditions_profile_for(consent_declaration_request_clear, Profile),
+    consent_conditions_status(Profile, _, _, Citations),
+    sort(Citations, Distinct),
+    length(Distinct, 4).
+test(a_missing_crisp_key_is_named) :-
+    missing_key_named(consent_crisp_keys_absent, informed_of_withdrawal_right_before_consent).
+test(a_non_final_answer_exists_with_an_empty_basis) :-
+    non_final_answer(consent_scope_absent).
 
-cp_test_names([totality_every_subject_classifies, determinism_conditions_status_exactly_one_solution, determinism_declaration_effect_exactly_one_solution, determinism_factors_exactly_one_solution, determinism_obligation_exactly_one_solution, determinism_duty_exactly_one_solution, determinism_rights_exactly_one_solution, invariant_met_has_basis_and_citations, invariant_not_applicable_has_empty_basis]).
-cp_test_fail_names([]).
+single_verdict(Subject) :-
+    fixture_profile(Subject, Profile),
+    findall(Verdict, decide_gdpr_consent_conditions(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+multiple_answers(Subject, Query) :-
+    fixture_profile(Subject, Profile),
+    query_name(Query),
+    findall(Answer, query_answer(Query, Profile, Answer), Answers),
+    length(Answers, Count),
+    dif(Count, 1).
+
+test(no_query_yields_other_than_one_answer_on_any_fixture, fail) :-
+    multiple_answers(_, _).
+test(no_fixture_cites_off_the_vocabulary, fail) :-
+    off_vocabulary_citation(_, _).
+test(no_citation_list_repeats_a_citation, fail) :-
+    duplicated_citation_list(_).
+test(no_outside_fact_is_named_missing, fail) :-
+    outside_fact_named_missing(_, _).
+test(no_non_final_answer_carries_a_basis, fail) :-
+    non_final_with_basis(_).
+
+expected_answer_holds(Subject) :-
+    gdpr_consent_conditions_expected(Subject, Query, Expected),
+    gdpr_consent_conditions_profile_for(Subject, Profile),
+    findall(Answer, query_answer(Query, Profile, Answer), Answers),
+    Answers == [Expected].
+
+off_vocabulary_citation(Subject, Citation) :-
+    fixture_profile(Subject, Profile),
+    answer_citations(Profile, Citations),
+    member(Citation, Citations),
+    vocabulary_citations(Vocabulary),
+    not_member(Citation, Vocabulary).
+
+vocabulary_citation_used(Subject, Citation) :-
+    fixture_profile(Subject, Profile),
+    answer_citations(Profile, Citations),
+    member(Citation, Citations),
+    vocabulary_citations(Vocabulary),
+    member(Citation, Vocabulary).
+
+duplicated_citation_list(Subject) :-
+    fixture_profile(Subject, Profile),
+    answer_citations(Profile, Citations),
+    sort(Citations, Distinct),
+    length(Citations, Count),
+    length(Distinct, DistinctCount),
+    dif(Count, DistinctCount).
+
+missing_key_named(Subject, Key) :-
+    fixture_profile(Subject, Profile),
+    query_name(Query),
+    query_answer(Query, Profile, indeterminate(MissingKeys)),
+    member(Key, MissingKeys).
+
+outside_fact_named_missing(Subject, Key) :-
+    missing_key_named(Subject, Key),
+    outside_fact_keys(OutsideKeys),
+    member(Key, OutsideKeys).
+
+non_final_with_basis(Subject) :-
+    fixture_profile(Subject, Profile),
+    answer_status_basis(Profile, Status, [_|_]),
+    non_final_status(Status).
+
+non_final_answer(Subject) :-
+    fixture_profile(Subject, Profile),
+    answer_status_basis(Profile, Status, []),
+    non_final_status(Status).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_yields_exactly_one_verdict, every_query_yields_one_answer_on_the_empty_profile, every_fixture_gets_its_expected_answer_exactly_once, the_fixtures_cite_the_vocabulary, a_four_limb_citation_list_has_four_distinct_citations, a_missing_crisp_key_is_named, a_non_final_answer_exists_with_an_empty_basis]).
+cp_test_fail_names([no_query_yields_other_than_one_answer_on_any_fixture, no_fixture_cites_off_the_vocabulary, no_citation_list_repeats_a_citation, no_outside_fact_is_named_missing, no_non_final_answer_carries_a_basis]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

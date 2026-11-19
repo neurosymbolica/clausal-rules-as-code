@@ -4,49 +4,48 @@
 % A TOP-LAYER consumer: it imports the determination slice's PUBLIC
 % predicates it calls, and nothing else.
 %
-% a reading, not a lawyer's; the German text of the DSG is
-% authoritative (reading (1)).
+% Query types this domain serves (the order's CALLED CONTRACT, re-exported
+% here from the slice, unchanged):
+%   #14 obligation surfacing -- what must the controller / processor do:
+%       swiss_controller_report_to_commissioner/3       (DSG Art 24(1))
+%       swiss_processor_report_to_controller/3          (DSG Art 24(3))
+%       swiss_information_of_data_subject/3             (DSG Art 24(4), (5))
+%       eu_controller_notification_to_supervisory_authority/3 (GDPR Art 33(1))
+%   #5 comparison -- the two authority duties side by side on one profile:
+%       compare_swiss_eu_authority_notification/5
+%   #7 justification -- the slice's checklist carries cite(...) per item
+%       (swiss_fadp_art24_breach_notification_checklist/2, exported by the
+%       slice and the facade).
+%   #16 what-if -- override one key, re-evaluate:
+%       swiss_fadp_art24_breach_notification_what_if/4
+%   The input check (THE INPUT CHECK), re-exported from the kernel:
+%       swiss_fadp_art24_breach_notification_input_problems/2
+%   The profile key schema:
+%       swiss_fadp_art24_breach_notification_profile_keys/1
 %
-% swiss_fadp_art24_breach_notification_profile_keys/1: the nine profile keys, in
-%   root_exports / input_contract order.
-% swiss_fadp_art24_breach_notification_input_problems/2: THE INPUT CHECK,
-%   re-exported exactly as the scaffold wrote it in kernel.clausal.
-% swiss_fadp_art24_breach_notification_what_if/4 (#16 what-if): the headline
-%   status after one key of the attribute list is hypothetically set.
-%   The profile is an ATTRIBUTE LIST, not a dict, so the dict-based
-%   override_key/4 of kit/query_combinators does not apply: the override
-%   below drops every attribute(Key, _) of the key and appends the new one;
-%   a malformed profile is passed through unchanged, so the input check of
-%   the hypothesis answers it.
-% swiss_fadp_art24_breach_notification_obligations/2 (#14 obligation
-%   surfacing): each duty with its bearer, its single answer and its
-%   citations, copied from the slice's own query.
+% It also SERVES the order's answer atoms and the root_exports (the nine
+% profile key atoms and the judgement value unsure) as exported names, so
+% the package root carries each one. The result constructors are exported
+% as data: a constructor has no clauses. They decide nothing statutory: no
+% implements/1 marker.
 %
-% Served elsewhere (the slice): #5 comparison
-% compare_swiss_eu_authority_notification/5 and #7 justification
-% swiss_fadp_art24_breach_notification_checklist/2.
-%
-% root_exports: the nine profile key atoms and the judgement value unsure
-% are read by the test cases as package-root attributes; the answer atoms
-% and the result constructors of the contract are exported here as well.
-% They are vocabulary: they decide nothing and carry no marker.
+% The what-if override is attribute-list native: kit override_key/4 works
+% on dicts, and the order's PROFILE is an attribute list, so every
+% attribute(Key, _) entry is dropped and ONE attribute(Key, Value) entry
+% is added. The override is profile plumbing and decides nothing
+% statutory, so it carries no implements/1 marker.
+% Every predicate here yields exactly ONE solution per input.
 % =====================================================================
 
 :- module(queries, [
     swiss_fadp_art24_breach_notification_profile_keys/1,
     swiss_fadp_art24_breach_notification_input_problems/2,
     swiss_fadp_art24_breach_notification_what_if/4,
-    swiss_fadp_art24_breach_notification_obligations/2,
-    breach_of_data_security/0,
-    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights/0,
-    information_necessary_for_protection_of_data_subject/0,
-    commissioner_requested_information_of_data_subject/0,
-    article_26_ground_or_statutory_secrecy_obligation_applies/0,
-    information_impossible_or_requires_disproportionate_effort/0,
-    information_ensured_comparably_by_public_announcement/0,
-    personal_data_breach/0,
-    breach_unlikely_to_result_in_risk/0,
-    unsure/0,
+    swiss_controller_report_to_commissioner/3,
+    swiss_processor_report_to_controller/3,
+    swiss_information_of_data_subject/3,
+    eu_controller_notification_to_supervisory_authority/3,
+    compare_swiss_eu_authority_notification/5,
     authority_notification_required/0,
     authority_notification_not_required/0,
     report_to_controller_required/0,
@@ -65,52 +64,45 @@
     input_problems/1,
     unknown_key/1,
     wrong_type/1,
-    duplicate_key/1
+    duplicate_key/1,
+    breach_of_data_security/0,
+    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights/0,
+    information_necessary_for_protection_of_data_subject/0,
+    commissioner_requested_information_of_data_subject/0,
+    article_26_ground_or_statutory_secrecy_obligation_applies/0,
+    information_impossible_or_requires_disproportionate_effort/0,
+    information_ensured_comparably_by_public_announcement/0,
+    personal_data_breach/0,
+    breach_unlikely_to_result_in_risk/0,
+    unsure/0
 ]).
 
+:- use_module(ch/swiss_fadp_art24_breach_notification/kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
+:- use_module(ch/swiss_fadp_art24_breach_notification/swiss_fadp_art24_breach_notification, [
+    swiss_controller_report_to_commissioner/3,
+    swiss_processor_report_to_controller/3,
+    swiss_information_of_data_subject/3,
+    eu_controller_notification_to_supervisory_authority/3,
+    compare_swiss_eu_authority_notification/5,
+    swiss_fadp_art24_breach_notification_status/2
+]).
+
+% ---- the result constructors (exported as data, no clauses) -------------
 :- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
     open_textured(input, citation),
-    provenance(source, detail),
+    inputs_relied_on(pairs),
+    input_problems(problems),
     unknown_key(key),
     wrong_type(key),
     duplicate_key(key)
 ]).
 
-:- use_module(ch/swiss_fadp_art24_breach_notification/kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
-:- use_module(ch/swiss_fadp_art24_breach_notification/swiss_fadp_art24_breach_notification, [
-    swiss_fadp_art24_breach_notification_status/2,
-    swiss_controller_report_to_commissioner/3,
-    swiss_processor_report_to_controller/3,
-    swiss_information_of_data_subject/3,
-    eu_controller_notification_to_supervisory_authority/3
-]).
-
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
-swiss_fadp_art24_breach_notification_profile_keys([
-    breach_of_data_security,
-    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights,
-    information_necessary_for_protection_of_data_subject,
-    commissioner_requested_information_of_data_subject,
-    article_26_ground_or_statutory_secrecy_obligation_applies,
-    information_impossible_or_requires_disproportionate_effort,
-    information_ensured_comparably_by_public_announcement,
-    personal_data_breach,
-    breach_unlikely_to_result_in_risk
-]).
+swiss_fadp_art24_breach_notification_profile_keys([breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement, personal_data_breach, breach_unlikely_to_result_in_risk]).
 
-% ---- root_exports: the nine profile keys and the value unsure ---------
-breach_of_data_security.
-breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights.
-information_necessary_for_protection_of_data_subject.
-commissioner_requested_information_of_data_subject.
-article_26_ground_or_statutory_secrecy_obligation_applies.
-information_impossible_or_requires_disproportionate_effort.
-information_ensured_comparably_by_public_announcement.
-personal_data_breach.
-breach_unlikely_to_result_in_risk.
-unsure.
-
-% ---- the answer atoms of the contract ---------------------------------
+% ---- the answer atoms of THE ANSWER FORM (arity 0) ----------------------
 authority_notification_required.
 authority_notification_not_required.
 report_to_controller_required.
@@ -122,67 +114,71 @@ same.
 differs.
 not_comparable.
 
-% ---- the result constructors (exported, never called as queries) -------
-% open_textured/2, provenance/2, unknown_key/1, wrong_type/1 and
-% duplicate_key/1 are data (declared above with constructors/1): no clauses.
-indeterminate(MissingKeys) :-
-    is_list(MissingKeys).
-needs_legal_review(_Reason, Context) :-
-    is_list(Context).
-inputs_relied_on(Pairs) :-
-    is_list(Pairs).
-input_problems(Problems) :-
-    is_list(Problems).
+% ---- root_exports: the nine profile key atoms and the value unsure -----
+breach_of_data_security.
+breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights.
+information_necessary_for_protection_of_data_subject.
+commissioner_requested_information_of_data_subject.
+article_26_ground_or_statutory_secrecy_obligation_applies.
+information_impossible_or_requires_disproportionate_effort.
+information_ensured_comparably_by_public_announcement.
+personal_data_breach.
+breach_unlikely_to_result_in_risk.
+unsure.
 
-% ---- #16 what-if: re-evaluate with one key hypothetically set ---------
+% #16 what-if: re-evaluate the facade status with one key hypothetically overridden
 swiss_fadp_art24_breach_notification_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
     swiss_fadp_art24_breach_notification_status(Hypothesis, NewStatus).
 
-% override_attribute(Profile, OverriddenKey, NewValue, Hypothesis): list
-% plumbing, no marker. Exactly one clause holds for every Profile term; an
-% unbound or partial or non-list profile stays malformed.
-override_attribute(RemainingProfile, _, _, RemainingProfile) :-
-    var(RemainingProfile).
-override_attribute(RemainingProfile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]) :-
-    RemainingProfile == [].
-override_attribute(RemainingProfile, OverriddenKey, NewValue, Hypothesis) :-
-    nonvar(RemainingProfile),
-    RemainingProfile = [Element|Elements],
-    element_kept(Element, OverriddenKey, KeptElements),
-    override_attribute(Elements, OverriddenKey, NewValue, LaterElements),
-    append(KeptElements, LaterElements, Hypothesis).
-override_attribute(RemainingProfile, _, _, RemainingProfile) :-
-    nonvar(RemainingProfile),
-    RemainingProfile \== [],
-    RemainingProfile \= [_|_].
+% attribute_override(Profile, OverriddenKey, NewValue, Hypothesis): every
+% attribute(OverriddenKey, _) entry dropped, attribute(OverriddenKey, NewValue)
+% added at the end. A term that is not a proper list is passed on unchanged,
+% so the input check still names it. Complementary clauses: one answer.
+attribute_override(Profile, _, _, Profile) :-
+    var(Profile).
+attribute_override(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]) :-
+    Profile == [].
+attribute_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    nonvar(Profile),
+    Profile = [Element|Elements],
+    attribute_override(Elements, OverriddenKey, NewValue, LaterElements),
+    keep_element(Element, OverriddenKey, LaterElements, Hypothesis).
+attribute_override(Profile, _, _, Profile) :-
+    nonvar(Profile),
+    Profile \== [],
+    Profile \= [_|_].
 
-element_kept(Element, _, [Element]) :-
+keep_element(Element, _, LaterElements, [Element|LaterElements]) :-
     var(Element).
-element_kept(Element, OverriddenKey, []) :-
+keep_element(Element, OverriddenKey, LaterElements, LaterElements) :-
     nonvar(Element),
     Element = attribute(ElementKey, _),
     ElementKey == OverriddenKey.
-element_kept(Element, OverriddenKey, [Element]) :-
+keep_element(Element, OverriddenKey, LaterElements, [Element|LaterElements]) :-
     nonvar(Element),
     Element = attribute(ElementKey, _),
     ElementKey \== OverriddenKey.
-element_kept(Element, _, [Element]) :-
+keep_element(Element, _, LaterElements, [Element|LaterElements]) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-% ---- #14 obligation surfacing: what must each bearer do -------------
-% One duty row per obligation of the order, in a fixed order; each copies
-% the single answer of its query (input_problems(...) and [] included).
-swiss_fadp_art24_breach_notification_obligations(Profile, [
-    duty(controller, report_to_commissioner, ControllerResult, ControllerCitations),
-    duty(processor, report_to_controller, ProcessorResult, ProcessorCitations),
-    duty(controller, inform_data_subject, InformationResult, InformationCitations),
-    duty(controller, notify_eu_supervisory_authority, EuropeanResult, EuropeanCitations)
-]) :-
-    swiss_controller_report_to_commissioner(Profile, ControllerResult, ControllerCitations),
-    swiss_processor_report_to_controller(Profile, ProcessorResult, ProcessorCitations),
-    swiss_information_of_data_subject(Profile, InformationResult, InformationCitations),
-    eu_controller_notification_to_supervisory_authority(Profile, EuropeanResult, EuropeanCitations).
+% ---- tests --------------------------------------------------------------
+test(what_if_turns_a_false_high_risk_into_a_required_report) :-
+    findall(Status, swiss_fadp_art24_breach_notification_what_if([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true, Status), Statuses),
+    Statuses == [authority_notification_required].
+test(what_if_adds_an_absent_key) :-
+    findall(Status, swiss_fadp_art24_breach_notification_what_if([attribute(breach_of_data_security, true)], breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false, Status), Statuses),
+    Statuses == [authority_notification_not_required].
+test(what_if_override_is_not_the_old_answer, fail) :-
+    swiss_fadp_art24_breach_notification_what_if([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true, authority_notification_not_required).
+test(the_profile_schema_has_nine_keys) :-
+    swiss_fadp_art24_breach_notification_profile_keys(ProfileKeys),
+    length(ProfileKeys, 9).
+test(the_answer_atoms_are_served) :-
+    authority_notification_required,
+    information_of_data_subject_may_be_restricted_deferred_or_omitted,
+    not_comparable,
+    unsure.
 
 :- end_module(queries).

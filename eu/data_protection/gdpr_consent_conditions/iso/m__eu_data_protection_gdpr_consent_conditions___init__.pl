@@ -4,11 +4,11 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_kernel, [gdpr_consent_conditions_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_citations, [citation/2, implements/1]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [art11_1_not_engaged/0, art11_2_not_engaged/0, articles_15_to_20_apply/0, articles_15_to_20_do_not_apply/0, conditions_met/0, conditions_not_met/0, consent_assessment_factors/2, consent_conditions_status/4, consent_declaration_effect/3, decide_gdpr_consent_conditions/2, gdpr_consent_conditions_checklist/2, gdpr_consent_conditions_decision_resolvable/1, gdpr_consent_conditions_status/2, gdpr_consent_conditions_status_values/1, identification_information_duty/4, identification_obligation/4, identification_rights_effect/4, must_inform_data_subject/0, need_not_inform_data_subject/0, no_part_infringing/0, not_applicable/0, not_obliged_to_acquire_identifying_information/0, part_not_binding/0]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_queries, [gdpr_consent_conditions_profile_keys/1, gdpr_consent_conditions_what_if/4]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_assess/2, gdpr_consent_conditions_profile_for/2, gdpr_consent_conditions_subject/1]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_kernel, [crisp_limb/3, gdpr_consent_conditions_input_problems/2, gdpr_consent_conditions_key_order/1, outside_fact_limb/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_citations, [citation/2, citation_vocabulary/1, implements/1, outside_fact_entry/3]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [consent_assessment_factors/2, consent_conditions_status/4, consent_declaration_effect/3, decide_gdpr_consent_conditions/2, gdpr_consent_conditions_checklist/2, gdpr_consent_conditions_decision_resolvable/1, gdpr_consent_conditions_status/2, gdpr_consent_conditions_status_values/1, identification_information_duty/4, identification_obligation/4, identification_rights_effect/4]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_queries, [art11_1_not_engaged/0, art11_2_not_engaged/0, articles_15_to_20_apply/0, articles_15_to_20_do_not_apply/0, conditions_met/0, conditions_not_met/0, gdpr_consent_conditions_compliance/3, gdpr_consent_conditions_eligibility/2, gdpr_consent_conditions_obligations/2, gdpr_consent_conditions_profile_keys/1, gdpr_consent_conditions_what_if/4, must_inform_data_subject/0, need_not_inform_data_subject/0, no_part_infringing/0, not_applicable/0, not_obliged_to_acquire_identifying_information/0, part_not_binding/0]).
+:- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_assess/2, gdpr_consent_conditions_expected/3, gdpr_consent_conditions_profile_for/2, gdpr_consent_conditions_subject/1]).
 
 root_export(able_to_demonstrate_not_in_position_to_identify).
 root_export(absent).

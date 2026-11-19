@@ -6,60 +6,47 @@
 :- use_module(library(dif)).
 :- use_module(m__eu_data_protection_gdpr_data_subject_rights_response_duties_queries, [gdpr_data_subject_rights_response_duties_profile_keys/1, gdpr_data_subject_rights_response_duties_what_if/4]).
 :- use_module(m__eu_data_protection_gdpr_data_subject_rights_response_duties_kernel, [gdpr_data_subject_rights_response_duties_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_data_subject_rights_response_duties_gdpr_data_subject_rights_response_duties, [request_response_deadline/2, response_duties/2]).
-:- use_module(m__eu_data_protection_gdpr_data_subject_rights_response_duties_fixtures, [gdpr_data_subject_rights_response_duties_profile_for/2]).
+:- use_module(m__eu_data_protection_gdpr_data_subject_rights_response_duties_gdpr_data_subject_rights_response_duties, [gdpr_data_subject_rights_response_duties_status/2, request_response_deadline/2, response_duties/2, recipient_notification/2]).
 
 test(profile_keys_are_the_contract_keys) :-
     gdpr_data_subject_rights_response_duties_profile_keys(ProfileKeys),
     ProfileKeys == [request_type, objection_ground_claimed, request_received_on, extension_claimed, controller_demonstrates_unable_to_identify_data_subject, identity_confirmed, personal_data_inaccurate, consent_is_the_basis_of_processing, consent_withdrawn, other_legal_ground_for_processing_exists, objection_under_art21_1_made, objection_under_art21_2_made, collected_in_relation_to_information_society_services_offer, accuracy_contested_by_data_subject, data_subject_opposes_erasure, data_required_by_data_subject_for_legal_claims, verification_of_overriding_grounds_pending, personal_data_provided_by_data_subject, processing_based_on_consent_or_contract, processing_carried_out_by_automated_means, processing_based_on_art6_1_e_or_f, processing_for_direct_marketing, processing_for_research_or_statistics_pursuant_to_art89_1, data_subject_gave_explicit_consent, decision_based_on_special_categories, special_category_condition_and_safeguards_met_for_decision, personal_data_disclosed_to_recipients, data_subject_asks_who_the_recipients_are, extension_necessary_for_complexity_and_number, reasonable_doubts_about_identity, request_manifestly_unfounded_or_excessive, personal_data_incomplete_in_light_of_purposes, data_no_longer_necessary_for_purposes, overriding_legitimate_grounds_exist, personal_data_unlawfully_processed, processing_necessary_for_freedom_of_expression_and_information, processing_necessary_for_public_task_or_official_authority, processing_necessary_for_public_health_in_accordance_with_art9_2_h_and_i, processing_for_archiving_research_or_statistics_in_accordance_with_art89_1, erasure_would_render_impossible_or_seriously_impair_processing_objectives, processing_necessary_for_legal_claims, controller_no_longer_needs_data_for_processing_purposes, transmission_would_adversely_affect_rights_and_freedoms_of_others, objection_grounds_relate_to_particular_situation, controller_demonstrates_compelling_legitimate_grounds, decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects, decision_necessary_for_contract_with_data_subject, recipient_notification_impossible_or_disproportionate_effort, legislative_restriction_applies_to_the_right, erasure_required_by_union_or_member_state_law, processing_required_by_union_or_member_state_law, decision_authorised_by_union_or_member_state_law, public_holidays].
-test(there_are_fifty_four_profile_keys) :-
+test(profile_keys_number_fifty_four) :-
     gdpr_data_subject_rights_response_duties_profile_keys(ProfileKeys),
     length(ProfileKeys, 54).
-test(input_problems_of_a_good_profile_is_empty) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_input_problems(Profile, []).
-test(input_problems_names_an_unknown_key) :-
-    gdpr_data_subject_rights_response_duties_profile_for(unknown_key_profile, Profile),
-    gdpr_data_subject_rights_response_duties_input_problems(Profile, [unknown_key(bogus_key)]).
-test(input_problems_of_a_non_list_is_the_profile) :-
-    gdpr_data_subject_rights_response_duties_input_problems(not_a_list, [wrong_type(profile)]).
-test(what_if_excessive_flips_must_comply_to_need_not_comply) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, true, need_not_comply).
-test(what_if_not_excessive_keeps_must_comply) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_excessive, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, false, must_comply).
-test(what_if_unsure_judgement_is_referred) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, unsure, needs_legal_review(open_textured(request_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)), _)).
-test(what_if_bad_request_type_is_an_input_problem) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_type, other, input_problems([wrong_type(request_type)])).
-test(what_if_override_replaces_a_duplicated_key) :-
-    gdpr_data_subject_rights_response_duties_profile_for(duplicate_key_profile, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_type, access, must_comply).
-test(what_if_identity_doubts_suspend) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_identity_confirmed, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, identity_confirmed, false, suspended(art12_6_identity_not_confirmed)).
-test(obligation_surfacing_lists_the_duty) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    response_duties(Profile, [respond_with_action_taken(first_period, cite(eu_reg_2016_679_art_12_3))]).
-test(deadline_query_gives_the_working_day) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    request_response_deadline(Profile, date(2026, 11, 30)).
-test(deadline_query_refusal_uses_the_first_period) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_excessive, Profile),
-    request_response_deadline(Profile, date(2026, 11, 30)).
-test(deadline_query_of_a_bad_profile_is_the_input_problem) :-
-    gdpr_data_subject_rights_response_duties_profile_for(duplicate_key_profile, Profile),
-    request_response_deadline(Profile, input_problems([duplicate_key(request_type)])).
+test(the_reexported_input_check_reads_the_profile) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(request_type, access), attribute(favourite_colour, blue)], Problems),
+    Problems == [unknown_key(favourite_colour)].
+test(status_query_two) :-
+    gdpr_data_subject_rights_response_duties_status([attribute(request_type, access)], Status),
+    Status == must_comply.
+test(obligation_query_fourteen) :-
+    findall(Duties, response_duties([attribute(request_type, portability), attribute(personal_data_provided_by_data_subject, true), attribute(processing_based_on_consent_or_contract, true), attribute(processing_carried_out_by_automated_means, true), attribute(processing_necessary_for_public_task_or_official_authority, true)], Duties), AllDuties),
+    AllDuties == [[inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4))]].
+test(obligation_query_fourteen_for_recipients) :-
+    findall(Duties, recipient_notification([attribute(request_type, restriction), attribute(accuracy_contested_by_data_subject, true), attribute(personal_data_disclosed_to_recipients, true)], Duties), AllDuties),
+    AllDuties == [indeterminate([recipient_notification_impossible_or_disproportionate_effort])].
+test(deadline_query_fifteen_leap_year) :-
+    findall(Deadline, request_response_deadline([attribute(request_type, access), attribute(request_received_on, date(2028, 1, 31))], Deadline), Deadlines),
+    Deadlines == [date(2028, 2, 29)].
+test(deadline_query_fifteen_year_carry) :-
+    findall(Deadline, request_response_deadline([attribute(request_type, access), attribute(request_received_on, date(2026, 12, 31))], Deadline), Deadlines),
+    Deadlines == [date(2027, 2, 1)].
+test(deadline_query_fifteen_extended_sunday_shift) :-
+    findall(Deadline, request_response_deadline([attribute(request_type, access), attribute(request_received_on, date(2026, 11, 30)), attribute(extension_claimed, true), attribute(extension_necessary_for_complexity_and_number, true)], Deadline), Deadlines),
+    Deadlines == [date(2027, 3, 1)].
+test(what_if_query_sixteen_flips_a_refusal) :-
+    gdpr_data_subject_rights_response_duties_what_if([attribute(request_type, access), attribute(controller_demonstrates_unable_to_identify_data_subject, true)], controller_demonstrates_unable_to_identify_data_subject, false, Status),
+    Status == must_comply.
+test(what_if_query_sixteen_adds_a_missing_key) :-
+    gdpr_data_subject_rights_response_duties_what_if([attribute(request_type, rectification)], personal_data_inaccurate, true, Status),
+    Status == must_comply.
+test(what_if_query_sixteen_never_duplicates_a_key) :-
+    gdpr_data_subject_rights_response_duties_what_if([attribute(request_type, access)], request_type, erasure, Status),
+    Status == indeterminate.
 
-test(what_if_excessive_override_is_not_must_comply, fail) :-
-    gdpr_data_subject_rights_response_duties_profile_for(access_basic, Profile),
-    gdpr_data_subject_rights_response_duties_what_if(Profile, request_manifestly_unfounded_or_excessive, true, must_comply).
-
-cp_test_names([profile_keys_are_the_contract_keys, there_are_fifty_four_profile_keys, input_problems_of_a_good_profile_is_empty, input_problems_names_an_unknown_key, input_problems_of_a_non_list_is_the_profile, what_if_excessive_flips_must_comply_to_need_not_comply, what_if_not_excessive_keeps_must_comply, what_if_unsure_judgement_is_referred, what_if_bad_request_type_is_an_input_problem, what_if_override_replaces_a_duplicated_key, what_if_identity_doubts_suspend, obligation_surfacing_lists_the_duty, deadline_query_gives_the_working_day, deadline_query_refusal_uses_the_first_period, deadline_query_of_a_bad_profile_is_the_input_problem]).
-cp_test_fail_names([what_if_excessive_override_is_not_must_comply]).
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_number_fifty_four, the_reexported_input_check_reads_the_profile, status_query_two, obligation_query_fourteen, obligation_query_fourteen_for_recipients, deadline_query_fifteen_leap_year, deadline_query_fifteen_year_carry, deadline_query_fifteen_extended_sunday_shift, what_if_query_sixteen_flips_a_refusal, what_if_query_sixteen_adds_a_missing_key, what_if_query_sixteen_never_duplicates_a_key]).
+cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

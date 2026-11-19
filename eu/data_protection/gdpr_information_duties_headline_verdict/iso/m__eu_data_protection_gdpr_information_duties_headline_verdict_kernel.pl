@@ -1,10 +1,25 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_information_duties_headline_verdict_kernel, [gdpr_information_duties_headline_verdict_input_problems/2]).
+:- module(m__eu_data_protection_gdpr_information_duties_headline_verdict_kernel, [gdpr_information_duties_headline_verdict_input_problems/2, contract_keys/1, key_status/3, attested_status/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+contract_keys([personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays]).
+
+key_status(Profile, Key, unknown([Key])) :-
+    profile_lacks(Profile, Key).
+key_status(Profile, Key, value(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+attested_status(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+attested_status(Profile, Key, value(AttestedValue)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, attested(AttestedValue, _)).
 
 gdpr_information_duties_headline_verdict_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -12,7 +27,7 @@ gdpr_information_duties_headline_verdict_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays],
+    contract_keys(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -256,3 +271,41 @@ gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
     FourCenturyRemainder =\= 0.
 gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
     FourYearRemainder =\= 0.
+
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2028, 2, 29)), attribute(automated_decision_making_under_article_22, unsure)], []).
+test(the_empty_profile_has_no_problem) :-
+    gdpr_information_duties_headline_verdict_input_problems([], []).
+test(an_atom_is_not_a_profile) :-
+    gdpr_information_duties_headline_verdict_input_problems(foo, [wrong_type(profile)]).
+test(duplicate_wrong_type_and_unknown_in_order) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(items_provided, []), attribute(obtaining_date, date(2026, 2, 30)), attribute(items_provided, [not_an_item]), attribute(colour, red), attribute(colour, blue)], [duplicate_key(items_provided), wrong_type(obtaining_date), unknown_key(colour)]).
+test(other_purpose_information_is_not_an_item_provided) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(items_provided, [other_purpose_information])], [wrong_type(items_provided)]).
+test(other_purpose_information_may_be_already_held) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(items_data_subject_already_has, [other_purpose_information])], []).
+test(a_crisp_flag_given_unsure_is_wrong_type) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(recipients_exist, unsure)], [wrong_type(recipients_exist)]).
+test(an_attested_outside_fact_is_well_formed) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(professional_secrecy_obligation_by_law, attested(true, attestation(by, at, reason, none))), attribute(public_holidays, attested([date(2026, 12, 25)], attestation(by, at, reason, none)))], []).
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_information_duties_headline_verdict_input_problems([attribute(obtaining_or_disclosure_laid_down_by_law, true)], [wrong_type(obtaining_or_disclosure_laid_down_by_law)]).
+test(the_input_check_has_one_answer) :-
+    findall(Problems, gdpr_information_duties_headline_verdict_input_problems([attribute(recipients_exist, true)], Problems), Answers),
+    Answers == [[]].
+test(an_absent_key_is_unknown) :-
+    key_status([attribute(recipients_exist, true)], transfer_intended, unknown([transfer_intended])).
+test(a_present_key_gives_its_value) :-
+    key_status([attribute(provided_within_reasonable_period, unsure)], provided_within_reasonable_period, value(unsure)).
+test(an_absent_outside_fact_is_absent) :-
+    attested_status([], professional_secrecy_obligation_by_law, absent).
+test(an_attested_outside_fact_gives_its_value) :-
+    attested_status([attribute(obtaining_or_disclosure_laid_down_by_law, attested(false, attestation(by, at, reason, none)))], obtaining_or_disclosure_laid_down_by_law, value(false)).
+test(the_contract_has_twenty_six_keys) :-
+    contract_keys(Keys),
+    length(Keys, 26).
+
+test(an_atom_is_not_a_clean_profile, fail) :-
+    gdpr_information_duties_headline_verdict_input_problems(foo, []).
+test(an_absent_key_has_no_value, fail) :-
+    key_status([attribute(recipients_exist, true)], transfer_intended, value(_)).

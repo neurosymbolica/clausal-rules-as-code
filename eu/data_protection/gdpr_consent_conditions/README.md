@@ -4,7 +4,7 @@
 
 ## Scope
 
-Regulation (EU) 2016/679 (GDPR) Art 7(1) to (4) (conditions for consent on which processing is based: demonstrability, presentation of the request within a written declaration, information on and ease of withdrawal, freely-given assessment with the contract-conditionality factor) and Art 11(1) and (2) (processing which does not require identification: relief from acquiring identifying information, the duty to inform the data subject if possible, and the non-application of Arts 15 to 20 unless additional identifying information is provided). Decided: whether the stated conditions of Art 7 are met on the facts stated, the effect of an infringing part of a declaration, the reported assessment factor, and the Art 11 statuses. Open-textured limbs are outside facts stated by the caller as attested values and never decided here. Out of scope (sibling orders or a lawyer): whether a statement is a consent (Art 4(11)), whether processing rests on consent (Art 6(1)(a)), Arts 8 and 9, the content of Arts 15 to 20, and the first two sentences of Art 7(3).
+Regulation (EU) 2016/679 (GDPR) Art 7(1), 7(2), 7(3) third and fourth sentences and 7(4), and Art 11(1) and 11(2). Decided here, on facts the caller states: whether the conditions for consent in Art 7 are met for processing the caller states is based on consent (consent_conditions_status); the consequence of Art 7(2) last sentence that an infringing part of a written declaration is not binding (consent_declaration_effect); the one Art 7(4) factor, reported and deciding nothing (consent_assessment_factors); the Art 11(1) relief from acquiring identifying information (identification_obligation); the Art 11(2) duty to inform the data subject, if possible (identification_information_duty); and whether Arts 15 to 20 apply under Art 11(2) (identification_rights_effect). The seven open-textured limbs are OUTSIDE FACTS (operator rulings of 2026-11-11): each is stated as attested(true or false, attestation(By, At, Reason, Evidence)), copied into the answer and never decided; an absent one the answer turns on refers (cross_reference_unresolved). Out of scope: whether a statement is a consent (Art 4(11)), whether processing rests on consent (Art 6(1)(a)), Arts 8 and 9(2)(a), the content of ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Regulation (EU) 2016/679 (GDPR) Art 7(1) to (4) (conditions for consent on which
 
 ## What was checked
 
-- 149 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 259 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

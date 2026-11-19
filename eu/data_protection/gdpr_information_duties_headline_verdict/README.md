@@ -4,7 +4,7 @@
 
 ## Scope
 
-The headline question of the GDPR information duties: given a profile of one processing situation, is the controller's duty to inform the data subject satisfied or disapplied (eligible) or not (ineligible) under Regulation (EU) 2016/679 Arts 13 and 14, with the route (Art 13 or Art 14), the items owed and missing, the deadline (Art 13(1) at collection; Art 14(3) earliest of one month by Regulation 1182/71 Art 3, first communication, first disclosure), further processing (Arts 13(3), 14(4)), the already-has exemption (Arts 13(4), 14(5)(a)) and the Art 14(5)(b), (c), (d) exemptions. Also answers information_duty_exemption/2 and information_outside_facts/2 and the input check. Out of scope, handed to the lawyer or a sibling order: the adequacy of the content of an item given, Art 12 modalities, Art 22, Arts 6, 7 and 9 lawfulness, Art 89 safeguards, remedies and fines.
+Regulation (EU) 2016/679 (GDPR) Articles 13 and 14, headline part of the split gdpr-information-duties order: whether the controller's duty to inform the data subject is satisfied or disapplied for one processing situation (information_duty_verdict/3), whether an Art 14(5)(b), (c) or (d) exemption applies (information_duty_exemption/2), and which outside facts were attested (information_outside_facts/2), with the shared input check. The headline is built internally from the route (Art 13 or Art 14), the items owed and missing (Art 13(1), 13(2), 14(1), 14(2), with Art 13(4) and 14(5)(a) item by item), the timing (Art 13(1) at obtaining; Art 14(3) earliest applicable limb, the one-month limb computed under Regulation (EEC, Euratom) No 1182/71 Art 3 with attested public holidays) and further processing (Art 13(3), 14(4)). Open-textured questions (automated decision-making under Art 22, reasonable period, impossibility or disproportionate effort, relevance of paragraph-2 information) are the user's judgements and refer to a lawyer when unsure. Out of scope: the content adequacy of an item, Art 12 modalities, the validity of the lawful basis (Arts 6, 7, 9), Art 22 and Art 89 ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ The headline question of the GDPR information duties: given a profile of one pro
 
 ## What was checked
 
-- 163 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 184 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

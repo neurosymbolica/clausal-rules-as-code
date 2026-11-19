@@ -1,43 +1,184 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
-% verdict term builds and destructures, the verdict atoms are distinct, and
-% one real citation record resolves.
+% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads,
+% the result terms the kernel records build and destructure, the verdict
+% and status atoms are distinct, the input check of the order answers
+% exactly once with the problems the contract names, and real citation
+% records resolve (and implements/1 fails for a key not recorded).
+% Self-contained: the determination slice is not referenced here.
 % Run: cd <corpus root> && python -m clausal.testing \
 %      eu/data_protection/gdpr_data_subject_rights_response_duties/tests/test_load.clausal
 % =====================================================================
 :- module(test_load, []).
 :- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/kernel, [gdpr_data_subject_rights_response_duties_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/citations, [citation/2]).
+:- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/citations, [citation/2, implements/1]).
 
-test(the_verdict_term_builds_and_destructures) :-
-    Verdict = gdpr_data_subject_request_verdict(must_comply, art15_1, none, [], [cite(eu_reg_2016_679_art_12_3)]),
-    Verdict = gdpr_data_subject_request_verdict(Comply, Basis, Exception, Conditions, Citations),
-    Comply == must_comply,
-    Basis == art15_1,
-    Exception == none,
+% ---- result terms build and destructure ------------------------------
+
+test(the_verdict_term_carries_its_five_fields) :-
+    Verdict = gdpr_data_subject_request_verdict(need_not_comply,
+                                                art17_1_a,
+                                                art17_3_e,
+                                                [],
+                                                []),
+    Verdict = gdpr_data_subject_request_verdict(Comply,
+                                                Basis,
+                                                Exception,
+                                                Conditions,
+                                                Citations),
+    Comply == need_not_comply,
+    Basis == art17_1_a,
+    Exception == art17_3_e,
     Conditions == [],
-    Citations == [cite(eu_reg_2016_679_art_12_3)].
+    Citations == [].
 
-test(the_verdict_atoms_are_distinct) :-
+test(the_facade_verdict_carries_status_and_citations) :-
+    Verdict = gdpr_data_subject_rights_response_duties_verdict(must_comply, [eu_reg_2016_679_art_12_3]),
+    Verdict = gdpr_data_subject_rights_response_duties_verdict(Status, Citations),
+    Status == must_comply,
+    Citations == [eu_reg_2016_679_art_12_3].
+
+test(the_open_textured_referral_destructures) :-
+    Referral = needs_legal_review(open_textured(extension_necessary_for_complexity_and_number,
+                                                cite(eu_reg_2016_679_art_12_3)),
+                                  [inputs_relied_on([extension_necessary_for_complexity_and_number-unsure])]),
+    Referral = needs_legal_review(open_textured(InputKey, cite(CitationKey)),
+                                  [inputs_relied_on(Pairs)]),
+    InputKey == extension_necessary_for_complexity_and_number,
+    CitationKey == eu_reg_2016_679_art_12_3,
+    Pairs == [extension_necessary_for_complexity_and_number-unsure].
+
+test(the_cross_reference_referral_destructures) :-
+    Referral = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_17_1_e),
+                                                             cite(union_or_member_state_law_requiring_erasure)),
+                                  [resolution(cite(union_or_member_state_law_requiring_erasure), not_attempted),
+                                   inputs_relied_on([request_type-erasure,
+                                                     erasure_required_by_union_or_member_state_law-absent])]),
+    Referral = needs_legal_review(cross_reference_unresolved(cite(CitationKey), cite(TargetKey)),
+                                  [resolution(cite(ResolvedTarget), Status), inputs_relied_on(Pairs)]),
+    CitationKey == eu_reg_2016_679_art_17_1_e,
+    TargetKey == union_or_member_state_law_requiring_erasure,
+    ResolvedTarget == TargetKey,
+    Status == not_attempted,
+    Pairs == [request_type-erasure, erasure_required_by_union_or_member_state_law-absent].
+
+test(the_duty_terms_destructure) :-
+    Duties = [inform_of_extension_with_reasons(first_period, cite(eu_reg_2016_679_art_12_3)),
+              respond_with_action_taken(extended_period, cite(eu_reg_2016_679_art_12_3))],
+    Duties = [inform_of_extension_with_reasons(NoticePeriod, _),
+              respond_with_action_taken(ResponsePeriod, cite(ResponseCitation))],
+    NoticePeriod == first_period,
+    ResponsePeriod == extended_period,
+    ResponseCitation == eu_reg_2016_679_art_12_3.
+
+test(the_indeterminate_status_carries_its_missing_keys) :-
+    Status = indeterminate([request_type]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys == [request_type].
+
+% ---- the verdict and status atoms are distinct -----------------------
+
+test(the_comply_atoms_are_distinct) :-
     dif(must_comply, need_not_comply).
 
-test(a_status_compound_destructures) :-
-    Verdict = gdpr_data_subject_request_verdict(suspended(art12_6_identity_not_confirmed), none, none, [], []),
-    Verdict = gdpr_data_subject_request_verdict(suspended(Reason), _, _, _, _),
-    Reason == art12_6_identity_not_confirmed.
+test(the_periods_are_distinct) :-
+    dif(first_period, extended_period).
 
-test(a_real_citation_record_resolves) :-
+test(the_suspension_is_not_a_refusal) :-
+    dif(suspended(art12_6_identity_not_confirmed), need_not_comply).
+
+test(the_statuses_are_distinct_compounds) :-
+    dif(indeterminate([request_type]), input_problems([wrong_type(profile)])).
+
+test(the_judgement_value_is_not_a_boolean) :-
+    dif(unsure, true),
+    dif(unsure, false).
+
+% ---- the input check: exactly one answer, the contract's problems ----
+
+test(the_empty_profile_has_no_problem) :-
+    findall(Problems,
+            gdpr_data_subject_rights_response_duties_input_problems([], Problems),
+            Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    Profile = [attribute(request_type, erasure),
+               attribute(request_received_on, date(2028, 2, 29)),
+               attribute(extension_claimed, true),
+               attribute(extension_necessary_for_complexity_and_number, unsure),
+               attribute(legislative_restriction_applies_to_the_right,
+                         attested(false, attestation(by, at, reason, none))),
+               attribute(public_holidays,
+                         attested([date(2026, 12, 25)], attestation(by, at, reason, none)))],
+    findall(Problems,
+            gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+            Answers),
+    Answers == [[]].
+
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    findall(Problems,
+            gdpr_data_subject_rights_response_duties_input_problems(not_a_profile, Problems),
+            Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_request_type_outside_the_enum_is_wrong_type) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(request_type, complaint)],
+                                                            Problems),
+    Problems == [wrong_type(request_type)].
+
+test(a_crisp_flag_given_unsure_is_wrong_type) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(extension_claimed, unsure)],
+                                                            Problems),
+    Problems == [wrong_type(extension_claimed)].
+
+test(a_day_that_is_not_in_the_calendar_is_wrong_type) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(request_received_on, date(2026, 2, 29))],
+                                                            Problems),
+    Problems == [wrong_type(request_received_on)].
+
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(erasure_required_by_union_or_member_state_law, true)],
+                                                            Problems),
+    Problems == [wrong_type(erasure_required_by_union_or_member_state_law)].
+
+test(a_duplicate_key_comes_before_an_unknown_key) :-
+    Profile = [attribute(colour, blue),
+               attribute(request_type, access),
+               attribute(request_type, complaint),
+               attribute(colour, red)],
+    findall(Problems,
+            gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems),
+            Answers),
+    Answers == [[duplicate_key(request_type), unknown_key(colour)]].
+
+test(a_duplicate_key_is_not_also_wrong_type, fail) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(extension_claimed, unsure),
+                                                             attribute(extension_claimed, maybe)],
+                                                            [wrong_type(extension_claimed)]).
+
+test(a_repeated_flag_is_one_duplicate_key) :-
+    gdpr_data_subject_rights_response_duties_input_problems([attribute(extension_claimed, unsure),
+                                                             attribute(extension_claimed, maybe)],
+                                                            [duplicate_key(extension_claimed)]).
+
+% ---- real citation records resolve -----------------------------------
+
+test(the_response_period_citation_is_recorded) :-
     citation(eu_reg_2016_679_art_12_3, Record),
     Record = [label-_, ref-_, verbatim-_].
 
-test(an_unrecorded_citation_does_not_resolve, fail) :-
-    citation(eu_todo_primary_source, _Record).
+test(the_recipient_notification_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_19, _Record).
 
-test(the_empty_attribute_list_has_no_input_problems) :-
-    gdpr_data_subject_rights_response_duties_input_problems([], []).
+test(the_calendar_marker_is_recorded) :-
+    implements(eu_reg_1971_1182_art_3_2_c).
 
-test(a_non_list_profile_is_a_wrong_type_profile) :-
-    gdpr_data_subject_rights_response_duties_input_problems(not_a_profile, [wrong_type(profile)]).
+test(an_outside_fact_target_is_recorded_without_verbatim) :-
+    citation(union_or_member_state_law_requiring_erasure, Record),
+    Record = [label-_, ref-_].
+
+test(an_unrecorded_key_does_not_implement, fail) :-
+    implements(eu_todo_primary_source).
 
 :- end_module(test_load).

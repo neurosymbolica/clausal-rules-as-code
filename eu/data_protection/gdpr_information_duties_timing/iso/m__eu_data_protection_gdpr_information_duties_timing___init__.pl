@@ -4,11 +4,12 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_date_order/3, gdpr_information_duties_timing_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_citations, [citation/2, implements/1]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_deadline_basis, [decide_information_deadline_basis/2, information_deadline/2, information_deadline_basis/2, information_deadline_basis_checklist/2, information_deadline_basis_decision_resolvable/1, information_deadline_basis_outcome/2, information_deadline_basis_status/2, information_deadline_basis_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_timing_verdict, [decide_information_timing_verdict/2, information_timing_verdict/3, information_timing_verdict_checklist/2, information_timing_verdict_decision_resolvable/1, information_timing_verdict_status/2, information_timing_verdict_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_queries, [attestation/4, attested/2, document/2, duplicate_key/1, gdpr_information_duties_timing_obligation/2, gdpr_information_duties_timing_profile_keys/1, gdpr_information_duties_timing_what_if/4, indeterminate/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, open_textured/2, provenance/2, unknown_key/1, url/2, wrong_type/1]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [calendar_date_before/2, calendar_date_on_or_before/2, calendar_date_relation/3, contract_keys/1, gdpr_information_duties_timing_input_problems/2, keys_in_contract_order/2, profile_key_status/3, public_holidays_referral/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_citations, [citation/2, implements/1, limb_citation/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_parameters, [parameter_source/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_deadline_basis, [deadline_resolution/2, decide_information_deadline/2, decide_information_deadline_basis/2, earliest_event_limb/2, information_deadline_basis_checklist/2, information_deadline_basis_decision_resolvable/1, information_deadline_basis_status/2, information_deadline_basis_status_values/1, limb_a_date/3]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_timing_verdict, [decide_information_timing_verdict/2, information_timing_verdict_checklist/2, information_timing_verdict_decision_resolvable/1, information_timing_verdict_status/2, information_timing_verdict_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_queries, [attestation/4, attested/2, cross_reference_unresolved/2, document/2, duplicate_key/1, gdpr_information_duties_timing_compliance_check/3, gdpr_information_duties_timing_obligation/2, gdpr_information_duties_timing_profile_keys/1, gdpr_information_duties_timing_what_if/4, indeterminate/1, information_deadline/2, information_deadline_basis/2, information_timing_verdict/3, input_problems/1, inputs_relied_on/1, needs_legal_review/2, open_textured/2, provenance/2, resolution/2, unknown_key/1, url/2, wrong_type/1]).
 :- use_module(m__eu_data_protection_gdpr_information_duties_timing_fixtures, [gdpr_information_duties_timing_assess/2, gdpr_information_duties_timing_profile_for/2, gdpr_information_duties_timing_subject/1]).
 
 root_export(art13_1).
@@ -34,6 +35,7 @@ root_export(items_data_subject_already_has).
 root_export(items_provided).
 root_export(late).
 root_export(legitimate_interests).
+root_export(not_attempted).
 root_export(obtaining_date).
 root_export(obtaining_or_disclosure_laid_down_by_law).
 root_export(other_purpose_information).

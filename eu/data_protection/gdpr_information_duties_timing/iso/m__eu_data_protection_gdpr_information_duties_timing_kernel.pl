@@ -1,10 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2, gdpr_information_duties_timing_date_order/3]).
+:- module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2, contract_keys/1, profile_key_status/3, keys_in_contract_order/2, calendar_date_relation/3, calendar_date_on_or_before/2, calendar_date_before/2, public_holidays_referral/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
+:- use_module(library(clpz)).
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
 
 gdpr_information_duties_timing_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -257,60 +259,87 @@ gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
 gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
     FourYearRemainder =\= 0.
 
-gdpr_information_duties_timing_date_order(date(FirstYear, FirstMonth, FirstDay), date(SecondYear, SecondMonth, SecondDay), Order) :-
-    compare(YearComparison, FirstYear, SecondYear),
-    compare(MonthComparison, FirstMonth, SecondMonth),
-    compare(DayComparison, FirstDay, SecondDay),
-    lexicographic_order(YearComparison, MonthComparison, DayComparison, Order).
+contract_keys(Keys) :-
+    findall(Key, key_type(Key, _), Keys).
 
-lexicographic_order(<, _, _, before).
-lexicographic_order(>, _, _, after).
-lexicographic_order(=, <, _, before).
-lexicographic_order(=, >, _, after).
-lexicographic_order(=, =, <, before).
-lexicographic_order(=, =, =, same).
-lexicographic_order(=, =, >, after).
+profile_key_status(Profile, Key, present(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+profile_key_status(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+keys_in_contract_order(Keys, Ordered) :-
+    contract_keys(ContractKeys),
+    contract_order(ContractKeys, Keys, Ordered).
+
+contract_order([], _, []).
+contract_order([ContractKey|ContractKeys], Keys, Ordered) :-
+    memberd_t(ContractKey, Keys, IsNamed),
+    keep_named_key(IsNamed, ContractKey, ContractKeys, Keys, Ordered).
+
+keep_named_key(true, ContractKey, ContractKeys, Keys, [ContractKey|Ordered]) :-
+    contract_order(ContractKeys, Keys, Ordered).
+keep_named_key(false, _, ContractKeys, Keys, Ordered) :-
+    contract_order(ContractKeys, Keys, Ordered).
+
+calendar_date_number(date(Year, Month, DayNumber), DateNumber) :-
+    DateNumber #= Year * 10000 + Month * 100 + DayNumber.
+
+calendar_date_relation(First, Second, before) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #< SecondNumber.
+calendar_date_relation(First, Second, same) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #= SecondNumber.
+calendar_date_relation(First, Second, after) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #> SecondNumber.
+
+calendar_date_on_or_before(Earlier, Later) :-
+    calendar_date_number(Earlier, EarlierNumber),
+    calendar_date_number(Later, LaterNumber),
+    EarlierNumber #=< LaterNumber.
+
+calendar_date_before(Earlier, Later) :-
+    calendar_date_number(Earlier, EarlierNumber),
+    calendar_date_number(Later, LaterNumber),
+    EarlierNumber #< LaterNumber.
+
+public_holidays_referral(Pairs, needs_legal_review(cross_reference_unresolved(cite(eu_reg_1971_1182_art_3_4), cite(public_holidays_applicable_to_the_period)), [resolution(cite(public_holidays_applicable_to_the_period), not_attempted), inputs_relied_on(Pairs)])).
 
 test(an_empty_profile_has_no_problem) :-
     gdpr_information_duties_timing_input_problems([], []).
-test(a_well_typed_profile_has_no_problem) :-
-    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2028, 2, 29)), attribute(provided_within_reasonable_period, unsure), attribute(items_provided, []), attribute(public_holidays, attested([date(2027, 2, 1)], attestation(host, moment, reason, none)))], []).
-test(a_crisp_flag_given_true_has_no_problem) :-
-    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, true)], []).
-test(a_crisp_flag_given_unsure_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, unsure)], [wrong_type(personal_data_collected_from_data_subject)]).
-test(a_date_that_is_not_a_calendar_day_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2026, 2, 29))], [wrong_type(obtaining_date)]).
-test(a_leap_day_is_a_calendar_day) :-
-    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2028, 2, 29))], []).
-test(a_repeated_key_is_a_duplicate_only) :-
-    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2026, 1, 15)), attribute(obtaining_date, not_a_date)], [duplicate_key(obtaining_date)]).
-test(an_unknown_key_is_named_once) :-
-    gdpr_information_duties_timing_input_problems([attribute(as_of_date, first), attribute(as_of_date, second)], [unknown_key(as_of_date)]).
-test(other_purpose_information_is_not_an_item_provided) :-
-    gdpr_information_duties_timing_input_problems([attribute(items_provided, [other_purpose_information])], [wrong_type(items_provided)]).
-test(a_malformed_holiday_list_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems([attribute(public_holidays, attested([date(2027, 2, 30)], attestation(host, moment, reason, none)))], [wrong_type(public_holidays)]).
-test(problems_follow_contract_order_then_unknown_keys) :-
-    gdpr_information_duties_timing_input_problems([attribute(zebra, 1), attribute(provision_date, not_a_date), attribute(personal_data_collected_from_data_subject, yes)], [wrong_type(personal_data_collected_from_data_subject), wrong_type(provision_date), unknown_key(zebra)]).
-test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+test(a_non_list_is_not_a_profile) :-
     gdpr_information_duties_timing_input_problems(profile, [wrong_type(profile)]).
-test(the_input_check_has_exactly_one_answer) :-
-    findall(Problems, gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2026, 1, 15))], Problems), Answers),
-    Answers == [[]].
-test(an_earlier_year_is_before) :-
-    gdpr_information_duties_timing_date_order(date(2026, 12, 31), date(2027, 1, 1), before).
-test(a_later_day_is_after) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 16), date(2026, 2, 15), after).
-test(day_two_is_before_day_fifteen) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), before).
-test(the_same_date_is_same) :-
-    gdpr_information_duties_timing_date_order(date(2026, 3, 2), date(2026, 3, 2), same).
-test(the_date_order_has_exactly_one_answer) :-
-    findall(Order, gdpr_information_duties_timing_date_order(date(2026, 3, 2), date(2026, 3, 2), Order), Orders),
-    Orders == [same].
+test(a_false_calendar_day_is_wrong_type) :-
+    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2026, 2, 29))], [wrong_type(obtaining_date)]).
+test(a_leap_day_is_a_real_day) :-
+    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2028, 2, 29))], []).
+test(the_contract_has_twenty_six_keys) :-
+    contract_keys(Keys),
+    length(Keys, 26).
+test(missing_keys_follow_the_contract_order) :-
+    keys_in_contract_order([provision_date, personal_data_collected_from_data_subject, provision_date], Ordered),
+    Ordered == [personal_data_collected_from_data_subject, provision_date].
+test(a_present_key_is_read) :-
+    profile_key_status([attribute(obtaining_date, date(2026, 1, 15))], obtaining_date, Status),
+    Status == present(date(2026, 1, 15)).
+test(an_absent_key_is_absent) :-
+    profile_key_status([], obtaining_date, absent).
+test(dates_compare_by_value) :-
+    calendar_date_relation(date(2026, 2, 2), date(2026, 2, 15), before).
+test(one_relation_per_pair) :-
+    findall(Relation, calendar_date_relation(date(2026, 12, 31), date(2027, 1, 1), Relation), Relations),
+    Relations == [before].
+test(the_last_day_is_inclusive) :-
+    calendar_date_on_or_before(date(2026, 2, 16), date(2026, 2, 16)).
+test(the_referral_carries_its_pairs) :-
+    public_holidays_referral([], needs_legal_review(cross_reference_unresolved(_, _), [resolution(_, not_attempted), inputs_relied_on([])])).
 
-test(a_crisp_flag_given_unsure_is_not_well_formed, fail) :-
-    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, unsure)], []).
-test(day_two_is_not_after_day_fifteen, fail) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), after).
+test(dates_compare_by_value_not_as_strings, fail) :-
+    calendar_date_relation(date(2026, 2, 2), date(2026, 2, 15), after).
+test(the_same_day_is_not_before, fail) :-
+    calendar_date_before(date(2026, 2, 16), date(2026, 2, 16)).

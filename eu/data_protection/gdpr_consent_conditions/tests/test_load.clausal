@@ -1,40 +1,125 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_load.clausal -- LOAD: the shared floor loads, the input check
-% answers, and a real citation record resolves.
+% test_load.clausal -- LOAD: the shared floor of
+% eu/data_protection/gdpr_consent_conditions loads (kernel and citations),
+% the result terms the order pins build and destructure, the status atoms
+% are distinct, and the real citation records resolve.
+% The determination slices are not referenced here: this test checks only
+% what the shared floor guarantees.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/data_protection/gdpr_consent_conditions/tests/test_load.clausal
 % =====================================================================
 :- module(test_load, []).
-:- use_module(eu/data_protection/gdpr_consent_conditions/kernel, [gdpr_consent_conditions_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_consent_conditions/citations, [citation/2, implements/1]).
+:- use_module(eu/data_protection/gdpr_consent_conditions/kernel, [gdpr_consent_conditions_input_problems/2, gdpr_consent_conditions_key_order/1, outside_fact_limb/4, crisp_limb/3]).
+:- use_module(eu/data_protection/gdpr_consent_conditions/citations, [citation/2, implements/1, citation_vocabulary/1, outside_fact_entry/3]).
 
-test(a_well_formed_profile_has_no_input_problems) :-
-    gdpr_consent_conditions_input_problems([attribute(processing_based_on_consent, true)], Problems),
-    Problems == [].
-
-test(a_bare_value_for_an_outside_fact_is_a_wrong_type) :-
-    gdpr_consent_conditions_input_problems([attribute(consent_demonstrable, true)], Problems),
-    Problems == [wrong_type(consent_demonstrable)].
-
-test(a_term_that_is_not_a_list_is_not_a_profile) :-
-    gdpr_consent_conditions_input_problems(not_a_list, Problems),
-    Problems == [wrong_type(profile)].
-
-test(the_verdict_atoms_are_distinct) :-
+% ---- the status vocabulary: each atom distinct ----------------------
+test(the_consent_status_atoms_are_distinct) :-
+    dif(not_applicable, conditions_met),
+    dif(not_applicable, conditions_not_met),
     dif(conditions_met, conditions_not_met).
 
-test(the_verdict_term_builds_and_destructures) :-
+test(the_declaration_status_atoms_are_distinct) :-
+    dif(not_applicable, part_not_binding),
+    dif(not_applicable, no_part_infringing),
+    dif(part_not_binding, no_part_infringing).
+
+test(the_identification_status_atoms_are_distinct) :-
+    dif(not_obliged_to_acquire_identifying_information, art11_1_not_engaged),
+    dif(must_inform_data_subject, need_not_inform_data_subject),
+    dif(must_inform_data_subject, art11_2_not_engaged),
+    dif(need_not_inform_data_subject, art11_2_not_engaged),
+    dif(articles_15_to_20_apply, articles_15_to_20_do_not_apply),
+    dif(articles_15_to_20_apply, art11_2_not_engaged),
+    dif(articles_15_to_20_do_not_apply, art11_2_not_engaged).
+
+test(a_final_status_is_not_a_compound_status, fail) :-
+    conditions_met = indeterminate(_).
+
+% ---- the result terms build and destructure -------------------------
+test(the_verdict_term_carries_status_and_citations) :-
     Verdict = gdpr_consent_conditions_verdict(conditions_met, [cite(eu_reg_2016_679_art_7_1)]),
     Verdict = gdpr_consent_conditions_verdict(Status, Citations),
     Status == conditions_met,
     Citations == [cite(eu_reg_2016_679_art_7_1)].
 
-test(a_real_citation_record_resolves) :-
+test(the_basis_item_carries_the_attested_term) :-
+    Item = outside_fact(consent_demonstrable, attested(true, attestation(by, at, reason, none))),
+    Item = outside_fact(Key, attested(Value, attestation(_, _, _, Evidence))),
+    Key == consent_demonstrable,
+    Value == true,
+    Evidence == none.
+
+test(the_referral_term_destructures) :-
+    Status = needs_legal_review(
+        cross_reference_unresolved(cite(eu_reg_2016_679_art_7_1), cite(consent_demonstration_statement)),
+        [resolution(cite(consent_demonstration_statement), not_attempted),
+         inputs_relied_on([consent_demonstrable-absent])]),
+    Status = needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, Resolution), inputs_relied_on(Pairs)]),
+    Citation == cite(eu_reg_2016_679_art_7_1),
+    Target == cite(consent_demonstration_statement),
+    Resolution == not_attempted,
+    Pairs == [consent_demonstrable-absent].
+
+test(the_factor_term_destructures) :-
+    Factors = [factor(contract_conditional_on_unneeded_consent, cite(eu_reg_2016_679_art_7_4))],
+    Factors = [factor(Name, Citation)],
+    Name == contract_conditional_on_unneeded_consent,
+    Citation == cite(eu_reg_2016_679_art_7_4).
+
+test(the_input_problems_term_destructures) :-
+    Status = input_problems([wrong_type(consent_demonstrable), unknown_key(colour)]),
+    Status = input_problems(Problems),
+    Problems == [wrong_type(consent_demonstrable), unknown_key(colour)].
+
+% ---- the real citation records resolve ------------------------------
+test(the_art_7_1_citation_is_recorded) :-
     citation(eu_reg_2016_679_art_7_1, _Record).
 
-test(implements_succeeds_for_a_recorded_key) :-
-    implements(eu_reg_2016_679_art_11_2).
+test(the_art_11_2_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_11_2, _Record).
 
-test(implements_fails_for_an_unrecorded_key, fail) :-
-    implements(eu_todo_primary_source).
+test(the_vocabulary_holds_six_keys) :-
+    citation_vocabulary(Keys),
+    length(Keys, 6).
+
+test(every_vocabulary_key_implements) :-
+    citation_vocabulary(Keys),
+    maplist(implements, Keys).
+
+test(a_shortened_key_does_not_implement, fail) :-
+    implements(gdpr_art_7_1).
+
+test(the_consent_demonstrable_row_resolves) :-
+    outside_fact_entry(consent_demonstrable, Citation, Target),
+    Citation == cite(eu_reg_2016_679_art_7_1),
+    Target == cite(consent_demonstration_statement).
+
+test(the_referral_target_is_recorded) :-
+    citation(consent_demonstration_statement, _Record).
+
+% ---- the kernel predicates load and answer --------------------------
+test(the_key_order_starts_with_the_scope_key) :-
+    gdpr_consent_conditions_key_order([First|_]),
+    First == processing_based_on_consent.
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_consent_conditions_input_problems([], Problems),
+    Problems == [].
+
+test(an_empty_profile_does_not_have_problems, fail) :-
+    gdpr_consent_conditions_input_problems([], [_|_]).
+
+test(an_absent_outside_fact_reads_absent) :-
+    outside_fact_limb([], consent_freely_given, Limb, Attested),
+    Limb == absent,
+    Attested == absent.
+
+test(a_true_crisp_key_reads_met) :-
+    crisp_limb([attribute(additional_identifying_information_provided, true)], additional_identifying_information_provided, Limb),
+    Limb == met.
+
+test(a_true_crisp_key_does_not_read_unmet, fail) :-
+    crisp_limb([attribute(additional_identifying_information_provided, true)], additional_identifying_information_provided, unmet).
 
 :- end_module(test_load).

@@ -4,89 +4,96 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_deadline_basis, [decide_information_deadline_basis/2, information_deadline/2, information_deadline_basis/2, information_deadline_basis_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_information_timing_verdict, [information_timing_verdict/3, information_timing_verdict_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_fixtures, [gdpr_information_duties_timing_subject/1, gdpr_information_duties_timing_profile_for/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_queries, [information_deadline/2, information_deadline_basis/2, information_timing_verdict/3]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_fixtures, [gdpr_information_duties_timing_profile_for/2]).
 
-expected_verdict(art13_provided_on_obtaining_day, timely, [cite(eu_reg_2016_679_art_13_1)]).
-expected_verdict(art13_provided_day_after_obtaining, late, [cite(eu_reg_2016_679_art_13_1)]).
-expected_verdict(art14_one_month_last_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_one_month_day_after, late, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_leap_day_last_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_leap_day_day_after, late, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_holiday_shift_last_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_holiday_shift_day_after, late, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_tie_with_communication_last_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_first_communication_on_day, timely, [cite(eu_reg_2016_679_art_14_3_b)]).
-expected_verdict(art14_first_communication_day_after, late, [cite(eu_reg_2016_679_art_14_3_b)]).
-expected_verdict(art14_first_disclosure_on_day, timely, [cite(eu_reg_2016_679_art_14_3_c)]).
-expected_verdict(art14_first_disclosure_day_after, late, [cite(eu_reg_2016_679_art_14_3_c)]).
-expected_verdict(art14_reasonable_period_unsure, needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), [inputs_relied_on([provided_within_reasonable_period - unsure]), provenance(reasonable_period_for_art14_information, [cite(eu_reg_2016_679_art_14_3_a)])]), []).
+expected_verdict(art13_on_obtaining_day, timely, [cite(eu_reg_2016_679_art_13_1)]).
+expected_verdict(art13_day_after_obtaining, late, [cite(eu_reg_2016_679_art_13_1)]).
+expected_verdict(art13_with_unread_keys, timely, [cite(eu_reg_2016_679_art_13_1)]).
+expected_verdict(art14_limb_a_last_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_limb_a_day_after, late, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_first_communication_day, timely, [cite(eu_reg_2016_679_art_14_3_b)]).
+expected_verdict(art14_day_after_first_communication, late, [cite(eu_reg_2016_679_art_14_3_b)]).
+expected_verdict(art14_first_disclosure_day, timely, [cite(eu_reg_2016_679_art_14_3_c)]).
+expected_verdict(art14_day_after_first_disclosure, late, [cite(eu_reg_2016_679_art_14_3_c)]).
+expected_verdict(art14_attested_holiday_shift, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_day_after_attested_holiday_shift, late, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_leap_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_day_after_leap_day, late, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_holidays_absent_on_limb_a_day, timely, [cite(eu_reg_2016_679_art_14_3_a)]).
+expected_verdict(art14_holidays_absent_after_limb_a_day, needs_legal_review(cross_reference_unresolved(cite(eu_reg_1971_1182_art_3_4), cite(public_holidays_applicable_to_the_period)), [resolution(cite(public_holidays_applicable_to_the_period), not_attempted), inputs_relied_on([provided_within_reasonable_period - true])]), []).
 expected_verdict(art14_reasonable_period_false, late, [cite(eu_reg_2016_679_art_14_3_a)]).
-expected_verdict(art14_reasonable_period_absent, indeterminate([provided_within_reasonable_period]), []).
-expected_verdict(route_unknown, indeterminate([personal_data_collected_from_data_subject, obtaining_date, provision_date]), []).
-expected_verdict(crisp_flag_given_unsure, input_problems([wrong_type(personal_data_collected_from_data_subject)]), []).
+expected_verdict(art14_reasonable_period_unsure, needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), [inputs_relied_on([provided_within_reasonable_period - unsure])]), []).
+expected_verdict(route_unknown, indeterminate([personal_data_collected_from_data_subject]), []).
+expected_verdict(items_provided_wrong_type, input_problems([wrong_type(items_provided)]), []).
+expected_verdict(route_key_duplicated, input_problems([duplicate_key(personal_data_collected_from_data_subject)]), []).
 
-expected_deadline(art13_provided_on_obtaining_day, date(2026, 3, 10), art13_1).
-expected_deadline(art13_provided_day_after_obtaining, date(2026, 3, 10), art13_1).
-expected_deadline(art14_one_month_last_day, date(2026, 2, 16), art14_3_a).
-expected_deadline(art14_one_month_day_after, date(2026, 2, 16), art14_3_a).
-expected_deadline(art14_leap_day_last_day, date(2028, 2, 29), art14_3_a).
-expected_deadline(art14_leap_day_day_after, date(2028, 2, 29), art14_3_a).
-expected_deadline(art14_holiday_shift_last_day, date(2027, 2, 2), art14_3_a).
-expected_deadline(art14_holiday_shift_day_after, date(2027, 2, 2), art14_3_a).
-expected_deadline(art14_tie_with_communication_last_day, date(2026, 2, 16), art14_3_a).
-expected_deadline(art14_first_communication_on_day, date(2026, 1, 20), art14_3_b).
-expected_deadline(art14_first_communication_day_after, date(2026, 1, 20), art14_3_b).
-expected_deadline(art14_first_disclosure_on_day, date(2026, 1, 30), art14_3_c).
-expected_deadline(art14_first_disclosure_day_after, date(2026, 1, 30), art14_3_c).
-expected_deadline(art14_reasonable_period_unsure, date(2026, 2, 16), art14_3_a).
-expected_deadline(art14_reasonable_period_false, date(2026, 2, 16), art14_3_a).
-expected_deadline(art14_reasonable_period_absent, date(2026, 2, 16), art14_3_a).
-expected_deadline(route_unknown, indeterminate([personal_data_collected_from_data_subject, obtaining_date]), indeterminate([personal_data_collected_from_data_subject, obtaining_date])).
-expected_deadline(crisp_flag_given_unsure, input_problems([wrong_type(personal_data_collected_from_data_subject)]), input_problems([wrong_type(personal_data_collected_from_data_subject)])).
+expected_deadline(art13_on_obtaining_day, date(2026, 3, 10)).
+expected_deadline(art14_limb_a_last_day, date(2026, 2, 16)).
+expected_deadline(art14_first_communication_day, date(2026, 1, 20)).
+expected_deadline(art14_first_disclosure_day, date(2026, 2, 1)).
+expected_deadline(art14_attested_holiday_shift, date(2027, 2, 2)).
+expected_deadline(art14_leap_day, date(2028, 2, 29)).
+expected_deadline(art14_holidays_absent_on_limb_a_day, needs_legal_review(cross_reference_unresolved(cite(eu_reg_1971_1182_art_3_4), cite(public_holidays_applicable_to_the_period)), [resolution(cite(public_holidays_applicable_to_the_period), not_attempted), inputs_relied_on([])])).
+expected_deadline(route_unknown, indeterminate([personal_data_collected_from_data_subject])).
+expected_deadline(items_provided_wrong_type, input_problems([wrong_type(items_provided)])).
 
-subject_yields_expected_verdict(Subject) :-
+expected_basis(art13_on_obtaining_day, art13_1).
+expected_basis(art14_limb_a_last_day, art14_3_a).
+expected_basis(art14_first_communication_day, art14_3_b).
+expected_basis(art14_first_disclosure_day, art14_3_c).
+expected_basis(art14_attested_holiday_shift, art14_3_a).
+expected_basis(art14_holidays_absent_on_limb_a_day, art14_3_a).
+expected_basis(route_unknown, indeterminate([personal_data_collected_from_data_subject])).
+expected_basis(route_key_duplicated, input_problems([duplicate_key(personal_data_collected_from_data_subject)])).
+
+verdict_matches(Subject) :-
     expected_verdict(Subject, Verdict, Citations),
     gdpr_information_duties_timing_profile_for(Subject, Profile),
-    findall(Answer - AnswerCitations, information_timing_verdict(Profile, Answer, AnswerCitations), Answers),
+    findall(Got - GotCitations, information_timing_verdict(Profile, Got, GotCitations), Answers),
     Answers == [Verdict - Citations].
 
-subject_yields_expected_deadline(Subject) :-
-    expected_deadline(Subject, Deadline, Basis),
+deadline_matches(Subject) :-
+    expected_deadline(Subject, Deadline),
     gdpr_information_duties_timing_profile_for(Subject, Profile),
-    findall(AnswerDeadline, information_deadline(Profile, AnswerDeadline), Deadlines),
-    Deadlines == [Deadline],
-    findall(AnswerBasis, information_deadline_basis(Profile, AnswerBasis), Bases),
-    Bases == [Basis].
+    findall(Got, information_deadline(Profile, Got), Answers),
+    Answers == [Deadline].
 
-test(every_subject_yields_exactly_its_expected_verdict) :-
-    findall(Subject, gdpr_information_duties_timing_subject(Subject), Subjects),
-    findall(Subject, (gdpr_information_duties_timing_subject(Subject), subject_yields_expected_verdict(Subject)), MatchingSubjects),
-    MatchingSubjects == Subjects.
-test(every_subject_yields_exactly_its_expected_deadline_and_basis) :-
-    findall(Subject, gdpr_information_duties_timing_subject(Subject), Subjects),
-    findall(Subject, (gdpr_information_duties_timing_subject(Subject), subject_yields_expected_deadline(Subject)), MatchingSubjects),
-    MatchingSubjects == Subjects.
-test(the_tie_reads_out_limb_a_once) :-
-    gdpr_information_duties_timing_profile_for(art14_tie_with_communication_last_day, Profile),
-    findall(Basis, information_deadline_basis(Profile, Basis), Bases),
-    Bases == [art14_3_a].
-test(the_basis_verdict_reads_out_its_citation) :-
-    gdpr_information_duties_timing_profile_for(art14_first_disclosure_on_day, Profile),
-    findall(Verdict, decide_information_deadline_basis(Profile, Verdict), Verdicts),
-    Verdicts == [information_deadline_basis_verdict(art14_3_c, [cite(eu_reg_2016_679_art_14_3_c)])].
-test(a_non_final_basis_reads_out_no_citation) :-
-    gdpr_information_duties_timing_profile_for(route_unknown, Profile),
-    decide_information_deadline_basis(Profile, information_deadline_basis_verdict(_Status, Citations)),
+basis_matches(Subject) :-
+    expected_basis(Subject, Basis),
+    gdpr_information_duties_timing_profile_for(Subject, Profile),
+    findall(Got, information_deadline_basis(Profile, Got), Answers),
+    Answers == [Basis].
+
+test(every_fixture_yields_exactly_its_verdict_once) :-
+    findall(Subject, expected_verdict(Subject, _, _), Subjects),
+    findall(Subject, verdict_matches(Subject), Matched),
+    Matched == Subjects.
+test(every_listed_fixture_yields_exactly_its_deadline_once) :-
+    findall(Subject, expected_deadline(Subject, _), Subjects),
+    findall(Subject, deadline_matches(Subject), Matched),
+    Matched == Subjects.
+test(every_listed_fixture_yields_exactly_its_basis_once) :-
+    findall(Subject, expected_basis(Subject, _), Subjects),
+    findall(Subject, basis_matches(Subject), Matched),
+    Matched == Subjects.
+test(the_limb_a_last_day_is_timely_and_the_next_day_late) :-
+    gdpr_information_duties_timing_profile_for(art14_limb_a_last_day, OnTheDay),
+    information_timing_verdict(OnTheDay, OnTheDayVerdict, _),
+    OnTheDayVerdict == timely,
+    gdpr_information_duties_timing_profile_for(art14_limb_a_day_after, DayAfter),
+    information_timing_verdict(DayAfter, DayAfterVerdict, _),
+    DayAfterVerdict == late.
+test(the_holiday_shift_moves_the_deadline_past_the_attested_day) :-
+    gdpr_information_duties_timing_profile_for(art14_attested_holiday_shift, Profile),
+    information_deadline(Profile, Deadline),
+    Deadline == date(2027, 2, 2).
+test(the_missing_keys_of_an_empty_profile) :-
+    information_timing_verdict([], Verdict, Citations),
+    Verdict == indeterminate([personal_data_collected_from_data_subject, obtaining_date, provision_date]),
     Citations == [].
-test(the_verdict_vocabulary_enumerates) :-
-    information_timing_verdict_status_values(TimingValues),
-    TimingValues == [timely, late],
-    information_deadline_basis_status_values(BasisValues),
-    BasisValues == [art13_1, art14_3_a, art14_3_b, art14_3_c].
 
-cp_test_names([every_subject_yields_exactly_its_expected_verdict, every_subject_yields_exactly_its_expected_deadline_and_basis, the_tie_reads_out_limb_a_once, the_basis_verdict_reads_out_its_citation, a_non_final_basis_reads_out_no_citation, the_verdict_vocabulary_enumerates]).
+cp_test_names([every_fixture_yields_exactly_its_verdict_once, every_listed_fixture_yields_exactly_its_deadline_once, every_listed_fixture_yields_exactly_its_basis_once, the_limb_a_last_day_is_timely_and_the_next_day_late, the_holiday_shift_moves_the_deadline_past_the_attested_day, the_missing_keys_of_an_empty_profile]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

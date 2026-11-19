@@ -1,4 +1,4 @@
-# The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6): the tier (10000000 EUR / 2 % or 20000000 EUR / 4 %) by infringed provision, the ...
+# Regulation (EU) 2016/679 (GDPR) Article 83(3) to (6): the legal MAXIMUM of the administrative fine for one or several listed infringements. Decided here: the tier of ...
 
 `eu/data_protection/gdpr_administrative_fine_maximum`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 186/186 | none (no provision-tracking ledger) | pass | pass | pass |
+| 164/164 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6): the tier (10000000 EUR / 2 % or 20000000 EUR / 4 %) by infringed provision, the higher-of fixed amount and percentage of the economic unit's total worldwide annual turnover for an undertaking (integer euro cents, tie gives the fixed amount), the fixed amount alone for a non-undertaking, the gravest-infringement rule of Art 83(3) for several linked, intentional or negligent infringements, and separate maxima otherwise. Out of scope, handed to the lawyer: the amount actually imposed (Art 83(1)-(2)), public authorities (Art 83(7)), procedure (Art 83(8)-(9)), whether the infringer is an undertaking, foreign-currency turnover, and provisions Art 83(4)-(6) do not list.
+Regulation (EU) 2016/679 (GDPR) Article 83(3) to (6): the legal MAXIMUM of the administrative fine for one or several listed infringements. Decided here: the tier of each listed provision (Art 83(4), lower: EUR 10000000 or 2 %; Art 83(5) and (6), higher: EUR 20000000 or 4 %), whichever is higher for an undertaking, computed exactly in integer euro cents, and for several distinct provisions the gravest-infringement limit of Art 83(3) when the infringements concern the same or linked processing operations and were intentional or negligent, otherwise a separate maximum for each infringement (never summed). Handed to the user as judgements: whether the infringer is an undertaking (economic unit of competition law), same or linked processing operations, intent or negligence. Out of scope: the amount actually imposed (Art 83(1) and (2)), public authorities (Art 83(7)), procedure (Art 83(8) and (9)), the composition of the economic unit's turnover, currency conversion and the reference year of the preceding financial year; a provision Art 83(4) to (6) does not list is referred (not_governed_here).
 
 ## Pinned sources
 
@@ -26,7 +26,7 @@ The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6):
 
 ??? info "art83_7_public_authorities"
 
-    **Why:** Each Member State may lay down whether and to what extent administrative fines may be imposed on public authorities and bodies established there. That is Member State law, not pinned and not formalized here. CHOICE (the order's author): DEFERRED, not modelled as an outside fact. Modelling it as an attested or fetched outside fact (fetcher none, as in eu/procurement/procedure-conduct) would need a public-authority input, an outside-fact key and a rule for what a Member State rule does to the Art 83(4)-(6) maximum, and Art 83(7) says nothing about the maximum, only about whether and to what extent a fine may be imposed. Open question for the operator.
+    **Why:** Each Member State may lay down whether and to what extent administrative fines may be imposed on public authorities and bodies established there. That is Member State law, not pinned and not formalized here. CHOICE (the order's author): DEFERRED, not modelled as an outside fact. Modelling it as an attested or fetched outside fact (fetcher none, as in eu/procurement/procedure-conduct) would need a public-authority input, an outside-fact key and a rule for what a Member State rule does to the Art 83(4)-(6) maximum, and Art 83(7) says nothing about the maximum, only about whether and to what extent a fine may be imposed. OPEN QUESTIONS, Q3.
 
     **Consequence for a user:** for a public authority the caller must check the Member State rule; this order returns the Regulation's maximum.
 
@@ -40,5 +40,5 @@ The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6):
 
     **Why:** 'Preceding financial year' is not stated to precede the infringement or the decision. The order takes the figure as given by the caller and does not choose the reference year.
 
-    **Consequence for a user:** The caller supplies the right year (open question for the operator).
+    **Consequence for a user:** The caller supplies the right year (OPEN QUESTIONS, Q2).
 

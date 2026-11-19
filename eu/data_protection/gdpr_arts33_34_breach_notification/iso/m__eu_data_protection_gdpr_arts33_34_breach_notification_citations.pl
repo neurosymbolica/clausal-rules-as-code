@@ -8,37 +8,49 @@
 implements(Key) :-
     citation(Key, _).
 
-citation(eu_reg_2016_679_art_33_1, [label - 'Regulation (EU) 2016/679 Art 33(1)', ref - 'CELEX 02016R0679-20160504, unit parag_033.001', verbatim - 'the controller shall without undue delay and, where feasible, not later than 72 hours after having become aware of it, notify the personal data breach to the supervisory authority competent in accordance with Article 55, unless the personal data breach is unlikely to result in a risk to the rights and freedoms of natural persons']).
-citation(eu_reg_2016_679_art_33_2, [label - 'Regulation (EU) 2016/679 Art 33(2)', ref - 'CELEX 02016R0679-20160504, unit parag_033.002', verbatim - 'The processor shall notify the controller without undue delay after becoming aware of a personal data breach']).
-citation(eu_reg_2016_679_art_33_3, [label - 'Regulation (EU) 2016/679 Art 33(3)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003', verbatim - 'The notification referred to in paragraph 1 shall at least']).
-citation(eu_reg_2016_679_art_33_3_a, [label - 'Regulation (EU) 2016/679 Art 33(3)(a)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (a)', verbatim - 'describe the nature of the personal data breach including where possible']).
-citation(eu_reg_2016_679_art_33_3_b, [label - 'Regulation (EU) 2016/679 Art 33(3)(b)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (b)', verbatim - 'communicate the name and contact details of the data protection officer or other contact point where more information can be obtained']).
-citation(eu_reg_2016_679_art_33_3_c, [label - 'Regulation (EU) 2016/679 Art 33(3)(c)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (c)', verbatim - 'describe the likely consequences of the personal data breach']).
-citation(eu_reg_2016_679_art_33_3_d, [label - 'Regulation (EU) 2016/679 Art 33(3)(d)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (d)', verbatim - 'describe the measures taken or proposed to be taken by the controller to address the personal data breach, including, where appropriate, measures to mitigate its possible adverse effects']).
-citation(eu_reg_2016_679_art_33_4, [label - 'Regulation (EU) 2016/679 Art 33(4)', ref - 'CELEX 02016R0679-20160504, unit parag_033.004', verbatim - 'it is not possible to provide the information at the same time, the information may be provided in phases without undue further delay']).
-citation(eu_reg_2016_679_art_33_5, [label - 'Regulation (EU) 2016/679 Art 33(5)', ref - 'CELEX 02016R0679-20160504, unit parag_033.005', verbatim - 'The controller shall document any personal data breaches, comprising the facts relating to the personal data breach, its effects and the remedial action taken']).
-citation(eu_reg_2016_679_art_34_1, [label - 'Regulation (EU) 2016/679 Art 34(1)', ref - 'CELEX 02016R0679-20160504, unit parag_034.001', verbatim - 'When the personal data breach is likely to result in a high risk to the rights and freedoms of natural persons, the controller shall communicate the personal data breach to the data subject without undue delay']).
-citation(eu_reg_2016_679_art_34_2, [label - 'Regulation (EU) 2016/679 Art 34(2)', ref - 'CELEX 02016R0679-20160504, unit parag_034.002', verbatim - 'shall describe in clear and plain language the nature of the personal data breach']).
-citation(eu_reg_2016_679_art_34_3, [label - 'Regulation (EU) 2016/679 Art 34(3)', ref - 'CELEX 02016R0679-20160504, unit parag_034.003', verbatim - 'shall not be required if any of the following conditions are met']).
-citation(eu_reg_2016_679_art_34_3_a, [label - 'Regulation (EU) 2016/679 Art 34(3)(a)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_a', verbatim - 'the controller has implemented appropriate technical and organisational protection measures, and those measures were applied to the personal data affected by the personal data breach']).
-citation(eu_reg_2016_679_art_34_3_b, [label - 'Regulation (EU) 2016/679 Art 34(3)(b)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_b', verbatim - 'the controller has taken subsequent measures which ensure that the high risk to the rights and freedoms of data subjects referred to in paragraph 1 is no longer likely to materialise']).
-citation(eu_reg_2016_679_art_34_3_c, [label - 'Regulation (EU) 2016/679 Art 34(3)(c)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_c', verbatim - 'there shall instead be a public communication or similar measure whereby the data subjects are informed in an equally effective manner']).
-citation(eu_reg_2016_679_art_34_4, [label - 'Regulation (EU) 2016/679 Art 34(4)', ref - 'CELEX 02016R0679-20160504, unit parag_034.004', verbatim - 'may require it to do so or may decide that any of the conditions referred to in paragraph 3 are met']).
-citation(eu_reg_1971_1182_art_3_1, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(1) first subparagraph', ref - 'CELEX 31971R1182, OJ L 124, 8.6.1971, Art 3(1)', verbatim - 'Where a period expressed in hours is to be calculated from the moment at which an event occurs or an action takes place, the hour during which that event occurs or that action takes place shall not be considered as falling within the period in question']).
-citation(eu_reg_1971_1182_art_3_2, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(2) opening words', ref - 'CELEX 31971R1182, unit parag_003.002', verbatim - 'Subject to the provisions of paragraphs 1 and 4']).
-citation(eu_reg_1971_1182_art_3_2_a, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(2)(a)', ref - 'CELEX 31971R1182, unit point_003.002_a', verbatim - 'a period expressed in hours shall start at the beginning of the first hour and shall end with the expiry of the last hour of the period']).
-citation(eu_reg_1971_1182_art_3_3, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(3)', ref - 'CELEX 31971R1182, unit parag_003.003', verbatim - 'The periods concerned shall include public holidays, Sundays and Saturdays']).
-citation(eu_reg_1971_1182_art_3_4, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(4)', ref - 'CELEX 31971R1182, OJ L 124, 8.6.1971, Art 3(4)', verbatim - 'Where the last day of a period expressed otherwise than in hours is a public holiday, Sunday or Saturday, the period shall end with the expiry of the last hour of the following working day']).
+citation(eu_reg_2016_679_art_33_1, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(1)', ref - 'CELEX 02016R0679-20160504, unit parag_033.001', verbatim - 'the controller shall without undue delay and, where feasible, not later than 72 hours after having become aware of it, notify the personal data breach to the supervisory authority competent in accordance with Article 55, unless the personal data breach is unlikely to result in a risk to the rights and freedoms of natural persons. Where the notification to the supervisory authority is not made within 72 hours, it shall be accompanied by reasons for the delay.']).
+citation(eu_reg_2016_679_art_33_2, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(2)', ref - 'CELEX 02016R0679-20160504, unit parag_033.002', verbatim - 'The processor shall notify the controller without undue delay after becoming aware of a personal data breach.']).
+citation(eu_reg_2016_679_art_33_3, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(3), opening words', ref - 'CELEX 02016R0679-20160504, unit parag_033.003', verbatim - 'The notification referred to in paragraph 1 shall at least:']).
+citation(eu_reg_2016_679_art_33_3_a, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(3)(a)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (a)', verbatim - 'describe the nature of the personal data breach including where possible, the categories and approximate number of data subjects concerned and the categories and approximate number of personal data records concerned']).
+citation(eu_reg_2016_679_art_33_3_b, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(3)(b)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (b)', verbatim - 'communicate the name and contact details of the data protection officer or other contact point where more information can be obtained']).
+citation(eu_reg_2016_679_art_33_3_c, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(3)(c)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (c)', verbatim - 'describe the likely consequences of the personal data breach']).
+citation(eu_reg_2016_679_art_33_3_d, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(3)(d)', ref - 'CELEX 02016R0679-20160504, unit parag_033.003, point (d)', verbatim - 'describe the measures taken or proposed to be taken by the controller to address the personal data breach, including, where appropriate, measures to mitigate its possible adverse effects']).
+citation(eu_reg_2016_679_art_33_4, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(4)', ref - 'CELEX 02016R0679-20160504, unit parag_033.004', verbatim - 'Where, and in so far as, it is not possible to provide the information at the same time, the information may be provided in phases without undue further delay.']).
+citation(eu_reg_2016_679_art_33_5, [label - 'Regulation (EU) 2016/679 (GDPR) Art 33(5)', ref - 'CELEX 02016R0679-20160504, unit parag_033.005', verbatim - 'The controller shall document any personal data breaches, comprising the facts relating to the personal data breach, its effects and the remedial action taken.']).
+citation(eu_reg_2016_679_art_34_1, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(1)', ref - 'CELEX 02016R0679-20160504, unit parag_034.001', verbatim - 'When the personal data breach is likely to result in a high risk to the rights and freedoms of natural persons, the controller shall communicate the personal data breach to the data subject without undue delay.']).
+citation(eu_reg_2016_679_art_34_2, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(2)', ref - 'CELEX 02016R0679-20160504, unit parag_034.002', verbatim - 'The communication to the data subject referred to in paragraph 1 of this Article shall describe in clear and plain language the nature of the personal data breach and contain at least the information and measures referred to in points (b), (c) and (d) of Article 33(3).']).
+citation(eu_reg_2016_679_art_34_3, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(3), opening words', ref - 'CELEX 02016R0679-20160504, unit parag_034.003', verbatim - 'The communication to the data subject referred to in paragraph 1 shall not be required if any of the following conditions are met:']).
+citation(eu_reg_2016_679_art_34_3_a, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(3)(a)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_a', verbatim - 'the controller has implemented appropriate technical and organisational protection measures, and those measures were applied to the personal data affected by the personal data breach']).
+citation(eu_reg_2016_679_art_34_3_b, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(3)(b)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_b', verbatim - 'the controller has taken subsequent measures which ensure that the high risk to the rights and freedoms of data subjects referred to in paragraph 1 is no longer likely to materialise']).
+citation(eu_reg_2016_679_art_34_3_c, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(3)(c)', ref - 'CELEX 02016R0679-20160504, unit point_034.003_c', verbatim - 'it would involve disproportionate effort. In such a case, there shall instead be a public communication or similar measure whereby the data subjects are informed in an equally effective manner.']).
+citation(eu_reg_2016_679_art_34_4, [label - 'Regulation (EU) 2016/679 (GDPR) Art 34(4)', ref - 'CELEX 02016R0679-20160504, unit parag_034.004', verbatim - 'If the controller has not already communicated the personal data breach to the data subject, the supervisory authority, having considered the likelihood of the personal data breach resulting in a high risk, may require it to do so or may decide that any of the conditions referred to in paragraph 3 are met.']).
+citation(eu_reg_1971_1182_art_3_1, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(1), first subparagraph (periods in hours)', ref - 'CELEX 31971R1182, Formex 31971R1182-art003.fmx4.xml, unit parag_003.001', verbatim - 'Where a period expressed in hours is to be calculated from the moment at which an event occurs or an action takes place, the hour during which that event occurs or that action takes place shall not be considered as falling within the period in question.']).
+citation(eu_reg_1971_1182_art_3_2, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(2), opening words', ref - 'CELEX 31971R1182, Formex 31971R1182-art003.fmx4.xml, unit parag_003.002', verbatim - 'Subject to the provisions of paragraphs 1 and 4:']).
+citation(eu_reg_1971_1182_art_3_2_a, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(2)(a) (start and end of a period in hours)', ref - 'CELEX 31971R1182, Formex 31971R1182-art003.fmx4.xml, unit point_003.002_a', verbatim - 'a period expressed in hours shall start at the beginning of the first hour and shall end with the expiry of the last hour of the period']).
+citation(eu_reg_1971_1182_art_3_3, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(3) (holidays, Sundays and Saturdays included)', ref - 'CELEX 31971R1182, Formex 31971R1182-art003.fmx4.xml, unit parag_003.003', verbatim - 'The periods concerned shall include public holidays, Sundays and Saturdays, save where these are expressly excepted or where the periods are expressed in working days.']).
+citation(eu_reg_1971_1182_art_3_4, [label - 'Regulation (EEC, Euratom) No 1182/71 Art 3(4) (shift for periods expressed otherwise than in hours)', ref - 'CELEX 31971R1182, Formex 31971R1182-art003.fmx4.xml, unit parag_003.004', verbatim - 'Where the last day of a period expressed otherwise than in hours is a public holiday, Sunday or Saturday, the period shall end with the expiry of the last hour of the following working day.']).
 
-test(a_recorded_key_is_implemented) :-
-    implements(eu_reg_2016_679_art_33_1).
-test(a_calendar_key_is_implemented) :-
-    implements(eu_reg_1971_1182_art_3_2_a).
-test(each_key_is_recorded_once) :-
-    findall(Key, citation(Key, _), Keys),
-    sort(Keys, DistinctKeys),
-    length(Keys, Count),
-    length(DistinctKeys, Count).
+test(every_answer_key_is_recorded) :-
+    implements(eu_reg_2016_679_art_33_1),
+    implements(eu_reg_2016_679_art_33_2),
+    implements(eu_reg_2016_679_art_33_3_a),
+    implements(eu_reg_2016_679_art_33_3_d),
+    implements(eu_reg_2016_679_art_33_4),
+    implements(eu_reg_2016_679_art_33_5),
+    implements(eu_reg_2016_679_art_34_1),
+    implements(eu_reg_2016_679_art_34_2),
+    implements(eu_reg_2016_679_art_34_3_a),
+    implements(eu_reg_2016_679_art_34_3_b),
+    implements(eu_reg_2016_679_art_34_3_c),
+    implements(eu_reg_2016_679_art_34_4).
+test(every_period_key_is_recorded) :-
+    implements(eu_reg_1971_1182_art_3_1),
+    implements(eu_reg_1971_1182_art_3_2),
+    implements(eu_reg_1971_1182_art_3_2_a),
+    implements(eu_reg_1971_1182_art_3_3),
+    implements(eu_reg_1971_1182_art_3_4).
 
-test(an_unrecorded_key_is_not_implemented, fail) :-
-    implements(eu_reg_2016_679_art_33).
+test(a_shortened_key_is_not_recorded, fail) :-
+    implements(gdpr_art_33_1).
+test(a_deferred_key_is_not_recorded, fail) :-
+    implements(eu_reg_1971_1182_art_3_5).

@@ -4,84 +4,108 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2, gdpr_information_duties_timing_date_order/3]).
-:- use_module(m__eu_data_protection_gdpr_information_duties_timing_citations, [citation/2, implements/1]).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_kernel, [gdpr_information_duties_timing_input_problems/2, contract_keys/1, profile_key_status/3, keys_in_contract_order/2, calendar_date_relation/3, calendar_date_on_or_before/2, calendar_date_before/2, public_holidays_referral/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_timing_citations, [citation/2, implements/1, limb_citation/2]).
 
-test(the_basis_atoms_are_distinct) :-
-    dif(art13_1, art14_3_a),
-    dif(art13_1, art14_3_b),
-    dif(art13_1, art14_3_c),
-    dif(art14_3_a, art14_3_b),
-    dif(art14_3_a, art14_3_c),
-    dif(art14_3_b, art14_3_c).
 test(the_timing_verdict_atoms_are_distinct) :-
     dif(timely, late).
-test(the_judgement_value_unsure_is_not_a_crisp_value) :-
+test(the_basis_atoms_are_distinct) :-
+    BasisAtoms = [art13_1, art14_3_a, art14_3_b, art14_3_c],
+    sort(BasisAtoms, SortedBasisAtoms),
+    length(SortedBasisAtoms, 4),
+    dif(art13_1, art14_3_a),
+    dif(art14_3_a, art14_3_b),
+    dif(art14_3_b, art14_3_c),
+    dif(art13_1, art14_3_c).
+test(a_basis_atom_is_not_a_verdict_atom) :-
+    dif(art14_3_a, timely),
+    dif(art13_1, late).
+test(the_judgement_value_is_not_a_crisp_atom) :-
     dif(unsure, true),
     dif(unsure, false).
-test(the_basis_verdict_carries_status_and_citations) :-
-    Verdict = information_deadline_basis_verdict(art14_3_a, [cite(eu_reg_2016_679_art_14_3_a)]),
-    Verdict = information_deadline_basis_verdict(Status, Citations),
-    Status == art14_3_a,
-    Citations == [cite(eu_reg_2016_679_art_14_3_a)].
-test(the_timing_verdict_carries_status_and_citations) :-
-    Verdict = information_timing_verdict_verdict(timely, [cite(eu_reg_2016_679_art_13_1)]),
-    Verdict = information_timing_verdict_verdict(Status, Citations),
-    Status == timely,
+test(the_basis_decision_carries_basis_and_citations) :-
+    Decision = information_deadline_basis_decision(art14_3_b, [cite(eu_reg_2016_679_art_14_3_b)]),
+    Decision = information_deadline_basis_decision(Basis, Citations),
+    Basis == art14_3_b,
+    Citations == [cite(eu_reg_2016_679_art_14_3_b)].
+test(the_verdict_decision_carries_verdict_and_citations) :-
+    Decision = information_timing_verdict_decision(timely, [cite(eu_reg_2016_679_art_13_1)]),
+    Decision = information_timing_verdict_decision(Verdict, Citations),
+    Verdict == timely,
     Citations == [cite(eu_reg_2016_679_art_13_1)].
-test(the_indeterminate_status_destructures) :-
+test(the_indeterminate_status_carries_its_missing_keys) :-
     Status = indeterminate([personal_data_collected_from_data_subject, obtaining_date]),
     Status = indeterminate(MissingKeys),
     MissingKeys == [personal_data_collected_from_data_subject, obtaining_date].
-test(the_referral_status_destructures) :-
-    Status = needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), [inputs_relied_on([provided_within_reasonable_period - unsure])]),
-    Status = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+test(the_open_texture_review_destructures) :-
+    Review = needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), [inputs_relied_on([provided_within_reasonable_period - unsure])]),
+    Review = needs_legal_review(open_textured(Input, cite(CitationKey)), [inputs_relied_on(Pairs)]),
     Input == provided_within_reasonable_period,
-    Key == eu_reg_2016_679_art_14_3_a,
+    CitationKey == eu_reg_2016_679_art_14_3_a,
     Pairs == [provided_within_reasonable_period - unsure].
-test(the_deadline_term_destructures_element_wise) :-
-    Deadline = date(2026, 2, 16),
-    Deadline = date(Year, Month, Day),
-    Year =:= 2026,
-    Month =:= 2,
-    Day =:= 16.
-test(the_art_13_1_citation_resolves) :-
-    citation(eu_reg_2016_679_art_13_1, Record),
+test(the_public_holidays_referral_destructures) :-
+    public_holidays_referral([provided_within_reasonable_period - true], Referral),
+    Referral = needs_legal_review(cross_reference_unresolved(cite(FirstKey), cite(TargetKey)), [resolution(cite(ResolutionKey), ResolutionStatus), inputs_relied_on(Pairs)]),
+    FirstKey == eu_reg_1971_1182_art_3_4,
+    TargetKey == public_holidays_applicable_to_the_period,
+    ResolutionKey == public_holidays_applicable_to_the_period,
+    ResolutionStatus == not_attempted,
+    Pairs == [provided_within_reasonable_period - true].
+test(the_article_14_3_a_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_14_3_a, Record),
     Record = [label - _, ref - _, verbatim - _].
-test(every_answer_citation_resolves) :-
-    citation(eu_reg_2016_679_art_14_3_a, _),
-    citation(eu_reg_2016_679_art_14_3_b, _),
-    citation(eu_reg_2016_679_art_14_3_c, _).
-test(the_period_rule_markers_resolve) :-
+test(the_article_13_1_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_13_1, _Record).
+test(the_calendar_rule_markers_are_recorded) :-
     implements(eu_reg_1971_1182_art_3_1),
     implements(eu_reg_1971_1182_art_3_2_c),
-    implements(eu_reg_1971_1182_art_3_4).
-test(a_well_formed_profile_has_no_input_problem) :-
-    findall(Problems, gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, true), attribute(obtaining_date, date(2026, 1, 15)), attribute(provision_date, date(2026, 1, 15))], Problems), Answers),
+    implements(eu_reg_1971_1182_art_3_4),
+    implements(eu_reg_1971_1182_art_2_2).
+test(each_basis_has_exactly_one_limb_citation) :-
+    findall(Basis - Citation, limb_citation(Basis, Citation), LimbCitations),
+    LimbCitations == [art13_1 - cite(eu_reg_2016_679_art_13_1), art14_3_a - cite(eu_reg_2016_679_art_14_3_a), art14_3_b - cite(eu_reg_2016_679_art_14_3_b), art14_3_c - cite(eu_reg_2016_679_art_14_3_c)].
+test(the_contract_keys_load_in_order) :-
+    contract_keys(ContractKeys),
+    length(ContractKeys, 26),
+    ContractKeys = [personal_data_collected_from_data_subject|_],
+    last(ContractKeys, LastKey),
+    LastKey == public_holidays.
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_date, date(2026, 1, 15)), attribute(provision_date, date(2026, 2, 16)), attribute(provided_within_reasonable_period, unsure), attribute(public_holidays, attested([date(2026, 12, 25)], attestation(by, at, reason, none)))], []).
+test(an_unsure_crisp_flag_is_wrong_type) :-
+    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, unsure)], [wrong_type(personal_data_collected_from_data_subject)]).
+test(a_repeated_key_is_a_duplicate_not_wrong_type) :-
+    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, wrong), attribute(obtaining_date, date(2026, 1, 15))], [duplicate_key(obtaining_date)]).
+test(contract_problems_come_before_unknown_keys) :-
+    gdpr_information_duties_timing_input_problems([attribute(surplus_key, 1), attribute(provision_date, date(2026, 2, 30)), attribute(surplus_key, 2)], [wrong_type(provision_date), unknown_key(surplus_key)]).
+test(other_purpose_information_is_wrong_type_in_items_provided) :-
+    gdpr_information_duties_timing_input_problems([attribute(items_provided, [other_purpose_information])], [wrong_type(items_provided)]).
+test(the_input_check_has_exactly_one_answer) :-
+    findall(Problems, gdpr_information_duties_timing_input_problems([attribute(transfer_intended, true)], Problems), Answers),
     Answers == [[]].
-test(a_crisp_flag_given_unsure_is_an_input_problem) :-
-    gdpr_information_duties_timing_input_problems([attribute(data_used_for_communication_with_data_subject, unsure)], [wrong_type(data_used_for_communication_with_data_subject)]).
-test(the_input_problems_status_destructures) :-
-    gdpr_information_duties_timing_input_problems(profile, Problems),
-    Status = input_problems(Problems),
-    Status = input_problems(Named),
-    Named == [wrong_type(profile)].
-test(the_date_order_compares_by_value) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), before).
+test(a_present_key_status_is_read) :-
+    profile_key_status([attribute(provision_date, date(2026, 3, 2))], provision_date, Status),
+    Status == present(date(2026, 3, 2)).
+test(missing_keys_are_ordered_by_the_contract) :-
+    keys_in_contract_order([public_holidays, obtaining_date, obtaining_date], Ordered),
+    Ordered == [obtaining_date, public_holidays].
+test(dates_compare_across_a_year_end) :-
+    calendar_date_relation(date(2027, 1, 31), date(2026, 12, 31), after),
+    calendar_date_before(date(2026, 12, 31), date(2027, 2, 1)),
+    calendar_date_on_or_before(date(2027, 2, 1), date(2027, 2, 1)).
 
-test(a_timely_verdict_is_not_late, fail) :-
-    information_timing_verdict_verdict(timely, []) = information_timing_verdict_verdict(late, _).
-test(the_placeholder_citation_is_gone, fail) :-
-    citation(eu_todo_primary_source, _).
-test(a_shortened_citation_does_not_resolve, fail) :-
-    implements(gdpr_art_14_3_a).
-test(a_crisp_flag_given_unsure_is_not_well_formed, fail) :-
-    gdpr_information_duties_timing_input_problems([attribute(data_used_for_communication_with_data_subject, unsure)], []).
-test(the_date_order_is_not_string_order, fail) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), after).
+test(the_referral_is_never_an_open_texture_review, fail) :-
+    public_holidays_referral([], needs_legal_review(open_textured(_, _), _)).
+test(a_shortened_citation_is_not_recorded, fail) :-
+    citation(gdpr_art_14_3_a, _).
+test(an_unsure_crisp_flag_is_not_accepted, fail) :-
+    gdpr_information_duties_timing_input_problems([attribute(personal_data_collected_from_data_subject, unsure)], []).
+test(a_later_date_is_not_before, fail) :-
+    calendar_date_before(date(2027, 2, 2), date(2027, 2, 1)).
 
-cp_test_names([the_basis_atoms_are_distinct, the_timing_verdict_atoms_are_distinct, the_judgement_value_unsure_is_not_a_crisp_value, the_basis_verdict_carries_status_and_citations, the_timing_verdict_carries_status_and_citations, the_indeterminate_status_destructures, the_referral_status_destructures, the_deadline_term_destructures_element_wise, the_art_13_1_citation_resolves, every_answer_citation_resolves, the_period_rule_markers_resolve, a_well_formed_profile_has_no_input_problem, a_crisp_flag_given_unsure_is_an_input_problem, the_input_problems_status_destructures, the_date_order_compares_by_value]).
-cp_test_fail_names([a_timely_verdict_is_not_late, the_placeholder_citation_is_gone, a_shortened_citation_does_not_resolve, a_crisp_flag_given_unsure_is_not_well_formed, the_date_order_is_not_string_order]).
+cp_test_names([the_timing_verdict_atoms_are_distinct, the_basis_atoms_are_distinct, a_basis_atom_is_not_a_verdict_atom, the_judgement_value_is_not_a_crisp_atom, the_basis_decision_carries_basis_and_citations, the_verdict_decision_carries_verdict_and_citations, the_indeterminate_status_carries_its_missing_keys, the_open_texture_review_destructures, the_public_holidays_referral_destructures, the_article_14_3_a_citation_is_recorded, the_article_13_1_citation_is_recorded, the_calendar_rule_markers_are_recorded, each_basis_has_exactly_one_limb_citation, the_contract_keys_load_in_order, a_well_formed_profile_has_no_problem, an_unsure_crisp_flag_is_wrong_type, a_repeated_key_is_a_duplicate_not_wrong_type, contract_problems_come_before_unknown_keys, other_purpose_information_is_wrong_type_in_items_provided, the_input_check_has_exactly_one_answer, a_present_key_status_is_read, missing_keys_are_ordered_by_the_contract, dates_compare_across_a_year_end]).
+cp_test_fail_names([the_referral_is_never_an_open_texture_review, a_shortened_citation_is_not_recorded, an_unsure_crisp_flag_is_not_accepted, a_later_date_is_not_before]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

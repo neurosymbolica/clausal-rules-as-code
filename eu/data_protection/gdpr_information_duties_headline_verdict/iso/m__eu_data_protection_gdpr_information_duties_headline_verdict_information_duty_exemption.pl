@@ -1,12 +1,11 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_information_duties_headline_verdict_information_duty_exemption, [decide_information_duty_exemption/2, information_duty_exemption/2, information_duty_exemption_status/2, information_duty_exemption_checklist/2, information_duty_exemption_decision_resolvable/1, information_duty_exemption_status_values/1]).
+:- module(m__eu_data_protection_gdpr_information_duties_headline_verdict_information_duty_exemption, [information_duty_exemption/2, decide_information_duty_exemption/2, information_duty_exemption_status/2, information_duty_exemption_checklist/2, information_duty_exemption_decision_resolvable/1, information_duty_exemption_status_values/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_kernel, [gdpr_information_duties_headline_verdict_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_kernel, [gdpr_information_duties_headline_verdict_input_problems/2, key_status/3, attested_status/3]).
 :- use_module(m__eu_data_protection_gdpr_information_duties_headline_verdict_citations, [implements/1]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
 
 information_duty_exemption_status_values([none, impossible_or_disproportionate_effort, law_lays_down_obtaining_or_disclosure, professional_secrecy_obligation]).
 
@@ -14,152 +13,187 @@ exemption_ground(impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art
 exemption_ground(law_lays_down_obtaining_or_disclosure, cite(eu_reg_2016_679_art_14_5_c)).
 exemption_ground(professional_secrecy_obligation, cite(eu_reg_2016_679_art_14_5_d)).
 
-value_or_absent(Profile, Key, Value) :-
-    profile_get(Profile, Key, Value).
-value_or_absent(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
-
-attested_truth(Profile, Key, Truth) :-
-    profile_get(Profile, Key, attested(Truth, _Attestation)).
-attested_truth(Profile, Key, false) :-
-    profile_lacks(Profile, Key).
-
-effort_limb(Profile, State) :-
-    implements(eu_reg_2016_679_art_14_5_b),
-    value_or_absent(Profile, provision_impossible_or_disproportionate_effort, EffortJudgement),
-    value_or_absent(Profile, protective_measures_taken, MeasuresFlag),
-    effort_state(EffortJudgement, MeasuresFlag, State).
-
-effort_state(true, true, met) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(true, false, unmet) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(true, absent, open(absent([protective_measures_taken]))) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(false, _, unmet) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(absent, true, open(absent([provision_impossible_or_disproportionate_effort]))) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(absent, false, unmet) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(absent, absent, open(absent([provision_impossible_or_disproportionate_effort]))) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(unsure, false, unmet) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(unsure, true, open(unsure)) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-effort_state(unsure, absent, open(unsure)) :-
-    implements(eu_reg_2016_679_art_14_5_b).
-
-combine(met, _, _, impossible_or_disproportionate_effort).
-combine(unmet, true, _, law_lays_down_obtaining_or_disclosure).
-combine(unmet, false, true, professional_secrecy_obligation).
-combine(unmet, false, false, none).
-combine(open(_), true, _, law_lays_down_obtaining_or_disclosure).
-combine(open(_), false, true, professional_secrecy_obligation).
-combine(open(absent(Keys)), false, false, indeterminate(Keys)).
-combine(open(unsure), false, false, needs_legal_review(open_textured(provision_impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)), [inputs_relied_on([provision_impossible_or_disproportionate_effort - unsure])])).
-
-art14_exemption(Profile, Exemption) :-
-    implements(eu_reg_2016_679_art_14_5),
-    implements(eu_reg_2016_679_art_14_5_c),
-    implements(eu_reg_2016_679_art_14_5_d),
-    effort_limb(Profile, EffortState),
-    attested_truth(Profile, obtaining_or_disclosure_laid_down_by_law, LawTruth),
-    attested_truth(Profile, professional_secrecy_obligation_by_law, SecrecyTruth),
-    combine(EffortState, LawTruth, SecrecyTruth, Exemption).
-
-route_exemption(true, _, none).
-route_exemption(absent, _, indeterminate([personal_data_collected_from_data_subject])).
-route_exemption(false, Profile, Exemption) :-
-    art14_exemption(Profile, Exemption).
-
 information_duty_exemption(Profile, Exemption) :-
-    gdpr_information_duties_headline_verdict_input_problems(Profile, ProblemList),
-    exemption_for(ProblemList, Profile, Exemption).
+    decide_information_duty_exemption(Profile, information_duty_exemption_result(Exemption, _Citations)).
 
-exemption_for([Problem|Problems], _, input_problems([Problem|Problems])).
-exemption_for([], Profile, Exemption) :-
-    value_or_absent(Profile, personal_data_collected_from_data_subject, RouteValue),
-    route_exemption(RouteValue, Profile, Exemption).
+decide_information_duty_exemption(Profile, Result) :-
+    gdpr_information_duties_headline_verdict_input_problems(Profile, Problems),
+    decide_checked(Problems, Profile, Result).
 
-decide_information_duty_exemption(Profile, information_duty_exemption_verdict(Status, Citations)) :-
-    information_duty_exemption(Profile, Status),
-    verdict_citations(Status, Citations).
+decide_checked([Problem|Problems], _, information_duty_exemption_result(input_problems([Problem|Problems]), [])).
+decide_checked([], Profile, Result) :-
+    key_status(Profile, personal_data_collected_from_data_subject, RouteStatus),
+    route_exemption(RouteStatus, Profile, Result).
 
-verdict_citations(impossible_or_disproportionate_effort, [Citation]) :-
+route_exemption(unknown(MissingKeys), _, information_duty_exemption_result(indeterminate(MissingKeys), [])) :-
+    implements(eu_reg_2016_679_art_14_1).
+route_exemption(value(true), _, information_duty_exemption_result(none, [])) :-
+    implements(eu_reg_2016_679_art_13_1).
+route_exemption(value(false), Profile, information_duty_exemption_result(Exemption, Citations)) :-
+    implements(eu_reg_2016_679_art_14_5),
+    limb_statuses(Profile, EffortLimb, LawLimb, SecrecyLimb),
+    exemption_from_limbs(EffortLimb, LawLimb, SecrecyLimb, Exemption, Citations).
+
+limb_statuses(Profile, EffortLimb, LawLimb, SecrecyLimb) :-
+    key_status(Profile, provision_impossible_or_disproportionate_effort, EffortStatus),
+    key_status(Profile, protective_measures_taken, MeasuresStatus),
+    effort_limb(EffortStatus, MeasuresStatus, EffortLimb),
+    attested_status(Profile, obtaining_or_disclosure_laid_down_by_law, LawStatus),
+    law_limb(LawStatus, LawLimb),
+    attested_status(Profile, professional_secrecy_obligation_by_law, SecrecyStatus),
+    secrecy_limb(SecrecyStatus, SecrecyLimb).
+
+effort_limb(value(true), value(true), met) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(false), _, unmet) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(true), value(false), unmet) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(unsure), value(false), unmet) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(unknown(_), value(false), unmet) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(unknown(_), value(true), missing([provision_impossible_or_disproportionate_effort])) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(unknown(_), unknown(_), missing([provision_impossible_or_disproportionate_effort, protective_measures_taken])) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(true), unknown(_), missing([protective_measures_taken])) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(unsure), unknown(_), missing([protective_measures_taken])) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+effort_limb(value(unsure), value(true), unsure) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+
+law_limb(value(true), met) :-
+    implements(eu_reg_2016_679_art_14_5_c).
+law_limb(value(false), unmet) :-
+    implements(eu_reg_2016_679_art_14_5_c).
+law_limb(absent, unmet) :-
+    implements(eu_reg_2016_679_art_14_5_c).
+
+secrecy_limb(value(true), met) :-
+    implements(eu_reg_2016_679_art_14_5_d).
+secrecy_limb(value(false), unmet) :-
+    implements(eu_reg_2016_679_art_14_5_d).
+secrecy_limb(absent, unmet) :-
+    implements(eu_reg_2016_679_art_14_5_d).
+
+exemption_from_limbs(met, _, _, impossible_or_disproportionate_effort, [Citation]) :-
+    implements(eu_reg_2016_679_art_14_5_b),
     exemption_ground(impossible_or_disproportionate_effort, Citation).
-verdict_citations(law_lays_down_obtaining_or_disclosure, [Citation]) :-
+exemption_from_limbs(EffortLimb, met, _, law_lays_down_obtaining_or_disclosure, [Citation]) :-
+    implements(eu_reg_2016_679_art_14_5_c),
+    limb_short_of_met(EffortLimb),
     exemption_ground(law_lays_down_obtaining_or_disclosure, Citation).
-verdict_citations(professional_secrecy_obligation, [Citation]) :-
+exemption_from_limbs(EffortLimb, unmet, met, professional_secrecy_obligation, [Citation]) :-
+    implements(eu_reg_2016_679_art_14_5_d),
+    limb_short_of_met(EffortLimb),
     exemption_ground(professional_secrecy_obligation, Citation).
-verdict_citations(none, []).
-verdict_citations(indeterminate(_), []).
-verdict_citations(needs_legal_review(_, _), []).
-verdict_citations(input_problems(_), []).
+exemption_from_limbs(unmet, unmet, unmet, none, []) :-
+    implements(eu_reg_2016_679_art_14_5).
+exemption_from_limbs(missing(MissingKeys), unmet, unmet, indeterminate(MissingKeys), []) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+exemption_from_limbs(unsure, unmet, unmet, needs_legal_review(open_textured(provision_impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)), [inputs_relied_on([provision_impossible_or_disproportionate_effort - unsure])]), []) :-
+    implements(eu_reg_2016_679_art_14_5_b).
+
+limb_short_of_met(unmet).
+limb_short_of_met(missing(_)).
+limb_short_of_met(unsure).
 
 information_duty_exemption_status(Profile, Status) :-
-    decide_information_duty_exemption(Profile, information_duty_exemption_verdict(Status, _Citations)).
+    decide_information_duty_exemption(Profile, information_duty_exemption_result(Status, _Citations)).
 
 information_duty_exemption_checklist(Profile, Items) :-
-    gdpr_information_duties_headline_verdict_input_problems(Profile, ProblemList),
-    checklist_for(ProblemList, Profile, Items).
+    gdpr_information_duties_headline_verdict_input_problems(Profile, Problems),
+    checklist_checked(Problems, Profile, Items).
 
-checklist_for([_|_], _, [item(overall, unknown([input_problems]), cite(eu_reg_2016_679_art_14_5))]).
-checklist_for([], Profile, Items) :-
-    value_or_absent(Profile, personal_data_collected_from_data_subject, RouteValue),
-    checklist_route(RouteValue, Profile, Items).
+checklist_checked([Problem|Problems], _, Items) :-
+    ground_rows(unmet(input_problems([Problem|Problems])), unmet(input_problems([Problem|Problems])), unmet(input_problems([Problem|Problems])), Items).
+checklist_checked([], Profile, Items) :-
+    key_status(Profile, personal_data_collected_from_data_subject, RouteStatus),
+    checklist_route(RouteStatus, Profile, Items).
 
-checklist_route(true, _, [item(overall, unmet(art13_route_has_no_exemption), cite(eu_reg_2016_679_art_14_5))]).
-checklist_route(absent, _, [item(overall, unknown([personal_data_collected_from_data_subject]), cite(eu_reg_2016_679_art_14_5))]).
-checklist_route(false, Profile, [item(impossible_or_disproportionate_effort, EffortStatus, cite(eu_reg_2016_679_art_14_5_b)), item(law_lays_down_obtaining_or_disclosure, LawStatus, cite(eu_reg_2016_679_art_14_5_c)), item(professional_secrecy_obligation, SecrecyStatus, cite(eu_reg_2016_679_art_14_5_d))]) :-
-    effort_limb(Profile, EffortState),
-    state_status(EffortState, EffortStatus),
-    attested_truth(Profile, obtaining_or_disclosure_laid_down_by_law, LawTruth),
-    truth_status(LawTruth, LawStatus),
-    attested_truth(Profile, professional_secrecy_obligation_by_law, SecrecyTruth),
-    truth_status(SecrecyTruth, SecrecyStatus).
+checklist_route(unknown(MissingKeys), _, Items) :-
+    ground_rows(unknown(MissingKeys), unknown(MissingKeys), unknown(MissingKeys), Items).
+checklist_route(value(true), _, Items) :-
+    ground_rows(unmet(article_13_route), unmet(article_13_route), unmet(article_13_route), Items).
+checklist_route(value(false), Profile, Items) :-
+    limb_statuses(Profile, EffortLimb, LawLimb, SecrecyLimb),
+    item_status(EffortLimb, EffortStatus),
+    item_status(LawLimb, LawStatus),
+    item_status(SecrecyLimb, SecrecyStatus),
+    ground_rows(EffortStatus, LawStatus, SecrecyStatus, Items).
 
-state_status(met, met).
-state_status(unmet, unmet(not_met)).
-state_status(open(absent(Keys)), unknown(Keys)).
-state_status(open(unsure), unknown([provision_impossible_or_disproportionate_effort])).
+ground_rows(EffortStatus, LawStatus, SecrecyStatus, [item(impossible_or_disproportionate_effort, EffortStatus, EffortCitation), item(law_lays_down_obtaining_or_disclosure, LawStatus, LawCitation), item(professional_secrecy_obligation, SecrecyStatus, SecrecyCitation)]) :-
+    exemption_ground(impossible_or_disproportionate_effort, EffortCitation),
+    exemption_ground(law_lays_down_obtaining_or_disclosure, LawCitation),
+    exemption_ground(professional_secrecy_obligation, SecrecyCitation).
 
-truth_status(true, met).
-truth_status(false, unmet(not_attested_true)).
+item_status(met, met).
+item_status(unmet, unmet(exemption_condition_not_met)).
+item_status(missing(MissingKeys), unknown(MissingKeys)).
+item_status(unsure, unknown([provision_impossible_or_disproportionate_effort])).
 
 information_duty_exemption_decision_resolvable(Profile) :-
-    decide_information_duty_exemption(Profile, _Verdict).
+    decide_information_duty_exemption(Profile, _Result).
 
-test(art13_route_has_no_exemption) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, true)], none).
-test(effort_with_measures_is_met) :-
+attested_true(attested(true, attestation(by, at, reason, none))).
+
+attested_false(attested(false, attestation(by, at, reason, none))).
+
+test(article_13_route_is_none) :-
+    attested_true(Fact),
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, true), attribute(professional_secrecy_obligation_by_law, Fact)], none).
+test(route_unknown_names_the_route_key) :-
+    attested_true(Fact),
+    information_duty_exemption([attribute(obtaining_or_disclosure_laid_down_by_law, Fact), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true)], indeterminate([personal_data_collected_from_data_subject])).
+test(effort_and_measures_meet_limb_b) :-
     information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true)], impossible_or_disproportionate_effort).
-test(effort_without_measures_is_unmet) :-
+test(effort_and_measures_cite_limb_b) :-
+    decide_information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true)], information_duty_exemption_result(impossible_or_disproportionate_effort, [cite(eu_reg_2016_679_art_14_5_b)])).
+test(effort_without_measures_is_none) :-
     information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, false)], none).
-test(effort_judgement_absent_is_indeterminate) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false)], indeterminate([provision_impossible_or_disproportionate_effort])).
-test(effort_true_measures_absent_names_measures) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true)], indeterminate([protective_measures_taken])).
-test(effort_unsure_is_referred) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, unsure)], needs_legal_review(open_textured(provision_impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)), [inputs_relied_on([provision_impossible_or_disproportionate_effort - unsure])])).
-test(law_attested_true_wins_over_absent_effort) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_or_disclosure_laid_down_by_law, attested(true, attestation(host, none, statute, none)))], law_lays_down_obtaining_or_disclosure).
-test(secrecy_attested_true_is_met) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, false), attribute(professional_secrecy_obligation_by_law, attested(true, attestation(host, none, statute, none)))], professional_secrecy_obligation).
-test(law_attested_false_is_unmet) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, false), attribute(obtaining_or_disclosure_laid_down_by_law, attested(false, attestation(host, none, statute, none)))], none).
-test(route_absent_names_route) :-
-    information_duty_exemption([], indeterminate([personal_data_collected_from_data_subject])).
-test(input_problem_is_reported) :-
-    information_duty_exemption([attribute(no_such_key, true)], input_problems([unknown_key(no_such_key)])).
-test(verdict_carries_citation) :-
-    decide_information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true)], information_duty_exemption_verdict(impossible_or_disproportionate_effort, [cite(eu_reg_2016_679_art_14_5_b)])).
-test(checklist_has_three_rows_on_art14) :-
-    information_duty_exemption_checklist([attribute(personal_data_collected_from_data_subject, false)], Items),
-    length(Items, 3).
+test(law_attested_true_wins_over_absent_limb_b) :-
+    attested_true(Fact),
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(obtaining_or_disclosure_laid_down_by_law, Fact)], law_lays_down_obtaining_or_disclosure).
+test(secrecy_attested_true_after_law_false) :-
+    attested_true(TrueFact),
+    attested_false(FalseFact),
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, false), attribute(obtaining_or_disclosure_laid_down_by_law, FalseFact), attribute(professional_secrecy_obligation_by_law, TrueFact)], professional_secrecy_obligation).
+test(limb_b_first_when_all_met) :-
+    attested_true(Fact),
+    findall(Exemption, information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true), attribute(obtaining_or_disclosure_laid_down_by_law, Fact), attribute(professional_secrecy_obligation_by_law, Fact)], Exemption), Exemptions),
+    Exemptions == [impossible_or_disproportionate_effort].
+test(both_limb_b_keys_absent_are_both_named) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false)], indeterminate([provision_impossible_or_disproportionate_effort, protective_measures_taken])).
+test(effort_absent_with_measures_names_effort) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(protective_measures_taken, true)], indeterminate([provision_impossible_or_disproportionate_effort])).
+test(effort_absent_with_measures_false_is_none) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(protective_measures_taken, false)], none).
+test(unsure_effort_without_measures_names_measures) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, unsure)], indeterminate([protective_measures_taken])).
+test(unsure_effort_with_measures_refers) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, unsure), attribute(protective_measures_taken, true)], needs_legal_review(open_textured(provision_impossible_or_disproportionate_effort, cite(eu_reg_2016_679_art_14_5_b)), [inputs_relied_on([provision_impossible_or_disproportionate_effort - unsure])])).
+test(absent_facts_never_open_the_answer) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, false)], none).
+test(input_problems_come_first) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(colour, red)], input_problems([unknown_key(colour)])).
+test(not_a_profile_is_an_input_problem) :-
+    information_duty_exemption(foo, input_problems([wrong_type(profile)])).
+test(one_solution_per_query) :-
+    findall(Exemption, information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, false), attribute(protective_measures_taken, false)], Exemption), Exemptions),
+    Exemptions == [none].
+test(checklist_has_one_row_per_ground) :-
+    information_duty_exemption_checklist([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, true)], [item(impossible_or_disproportionate_effort, met, cite(eu_reg_2016_679_art_14_5_b)), item(law_lays_down_obtaining_or_disclosure, unmet(exemption_condition_not_met), cite(eu_reg_2016_679_art_14_5_c)), item(professional_secrecy_obligation, unmet(exemption_condition_not_met), cite(eu_reg_2016_679_art_14_5_d))]).
+test(status_projection) :-
+    information_duty_exemption_status([attribute(personal_data_collected_from_data_subject, true)], none).
+test(every_profile_resolves) :-
+    information_duty_exemption_decision_resolvable([]).
 
-test(art13_route_is_not_an_exemption, fail) :-
-    information_duty_exemption([attribute(personal_data_collected_from_data_subject, true)], impossible_or_disproportionate_effort).
-test(effort_without_measures_is_not_met, fail) :-
+test(article_13_route_is_not_secrecy, fail) :-
+    attested_true(Fact),
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, true), attribute(professional_secrecy_obligation_by_law, Fact)], professional_secrecy_obligation).
+test(effort_without_measures_is_not_exempt, fail) :-
     information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, true), attribute(protective_measures_taken, false)], impossible_or_disproportionate_effort).
+test(unsure_effort_with_measures_is_not_none, fail) :-
+    information_duty_exemption([attribute(personal_data_collected_from_data_subject, false), attribute(provision_impossible_or_disproportionate_effort, unsure), attribute(protective_measures_taken, true)], none).

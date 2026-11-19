@@ -1,29 +1,19 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- tests for the query layer: the profile schema,
-% the re-exported input check, the what-if compliance check (#13), the
-% obligation surfacing (#14) and the result constructors.
+% test_queries.clausal -- tests for the query layer: one per query type in
+% manifest.yaml query_interface (#2, #13, #14, #15, #16), the schema, and the
+% result-constructor recognizers.
 % Run: python -m clausal.testing eu/data_protection/gdpr_information_duties_timing/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
 :- use_module(eu/data_protection/gdpr_information_duties_timing/queries, [
+    information_deadline/2,
+    information_timing_verdict/3,
     gdpr_information_duties_timing_profile_keys/1,
-    gdpr_information_duties_timing_input_problems/2,
     gdpr_information_duties_timing_what_if/4,
+    gdpr_information_duties_timing_compliance_check/3,
     gdpr_information_duties_timing_obligation/2,
-    indeterminate/1,
-    needs_legal_review/2,
-    open_textured/2,
-    inputs_relied_on/1,
-    provenance/2,
-    input_problems/1,
-    unknown_key/1,
-    wrong_type/1,
-    duplicate_key/1,
-    attested/2,
-    attestation/4,
-    url/2,
-    document/2
+    indeterminate/1
 ]).
 :- use_module(eu/data_protection/gdpr_information_duties_timing/fixtures, [gdpr_information_duties_timing_profile_for/2]).
 
@@ -31,131 +21,65 @@ test(profile_keys_are_the_contract_keys) :-
     gdpr_information_duties_timing_profile_keys(ProfileKeys),
     ProfileKeys == [personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays].
 
-test(the_reexported_input_check_accepts_an_empty_profile) :-
-    gdpr_information_duties_timing_input_problems([], []).
+% ---- #2 eligibility: the verdict with its citation ---------------------------
+test(eligibility_verdict_with_its_citation) :-
+    gdpr_information_duties_timing_profile_for(art14_day_after_first_communication, Profile),
+    findall(Verdict-Citations, information_timing_verdict(Profile, Verdict, Citations), Answers),
+    Answers == [late-[cite(eu_reg_2016_679_art_14_3_b)]].
 
-test(the_reexported_input_check_names_a_wrong_type) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(provided_within_reasonable_period, maybe)],
-        [wrong_type(provided_within_reasonable_period)]).
+% ---- #15 deadline -------------------------------------------------------------
+test(deadline_of_the_year_end_sunday) :-
+    information_deadline([attribute(personal_data_collected_from_data_subject, false),
+                          attribute(obtaining_date, date(2026, 12, 31)),
+                          attribute(data_used_for_communication_with_data_subject, false),
+                          attribute(disclosure_to_another_recipient_envisaged, false),
+                          attribute(public_holidays, attested([], attestation(by, at, reason, none)))],
+                         Deadline),
+    Deadline == date(2027, 2, 1).
 
-% ---- #13 what-if ---------------------------------------------------------
-test(what_if_an_earlier_provision_is_timely) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 11))],
-        provision_date,
-        date(2026, 3, 10),
-        timely).
-
-test(what_if_a_later_provision_is_late) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 10))],
-        provision_date,
-        date(2026, 3, 11),
-        late).
-
-test(what_if_a_later_provision_is_not_timely, fail) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 10))],
-        provision_date,
-        date(2026, 3, 11),
-        timely).
-
-test(what_if_flipping_the_route_flips_the_verdict) :-
-    gdpr_information_duties_timing_profile_for(art14_one_month_last_day, Profile),
-    gdpr_information_duties_timing_what_if(Profile, personal_data_collected_from_data_subject, true, late).
-
-test(what_if_an_unsure_judgement_refers) :-
-    gdpr_information_duties_timing_profile_for(art14_reasonable_period_false, Profile),
-    gdpr_information_duties_timing_what_if(
-        Profile,
-        provided_within_reasonable_period,
-        unsure,
-        needs_legal_review(open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)), _)).
-
-test(what_if_replaces_a_duplicated_key) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(obtaining_date, date(2026, 3, 11)),
-         attribute(provision_date, date(2026, 3, 10))],
-        obtaining_date,
-        date(2026, 3, 10),
-        timely).
-
-test(what_if_has_exactly_one_answer) :-
+% ---- #16 what-if --------------------------------------------------------------
+test(what_if_the_information_came_on_the_obtaining_day) :-
+    gdpr_information_duties_timing_profile_for(art13_day_after_obtaining, Profile),
+    gdpr_information_duties_timing_what_if(Profile, provision_date, date(2026, 3, 10), Verdict),
+    Verdict == timely.
+test(what_if_the_data_were_not_collected_from_the_data_subject) :-
+    gdpr_information_duties_timing_profile_for(art13_on_obtaining_day, Profile),
     findall(Verdict,
-            gdpr_information_duties_timing_what_if(
-                [attribute(personal_data_collected_from_data_subject, true),
-                 attribute(obtaining_date, date(2026, 3, 10))],
-                provision_date,
-                date(2026, 3, 9),
-                Verdict),
+            gdpr_information_duties_timing_what_if(Profile, personal_data_collected_from_data_subject, false, Verdict),
             Verdicts),
-    Verdicts == [timely].
+    Verdicts == [indeterminate([data_used_for_communication_with_data_subject, disclosure_to_another_recipient_envisaged])].
 
-test(what_if_on_a_non_list_profile) :-
-    findall(Verdict,
-            gdpr_information_duties_timing_what_if(profile, provision_date, date(2026, 3, 9), Verdict),
-            Verdicts),
-    Verdicts == [input_problems([wrong_type(profile)])].
+% ---- #13 compliance check -----------------------------------------------------
+test(compliance_check_allows_the_limb_a_last_day) :-
+    gdpr_information_duties_timing_profile_for(art14_limb_a_last_day, Profile),
+    gdpr_information_duties_timing_compliance_check(Profile, date(2026, 2, 16), timely).
+test(compliance_check_refuses_the_day_after) :-
+    gdpr_information_duties_timing_profile_for(art14_limb_a_last_day, Profile),
+    gdpr_information_duties_timing_compliance_check(Profile, date(2026, 2, 17), late).
+test(compliance_check_does_not_allow_the_day_after, fail) :-
+    gdpr_information_duties_timing_profile_for(art14_limb_a_last_day, Profile),
+    gdpr_information_duties_timing_compliance_check(Profile, date(2026, 2, 17), timely).
 
-% ---- #14 obligation ------------------------------------------------------
-test(obligation_on_the_article_13_route) :-
-    gdpr_information_duties_timing_obligation(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10))],
-        obligation(provide_information, by(date(2026, 3, 10)), art13_1, [cite(eu_reg_2016_679_art_13_1)])).
-
-test(obligation_under_limb_b) :-
-    gdpr_information_duties_timing_profile_for(art14_first_communication_on_day, Profile),
+% ---- #14 obligation surfacing ----------------------------------------------------
+test(obligation_by_the_first_communication) :-
+    gdpr_information_duties_timing_profile_for(art14_first_communication_day, Profile),
     findall(Obligation, gdpr_information_duties_timing_obligation(Profile, Obligation), Obligations),
-    Obligations == [obligation(provide_information, by(date(2026, 1, 20)), art14_3_b, [cite(eu_reg_2016_679_art_14_3_b)])].
-
-test(obligation_under_limb_b_is_not_limb_a, fail) :-
-    gdpr_information_duties_timing_profile_for(art14_first_communication_on_day, Profile),
-    gdpr_information_duties_timing_obligation(Profile, obligation(_, _, art14_3_a, _)).
-
-test(obligation_while_keys_are_absent) :-
-    findall(Obligation, gdpr_information_duties_timing_obligation([], Obligation), Obligations),
-    Obligations == [indeterminate([personal_data_collected_from_data_subject, obtaining_date])].
-
+    Obligations == [obligation(provide_information, by(date(2026, 1, 20)), basis(art14_3_b), consequence(late), [cite(eu_reg_2016_679_art_14_3_b)])].
+test(obligation_with_holidays_absent_is_referred) :-
+    gdpr_information_duties_timing_profile_for(art14_holidays_absent_on_limb_a_day, Profile),
+    gdpr_information_duties_timing_obligation(Profile, Obligation),
+    Obligation == needs_legal_review(cross_reference_unresolved(cite(eu_reg_1971_1182_art_3_4),
+                                                                cite(public_holidays_applicable_to_the_period)),
+                                     [resolution(cite(public_holidays_applicable_to_the_period), not_attempted),
+                                      inputs_relied_on([])]).
 test(obligation_with_an_input_problem) :-
-    gdpr_information_duties_timing_obligation(
-        [attribute(personal_data_collected_from_data_subject, unsure)],
-        input_problems([wrong_type(personal_data_collected_from_data_subject)])).
+    gdpr_information_duties_timing_profile_for(items_provided_wrong_type, Profile),
+    gdpr_information_duties_timing_obligation(Profile, input_problems([wrong_type(items_provided)])).
 
-% ---- result constructors -------------------------------------------------
-test(result_constructors_accept_their_shapes) :-
-    indeterminate([obtaining_date]),
-    input_problems([wrong_type(profile)]),
-    unknown_key(as_of_date),
-    wrong_type(obtaining_date),
-    duplicate_key(obtaining_date),
-    open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
-    inputs_relied_on([provided_within_reasonable_period-unsure]),
-    provenance(reasonable_period_for_art14_information, [cite(eu_reg_2016_679_art_14_3_a)]),
-    needs_legal_review(
-        open_textured(provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
-        [inputs_relied_on([provided_within_reasonable_period-unsure])]).
-
-test(attestation_constructors_accept_every_evidence_form) :-
-    attested(true, attestation(host, moment, reason, none)),
-    attested([date(2026, 12, 25)], attestation(host, moment, reason, url(address, retrieved))),
-    attestation(host, moment, reason, document(upload, content_hash)),
-    url(address, retrieved),
-    document(upload, content_hash).
-
-test(an_attestation_with_unknown_evidence_is_rejected, fail) :-
-    attestation(host, moment, reason, rumour).
-
-test(indeterminate_of_a_bare_key_is_rejected, fail) :-
-    indeterminate(obtaining_date).
+% ---- result constructors ---------------------------------------------------------
+test(indeterminate_recognizes_a_non_empty_key_list) :-
+    indeterminate([obtaining_date]).
+test(indeterminate_refuses_an_empty_key_list, fail) :-
+    indeterminate([]).
 
 :- end_module(test_queries).

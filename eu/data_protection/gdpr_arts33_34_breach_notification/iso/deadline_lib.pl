@@ -72,7 +72,10 @@ prev_day(DATE, PREVIOUS_DATE) :-
     timedelta(1, 0, ONE_DAY),
     date_sub(DATE, ONE_DAY, PREVIOUS_DATE).
 
+month_last_day(_, 12, 31).
+
 month_last_day(YEAR, MONTH, LAST_DAY) :-
+    MONTH < 12,
     #=(NEXT_MONTH, MONTH mod 12 + 1),
     #=(NEXT_YEAR, YEAR + MONTH div 12),
     FIRST_OF_NEXT = date(NEXT_YEAR, NEXT_MONTH, 1),

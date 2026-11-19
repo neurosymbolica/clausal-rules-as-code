@@ -1,4 +1,4 @@
-# Whether a controller must comply with a data subject request invoking one of the rights of Regulation (EU) 2016/679 Arts 15, 16, 17, 18, 20, 21 or 22 (Art 12(2) to (6) ...
+# Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: for one request by a data subject under Art 15 (access), 16 (rectification), 17 (erasure), 18 ...
 
 `eu/data_protection/gdpr_data_subject_rights_response_duties`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 187/187 | none (no provision-tracking ledger) | pass | pass | pass |
+| 202/202 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Whether a controller must comply with a data subject request invoking one of the rights of Regulation (EU) 2016/679 Arts 15, 16, 17, 18, 20, 21 or 22 (Art 12(2) to (6) response rules, Art 17(3), 20(3)-(4), 21 and 22(2)-(4) exceptions, Art 23 restriction as an attested outside fact); the response deadline (one month, or three months from receipt where the extension is available) computed under Regulation (EEC, Euratom) No 1182/71 Art 3 applied to the GDPR; the controller's response duties (Art 12(3), 12(4)); and the Art 19 recipient notification duty. Out of scope, handed to the lawyer or a sibling domain: the content and form of the answer, Art 15(2)-(4), Art 17(2), Art 18(2)-(3), Art 20(2), Art 21(4)-(5), the grounds and content rules of Art 23(1)-(2), lawfulness under Arts 6 and 9, joint controllers and processors, remedies and fines.
+Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: for one request by a data subject under Art 15 (access), 16 (rectification), 17 (erasure), 18 (restriction), 20 (portability), 21 (objection) or 22 (automated decision), this order decides internally whether the controller must comply (the right is engaged under Art 15(1), 16, 17(1), 18(1), 20(1), 21(1), (2) or (6), or 22(1); no exception of Art 17(3), 20(3) second sentence, 20(4), 21(1), 21(6), 22(2) read with 22(4), 12(5), 12(2) or 23(1) relieves it; Art 12(6) suspends the duty while the identity is unconfirmed) and answers three queries: the deadline of the response (request_response_deadline/2: one month from receipt, or three months from receipt when an extension is claimed and necessary, Art 12(3); one month for a refusal, Art 12(4); computed by Regulation (EEC, Euratom) No 1182/71 Art 3(1), 3(2)(c) and 3(4), applied to the GDPR as a lawyer point, with attested public holidays), the response duties (response_duties/2, Art 12(3) and 12(4)) and the Art 19 communication to recipients (recipient_notification/2). Open-textured judgements are the user's (unsure refers to a lawyer); Union or Member State law ...
 
 ## Pinned sources
 
@@ -100,13 +100,7 @@ Whether a controller must comply with a data subject request invoking one of the
 
 ??? info "regulation_1182_71_article_2_public_holidays_and_working_days"
 
-    **Why:** Article 2(1) defines public holidays as the days designated as such in the Member State or in the Community institution in which action is to be taken, as published by the Commission in the Official Journal; Article 2(2) defines working days as all days other than public holidays, Sundays and Saturdays. This order chooses no Member State or institution and reads no published list: public holidays arrive as the outside fact public_holidays, and PERIODS states the working day of the Article 3(4) shift itself.
+    **Why:** Article 2(1) defines public holidays as the days designated as such in the Member State or in the Community institution in which action is to be taken, as published by the Commission in the Official Journal. This order chooses no Member State or institution and reads no published list: public holidays arrive as the outside fact public_holidays. Article 2(2), the working day, is quoted above and has its own row.
 
     **Consequence for a user:** The caller attests in public_holidays the public holidays of the Member State or Community institution in which the action is to be taken (Article 2(1)); a public holiday missing from that list, or an absent list, leaves a deadline that falls on that day unmoved, one working day early.
-
-??? info "art22_4_special_categories_bar"
-
-    **Why:** The bar of Art 22(4) (decisions under Art 22(2) shall not rest on special categories unless Art 9(2)(a) or (g) applies with suitable safeguards) is read through the profile facts decision_based_on_special_categories and special_category_condition_and_safeguards_met_for_decision; the Art 9 conditions themselves are not applied here.
-
-    **Consequence for a user:** The answer takes whether Art 9(2)(a) or (g) applies and whether suitable safeguards are in place as a fact stated in the profile: the caller establishes it under Art 9 before relying on the answer.
 

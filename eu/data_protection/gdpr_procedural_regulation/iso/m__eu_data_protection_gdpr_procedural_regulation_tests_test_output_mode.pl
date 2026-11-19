@@ -4,131 +4,202 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_procedural_regulation_gdpr_procedural_regulation, [complaint_admissibility/3, prior_request_condition/3, early_resolution/3, simple_cooperation_procedure/4, draft_decision_time_limit/4, late_step_effect/4, procedural_time_limit/4, temporal_application/5, decide_gdpr_procedural_regulation/2]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_gdpr_procedural_regulation, [complaint_admissibility/3, prior_request_condition/3, early_resolution/3, simple_cooperation_procedure/4, draft_decision_time_limit/4, late_step_effect/4, procedural_time_limit/4, temporal_application/5, decide_gdpr_procedural_regulation/2, gdpr_procedural_regulation_status/2, gdpr_procedural_regulation_checklist/2]).
 :- use_module(m__eu_data_protection_gdpr_procedural_regulation_fixtures, [gdpr_procedural_regulation_profile_for/2]).
 
+fixture(Subject, Profile) :-
+    gdpr_procedural_regulation_profile_for(Subject, Profile).
+
+supplied_value(Profile, Key, Value) :-
+    member(attribute(Key, Value), Profile).
+
 admissibility_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
+    fixture(Subject, Profile),
     findall(Result - Citations, complaint_admissibility(Profile, Result, Citations), Answers).
 
 prior_request_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
+    fixture(Subject, Profile),
     findall(Result - Citations, prior_request_condition(Profile, Result, Citations), Answers).
 
 early_resolution_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
+    fixture(Subject, Profile),
     findall(Result - Citations, early_resolution(Profile, Result, Citations), Answers).
 
 simple_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
-    findall(answer(Result, Basis, Citations), simple_cooperation_procedure(Profile, Result, Basis, Citations), Answers).
+    fixture(Subject, Profile),
+    findall(Result - Basis - Citations, simple_cooperation_procedure(Profile, Result, Basis, Citations), Answers).
 
 draft_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
-    findall(answer(Result, Basis, Citations), draft_decision_time_limit(Profile, Result, Basis, Citations), Answers).
+    fixture(Subject, Profile),
+    findall(Result - Basis - Citations, draft_decision_time_limit(Profile, Result, Basis, Citations), Answers).
 
 late_answers(Subject, Answers) :-
-    gdpr_procedural_regulation_profile_for(Subject, Profile),
-    findall(answer(Result, Basis, Citations), late_step_effect(Profile, Result, Basis, Citations), Answers).
+    fixture(Subject, Profile),
+    findall(Result - Basis - Citations, late_step_effect(Profile, Result, Basis, Citations), Answers).
 
-test(a_data_subject_complaint_reads_out_admissible) :-
+test(admissible_data_subject_complaint_enumerates_once) :-
     admissibility_answers(admissible_data_subject_complaint, Answers),
     Answers == [admissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_1_a), cite(eu_reg_2025_2518_art_4_1_d), cite(eu_reg_2025_2518_art_4_1_e), cite(eu_reg_2025_2518_art_4_5)]].
-test(a_mandated_body_complaint_reads_out_admissible_with_points_b_and_c) :-
-    admissibility_answers(admissible_article_80_1_complaint, Answers),
-    Answers == [admissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_1_a), cite(eu_reg_2025_2518_art_4_1_b), cite(eu_reg_2025_2518_art_4_1_c), cite(eu_reg_2025_2518_art_4_1_d), cite(eu_reg_2025_2518_art_4_1_e), cite(eu_reg_2025_2518_art_4_5)]].
-test(an_independent_body_complaint_does_not_read_the_mandate) :-
-    admissibility_answers(admissible_article_80_2_complaint_without_mandate_key, Answers),
-    Answers == [admissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_1_a), cite(eu_reg_2025_2518_art_4_1_b), cite(eu_reg_2025_2518_art_4_1_d), cite(eu_reg_2025_2518_art_4_1_e), cite(eu_reg_2025_2518_art_4_5)]].
-test(a_missing_mandate_reads_out_inadmissible) :-
-    admissibility_answers(inadmissible_missing_mandate, Answers),
+test(admissible_article_80_1_body_complaint_cites_points_b_and_c) :-
+    admissibility_answers(admissible_article_80_1_body_complaint, Answers),
+    Answers == [admissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_1_a), cite(eu_reg_2025_2518_art_4_1_d), cite(eu_reg_2025_2518_art_4_1_e), cite(eu_reg_2025_2518_art_4_5), cite(eu_reg_2025_2518_art_4_1_b), cite(eu_reg_2025_2518_art_4_1_c)]].
+test(admissible_article_80_2_body_complaint_cites_point_b) :-
+    admissibility_answers(admissible_article_80_2_body_complaint, Answers),
+    Answers == [admissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_1_a), cite(eu_reg_2025_2518_art_4_1_d), cite(eu_reg_2025_2518_art_4_1_e), cite(eu_reg_2025_2518_art_4_5), cite(eu_reg_2025_2518_art_4_1_b)]].
+test(missing_mandate_enumerates_inadmissible_once) :-
+    admissibility_answers(article_80_1_body_complaint_without_mandate, Answers),
     Answers == [inadmissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_2), cite(eu_reg_2025_2518_art_4_5)]].
-test(an_unstated_lodger_reads_out_indeterminate) :-
-    admissibility_answers(lodger_not_stated, Answers),
+test(missing_constitution_enumerates_inadmissible_once) :-
+    admissibility_answers(article_80_2_body_complaint_without_constitution, Answers),
+    Answers == [inadmissible - [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_2), cite(eu_reg_2025_2518_art_4_5)]].
+test(missing_lodger_names_one_key) :-
+    admissibility_answers(complaint_without_lodger, Answers),
     Answers == [indeterminate([complaint_lodged_by]) - []].
-test(prior_request_answers_read_out) :-
-    prior_request_answers(prior_request_made, Made),
-    Made == [prior_request_made - [cite(eu_reg_2025_2518_art_4_3)]],
-    prior_request_answers(prior_request_not_required, NotRequired),
-    NotRequired == [prior_request_not_required - [cite(eu_reg_2025_2518_art_4_3)]].
-test(an_unsure_right_reads_out_a_referral) :-
-    prior_request_answers(prior_request_unsure, Answers),
-    Answers == [needs_legal_review(open_textured(complaint_concerns_right_exercised_by_request, cite(eu_reg_2025_2518_art_4_3)), [inputs_relied_on([complaint_concerns_right_exercised_by_request - unsure])]) - []].
-test(early_resolution_before_the_receiving_authority_reads_out) :-
-    early_resolution_answers(early_resolution_by_receiving_authority, Answers),
-    Answers == [resolution_established_by_receiving_authority - [cite(eu_reg_2025_2518_art_5_1_a), cite(eu_reg_2025_2518_art_5_2), cite(eu_reg_2025_2518_art_5_2_c), cite(eu_reg_2025_2518_art_5_3), cite(eu_reg_2025_2518_art_5_6)]].
-test(early_resolution_before_the_lead_authority_reads_out) :-
-    early_resolution_answers(early_resolution_by_lead_authority, Answers),
-    Answers == [draft_decision_establishing_resolution - [cite(eu_reg_2025_2518_art_5_1_b), cite(eu_reg_2025_2518_art_5_2), cite(eu_reg_2025_2518_art_5_2_c), cite(eu_reg_2025_2518_art_5_4), cite(eu_reg_2025_2518_art_5_6)]].
-test(early_resolution_gates_read_out) :-
-    early_resolution_answers(early_resolution_outside_chapter_iii_rights, Outside),
-    Outside == [early_resolution_not_available - [cite(eu_reg_2025_2518_art_5_1)]],
-    early_resolution_answers(early_resolution_infringement_not_ended, NotEnded),
-    NotEnded == [complaint_not_devoid_of_purpose - [cite(eu_reg_2025_2518_art_5_2)]].
-test(a_local_case_reads_out_with_its_basis) :-
-    simple_answers(local_case_under_article_56_2, Answers),
-    Answers == [answer(chapter_iii_not_applicable, [outside_fact(case_handled_under_article_56_2, attested(true, attestation(supervisory_authority_officer, attested_at, reason_stated, none)))], [cite(eu_reg_2025_2518_art_6_5)])].
-test(an_available_simple_procedure_reads_out_with_its_basis) :-
-    simple_answers(simple_procedure_available, Answers),
-    Answers == [answer(simple_procedure_available, [outside_fact(case_handled_under_article_56_2, attested(false, attestation(supervisory_authority_officer, attested_at, reason_stated, none)))], [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_6_1_a), cite(eu_reg_2025_2518_art_6_1_b), cite(eu_reg_2025_2518_art_6_3)])].
-test(a_scope_doubt_reads_out_not_available) :-
-    simple_answers(simple_procedure_scope_doubt, Answers),
-    Answers == [answer(simple_procedure_not_available, [outside_fact(case_handled_under_article_56_2, attested(false, attestation(supervisory_authority_officer, attested_at, reason_stated, none)))], [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_6_1_a), cite(eu_reg_2025_2518_art_6_1_b)])].
-test(a_scope_doubt_without_a_local_statement_reads_out_the_absent_referral) :-
-    simple_answers(simple_procedure_scope_doubt_without_local_statement, Answers),
-    Answers == [answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_6_5), cite(article_56_2_local_case_statement)), [resolution(cite(article_56_2_local_case_statement), not_attempted), inputs_relied_on([case_handled_under_article_56_2 - absent])]), [], [])].
-test(an_unsure_cooperation_need_reads_out_a_referral) :-
-    simple_answers(simple_procedure_cooperation_unsure, Answers),
-    Answers == [answer(needs_legal_review(open_textured(issues_addressable_without_additional_cooperation, cite(eu_reg_2025_2518_art_6_1_b)), [inputs_relied_on([issues_addressable_without_additional_cooperation - unsure])]), [], [])].
-test(a_suspended_and_justified_extension_reads_out) :-
-    draft_answers(draft_decision_suspended_and_extended, Answers),
-    Answers == [answer(draft_decision_limit(15, extension(up_to, 12, months)), [suspended_until_board_binding_decision], [cite(eu_reg_2025_2518_art_12_1), cite(eu_reg_2025_2518_art_12_2), cite(eu_reg_2025_2518_art_12_3)])].
-test(an_unjustified_extension_reads_out_not_permitted) :-
-    draft_answers(draft_decision_unjustified_extension, Answers),
-    Answers == [answer(draft_decision_limit(15, no_extension), [extension_not_permitted], [cite(eu_reg_2025_2518_art_12_1), cite(eu_reg_2025_2518_art_12_3)])].
-test(an_unsure_complexity_reads_out_a_referral) :-
-    draft_answers(draft_decision_complexity_unsure, Answers),
-    Answers == [answer(needs_legal_review(open_textured(extension_justified_by_exceptional_complexity, cite(eu_reg_2025_2518_art_12_3)), [inputs_relied_on([extension_justified_by_exceptional_complexity - unsure])]), [], [])].
-test(the_simple_procedure_limit_reads_out) :-
-    draft_answers(simple_procedure_draft_decision_without_extension, Answers),
-    Answers == [answer(draft_decision_limit(12, no_extension), [], [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_12_6)])].
-test(a_refused_national_extension_reads_out_with_its_basis) :-
-    draft_answers(simple_procedure_extension_refused_by_national_law, Answers),
-    Answers == [answer(draft_decision_limit(12, no_extension), [extension_not_permitted, outside_fact(national_law_requires_domestic_proceedings_after_time_limit, attested(false, attestation(supervisory_authority_officer, attested_at, reason_stated, none)))], [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_12_6)])].
-test(a_missing_national_statement_reads_out_the_absent_referral) :-
-    draft_answers(simple_procedure_extension_without_national_statement, Answers),
-    Answers == [answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_12_6), cite(national_domestic_proceedings_statement)), [resolution(cite(national_domestic_proceedings_statement), not_attempted), inputs_relied_on([national_law_requires_domestic_proceedings_after_time_limit - absent])]), [], [])].
-test(a_late_step_under_this_regulation_reads_out) :-
-    late_answers(late_step_under_this_regulation, Answers),
-    Answers == [answer(legality_and_validity_not_affected, [outside_fact(time_limit_set_by_this_regulation_or_article_65_6, attested(true, attestation(supervisory_authority_officer, attested_at, reason_stated, none)))], [cite(eu_reg_2025_2518_art_14)])].
-test(a_late_step_without_a_statement_reads_out_the_absent_referral) :-
-    late_answers(late_step_without_source_statement, Answers),
-    Answers == [answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_14), cite(time_limit_source_statement)), [resolution(cite(time_limit_source_statement), not_attempted), inputs_relied_on([time_limit_set_by_this_regulation_or_article_65_6 - absent])]), [], [])].
-test(the_simple_procedure_draft_decision_row_reads_out) :-
-    findall(Limit - Citations, procedural_time_limit([], submit_draft_decision_in_simple_procedure, Limit, Citations), Answers),
-    Answers == [limit(12, months, within, confirmation_of_competence_or_board_binding_decision, extension(up_to, 2, months)) - [cite(eu_reg_2025_2518_art_12_6)]].
-test(the_comment_period_row_reads_out_an_exact_extension) :-
-    findall(Limit - Citations, procedural_time_limit([], comment_on_summary_of_key_issues, Limit, Citations), Answers),
-    Answers == [limit(4, weeks, within, receipt_of_summary_of_key_issues, extension(exactly, 2, weeks)) - [cite(eu_reg_2025_2518_art_10_4)]].
-test(the_inform_row_reads_out_at_least_before) :-
-    findall(Limit, procedural_time_limit([], inform_of_draft_decision_extension, Limit, _), Answers),
-    Answers == [limit(4, weeks, at_least_before, expiry_of_draft_decision_time_limit, no_extension)].
-test(chapter_two_boundary_reads_out) :-
-    findall(Result, temporal_application([], complaints_and_early_resolution, date(2027, 4, 1), Result, _), Before),
-    Before == [part_does_not_apply],
-    findall(Result, temporal_application([], complaints_and_early_resolution, date(2027, 4, 2), Result, _), OnTheDay),
-    OnTheDay == [part_applies].
-test(chapters_three_to_six_boundary_reads_out) :-
-    findall(Result, temporal_application([], cooperation_and_files, date(2027, 4, 2), Result, _), OnTheDay),
-    OnTheDay == [part_does_not_apply],
-    findall(Result, temporal_application([], cooperation_and_files, date(2027, 4, 3), Result, _), DayAfter),
-    DayAfter == [part_applies].
-test(the_facade_verdict_carries_the_admissibility_citations) :-
-    gdpr_procedural_regulation_profile_for(inadmissible_missing_description, Profile),
+test(malformed_profile_enumerates_its_input_problems) :-
+    admissibility_answers(malformed_profile_case, Answers),
+    Answers == [input_problems([duplicate_key(complaint_lodged_by), unknown_key(complaint_reference)]) - []].
+test(facade_verdict_enumerates_once) :-
+    fixture(data_subject_complaint_without_description, Profile),
     findall(Verdict, decide_gdpr_procedural_regulation(Profile, Verdict), Verdicts),
     Verdicts == [gdpr_procedural_regulation_verdict(inadmissible, [cite(eu_reg_2025_2518_art_4_1), cite(eu_reg_2025_2518_art_4_2), cite(eu_reg_2025_2518_art_4_5)])].
+test(facade_status_enumerates_once) :-
+    fixture(admissible_data_subject_complaint, Profile),
+    findall(Status, gdpr_procedural_regulation_status(Profile, Status), Statuses),
+    Statuses == [admissible].
+test(checklist_of_an_article_80_2_body_complaint) :-
+    fixture(admissible_article_80_2_body_complaint, Profile),
+    findall(Items, gdpr_procedural_regulation_checklist(Profile, Items), Checklists),
+    Checklists == [[item(lodging_person_name_and_contact_details, met, cite(eu_reg_2025_2518_art_4_1_a)), item(proof_of_proper_constitution, met, cite(eu_reg_2025_2518_art_4_1_b)), item(proof_of_data_subject_mandate, inapplicable, cite(eu_reg_2025_2518_art_4_1_c)), item(controller_or_processor_identification, met, cite(eu_reg_2025_2518_art_4_1_d)), item(alleged_infringement_description, met, cite(eu_reg_2025_2518_art_4_1_e))]].
+test(prior_request_made_enumerates_once) :-
+    prior_request_answers(prior_request_made_complaint, Answers),
+    Answers == [prior_request_made - [cite(eu_reg_2025_2518_art_4_3)]].
+test(prior_request_not_made_enumerates_once) :-
+    prior_request_answers(prior_request_not_made_complaint, Answers),
+    Answers == [prior_request_not_made - [cite(eu_reg_2025_2518_art_4_3)]].
+test(prior_request_not_required_enumerates_once) :-
+    prior_request_answers(right_not_exercised_by_request_complaint, Answers),
+    Answers == [prior_request_not_required - [cite(eu_reg_2025_2518_art_4_3)]].
+test(prior_request_unclear_goes_to_a_lawyer) :-
+    prior_request_answers(right_exercised_by_request_unclear_complaint, Answers),
+    Answers == [needs_legal_review(open_textured(complaint_concerns_right_exercised_by_request, cite(eu_reg_2025_2518_art_4_3)), [inputs_relied_on([complaint_concerns_right_exercised_by_request - unsure])]) - []].
+test(early_resolution_not_available_enumerates_once) :-
+    early_resolution_answers(complaint_outside_chapter_iii_rights, Answers),
+    Answers == [early_resolution_not_available - [cite(eu_reg_2025_2518_art_5_1)]].
+test(complaint_not_devoid_of_purpose_enumerates_once) :-
+    early_resolution_answers(complaint_not_devoid_of_purpose_case, Answers),
+    Answers == [complaint_not_devoid_of_purpose - [cite(eu_reg_2025_2518_art_5_2)]].
+test(early_resolution_objected_enumerates_once) :-
+    early_resolution_answers(early_resolution_objected_case, Answers),
+    Answers == [early_resolution_objected - [cite(eu_reg_2025_2518_art_5_2), cite(eu_reg_2025_2518_art_5_2_c)]].
+test(resolution_by_the_receiving_authority_enumerates_once) :-
+    early_resolution_answers(early_resolution_before_receiving_authority, Answers),
+    Answers == [resolution_established_by_receiving_authority - [cite(eu_reg_2025_2518_art_5_1_a), cite(eu_reg_2025_2518_art_5_2), cite(eu_reg_2025_2518_art_5_2_c), cite(eu_reg_2025_2518_art_5_3), cite(eu_reg_2025_2518_art_5_6)]].
+test(resolution_by_the_lead_authority_enumerates_once) :-
+    early_resolution_answers(early_resolution_before_lead_authority, Answers),
+    Answers == [draft_decision_establishing_resolution - [cite(eu_reg_2025_2518_art_5_1_b), cite(eu_reg_2025_2518_art_5_2), cite(eu_reg_2025_2518_art_5_2_c), cite(eu_reg_2025_2518_art_5_4), cite(eu_reg_2025_2518_art_5_6)]].
+test(local_case_enumerates_once_with_its_statement) :-
+    fixture(local_case_under_article_56_2, Profile),
+    supplied_value(Profile, case_handled_under_article_56_2, Attested),
+    simple_answers(local_case_under_article_56_2, Answers),
+    Answers == [chapter_iii_not_applicable - [outside_fact(case_handled_under_article_56_2, Attested)] - [cite(eu_reg_2025_2518_art_6_5)]].
+test(scope_in_doubt_enumerates_not_available_once) :-
+    fixture(scope_in_doubt_case, Profile),
+    supplied_value(Profile, case_handled_under_article_56_2, Attested),
+    simple_answers(scope_in_doubt_case, Answers),
+    Answers == [simple_procedure_not_available - [outside_fact(case_handled_under_article_56_2, Attested)] - [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_6_1_a), cite(eu_reg_2025_2518_art_6_1_b)]].
+test(objection_enumerates_excluded_once) :-
+    fixture(simple_procedure_objected_case, Profile),
+    supplied_value(Profile, case_handled_under_article_56_2, Attested),
+    simple_answers(simple_procedure_objected_case, Answers),
+    Answers == [simple_procedure_excluded_by_objection - [outside_fact(case_handled_under_article_56_2, Attested)] - [cite(eu_reg_2025_2518_art_6_3)]].
+test(open_case_enumerates_available_once) :-
+    fixture(simple_procedure_open_case, Profile),
+    supplied_value(Profile, case_handled_under_article_56_2, Attested),
+    simple_answers(simple_procedure_open_case, Answers),
+    Answers == [simple_procedure_available - [outside_fact(case_handled_under_article_56_2, Attested)] - [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_6_1_a), cite(eu_reg_2025_2518_art_6_1_b), cite(eu_reg_2025_2518_art_6_3)]].
+test(cooperation_need_unclear_goes_to_a_lawyer) :-
+    simple_answers(additional_cooperation_need_unclear_case, Answers),
+    Answers == [needs_legal_review(open_textured(issues_addressable_without_additional_cooperation, cite(eu_reg_2025_2518_art_6_1_b)), [inputs_relied_on([issues_addressable_without_additional_cooperation - unsure])]) - [] - []].
+test(missing_local_case_statement_is_referred) :-
+    simple_answers(local_case_statement_missing_case, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_6_5), cite(article_56_2_local_case_statement)), [resolution(cite(article_56_2_local_case_statement), not_attempted), inputs_relied_on([case_handled_under_article_56_2 - absent])]) - [] - []].
+test(standard_draft_decision_limit_enumerates_once) :-
+    draft_answers(standard_draft_decision_case, Answers),
+    Answers == [draft_decision_limit(15, no_extension) - [] - [cite(eu_reg_2025_2518_art_12_1)]].
+test(justified_extension_enumerates_once) :-
+    draft_answers(justified_extension_case, Answers),
+    Answers == [draft_decision_limit(15, extension(up_to, 12, months)) - [] - [cite(eu_reg_2025_2518_art_12_1), cite(eu_reg_2025_2518_art_12_3)]].
+test(unjustified_extension_with_board_request_enumerates_once) :-
+    draft_answers(unjustified_extension_with_board_request_case, Answers),
+    Answers == [draft_decision_limit(15, no_extension) - [suspended_until_board_binding_decision, extension_not_permitted] - [cite(eu_reg_2025_2518_art_12_1), cite(eu_reg_2025_2518_art_12_2), cite(eu_reg_2025_2518_art_12_3)]].
+test(complexity_unclear_goes_to_a_lawyer) :-
+    draft_answers(extension_complexity_unclear_case, Answers),
+    Answers == [needs_legal_review(open_textured(extension_justified_by_exceptional_complexity, cite(eu_reg_2025_2518_art_12_3)), [inputs_relied_on([extension_justified_by_exceptional_complexity - unsure])]) - [] - []].
+test(simple_procedure_limit_enumerates_once) :-
+    draft_answers(simple_procedure_draft_decision_case, Answers),
+    Answers == [draft_decision_limit(12, no_extension) - [] - [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_12_6)]].
+test(simple_procedure_justified_extension_copies_the_statement) :-
+    fixture(simple_procedure_justified_extension_case, Profile),
+    supplied_value(Profile, national_law_requires_domestic_proceedings_after_time_limit, Attested),
+    draft_answers(simple_procedure_justified_extension_case, Answers),
+    Answers == [draft_decision_limit(12, extension(up_to, 2, months)) - [outside_fact(national_law_requires_domestic_proceedings_after_time_limit, Attested)] - [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_12_6)]].
+test(simple_procedure_unjustified_extension_is_not_permitted) :-
+    fixture(simple_procedure_unjustified_extension_case, Profile),
+    supplied_value(Profile, national_law_requires_domestic_proceedings_after_time_limit, Attested),
+    draft_answers(simple_procedure_unjustified_extension_case, Answers),
+    Answers == [draft_decision_limit(12, no_extension) - [extension_not_permitted, outside_fact(national_law_requires_domestic_proceedings_after_time_limit, Attested)] - [cite(eu_reg_2025_2518_art_6_1), cite(eu_reg_2025_2518_art_12_6)]].
+test(missing_national_law_statement_is_referred) :-
+    draft_answers(national_law_statement_missing_case, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_12_6), cite(national_domestic_proceedings_statement)), [resolution(cite(national_domestic_proceedings_statement), not_attempted), inputs_relied_on([national_law_requires_domestic_proceedings_after_time_limit - absent])]) - [] - []].
+test(late_step_under_this_regulation_enumerates_once) :-
+    fixture(late_step_after_regulation_time_limit, Profile),
+    supplied_value(Profile, time_limit_set_by_this_regulation_or_article_65_6, Attested),
+    late_answers(late_step_after_regulation_time_limit, Answers),
+    Answers == [legality_and_validity_not_affected - [outside_fact(time_limit_set_by_this_regulation_or_article_65_6, Attested)] - [cite(eu_reg_2025_2518_art_14)]].
+test(late_step_under_another_provision_enumerates_once) :-
+    fixture(late_step_after_other_time_limit, Profile),
+    supplied_value(Profile, time_limit_set_by_this_regulation_or_article_65_6, Attested),
+    late_answers(late_step_after_other_time_limit, Answers),
+    Answers == [not_governed_by_article_14 - [outside_fact(time_limit_set_by_this_regulation_or_article_65_6, Attested)] - [cite(eu_reg_2025_2518_art_14)]].
+test(late_step_without_statement_is_referred) :-
+    late_answers(late_step_statement_missing_case, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2025_2518_art_14), cite(time_limit_source_statement)), [resolution(cite(time_limit_source_statement), not_attempted), inputs_relied_on([time_limit_set_by_this_regulation_or_article_65_6 - absent])]) - [] - []].
+test(declare_inadmissible_limit_enumerates_once) :-
+    findall(Limit - Citations, procedural_time_limit([], declare_complaint_inadmissible, Limit, Citations), Answers),
+    Answers == [limit(2, weeks, within, receipt_of_complaint, no_extension) - [cite(eu_reg_2025_2518_art_4_2)]].
+test(comment_period_extends_by_exactly_two_weeks) :-
+    findall(Limit - Citations, procedural_time_limit([], comment_on_summary_of_key_issues, Limit, Citations), Answers),
+    Answers == [limit(4, weeks, within, receipt_of_summary_of_key_issues, extension(exactly, 2, weeks)) - [cite(eu_reg_2025_2518_art_10_4)]].
+test(informing_of_extension_is_at_least_before_expiry) :-
+    findall(Limit - Citations, procedural_time_limit([], inform_of_draft_decision_extension, Limit, Citations), Answers),
+    Answers == [limit(4, weeks, at_least_before, expiry_of_draft_decision_time_limit, no_extension) - [cite(eu_reg_2025_2518_art_12_3)]].
+test(simple_procedure_draft_decision_limit_enumerates_once) :-
+    findall(Limit - Citations, procedural_time_limit([], submit_draft_decision_in_simple_procedure, Limit, Citations), Answers),
+    Answers == [limit(12, months, within, confirmation_of_competence_or_board_binding_decision, extension(up_to, 2, months)) - [cite(eu_reg_2025_2518_art_12_6)]].
+test(summary_of_key_issues_limit_is_three_months) :-
+    findall(Limit - Citations, procedural_time_limit([], provide_summary_of_key_issues, Limit, Citations), Answers),
+    Answers == [limit(3, months, within, confirmation_of_competence_or_board_binding_decision, no_extension) - [cite(eu_reg_2025_2518_art_10_3)]].
+test(every_step_has_exactly_one_limit) :-
+    Steps = [declare_complaint_inadmissible, transmit_complaint_to_presumed_lead_authority, confirm_competence_or_refer_to_board, object_to_early_resolution, establish_early_resolution, submit_early_resolution_draft_decision, notify_simple_cooperation_procedure, object_to_simple_cooperation_procedure, provide_summary_of_key_issues, comment_on_summary_of_key_issues, respond_to_comments_on_summary_of_key_issues, submit_draft_decision, inform_of_draft_decision_extension, object_to_draft_decision_extension, submit_draft_decision_in_simple_procedure, inform_of_simple_procedure_extension],
+    findall(Step, (member(Step, Steps), procedural_time_limit([], Step, limit(_, _, _, _, _), [_|_])), LimitedSteps),
+    LimitedSteps == Steps.
+test(complaint_before_the_day_does_not_apply) :-
+    findall(Result - Citations, temporal_application([], complaints_and_early_resolution, date(2027, 4, 1), Result, Citations), Answers),
+    Answers == [part_does_not_apply - [cite(eu_reg_2025_2518_art_37_2)]].
+test(complaint_on_the_day_applies) :-
+    findall(Result - Citations, temporal_application([], complaints_and_early_resolution, date(2027, 4, 2), Result, Citations), Answers),
+    Answers == [part_applies - [cite(eu_reg_2025_2518_art_37_2)]].
+test(cooperation_on_the_day_does_not_apply) :-
+    findall(Result - Citations, temporal_application([], cooperation_and_files, date(2027, 4, 2), Result, Citations), Answers),
+    Answers == [part_does_not_apply - [cite(eu_reg_2025_2518_art_36), cite(eu_reg_2025_2518_art_37_2)]].
+test(cooperation_the_day_after_applies) :-
+    findall(Result - Citations, temporal_application([], cooperation_and_files, date(2027, 4, 3), Result, Citations), Answers),
+    Answers == [part_applies - [cite(eu_reg_2025_2518_art_36), cite(eu_reg_2025_2518_art_37_2)]].
+test(dispute_resolution_a_year_later_applies) :-
+    findall(Result, temporal_application([], dispute_resolution_and_urgency, date(2028, 1, 1), Result, _), Results),
+    Results == [part_applies].
 
-cp_test_names([a_data_subject_complaint_reads_out_admissible, a_mandated_body_complaint_reads_out_admissible_with_points_b_and_c, an_independent_body_complaint_does_not_read_the_mandate, a_missing_mandate_reads_out_inadmissible, an_unstated_lodger_reads_out_indeterminate, prior_request_answers_read_out, an_unsure_right_reads_out_a_referral, early_resolution_before_the_receiving_authority_reads_out, early_resolution_before_the_lead_authority_reads_out, early_resolution_gates_read_out, a_local_case_reads_out_with_its_basis, an_available_simple_procedure_reads_out_with_its_basis, a_scope_doubt_reads_out_not_available, a_scope_doubt_without_a_local_statement_reads_out_the_absent_referral, an_unsure_cooperation_need_reads_out_a_referral, a_suspended_and_justified_extension_reads_out, an_unjustified_extension_reads_out_not_permitted, an_unsure_complexity_reads_out_a_referral, the_simple_procedure_limit_reads_out, a_refused_national_extension_reads_out_with_its_basis, a_missing_national_statement_reads_out_the_absent_referral, a_late_step_under_this_regulation_reads_out, a_late_step_without_a_statement_reads_out_the_absent_referral, the_simple_procedure_draft_decision_row_reads_out, the_comment_period_row_reads_out_an_exact_extension, the_inform_row_reads_out_at_least_before, chapter_two_boundary_reads_out, chapters_three_to_six_boundary_reads_out, the_facade_verdict_carries_the_admissibility_citations]).
+cp_test_names([admissible_data_subject_complaint_enumerates_once, admissible_article_80_1_body_complaint_cites_points_b_and_c, admissible_article_80_2_body_complaint_cites_point_b, missing_mandate_enumerates_inadmissible_once, missing_constitution_enumerates_inadmissible_once, missing_lodger_names_one_key, malformed_profile_enumerates_its_input_problems, facade_verdict_enumerates_once, facade_status_enumerates_once, checklist_of_an_article_80_2_body_complaint, prior_request_made_enumerates_once, prior_request_not_made_enumerates_once, prior_request_not_required_enumerates_once, prior_request_unclear_goes_to_a_lawyer, early_resolution_not_available_enumerates_once, complaint_not_devoid_of_purpose_enumerates_once, early_resolution_objected_enumerates_once, resolution_by_the_receiving_authority_enumerates_once, resolution_by_the_lead_authority_enumerates_once, local_case_enumerates_once_with_its_statement, scope_in_doubt_enumerates_not_available_once, objection_enumerates_excluded_once, open_case_enumerates_available_once, cooperation_need_unclear_goes_to_a_lawyer, missing_local_case_statement_is_referred, standard_draft_decision_limit_enumerates_once, justified_extension_enumerates_once, unjustified_extension_with_board_request_enumerates_once, complexity_unclear_goes_to_a_lawyer, simple_procedure_limit_enumerates_once, simple_procedure_justified_extension_copies_the_statement, simple_procedure_unjustified_extension_is_not_permitted, missing_national_law_statement_is_referred, late_step_under_this_regulation_enumerates_once, late_step_under_another_provision_enumerates_once, late_step_without_statement_is_referred, declare_inadmissible_limit_enumerates_once, comment_period_extends_by_exactly_two_weeks, informing_of_extension_is_at_least_before_expiry, simple_procedure_draft_decision_limit_enumerates_once, summary_of_key_issues_limit_is_three_months, every_step_has_exactly_one_limit, complaint_before_the_day_does_not_apply, complaint_on_the_day_applies, cooperation_on_the_day_does_not_apply, cooperation_the_day_after_applies, dispute_resolution_a_year_later_applies]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

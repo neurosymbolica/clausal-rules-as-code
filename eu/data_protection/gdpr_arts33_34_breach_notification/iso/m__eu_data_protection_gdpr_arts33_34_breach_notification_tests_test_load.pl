@@ -7,73 +7,74 @@
 :- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_citations, [citation/2, implements/1]).
 
-test(the_final_verdict_atoms_are_distinct) :-
+test(the_verdict_atoms_are_distinct) :-
     dif(eligible, ineligible).
 test(the_requirement_atoms_are_distinct) :-
     dif(without_undue_delay, reasons_for_delay).
-test(the_content_result_atoms_are_distinct) :-
-    dif(all_requirements_met, requirements_not_met),
-    dif(all_requirements_met, information_to_follow_in_phases),
-    dif(requirements_not_met, information_to_follow_in_phases).
+test(the_final_compound_is_not_a_bare_verdict_atom) :-
+    dif(notification_requirement_not_met(without_undue_delay), eligible),
+    dif(notification_requirement_not_met(reasons_for_delay), ineligible).
+test(the_content_results_are_distinct) :-
+    dif(all_requirements_met, requirements_not_met([contact_point])),
+    dif(requirements_not_met([contact_point]), information_to_follow_in_phases([contact_point])).
 test(the_verdict_term_carries_status_and_citations) :-
-    Verdict = breach_notification_verdict(eligible, [cite(eu_reg_2016_679_art_33_1)]),
-    Verdict = breach_notification_verdict(Status, Citations),
+    Verdict = breach_notification_verdict_verdict(eligible, [cite(eu_reg_2016_679_art_33_1)]),
+    Verdict = breach_notification_verdict_verdict(Status, Citations),
     Status == eligible,
     Citations == [cite(eu_reg_2016_679_art_33_1)].
-test(the_final_compound_destructures) :-
-    Verdict = notification_requirement_not_met(without_undue_delay),
-    Verdict = notification_requirement_not_met(Requirement),
-    Requirement == without_undue_delay.
-test(the_indeterminate_status_destructures) :-
-    Status = indeterminate([breach_unlikely_to_result_in_risk, supervisory_authority_decision_on_communication]),
-    Status = indeterminate(MissingKeys),
-    MissingKeys == [breach_unlikely_to_result_in_risk, supervisory_authority_decision_on_communication].
-test(the_referral_status_destructures) :-
-    Status = needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([breach_unlikely_to_result_in_risk - unsure])]),
-    Status = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
-    Key == breach_unlikely_to_result_in_risk,
+test(a_status_verdict_carries_no_citations) :-
+    Verdict = breach_notification_verdict_verdict(indeterminate([breach_unlikely_to_result_in_risk]), []),
+    Verdict = breach_notification_verdict_verdict(indeterminate(MissingKeys), Citations),
+    MissingKeys == [breach_unlikely_to_result_in_risk],
+    Citations == [].
+test(a_referral_destructures) :-
+    Referral = needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - 73, breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - unsure])]),
+    Referral = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on([hours_elapsed - HoursElapsed|Pairs])]),
+    Key == delay_justified_by_reasons,
     Citation == cite(eu_reg_2016_679_art_33_1),
-    Pairs == [breach_unlikely_to_result_in_risk - unsure].
-test(the_obligation_list_destructures) :-
-    Obligation = [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))],
-    Obligation = [FirstDuty, SecondDuty],
-    FirstDuty = notify_supervisory_authority(FirstCitation),
-    SecondDuty = document_breach(SecondCitation),
-    FirstCitation == cite(eu_reg_2016_679_art_33_1),
-    SecondCitation == cite(eu_reg_2016_679_art_33_5).
-test(the_period_end_term_destructures) :-
+    HoursElapsed == 73,
+    Pairs == [breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - unsure].
+test(a_period_end_destructures) :-
     PeriodEnd = period_end(date(2025, 11, 3), 11),
     PeriodEnd = period_end(date(Year, Month, Day), EndHour),
     Year == 2025,
     Month == 11,
     Day == 3,
     EndHour == 11.
+test(an_obligation_list_destructures) :-
+    Obligation = [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))],
+    Obligation = [First, Second, Third],
+    First == notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)),
+    Second == document_breach(cite(eu_reg_2016_679_art_33_5)),
+    Third == public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c)).
 test(the_primary_citation_is_recorded) :-
-    citation(eu_reg_2016_679_art_33_1, _Record).
-test(the_primary_citation_is_implemented) :-
-    implements(eu_reg_2016_679_art_33_1).
-test(every_answer_citation_of_the_vocabulary_is_recorded) :-
-    Keys = [eu_reg_2016_679_art_33_1, eu_reg_2016_679_art_33_2, eu_reg_2016_679_art_33_3_a, eu_reg_2016_679_art_33_3_d, eu_reg_2016_679_art_33_4, eu_reg_2016_679_art_33_5, eu_reg_2016_679_art_34_1, eu_reg_2016_679_art_34_2, eu_reg_2016_679_art_34_3_a, eu_reg_2016_679_art_34_3_b, eu_reg_2016_679_art_34_3_c, eu_reg_2016_679_art_34_4],
-    findall(Key, (member(Key, Keys), citation(Key, _)), Found),
-    Found == Keys.
-test(every_marker_citation_of_the_vocabulary_is_recorded) :-
-    Keys = [eu_reg_2016_679_art_33_3, eu_reg_2016_679_art_33_3_b, eu_reg_2016_679_art_33_3_c, eu_reg_2016_679_art_34_3, eu_reg_1971_1182_art_3_1, eu_reg_1971_1182_art_3_2, eu_reg_1971_1182_art_3_2_a, eu_reg_1971_1182_art_3_3, eu_reg_1971_1182_art_3_4],
-    findall(Key, (member(Key, Keys), citation(Key, _)), Found),
-    Found == Keys.
-test(the_input_check_loads_and_accepts_an_empty_profile) :-
-    gdpr_arts33_34_breach_notification_input_problems([], []).
+    citation(eu_reg_2016_679_art_33_1, Record),
+    Record = [label - _, ref - _, verbatim - _].
+test(the_communication_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_34_1, _Record).
+test(the_period_citation_is_recorded) :-
+    citation(eu_reg_1971_1182_art_3_1, _Record).
+test(the_marker_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_33_5).
+test(the_input_check_accepts_an_empty_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems([], Problems),
+    Problems == [].
 test(the_input_check_refuses_a_non_list) :-
-    gdpr_arts33_34_breach_notification_input_problems(profile, [wrong_type(profile)]).
+    gdpr_arts33_34_breach_notification_input_problems(controller, Problems),
+    Problems == [wrong_type(profile)].
 test(the_input_check_names_an_unknown_key) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(as_of_date, true)], Problems),
+    Problems == [unknown_key(as_of_date)].
 
-test(an_invented_citation_is_not_recorded, fail) :-
-    citation(eu_reg_2016_679_art_33, _Record).
-test(the_input_check_accepts_a_well_formed_profile_is_not_refused, fail) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller)], [_|_]).
+test(the_marker_fails_for_an_invented_key, fail) :-
+    implements(gdpr_art_33_1).
+test(an_invented_citation_does_not_resolve, fail) :-
+    citation(eu_todo_primary_source, _Record).
+test(the_input_check_does_not_accept_an_unknown_key_silently, fail) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(as_of_date, true)], []).
 
-cp_test_names([the_final_verdict_atoms_are_distinct, the_requirement_atoms_are_distinct, the_content_result_atoms_are_distinct, the_verdict_term_carries_status_and_citations, the_final_compound_destructures, the_indeterminate_status_destructures, the_referral_status_destructures, the_obligation_list_destructures, the_period_end_term_destructures, the_primary_citation_is_recorded, the_primary_citation_is_implemented, every_answer_citation_of_the_vocabulary_is_recorded, every_marker_citation_of_the_vocabulary_is_recorded, the_input_check_loads_and_accepts_an_empty_profile, the_input_check_refuses_a_non_list, the_input_check_names_an_unknown_key]).
-cp_test_fail_names([an_invented_citation_is_not_recorded, the_input_check_accepts_a_well_formed_profile_is_not_refused]).
+cp_test_names([the_verdict_atoms_are_distinct, the_requirement_atoms_are_distinct, the_final_compound_is_not_a_bare_verdict_atom, the_content_results_are_distinct, the_verdict_term_carries_status_and_citations, a_status_verdict_carries_no_citations, a_referral_destructures, a_period_end_destructures, an_obligation_list_destructures, the_primary_citation_is_recorded, the_communication_citation_is_recorded, the_period_citation_is_recorded, the_marker_succeeds_for_a_recorded_key, the_input_check_accepts_an_empty_profile, the_input_check_refuses_a_non_list, the_input_check_names_an_unknown_key]).
+cp_test_fail_names([the_marker_fails_for_an_invented_key, an_invented_citation_does_not_resolve, the_input_check_does_not_accept_an_unknown_key_silently]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

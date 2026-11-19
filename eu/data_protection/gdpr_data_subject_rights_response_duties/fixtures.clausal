@@ -1,4 +1,30 @@
 % SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_data_subject_rights_response_duties.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls. Profile keys and subject ids are atoms.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract); dates are date(Y, M, D) terms; outside facts are
+% attested(Value, attestation(by, at, reason, none)).
+%
+% Every route has a positive case and a one-key near-miss control:
+%   access plain (must comply)        / manifestly excessive (Art 12(5))
+%   attested holiday on the last day  / holiday elsewhere (Art 3(4))
+%   extension necessary (3 months)    / extension not necessary / unsure
+%   identity doubts, not confirmed    / identity confirmed (Art 12(6))
+%   Art 23 restriction attested true  / attested false
+%   erasure with legal-claims relief  / erasure without the exception
+%   erasure ground (e) not attested   / attested true (A2, enabling fact)
+%   rectification, recipients told    / communication excused (Art 19)
+%   restriction engaged               / not engaged (Art 18(1))
+%   portability engaged               / rights of others (Art 20(4))
+%   objection to direct marketing     / no direct marketing (Art 21(2))
+%   automated decision, consent       / special-category bar (Art 22(4))
+%   common exception, no request type / no exception, no request type
+%   input problems                    / well-formed controls
+% =====================================================================
+
 :- module(fixtures, [
     gdpr_data_subject_rights_response_duties_subject/1,
     gdpr_data_subject_rights_response_duties_profile_for/2,
@@ -8,192 +34,268 @@
 :- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/gdpr_data_subject_rights_response_duties, [decide_gdpr_data_subject_rights_response_duties/2]).
 
 % ---- Subject registry ------------------------------------------------
-gdpr_data_subject_rights_response_duties_subject(access_basic).
-gdpr_data_subject_rights_response_duties_subject(access_excessive).
-gdpr_data_subject_rights_response_duties_subject(access_not_excessive).
-gdpr_data_subject_rights_response_duties_subject(access_unable_to_identify).
-gdpr_data_subject_rights_response_duties_subject(access_identity_suspended).
-gdpr_data_subject_rights_response_duties_subject(access_identity_confirmed).
-gdpr_data_subject_rights_response_duties_subject(access_restricted_by_law).
-gdpr_data_subject_rights_response_duties_subject(access_not_restricted_by_law).
-gdpr_data_subject_rights_response_duties_subject(missing_request_type).
-gdpr_data_subject_rights_response_duties_subject(objection_without_ground).
-gdpr_data_subject_rights_response_duties_subject(request_type_invalid).
-gdpr_data_subject_rights_response_duties_subject(unknown_key_profile).
-gdpr_data_subject_rights_response_duties_subject(duplicate_key_profile).
-gdpr_data_subject_rights_response_duties_subject(rectification_inaccurate).
-gdpr_data_subject_rights_response_duties_subject(rectification_nothing_wrong).
-gdpr_data_subject_rights_response_duties_subject(rectification_keys_absent).
-gdpr_data_subject_rights_response_duties_subject(erasure_no_longer_necessary).
+gdpr_data_subject_rights_response_duties_subject(access_plain_must_comply).
+gdpr_data_subject_rights_response_duties_subject(access_manifestly_excessive_refused).
+gdpr_data_subject_rights_response_duties_subject(access_public_holiday_shift).
+gdpr_data_subject_rights_response_duties_subject(access_holiday_elsewhere_no_shift).
+gdpr_data_subject_rights_response_duties_subject(access_extension_necessary).
+gdpr_data_subject_rights_response_duties_subject(access_extension_not_necessary).
+gdpr_data_subject_rights_response_duties_subject(access_extension_unsure).
+gdpr_data_subject_rights_response_duties_subject(access_identity_doubts_suspended).
+gdpr_data_subject_rights_response_duties_subject(access_identity_confirmed_complies).
+gdpr_data_subject_rights_response_duties_subject(access_legislative_restriction_attested).
+gdpr_data_subject_rights_response_duties_subject(access_legislative_restriction_denied).
+gdpr_data_subject_rights_response_duties_subject(access_unable_to_identify_refused).
 gdpr_data_subject_rights_response_duties_subject(erasure_legal_claims_exception).
-gdpr_data_subject_rights_response_duties_subject(erasure_effort_excused).
+gdpr_data_subject_rights_response_duties_subject(erasure_without_exception_complies).
+gdpr_data_subject_rights_response_duties_subject(erasure_legal_obligation_not_attested).
+gdpr_data_subject_rights_response_duties_subject(erasure_legal_obligation_attested).
+gdpr_data_subject_rights_response_duties_subject(rectification_recipients_informed).
+gdpr_data_subject_rights_response_duties_subject(rectification_recipients_excused).
+gdpr_data_subject_rights_response_duties_subject(rectification_grounds_missing).
+gdpr_data_subject_rights_response_duties_subject(judgement_given_unsure_refers).
+gdpr_data_subject_rights_response_duties_subject(crisp_key_given_unsure).
 gdpr_data_subject_rights_response_duties_subject(restriction_accuracy_contested).
-gdpr_data_subject_rights_response_duties_subject(restriction_no_ground).
+gdpr_data_subject_rights_response_duties_subject(restriction_not_engaged).
 gdpr_data_subject_rights_response_duties_subject(portability_engaged).
-gdpr_data_subject_rights_response_duties_subject(portability_not_automated).
-gdpr_data_subject_rights_response_duties_subject(portability_public_task).
-gdpr_data_subject_rights_response_duties_subject(objection_marketing).
-gdpr_data_subject_rights_response_duties_subject(objection_not_marketing).
-gdpr_data_subject_rights_response_duties_subject(objection_art21_1_compelling).
-gdpr_data_subject_rights_response_duties_subject(automated_decision_consent).
-gdpr_data_subject_rights_response_duties_subject(automated_decision_no_consent).
-gdpr_data_subject_rights_response_duties_subject(automated_decision_special_bar).
-gdpr_data_subject_rights_response_duties_subject(extension_necessary).
-gdpr_data_subject_rights_response_duties_subject(extension_not_necessary).
-gdpr_data_subject_rights_response_duties_subject(extension_unsure).
-gdpr_data_subject_rights_response_duties_subject(holiday_shift).
-gdpr_data_subject_rights_response_duties_subject(no_holiday_shift).
-gdpr_data_subject_rights_response_duties_subject(leap_year).
-gdpr_data_subject_rights_response_duties_subject(year_end).
+gdpr_data_subject_rights_response_duties_subject(portability_rights_of_others).
+gdpr_data_subject_rights_response_duties_subject(objection_direct_marketing).
+gdpr_data_subject_rights_response_duties_subject(objection_not_direct_marketing).
+gdpr_data_subject_rights_response_duties_subject(objection_ground_missing).
+gdpr_data_subject_rights_response_duties_subject(automated_decision_explicit_consent).
+gdpr_data_subject_rights_response_duties_subject(automated_decision_special_category_bar).
+gdpr_data_subject_rights_response_duties_subject(request_type_absent_manifestly_excessive).
+gdpr_data_subject_rights_response_duties_subject(request_type_absent_not_excessive).
+gdpr_data_subject_rights_response_duties_subject(duplicate_request_type).
+gdpr_data_subject_rights_response_duties_subject(unknown_key_given).
+gdpr_data_subject_rights_response_duties_subject(profile_not_a_list).
 
-% ---- Profiles (attribute lists) --------------------------------------
-gdpr_data_subject_rights_response_duties_profile_for(access_basic, [
+% ---- Profiles --------------------------------------------------------
+
+% Art 15(1): access is always engaged; first period 2026-10-29 ends Sunday
+% 2026-11-29, moved to Monday 2026-11-30 (Reg 1182/71 Art 3(4)).
+gdpr_data_subject_rights_response_duties_profile_for(access_plain_must_comply, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29))
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_excessive, [
+
+% Near miss: Art 12(5) relief.
+gdpr_data_subject_rights_response_duties_profile_for(access_manifestly_excessive_refused, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29)),
     attribute(request_manifestly_unfounded_or_excessive, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_not_excessive, [
+
+% Art 3(4): attested holiday on Monday 2026-11-30 moves the end to 2026-12-01.
+gdpr_data_subject_rights_response_duties_profile_for(access_public_holiday_shift, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29)),
-    attribute(request_manifestly_unfounded_or_excessive, false)
+    attribute(public_holidays, attested([date(2026, 11, 30)], attestation(by, at, reason, none)))
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_unable_to_identify, [
+
+% Near miss: a holiday that is not the last day changes nothing.
+gdpr_data_subject_rights_response_duties_profile_for(access_holiday_elsewhere_no_shift, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29)),
-    attribute(controller_demonstrates_unable_to_identify_data_subject, true)
+    attribute(public_holidays, attested([date(2026, 12, 25)], attestation(by, at, reason, none)))
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_identity_suspended, [
+
+% Art 12(3) extension: three months from receipt, 2026-01-31 -> 2026-04-30.
+gdpr_data_subject_rights_response_duties_profile_for(access_extension_necessary, [
+    attribute(request_type, access),
+    attribute(request_received_on, date(2026, 1, 31)),
+    attribute(extension_claimed, true),
+    attribute(extension_necessary_for_complexity_and_number, true)
+]).
+
+% Near miss: extension not necessary, first period 2026-02-28 (Saturday) -> 2026-03-02.
+gdpr_data_subject_rights_response_duties_profile_for(access_extension_not_necessary, [
+    attribute(request_type, access),
+    attribute(request_received_on, date(2026, 1, 31)),
+    attribute(extension_claimed, true),
+    attribute(extension_necessary_for_complexity_and_number, false)
+]).
+
+gdpr_data_subject_rights_response_duties_profile_for(access_extension_unsure, [
+    attribute(request_type, access),
+    attribute(request_received_on, date(2026, 1, 31)),
+    attribute(extension_claimed, true),
+    attribute(extension_necessary_for_complexity_and_number, unsure)
+]).
+
+% Art 12(6): doubts and identity not confirmed suspend the duty and the clock.
+gdpr_data_subject_rights_response_duties_profile_for(access_identity_doubts_suspended, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29)),
     attribute(reasonable_doubts_about_identity, true),
     attribute(identity_confirmed, false)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_identity_confirmed, [
+
+% Near miss: identity confirmed.
+gdpr_data_subject_rights_response_duties_profile_for(access_identity_confirmed_complies, [
     attribute(request_type, access),
     attribute(request_received_on, date(2026, 10, 29)),
     attribute(reasonable_doubts_about_identity, true),
     attribute(identity_confirmed, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_restricted_by_law, [
+
+% Art 23(1): the blocking outside fact attested true relieves.
+gdpr_data_subject_rights_response_duties_profile_for(access_legislative_restriction_attested, [
     attribute(request_type, access),
-    attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(host, fixture_time, fixture_reason, none)))
+    attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(by, at, reason, none)))
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(access_not_restricted_by_law, [
+
+% Near miss: attested false is no exception.
+gdpr_data_subject_rights_response_duties_profile_for(access_legislative_restriction_denied, [
     attribute(request_type, access),
-    attribute(legislative_restriction_applies_to_the_right, attested(false, attestation(host, fixture_time, fixture_reason, none)))
+    attribute(legislative_restriction_applies_to_the_right, attested(false, attestation(by, at, reason, none)))
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(missing_request_type, []).
-gdpr_data_subject_rights_response_duties_profile_for(objection_without_ground, [
-    attribute(request_type, objection)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(request_type_invalid, [
-    attribute(request_type, other)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(unknown_key_profile, [
+
+% Art 12(2): unable to identify the data subject.
+gdpr_data_subject_rights_response_duties_profile_for(access_unable_to_identify_refused, [
     attribute(request_type, access),
-    attribute(bogus_key, true)
+    attribute(controller_demonstrates_unable_to_identify_data_subject, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(duplicate_key_profile, [
-    attribute(request_type, access),
-    attribute(request_type, access)
+
+% Art 17(1)(a) engaged, Art 17(3)(e) relieves; Art 19 not triggered by a refusal.
+gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_claims_exception, [
+    attribute(request_type, erasure),
+    attribute(data_no_longer_necessary_for_purposes, true),
+    attribute(processing_necessary_for_legal_claims, true),
+    attribute(personal_data_disclosed_to_recipients, true),
+    attribute(recipient_notification_impossible_or_disproportionate_effort, false),
+    attribute(data_subject_asks_who_the_recipients_are, false)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(rectification_inaccurate, [
-    attribute(request_type, rectification),
-    attribute(personal_data_inaccurate, true),
-    attribute(personal_data_disclosed_to_recipients, false)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(rectification_nothing_wrong, [
-    attribute(request_type, rectification),
-    attribute(personal_data_inaccurate, false),
-    attribute(personal_data_incomplete_in_light_of_purposes, false)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(rectification_keys_absent, [
-    attribute(request_type, rectification)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(erasure_no_longer_necessary, [
+
+% Near miss: no legal-claims exception, erasure carried out, Art 19 applies.
+gdpr_data_subject_rights_response_duties_profile_for(erasure_without_exception_complies, [
     attribute(request_type, erasure),
     attribute(data_no_longer_necessary_for_purposes, true),
     attribute(processing_necessary_for_legal_claims, false),
     attribute(personal_data_disclosed_to_recipients, true),
     attribute(recipient_notification_impossible_or_disproportionate_effort, false),
+    attribute(data_subject_asks_who_the_recipients_are, false)
+]).
+
+% Art 17(1)(e): every other ground unmet, the enabling fact absent refers.
+gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_obligation_not_attested, [
+    attribute(request_type, erasure),
+    attribute(data_no_longer_necessary_for_purposes, false),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, false),
+    attribute(personal_data_unlawfully_processed, false),
+    attribute(collected_in_relation_to_information_society_services_offer, false)
+]).
+
+% Near miss: the enabling fact attested true engages the right.
+gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_obligation_attested, [
+    attribute(request_type, erasure),
+    attribute(data_no_longer_necessary_for_purposes, false),
+    attribute(consent_is_the_basis_of_processing, false),
+    attribute(objection_under_art21_1_made, false),
+    attribute(objection_under_art21_2_made, false),
+    attribute(personal_data_unlawfully_processed, false),
+    attribute(collected_in_relation_to_information_society_services_offer, false),
+    attribute(erasure_required_by_union_or_member_state_law, attested(true, attestation(by, at, reason, none)))
+]).
+
+% Art 16 and Art 19: communicate, and inform the data subject on request.
+gdpr_data_subject_rights_response_duties_profile_for(rectification_recipients_informed, [
+    attribute(request_type, rectification),
+    attribute(personal_data_inaccurate, true),
+    attribute(personal_data_disclosed_to_recipients, true),
+    attribute(recipient_notification_impossible_or_disproportionate_effort, false),
     attribute(data_subject_asks_who_the_recipients_are, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(erasure_legal_claims_exception, [
-    attribute(request_type, erasure),
-    attribute(data_no_longer_necessary_for_purposes, true),
-    attribute(processing_necessary_for_legal_claims, true)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(erasure_effort_excused, [
-    attribute(request_type, erasure),
-    attribute(data_no_longer_necessary_for_purposes, true),
+
+% Near miss: disproportionate effort excuses the communication (Q24).
+gdpr_data_subject_rights_response_duties_profile_for(rectification_recipients_excused, [
+    attribute(request_type, rectification),
+    attribute(personal_data_inaccurate, true),
     attribute(personal_data_disclosed_to_recipients, true),
-    attribute(recipient_notification_impossible_or_disproportionate_effort, true)
+    attribute(recipient_notification_impossible_or_disproportionate_effort, true),
+    attribute(data_subject_asks_who_the_recipients_are, true)
 ]).
+
+gdpr_data_subject_rights_response_duties_profile_for(rectification_grounds_missing, [
+    attribute(request_type, rectification)
+]).
+
+% A judgement given unsure is accepted and refers on Art 16.
+gdpr_data_subject_rights_response_duties_profile_for(judgement_given_unsure_refers, [
+    attribute(request_type, rectification),
+    attribute(personal_data_inaccurate, false),
+    attribute(personal_data_incomplete_in_light_of_purposes, unsure)
+]).
+
+% Near miss: a crisp key given unsure is an input problem.
+gdpr_data_subject_rights_response_duties_profile_for(crisp_key_given_unsure, [
+    attribute(request_type, rectification),
+    attribute(personal_data_inaccurate, unsure)
+]).
+
+% Art 18(1)(a).
 gdpr_data_subject_rights_response_duties_profile_for(restriction_accuracy_contested, [
     attribute(request_type, restriction),
     attribute(accuracy_contested_by_data_subject, true),
     attribute(personal_data_disclosed_to_recipients, false)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(restriction_no_ground, [
+
+% Near miss: every point of Art 18(1) unmet.
+gdpr_data_subject_rights_response_duties_profile_for(restriction_not_engaged, [
     attribute(request_type, restriction),
     attribute(accuracy_contested_by_data_subject, false),
-    attribute(personal_data_unlawfully_processed, false),
-    attribute(controller_no_longer_needs_data_for_processing_purposes, false),
+    attribute(data_subject_opposes_erasure, false),
+    attribute(data_required_by_data_subject_for_legal_claims, false),
     attribute(objection_under_art21_1_made, false)
 ]).
+
+% Art 20(1).
 gdpr_data_subject_rights_response_duties_profile_for(portability_engaged, [
     attribute(request_type, portability),
     attribute(personal_data_provided_by_data_subject, true),
     attribute(processing_based_on_consent_or_contract, true),
     attribute(processing_carried_out_by_automated_means, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(portability_not_automated, [
-    attribute(request_type, portability),
-    attribute(personal_data_provided_by_data_subject, true),
-    attribute(processing_based_on_consent_or_contract, true),
-    attribute(processing_carried_out_by_automated_means, false)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(portability_public_task, [
+
+% Near miss: Art 20(4).
+gdpr_data_subject_rights_response_duties_profile_for(portability_rights_of_others, [
     attribute(request_type, portability),
     attribute(personal_data_provided_by_data_subject, true),
     attribute(processing_based_on_consent_or_contract, true),
     attribute(processing_carried_out_by_automated_means, true),
-    attribute(processing_necessary_for_public_task_or_official_authority, true)
+    attribute(transmission_would_adversely_affect_rights_and_freedoms_of_others, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(objection_marketing, [
+
+% Art 21(2): absolute right to object to direct marketing.
+gdpr_data_subject_rights_response_duties_profile_for(objection_direct_marketing, [
     attribute(request_type, objection),
     attribute(objection_ground_claimed, art21_2),
     attribute(processing_for_direct_marketing, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(objection_not_marketing, [
+
+% Near miss: no direct marketing, the right is not engaged.
+gdpr_data_subject_rights_response_duties_profile_for(objection_not_direct_marketing, [
     attribute(request_type, objection),
     attribute(objection_ground_claimed, art21_2),
     attribute(processing_for_direct_marketing, false)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(objection_art21_1_compelling, [
-    attribute(request_type, objection),
-    attribute(objection_ground_claimed, art21_1),
-    attribute(processing_based_on_art6_1_e_or_f, true),
-    attribute(objection_grounds_relate_to_particular_situation, true),
-    attribute(controller_demonstrates_compelling_legitimate_grounds, true)
+
+gdpr_data_subject_rights_response_duties_profile_for(objection_ground_missing, [
+    attribute(request_type, objection)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(automated_decision_consent, [
+
+% Art 22(1) engaged, Art 22(2)(c) relieves.
+gdpr_data_subject_rights_response_duties_profile_for(automated_decision_explicit_consent, [
     attribute(request_type, automated_decision),
     attribute(decision_based_solely_on_automated_processing, true),
     attribute(decision_produces_legal_or_similarly_significant_effects, true),
     attribute(data_subject_gave_explicit_consent, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(automated_decision_no_consent, [
-    attribute(request_type, automated_decision),
-    attribute(decision_based_solely_on_automated_processing, true),
-    attribute(decision_produces_legal_or_similarly_significant_effects, true),
-    attribute(data_subject_gave_explicit_consent, false)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(automated_decision_special_bar, [
+
+% Near miss: the Art 22(4) bar disables Art 22(2)(c).
+gdpr_data_subject_rights_response_duties_profile_for(automated_decision_special_category_bar, [
     attribute(request_type, automated_decision),
     attribute(decision_based_solely_on_automated_processing, true),
     attribute(decision_produces_legal_or_similarly_significant_effects, true),
@@ -201,42 +303,29 @@ gdpr_data_subject_rights_response_duties_profile_for(automated_decision_special_
     attribute(decision_based_on_special_categories, true),
     attribute(special_category_condition_and_safeguards_met_for_decision, false)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(extension_necessary, [
-    attribute(request_type, access),
-    attribute(request_received_on, date(2026, 1, 31)),
-    attribute(extension_claimed, true),
-    attribute(extension_necessary_for_complexity_and_number, true)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(extension_not_necessary, [
-    attribute(request_type, access),
-    attribute(request_received_on, date(2026, 1, 31)),
-    attribute(extension_claimed, true),
-    attribute(extension_necessary_for_complexity_and_number, false)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(extension_unsure, [
-    attribute(request_type, access),
-    attribute(request_received_on, date(2026, 1, 31)),
-    attribute(extension_claimed, true),
-    attribute(extension_necessary_for_complexity_and_number, unsure)
-]).
-gdpr_data_subject_rights_response_duties_profile_for(holiday_shift, [
-    attribute(request_type, access),
+
+% Completion test: a common exception met settles the duties whatever the type.
+gdpr_data_subject_rights_response_duties_profile_for(request_type_absent_manifestly_excessive, [
     attribute(request_received_on, date(2026, 10, 29)),
-    attribute(public_holidays, attested([date(2026, 11, 30)], attestation(host, fixture_time, fixture_reason, none)))
+    attribute(request_manifestly_unfounded_or_excessive, true)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(no_holiday_shift, [
+
+% Near miss: no exception, the request type is named.
+gdpr_data_subject_rights_response_duties_profile_for(request_type_absent_not_excessive, [
+    attribute(request_manifestly_unfounded_or_excessive, false)
+]).
+
+gdpr_data_subject_rights_response_duties_profile_for(duplicate_request_type, [
     attribute(request_type, access),
-    attribute(request_received_on, date(2026, 10, 29)),
-    attribute(public_holidays, attested([], attestation(host, fixture_time, fixture_reason, none)))
+    attribute(request_type, erasure)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(leap_year, [
+
+gdpr_data_subject_rights_response_duties_profile_for(unknown_key_given, [
     attribute(request_type, access),
-    attribute(request_received_on, date(2028, 1, 31))
+    attribute(favourite_colour, blue)
 ]).
-gdpr_data_subject_rights_response_duties_profile_for(year_end, [
-    attribute(request_type, access),
-    attribute(request_received_on, date(2026, 12, 31))
-]).
+
+gdpr_data_subject_rights_response_duties_profile_for(profile_not_a_list, not_an_attribute_list).
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_data_subject_rights_response_duties_assess(Subject, Result) :-

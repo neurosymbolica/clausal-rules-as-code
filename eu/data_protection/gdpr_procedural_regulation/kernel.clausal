@@ -2,73 +2,93 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_procedural_regulation (deontic family).
 %
-% Source: Regulation (EU) 2025/2518 (GDPR Procedural Regulation), CELEX
-% 32025R2518, OJ L, 12.12.2025 -- Arts 4, 5, 6, 10, 12, 14, 36 and 37(2)
-% as pinned by the order. The kernel decides no statutory condition: it
-% holds only the input check, which the scaffold writes here from the
-% order's typed input contract (INTERFACE - THE INPUT CHECK) and which the
-% determination slice and queries.clausal import:
-%   :- use_module(eu/data_protection/gdpr_procedural_regulation/kernel,
-%                 [gdpr_procedural_regulation_input_problems/2]).
+% Source: Regulation (EU) 2025/2518 (GDPR Procedural Regulation), OJ L,
+% 12.12.2025 (CELEX 32025R2518): Art 4 (admissibility, prior request,
+% transmission, competence), Art 5 (early resolution), Art 6 (simple
+% cooperation procedure), Art 10 and Art 12 (time limits), Art 14 (late
+% steps), Art 36 and Art 37(2) (application in time).
 %
-% There is one determination slice (gdpr_procedural_regulation.clausal),
-% so no rule predicate is shared and nothing else lives here. A predicate
-% moves here only when a SECOND file calls it.
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> gdpr_procedural_regulation
+%          -> queries -> fixtures -> package facade
+% It holds ONLY the predicates that two or more files CALL. Today that is
+% the order's input check, gdpr_procedural_regulation_input_problems/2,
+% written by the scaffold from the order's typed input contract and
+% called by the slice (step 0 of every query), by queries.clausal and by
+% the facade. Everything else (the absent referral, the calendar-day
+% test of EVENT_DATE, the table of time limits, the application day) has
+% ONE caller, the slice gdpr_procedural_regulation.clausal, and lives
+% there. Move a predicate here only when a SECOND file calls it:
+%   :- use_module(eu/data_protection/gdpr_procedural_regulation/kernel, [shared_predicate/2]).
 %
-% Atoms and data terms need NO declaration and NO import. The comment
-% block below only RECORDS the result terms so every file spells them alike.
+% deontic family: STATUS is a modal vocabulary (cf.
+% eu/procurement/exclusion_grounds). Atoms and data terms need NO
+% declaration and NO import; the block below only RECORDS the result
+% terms so every file spells them alike.
 %
-% RESULT TERMS (the order's called contract; every query yields exactly
-% ONE solution; CITATIONS is a set-like list of cite(Key) terms):
-%   complaint_admissibility(Profile, Result, Citations)
-%       Result: admissible | inadmissible | status compound.
-%   prior_request_condition(Profile, Result, Citations)
-%       Result: prior_request_not_required | prior_request_made |
-%               prior_request_not_made | status compound.
-%   early_resolution(Profile, Result, Citations)
-%       Result: early_resolution_not_available | complaint_not_devoid_of_purpose |
-%               early_resolution_objected |
-%               resolution_established_by_receiving_authority |
-%               draft_decision_establishing_resolution | status compound.
-%   simple_cooperation_procedure(Profile, Result, Basis, Citations)
-%       Result: chapter_iii_not_applicable | simple_procedure_not_available |
-%               simple_procedure_excluded_by_objection |
-%               simple_procedure_available | status compound.
-%       Basis: [outside_fact(case_handled_under_article_56_2, Attested)] on a
-%              final Result, [] otherwise.
-%   draft_decision_time_limit(Profile, Result, Basis, Citations)
-%       Result: draft_decision_limit(Months, Extension), Months 15 or 12,
-%               Extension no_extension | extension(up_to, N, months), N 12 or 2;
-%               or a status compound.
-%       Basis: suspended_until_board_binding_decision, extension_not_permitted
-%              (in that order, each at most once), then
-%              outside_fact(national_law_requires_domestic_proceedings_after_time_limit,
-%              Attested) where the limbs copy it; possibly [].
-%   late_step_effect(Profile, Result, Basis, Citations)
-%       Result: legality_and_validity_not_affected | not_governed_by_article_14 |
-%               status compound.
-%       Basis: [outside_fact(time_limit_set_by_this_regulation_or_article_65_6,
-%              Attested)] on a final Result, [] otherwise.
-%   procedural_time_limit(Profile, Step, Limit, Citations)
-%       Limit: limit(N, Unit, Relation, Event, Extension), Unit weeks | months,
-%              Relation within | at_least_before, Extension no_extension |
-%              extension(exactly, N2, Unit2) | extension(up_to, N2, Unit2);
-%              or input_problems(Problems).
-%   temporal_application(Profile, Part, EventDate, Result, Citations)
-%       Result: part_applies | part_does_not_apply | input_problems(Problems).
-%   Facade: gdpr_procedural_regulation_verdict(Status, Citations), Status the
-%       complaint_admissibility Result.
+% ---- Result terms built by the slice (THE CALLED CONTRACT) ----------
+% Every query takes PROFILE first, an attribute list
+% [attribute(Key, Value), ...] read with profile_get/3, and yields exactly
+% ONE solution. CITATIONS is always a set-like list of cite(Key) terms.
 %
-% STATUS COMPOUNDS (never written bare):
-%   indeterminate([Key])  -- one missing judgement or crisp key;
+% complaint_admissibility(Profile, Result, Citations)
+%   Result: admissible | inadmissible | a status compound.
+% prior_request_condition(Profile, Result, Citations)
+%   Result: prior_request_not_required | prior_request_made |
+%           prior_request_not_made | a status compound.
+% early_resolution(Profile, Result, Citations)
+%   Result: early_resolution_not_available |
+%           complaint_not_devoid_of_purpose | early_resolution_objected |
+%           resolution_established_by_receiving_authority |
+%           draft_decision_establishing_resolution | a status compound.
+% simple_cooperation_procedure(Profile, Result, Basis, Citations)
+%   Result: chapter_iii_not_applicable | simple_procedure_not_available |
+%           simple_procedure_excluded_by_objection |
+%           simple_procedure_available | a status compound.
+%   Basis: [outside_fact(case_handled_under_article_56_2, Attested)] when
+%          Result is final, Attested the term exactly as supplied; else [].
+% draft_decision_time_limit(Profile, Result, Basis, Citations)
+%   Result: draft_decision_limit(Months, Extension), Months 15 or 12,
+%           Extension no_extension | extension(up_to, N, months), N 12 or 2;
+%           or a status compound.
+%   Basis: suspended_until_board_binding_decision, extension_not_permitted
+%          (in that order, each at most once), then
+%          outside_fact(national_law_requires_domestic_proceedings_after_time_limit, Attested)
+%          where the limbs copy it; possibly [].
+% late_step_effect(Profile, Result, Basis, Citations)
+%   Result: legality_and_validity_not_affected |
+%           not_governed_by_article_14 | a status compound.
+%   Basis: [outside_fact(time_limit_set_by_this_regulation_or_article_65_6, Attested)]
+%          when Result is final; else [].
+% procedural_time_limit(Profile, Step, Limit, Citations)
+%   Limit: limit(N, Unit, Relation, Event, Extension), Unit weeks | months,
+%          Relation within | at_least_before, Event one of the ten event
+%          atoms, Extension no_extension | extension(exactly, N2, Unit2) |
+%          extension(up_to, N2, Unit2); or input_problems(Problems).
+% temporal_application(Profile, Part, EventDate, Result, Citations)
+%   Part: complaints_and_early_resolution | cooperation_and_files |
+%         dispute_resolution_and_urgency; EventDate date(Y, M, D).
+%   Result: part_applies | part_does_not_apply | input_problems(Problems).
+%
+% Status compounds (never the bare atom indeterminate):
+%   indeterminate([Key])                       -- one missing key
 %   needs_legal_review(open_textured(Key, cite(Citation)),
-%                      [inputs_relied_on([Key-unsure])]);
+%                      [inputs_relied_on([Key-unsure])])
 %   needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
 %                      [resolution(cite(Target), not_attempted),
-%                       inputs_relied_on([Key-absent])]);
-%   input_problems(Problems), Problems drawn from duplicate_key(Key),
-%                      wrong_type(Key) and unknown_key(Key).
-% Every non-final status carries Basis [] and Citations [].
+%                       inputs_relied_on([Key-absent])])
+%   input_problems(Problems), Problems a list of duplicate_key(Key),
+%                      wrong_type(Key) and unknown_key(Key) terms.
+% Every non-final status gives Basis [] and Citations [].
+%
+% Facade verdict (the admissibility determination, query type #3):
+%   gdpr_procedural_regulation_verdict(Status, Citations)
+%   Status and Citations exactly those of complaint_admissibility/3.
+%
+% Outside-fact value (the attested wrapper, never inspected beyond the
+% unbound-variable test, copied whole into Basis):
+%   attested(true | false, attestation(By, At, Reason, Evidence)),
+%   Evidence none | url(Url, RetrievedAt) | document(UploadId, Sha256).
 % =====================================================================
 
 :- module(kernel, [gdpr_procedural_regulation_input_problems/2]).

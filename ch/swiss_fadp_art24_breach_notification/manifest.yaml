@@ -15,40 +15,31 @@ modules:
   - "swiss_fadp_art24_breach_notification"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only, grouped per submodule -- keep
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
 # in sync with the :- module(...) export lists re-exported via the package
-# facade __init__.clausal. The /0 entries are the root_exports and answer
-# atoms of the order's contract, defined as facts in queries.clausal.
+# facade __init__.clausal. The answer atoms, result constructors and
+# root_exports are served as exported predicates of queries.clausal.
 public_interface:
-  # -- kernel.clausal --
+  # -- kernel.clausal (re-exported by queries.clausal) --
+  - "swiss_fadp_art24_breach_notification_input_problems/2"
   # -- citations.clausal --
   - "citation/2"
+  - "implements/1"
   # -- swiss_fadp_art24_breach_notification.clausal --
   - "decide_swiss_fadp_art24_breach_notification/2"
   - "swiss_fadp_art24_breach_notification_status/2"
   - "swiss_fadp_art24_breach_notification_checklist/2"
   - "swiss_fadp_art24_breach_notification_decision_resolvable/1"
   - "swiss_fadp_art24_breach_notification_status_values/1"
+  # -- queries.clausal (the called contract, re-exported from the slice) --
   - "swiss_controller_report_to_commissioner/3"
   - "swiss_processor_report_to_controller/3"
   - "swiss_information_of_data_subject/3"
   - "eu_controller_notification_to_supervisory_authority/3"
   - "compare_swiss_eu_authority_notification/5"
-  # -- queries.clausal --
   - "swiss_fadp_art24_breach_notification_profile_keys/1"
-  - "swiss_fadp_art24_breach_notification_input_problems/2"
   - "swiss_fadp_art24_breach_notification_what_if/4"
-  - "swiss_fadp_art24_breach_notification_obligations/2"
-  - "breach_of_data_security/0"
-  - "breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights/0"
-  - "information_necessary_for_protection_of_data_subject/0"
-  - "commissioner_requested_information_of_data_subject/0"
-  - "article_26_ground_or_statutory_secrecy_obligation_applies/0"
-  - "information_impossible_or_requires_disproportionate_effort/0"
-  - "information_ensured_comparably_by_public_announcement/0"
-  - "personal_data_breach/0"
-  - "breach_unlikely_to_result_in_risk/0"
-  - "unsure/0"
+  # -- queries.clausal: answer atoms --
   - "authority_notification_required/0"
   - "authority_notification_not_required/0"
   - "report_to_controller_required/0"
@@ -59,6 +50,7 @@ public_interface:
   - "same/0"
   - "differs/0"
   - "not_comparable/0"
+  # -- queries.clausal: result constructors --
   - "indeterminate/1"
   - "needs_legal_review/2"
   - "open_textured/2"
@@ -68,6 +60,17 @@ public_interface:
   - "unknown_key/1"
   - "wrong_type/1"
   - "duplicate_key/1"
+  # -- queries.clausal: root_exports (profile key atoms and unsure) --
+  - "breach_of_data_security/0"
+  - "breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights/0"
+  - "information_necessary_for_protection_of_data_subject/0"
+  - "commissioner_requested_information_of_data_subject/0"
+  - "article_26_ground_or_statutory_secrecy_obligation_applies/0"
+  - "information_impossible_or_requires_disproportionate_effort/0"
+  - "information_ensured_comparably_by_public_announcement/0"
+  - "personal_data_breach/0"
+  - "breach_unlikely_to_result_in_risk/0"
+  - "unsure/0"
   # -- fixtures.clausal --
   - "swiss_fadp_art24_breach_notification_subject/1"
   - "swiss_fadp_art24_breach_notification_profile_for/2"
@@ -77,46 +80,42 @@ public_interface:
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
-# Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. None: only the kit (formalize_lib) is used.
+# Reuse-declaration lever: the package imports only the kit's formalize_lib
+# and library(reif); no shared backbone package.
 uses: []
 
 scope: >-
-  Swiss law in force (a reading, not a lawyer's). The breach-reporting
-  duties of the Swiss Federal Act on Data Protection (DSG, SR 235.1, German text,
-  fedlex consolidation Stand 7 July 2025, authoritative; English glosses
-  unofficial) Art 24: the controller's report to the Federal Data Protection and
-  Information Commissioner (EDOeB) under Art 24(1), the processor's report to the
-  controller under Art 24(3), and the information of the data subject under Art
-  24(4) with its restriction, deferral or omission under Art 24(5), with the
-  definition of a breach of data security in DSG Art 5 letter h. For comparison
-  its own limb for Regulation (EU) 2016/679 (GDPR) Art 33(1), the controller's
-  notification to the supervisory authority, compared on the same facts with the
-  Swiss authority duty (the two threshold provisions make any difference).
-  Every open-textured matter (breach, likely high risk, necessity, the Art 24(5)
-  grounds, the EU breach and unlikely-risk judgements) is a tri-state judgement
-  of the caller; an unsure one that decides goes to a lawyer as
-  needs_legal_review. No date argument and no deadline: 'so rasch als moeglich'
-  has no number and the EU 72 hours are not read. Out of scope: timeliness and
-  content of a report or information, DSV Art 15, the documentation duty, the
-  Commissioner's forwarding (Art 24(5bis)), use in criminal proceedings (Art
-  24(6)), penalties (DSG Arts 60, 61, which name no Art 24 duty), GDPR Art 33(2)
-  to (5) (sibling order gdpr-breach-notification), the Art 26 grounds, the GDPR
-  Art 4(12) definition and the scope of application of either instrument.
+  Swiss law in force (drafter's reading, not a lawyer's): the breach-reporting
+  duties of the Federal Act on Data Protection (DSG, SR 235.1, German text,
+  fedlex consolidation Stand 7 July 2025, authoritative): whether the controller
+  must report a breach of data security (DSG Art 5 letter h) to the Commissioner
+  (EDOEB) under DSG Art 24(1), whether the processor must report it to the
+  controller under DSG Art 24(3), and whether the controller must inform the
+  data subject under DSG Art 24(4) or may restrict, defer or dispense with that
+  information under DSG Art 24(5) letters a to c. For comparison, its own limb
+  for EU GDPR Art 33(1) (the controller's notification to the supervisory
+  authority) and a side-by-side comparison of the two authority duties on the
+  same facts. Open-textured judgements (breach, high risk, necessity, the
+  Art 24(5) grounds, personal data breach, unlikely risk) are handed to the
+  caller as tri-state values; an unsure judgement that decides goes to a lawyer
+  (needs_legal_review). Out of scope: timing ('so rasch als moeglich', the EU
+  72 hours), the content of a report or information (DSG Art 24(2), DSV Art 15),
+  documentation, the Commissioner's forwarding (Art 24(5bis)), use in criminal
+  proceedings (Art 24(6)), penalties (DSG Arts 60 and 61), the Art 26 grounds
+  themselves, the EU definition of Art 4(12), and the scope of application of
+  the DSG and the GDPR. The order has no date argument.
 
 sources:
-  - "Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation Stand 7 July 2025, German text (authoritative), Akoma Ntoso, fetched 2026-11-14: Art 5 Bst. h (definition of Verletzung der Datensicherheit)"
-  - "Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation Stand 7 July 2025, German text (authoritative): Art 24 Abs. 1, 3, 4 and 5 Bst. a to c (Meldung von Verletzungen der Datensicherheit)"
-  - "Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation Stand 7 July 2025, German text: Arts 60 and 61 (Strafbestimmungen; pinned, deferred: name no Art 24 duty)"
-  - "Verordnung ueber den Datenschutz (DSV), SR 235.11, fedlex consolidation Stand 1 December 2025, German text: Art 15 (pinned, deferred: content, phases, documentation)"
-  - "Regulation (EU) 2016/679 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Formex consolidation 02016R0679-20160504: Art 33(1) (notification of a personal data breach to the supervisory authority; comparison limb)"
+  - "Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation Stand 7 July 2025 (Akoma Ntoso, German text authoritative): Art 5 letter h; Art 24 paragraphs 1, 3, 4 and 5 letters a to c; Arts 60 and 61 pinned and deferred"
+  - "Verordnung ueber den Datenschutz (DSV), SR 235.11, fedlex consolidation Stand 1 December 2025: Art 15 pinned and deferred (content, phases, documentation)"
+  - "Regulation (EU) 2016/679 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Formex consolidation 02016R0679-20160504: Art 33(1) (comparison limb)"
 
 query_interface:
-  2: "swiss_fadp_art24_breach_notification_status/2"      # status verdict: the controller's report to the Commissioner
-  5: "compare_swiss_eu_authority_notification/5"          # comparison: Swiss DSG Art 24(1) against GDPR Art 33(1)
-  7: "swiss_fadp_art24_breach_notification_checklist/2"   # justification: one item per obligation with cite(...) provenance
-  14: "swiss_fadp_art24_breach_notification_obligations/2" # obligation surfacing: each bearer's duty and its answer
-  16: "swiss_fadp_art24_breach_notification_what_if/4"    # what_if: re-evaluate under an overridden key
+  2: "swiss_fadp_art24_breach_notification_status/2"       # status verdict: the controller's report to the Commissioner
+  5: "compare_swiss_eu_authority_notification/5"          # comparison: Swiss Art 24(1) against GDPR Art 33(1)
+  7: "swiss_fadp_art24_breach_notification_checklist/2"    # justification: one row per duty, each with cite(...)
+  14: "swiss_controller_report_to_commissioner/3"         # obligation surfacing: what must the controller do
+  16: "swiss_fadp_art24_breach_notification_what_if/4"     # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings
@@ -298,6 +297,6 @@ excluded_set:
   - ch-fadp-sr-235-1#art_74
   - ch-fadp-ord-sr-235-11#final_provisions
   reason: 'The entry-into-force and transitional provisions were not pinned or read:
-    a missing fact named under the status rule (reading (10)(iii), open question Q8).'
+    a missing fact named under the ruling (reading (10)(iii), open question Q8).'
   consequence: The order answers under the pinned consolidations only and has no date
     argument.

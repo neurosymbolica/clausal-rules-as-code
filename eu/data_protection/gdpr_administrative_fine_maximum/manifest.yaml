@@ -3,7 +3,11 @@ id: eu/data_protection/gdpr_administrative_fine_maximum
 shape_family: numeric
 kit_version: "0.1.0"
 # The domain's .clausal file set, in import-DAG order (determination slices
-# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -11,18 +15,16 @@ modules:
   - "gdpr_administrative_fine_maximum"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only (atoms need no export).
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade.
 public_interface:
-  # -- kernel.clausal -- (gdpr_administrative_fine_maximum_input_problems/2 is listed under queries)
+  # -- kernel.clausal --
+  - "gdpr_administrative_fine_maximum_input_problems/2"
   # -- citations.clausal --
   - "citation/2"
+  - "implements/1"
   # -- gdpr_administrative_fine_maximum.clausal --
   - "administrative_fine_maximum/3"
-  - "decide_gdpr_administrative_fine_maximum/2"
-  - "gdpr_administrative_fine_maximum_status/2"
-  - "gdpr_administrative_fine_maximum_checklist/2"
-  - "gdpr_administrative_fine_maximum_decision_resolvable/1"
-  - "gdpr_administrative_fine_maximum_status_values/1"
   - "fine_maximum/3"
   - "separate_fine_maxima/1"
   - "infringement_maximum/4"
@@ -35,33 +37,52 @@ public_interface:
   - "unknown_key/1"
   - "wrong_type/1"
   - "duplicate_key/1"
+  - "decide_gdpr_administrative_fine_maximum/2"
+  - "gdpr_administrative_fine_maximum_status/2"
+  - "gdpr_administrative_fine_maximum_checklist/2"
+  - "gdpr_administrative_fine_maximum_decision_resolvable/1"
+  - "gdpr_administrative_fine_maximum_status_values/1"
   # -- queries.clausal --
   - "gdpr_administrative_fine_maximum_profile_keys/1"
-  - "gdpr_administrative_fine_maximum_input_problems/2"
   - "gdpr_administrative_fine_maximum_what_if/4"
+  - "gdpr_administrative_fine_maximum_cap_in_euro_cents/2"
   # -- fixtures.clausal --
   - "gdpr_administrative_fine_maximum_subject/1"
   - "gdpr_administrative_fine_maximum_profile_for/2"
   - "gdpr_administrative_fine_maximum_assess/2"
 
+# root_atoms: the bare atoms the reference scorer reads as package-root
+# attributes (the five profile keys and the judgement value unsure). An
+# export list holds only name/arity entries, so these live here and the
+# generated package facade carries them.
+root_atoms:
+  - "infringed_provisions"
+  - "infringer_is_undertaking"
+  - "total_worldwide_annual_turnover_in_euros"
+  - "infringements_concern_same_or_linked_processing_operations"
+  - "infringements_intentional_or_negligent"
+  - "unsure"
+
 # Independence classification: no external scorer yet -- the only check is a
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib, library(reif),
+# library(clpz)), no shared domain backbone package.
 uses: []
 
-scope: "The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6): the tier (10000000 EUR / 2 % or 20000000 EUR / 4 %) by infringed provision, the higher-of fixed amount and percentage of the economic unit's total worldwide annual turnover for an undertaking (integer euro cents, tie gives the fixed amount), the fixed amount alone for a non-undertaking, the gravest-infringement rule of Art 83(3) for several linked, intentional or negligent infringements, and separate maxima otherwise. Out of scope, handed to the lawyer: the amount actually imposed (Art 83(1)-(2)), public authorities (Art 83(7)), procedure (Art 83(8)-(9)), whether the infringer is an undertaking, foreign-currency turnover, and provisions Art 83(4)-(6) do not list."
+scope: "Regulation (EU) 2016/679 (GDPR) Article 83(3) to (6): the legal MAXIMUM of the administrative fine for one or several listed infringements. Decided here: the tier of each listed provision (Art 83(4), lower: EUR 10000000 or 2 %; Art 83(5) and (6), higher: EUR 20000000 or 4 %), whichever is higher for an undertaking, computed exactly in integer euro cents, and for several distinct provisions the gravest-infringement limit of Art 83(3) when the infringements concern the same or linked processing operations and were intentional or negligent, otherwise a separate maximum for each infringement (never summed). Handed to the user as judgements: whether the infringer is an undertaking (economic unit of competition law), same or linked processing operations, intent or negligence. Out of scope: the amount actually imposed (Art 83(1) and (2)), public authorities (Art 83(7)), procedure (Art 83(8) and (9)), the composition of the economic unit's turnover, currency conversion and the reference year of the preceding financial year; a provision Art 83(4) to (6) does not list is referred (not_governed_here)."
 
 sources:
-  - "Regulation (EU) 2016/679 (GDPR), Art 83(3), 83(4), 83(5), 83(6) (pinned consolidated text of 02016R0679-20160504)"
-  - "Regulation (EU) 2016/679 (GDPR), Art 4(18) and (19), quoted as context of the undertaking judgement; Art 83(7) quoted and deferred"
-  - "CJEU C-383/23 ILVA and C-807/21 Deutsche Wohnen (authority of the undertaking ruling); EDPB Guidelines 04/2022 v2.1 para 46 (authority of the separate-maxima ruling)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504 with the 2018 corrigendum: Article 83(3), (4)(a)-(c), (5)(a)-(e) and (6); Article 4(18) and (19) read as context of the judgement infringer_is_undertaking"
+  - "Authority of the 2026-11-01 rulings (not pinned): CJEU C-383/23 ILVA (paras 22, 23, 36) and C-807/21 Deutsche Wohnen (paras 55-57); EDPB Guidelines 04/2022 v2.1, Example 3 'Plurality of action'"
 
 query_interface:
-  2: "gdpr_administrative_fine_maximum_status/2"      # status verdict
-  7: "gdpr_administrative_fine_maximum_checklist/2"   # justification: cite(...) per item
-  16: "gdpr_administrative_fine_maximum_what_if/4"    # what_if: re-evaluate under an overridden key
-  23: "administrative_fine_maximum/3"                 # calculation: the cap in euro cents
+  2: "gdpr_administrative_fine_maximum_status/2"           # status verdict of the facade
+  7: "gdpr_administrative_fine_maximum_checklist/2"        # justification: rows carry cite(...)
+  16: "gdpr_administrative_fine_maximum_what_if/4"         # what_if: re-evaluate under an overridden key
+  23: "gdpr_administrative_fine_maximum_cap_in_euro_cents/2"  # calculation: integer cap in euro cents
 
 deferred_set:
 - what: art83_heading
@@ -112,6 +133,7 @@ deferred_set:
   what: art83_7_public_authorities
   units:
   - 02016R0679-20160504#parag_083.007
+  partial: true
   reason: 'Each Member State may lay down whether and to what extent administrative
     fines may be imposed on public authorities and bodies established there. That
     is Member State law, not pinned and not formalized here. CHOICE (the order''s
@@ -120,7 +142,7 @@ deferred_set:
     would need a public-authority input, an outside-fact key and a rule for what a
     Member State rule does to the Art 83(4)-(6) maximum, and Art 83(7) says nothing
     about the maximum, only about whether and to what extent a fine may be imposed.
-    Open question for the operator.'
+    OPEN QUESTIONS, Q3.'
   consequence: for a public authority the caller must check the Member State rule;
     this order returns the Regulation's maximum.
   declaration: answered_with_caveat
@@ -232,7 +254,7 @@ deferred_set:
   reason: '''Preceding financial year'' is not stated to precede the infringement
     or the decision. The order takes the figure as given by the caller and does not
     choose the reference year.'
-  consequence: The caller supplies the right year (open question for the operator).
+  consequence: The caller supplies the right year (OPEN QUESTIONS, Q2).
   declaration: answered_with_caveat
 
 excluded_set:
@@ -253,9 +275,11 @@ excluded_set:
   cites:
   - 62023CJ0383#operative_part
   - 62021CJ0807#operative_part
-  reason: Not pinned and not quoted. Named as the AUTHORITY of the 2026-11-01 ruling
-    in reading 6 (undertaking is the competition-law economic unit; its total worldwide
-    annual turnover of the preceding business year); no step computes from it.
+  reason: Not pinned. Named as the AUTHORITY of the 2026-11-01 ruling in reading 6
+    (undertaking is the competition-law economic unit; its total worldwide annual
+    turnover of the preceding business year). Point 2 of the operative part of C-807/21
+    is quoted in OPEN QUESTIONS, Q1, as the ground of that question; nothing else
+    of either judgment is quoted, and no step computes from either.
   consequence: The order computes no figure from the judgments; a caller who must
     apply the undertaking concept or the turnover of the preceding business year as
     the Court has read them, beyond reading 6, reads the judgments itself.
@@ -265,10 +289,11 @@ excluded_set:
   cites:
   - 02016R0679-20160504#parag_070.001
   - 02016R0679-20160504#point_070.001_k
-  reason: 'Soft law, not pinned and not quoted. Para 46 is named as the AUTHORITY
+  reason: Soft law, not pinned. One sentence of its Example 3 'Plurality of action',
+    which follows paragraph 45, is quoted in THE LIMBS, step (5b), as the AUTHORITY
     of the 2026-11-01 ruling for several infringements outside Art 83(3) (separate
-    maxima, no single legal maximum for their sum: THE LIMBS, step (5b)); the rest
-    concerns the amount imposed, which is deferred.'
+    maxima, no single legal maximum for their sum); no other part of the Guidelines
+    is quoted, and the rest concerns the amount imposed, which is deferred.
   consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
     itself. A caller who needs the amount actually imposed, or the guidance beyond
-    para 46, reads the Guidelines and applies them itself.
+    Example 3, reads the Guidelines and applies them itself.

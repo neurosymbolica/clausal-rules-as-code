@@ -2,120 +2,68 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for ch/swiss_fadp_art24_breach_notification (deontic family).
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL: the slice
-% swiss_fadp_art24_breach_notification.clausal and queries.clausal.
-% The scaffold writes the order's input check
+% PREDICATES that two or more files CALL. This domain has ONE
+% determination slice (swiss_fadp_art24_breach_notification.clausal), so no
+% rule logic is shared and none lives here.
+% Exception: the scaffold writes the order's input check
 % swiss_fadp_art24_breach_notification_input_problems/2 here, exported, for
-% every file to import.
+% the slice and queries.clausal to import (INTERFACE - THE INPUT CHECK).
 % deontic family: STATUS is a modal vocabulary (required / not_required /
 % may_be_restricted_deferred_or_omitted).
 %
-% Source (a reading, not a lawyer's; the German text is authoritative):
+% Source (the law the package formalizes; drafter's reading, not a
+% lawyer's; the German text is authoritative):
 %   Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation
-%   Stand 7 July 2025: Art 5 Bst. h (definition of Verletzung der
-%   Datensicherheit), Art 24 Abs. 1, 3, 4 and 5 (breach reporting and
-%   information of the data subject); Regulation (EU) 2016/679 Art 33(1)
-%   (comparison limb). The input check is typed against the order's
-%   input_contract and decides no article.
+%   Stand 7 July 2025: Art 5 letter h (breach of data security), Art 24
+%   paragraphs 1, 3, 4 and 5 (letters a to c);
+%   Regulation (EU) 2016/679 (GDPR) Art 33(1), Formex consolidation
+%   02016R0679-20160504 (the comparison limb).
+% The input check itself applies no statutory provision: it checks the
+% PROFILE against the order's typed input contract, so it carries no
+% implements/1 marker.
 %
-% Atoms and data terms need NO declaration and NO import. Nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
 %
-% Result terms of the slice (the answer positions of the queries):
-%   RESULT (argument 2 of each limb query) is EITHER one final atom:
-%     authority_notification_required | authority_notification_not_required
-%       (swiss_controller_report_to_commissioner/3,
-%        eu_controller_notification_to_supervisory_authority/3)
-%     report_to_controller_required | report_to_controller_not_required
-%       (swiss_processor_report_to_controller/3)
-%     information_of_data_subject_required
-%     | information_of_data_subject_not_required
-%     | information_of_data_subject_may_be_restricted_deferred_or_omitted
-%       (swiss_information_of_data_subject/3)
-%   OR one status compound ITSELF (never in a list):
-%     indeterminate([Key])            -- one bare key atom, the first missing
-%                                        key in root_exports order;
+% RESULT TERMS (the shapes of THE CALLED CONTRACT, for every file):
+%   Final answer atoms (arity 0, bare, never in a list):
+%     authority_notification_required, authority_notification_not_required
+%       (swiss_controller_report_to_commissioner/3, DSG Art 24(1);
+%        eu_controller_notification_to_supervisory_authority/3, GDPR Art 33(1));
+%     report_to_controller_required, report_to_controller_not_required
+%       (swiss_processor_report_to_controller/3, DSG Art 24(3));
+%     information_of_data_subject_required,
+%     information_of_data_subject_not_required,
+%     information_of_data_subject_may_be_restricted_deferred_or_omitted
+%       (swiss_information_of_data_subject/3, DSG Art 24(4) and (5));
+%     same, differs, not_comparable
+%       (DIFFERENCE of compare_swiss_eu_authority_notification/5).
+%   Status compounds (not final; the compound ITSELF in the answer position):
+%     indeterminate([Key])            -- exactly one bare key atom, the first
+%                                        missing key in root_exports order;
 %     needs_legal_review(open_textured(Key, cite(CitationKey)),
 %                        [inputs_relied_on(Pairs)])
 %                                     -- Pairs a flat list of Key-Value terms,
-%                                        the present input keys of the query in
-%                                        root_exports order (THE PAIRS RULE);
-%     input_problems(Problems)        -- Problems the non-empty list of
-%                                        duplicate_key/1, wrong_type/1 and
-%                                        unknown_key/1 terms.
-%   CITATIONS (argument 3) is a flat list of cite(Key); [] when not final.
-%   Comparison: compare_swiss_eu_authority_notification(Profile, SwissResult,
-%     EuResult, Difference, ChangedBy), Difference same | differs |
-%     not_comparable, ChangedBy a flat list of cite(Key).
-%   Facade headline verdict term:
-%     swiss_fadp_art24_breach_notification_verdict(status, citations)
+%                                        the present read keys, in order;
+%     input_problems(Problems)        -- Problems the non-empty list of this
+%                                        input check.
+%   Problem terms: duplicate_key(Key), wrong_type(Key), wrong_type(profile),
+%     unknown_key(Key).
+%   Citations: a flat set-like list of cite(CitationKey); [] when not final.
+%   Facade verdict term of the one slice:
+%     swiss_fadp_art24_breach_notification_verdict(Status, Citations)
+%     Status   -- the RESULT of swiss_controller_report_to_commissioner/3;
+%     Citations -- its citation list.
+% The domain has no date key and no statutory figure.
 %
-% Key states read by the slice and queries (key_state/3):
-%   absent | true | false | unsure -- called only on a profile with no
-%   input problems, so each key occurs at most once and has one state.
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
 % =====================================================================
 
-:- module(kernel, [
-    swiss_fadp_art24_breach_notification_input_problems/2,
-    swiss_fadp_art24_breach_notification_contract_keys/1,
-    swiss_fadp_art24_breach_notification_key_state/3,
-    swiss_fadp_art24_breach_notification_first_key_in_state/4,
-    swiss_fadp_art24_breach_notification_pairs/3
-]).
+:- module(kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
 
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
-
-% ---- the contract keys, in root_exports / input_contract order -----
-swiss_fadp_art24_breach_notification_contract_keys([
-    breach_of_data_security,
-    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights,
-    information_necessary_for_protection_of_data_subject,
-    commissioner_requested_information_of_data_subject,
-    article_26_ground_or_statutory_secrecy_obligation_applies,
-    information_impossible_or_requires_disproportionate_effort,
-    information_ensured_comparably_by_public_announcement,
-    personal_data_breach,
-    breach_unlikely_to_result_in_risk
-]).
-
-% ---- key states: absent, true, false or unsure ---------------------
-% swiss_fadp_art24_breach_notification_key_state(Profile, Key, State):
-% called only on a problem-free profile (each key at most once, each value
-% in its type), so exactly one clause holds. Profile plumbing: no marker.
-swiss_fadp_art24_breach_notification_key_state(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
-swiss_fadp_art24_breach_notification_key_state(Profile, Key, State) :-
-    profile_get(Profile, Key, Value),
-    present_state(Value, State).
-
-present_state(true, true).
-present_state(false, false).
-present_state(unsure, unsure).
-
-% swiss_fadp_art24_breach_notification_first_key_in_state(Profile, Keys, State, Key):
-% Key is the first of the ordered Keys whose state is State; no solution
-% when none is. The two recursive clauses are disjoint on the state.
-swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|_], State, Key) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State).
-swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|Keys], State, Found) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, OtherState),
-    dif(OtherState, State),
-    swiss_fadp_art24_breach_notification_first_key_in_state(Profile, Keys, State, Found).
-
-% swiss_fadp_art24_breach_notification_pairs(Profile, InputKeys, Pairs): THE PAIRS RULE.
-% Key-Value for each key of InputKeys (given in root_exports order) that is
-% present in Profile, the unsure one included; an absent key is no pair.
-swiss_fadp_art24_breach_notification_pairs(_, [], []).
-swiss_fadp_art24_breach_notification_pairs(Profile, [Key|Keys], Pairs) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State),
-    swiss_fadp_art24_breach_notification_pairs(Profile, Keys, LaterPairs),
-    pair_for_state(State, Key, LaterPairs, Pairs).
-
-pair_for_state(absent, _, Pairs, Pairs).
-pair_for_state(State, Key, Pairs, [Key-State|Pairs]) :-
-    dif(State, absent).
 
 % ---- input checks: the problems a profile has, if any -----------
 % swiss_fadp_art24_breach_notification_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -144,7 +92,7 @@ swiss_fadp_art24_breach_notification_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    swiss_fadp_art24_breach_notification_contract_keys(Keys),
+    Keys = [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement, personal_data_breach, breach_unlikely_to_result_in_risk],
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 

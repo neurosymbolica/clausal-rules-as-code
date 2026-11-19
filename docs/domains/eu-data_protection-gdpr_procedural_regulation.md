@@ -1,4 +1,4 @@
-# Regulation (EU) 2025/2518 (GDPR Procedural Regulation), for a complaint or an investigation concerning cross-border processing (the caller establishes the cross-border ...
+# Regulation (EU) 2025/2518 (GDPR Procedural Regulation), additional procedural rules for the enforcement of Regulation (EU) 2016/679 in cases concerning cross-border ...
 
 `eu/data_protection/gdpr_procedural_regulation`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 278/278 | none (no provision-tracking ledger) | pass | pass | pass |
+| 245/245 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Regulation (EU) 2025/2518 (GDPR Procedural Regulation), for a complaint or an investigation concerning cross-border processing (the caller establishes the cross-border character and the roles of the authorities). Decided here, from the pinned text only: the admissibility of a complaint (Art 4(1), 4(2), 4(5)); whether the prior request to the controller of Art 4(3) is required and made (reported, not made an item of admissibility); what follows from an early resolution (Art 5(1) to (4) and (6)); whether the simple cooperation procedure is available (Art 6(1), 6(3), 6(5)); which time limit applies to the draft decision and whether its extension is permitted (Art 6(1), Art 12(1) to (3) and (6)); the effect of a procedural step taken late (Art 14); a table of sixteen time limits (Arts 4, 5, 6, 10 and 12) stated as a number, a unit, a relation, an event and any extension; and from when Chapters II to VI apply (Art 36, Art 37(2)). Open-textured terms (a right exercised by request, issues addressable without additional cooperation, exceptional complexity) are tri-state judgements handed to the caller, with unsure referred to a lawyer; determinations under other law (a case handled under ...
+Regulation (EU) 2025/2518 (GDPR Procedural Regulation), additional procedural rules for the enforcement of Regulation (EU) 2016/679 in cases concerning cross-border processing. Decided here, from the pinned text only: whether a complaint is admissible (Art 4(1), 4(2), 4(5)); whether the prior request to the controller of Art 4(3) applies and was made; what follows once an authority examines a complaint for early resolution (Art 5(1) to (4) and (6)); whether the simple cooperation procedure is available, excluded by an objection or outside Chapter III (Art 6(1), 6(3), 6(5)); which time limit applies to the draft decision and any extension ceiling (Art 6(1), Art 12(1) to (3) and (6)); the effect of a procedural step taken late (Art 14); the sixteen time limits of Arts 4 to 6, 10 and 12 as number, unit, relation, event and extension; and from when Chapters II to VI apply (Art 36, Art 37(2)). Out of scope: calendar end dates of periods (deferred, period_end_dates), whether a case is cross-border and the roles of the authorities (given by the caller), determinations under Regulation (EU) 2016/679 (Art 56, 60, 65, 66, 77, 78, 80) and national law (supplied as attested outside facts), ...
 
 ## Pinned sources
 
@@ -73,7 +73,7 @@ Regulation (EU) 2025/2518 (GDPR Procedural Regulation), for a complaint or an in
 
 ??? info "period_end_dates"
 
-    **Why:** This order states every time limit as a number, a unit and an event (THE TIME LIMITS, draft_decision_time_limit) and computes no calendar end date: counting weeks and months from an event, the day of the event, a period ending on a month without that date, and a Saturday, Sunday or public holiday at the end are, in the author's reading (Q14), for the rules on periods of Regulation (EEC, Euratom) No 1182/71, Article 3, which are not pinned here and not re-derived; Article 1 of that Regulation names acts of the Council or Commission, Regulation (EU) 2025/2518 is an act of the European Parliament and of the Council, and its own text does not refer to Regulation (EEC, Euratom) No 1182/71. The shared order periods-regulation-1182-71 is to give them; it is not on this order's branch.
+    **Why:** This order states every time limit as a number, a unit and an event (THE TIME LIMITS, draft_decision_time_limit) and computes no calendar end date: counting weeks and months from an event, the day of the event, a period ending on a month without that date, and a Saturday, Sunday or public holiday at the end are, in the drafter's reading (Q14), for the rules on periods of Regulation (EEC, Euratom) No 1182/71, Article 3, which are not pinned here and not re-derived; Article 1 of that Regulation names acts of the Council or Commission, Regulation (EU) 2025/2518 is an act of the European Parliament and of the Council, and its own text does not refer to Regulation (EEC, Euratom) No 1182/71. The shared order periods-regulation-1182-71 is to give them; it is not on this order's branch.
 
     **Consequence for a user:** The caller counts the end date of each period itself from the event the answer names, under the rule it holds applicable; the facts that an objection or a step came in time (complainant_objected_to_early_resolution_in_time, concerned_authority_objected_to_simple_procedure_in_time) are stated by the caller after that count.
 

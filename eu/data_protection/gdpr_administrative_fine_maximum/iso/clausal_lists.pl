@@ -26,9 +26,14 @@
 % key in standard order and is STABLE, and the pairs are unwrapped again.
 % Ordering therefore comes from the host engine's standard order, exactly as
 % sort/2's would, and nothing here re-implements term comparison.
-:- module(clausal_lists, [msort/2]).
+%
+% Exported as clausal_msort/2, not msort/2: upstream Trealla (v3.15.20) warns
+% "overwriting 'msort'/2" on loading clauses that define its builtin, and the
+% consult gate reads that as a finding. The seam exporter respells each
+% msort(...) call to clausal_msort(...) (export.SEAM_COMPANION_RENAMES).
+:- module(clausal_lists, [clausal_msort/2]).
 
-msort(List, Sorted) :-
+clausal_msort(List, Sorted) :-
     msort_self_keyed(List, Keyed),
     keysort(Keyed, SortedKeyed),
     msort_unkeyed(SortedKeyed, Sorted).

@@ -1,4 +1,4 @@
-# WHEN the controller must give the data subject the information of GDPR Art 13(1) (data collected from the data subject: at the time the personal data are obtained) or ...
+# When must the controller give the data subject the information of GDPR Art 13(1) and Art 14(3), and did it come in time? Given one profile of one processing situation ...
 
 `eu/data_protection/gdpr_information_duties_timing`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 164/164 | none (no provision-tracking ledger) | pass | pass | pass |
+| 172/172 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-WHEN the controller must give the data subject the information of GDPR Art 13(1) (data collected from the data subject: at the time the personal data are obtained) or Art 14 (data not obtained from the data subject: Art 14(3)(a) within a reasonable period and at the latest within one month, (b) at the latest at the first communication, (c) at the latest at the first disclosure to another recipient, the earliest applicable date binding), and whether the one provision carried by the profile came in time. The one-month period is computed by Regulation (EEC, Euratom) No 1182/71 Art 3(1), 3(2)(c) and 3(4), applied to the GDPR by the G4 order, with an attested public-holiday list. Answers information_deadline/2 (the date), information_deadline_basis/2 (the limb) and information_timing_verdict/3 (timely | late, cited), with the input check gdpr_information_duties_timing_input_problems/2. The reasonable period is the user's judgement provided_within_reasonable_period; unsure refers to a lawyer. Out of scope: which items are owed or missing, the Art 14(5) exemptions, further processing and the headline verdict (sibling orders), the adequacy of an item's content (Q11), the form of the ...
+When must the controller give the data subject the information of GDPR Art 13(1) and Art 14(3), and did it come in time? Given one profile of one processing situation (one set of personal data from one source), this package answers (D) the DEADLINE, (E) the limb that fixes it and (F) whether the provision_date was timely or late. Art 13 route (data collected from the data subject): the deadline is the obtaining day. Art 14 route: the earliest of the limb (a) date (one month by Regulation (EEC, Euratom) No 1182/71 Art 3(1), 3(2)(c), 3(4) and 2(2), applied to the GDPR as a lawyer point), the first communication (b) and the first disclosure (c); the reasonable period of Art 14(3)(a) is the user's judgement, handed back when unsure; an absent public_holidays list refers only where a public holiday could change the answer. Out of scope, in the sibling orders: which items are owed or missing, further processing, the Art 14(5) exemptions and the headline verdict; Art 12 (form of the notice) is excluded; the adequacy of the content given is never decided.
 
 ## Pinned sources
 
@@ -42,27 +42,27 @@ WHEN the controller must give the data subject the information of GDPR Art 13(1)
 
     **Consequence for a user:** The answer takes provided_within_reasonable_period as the caller's judgement and checks only the one-month outer limit; the caller must weigh the specific circumstances of the processing under Art 14(3)(a) itself before judging it.
 
+??? info "art13_4_art14_5_a_information_already_held"
+
+    **Why:** Whether the data subject already has an item of the information, so that Art 13(4) or Art 14(5)(a) takes it out of the duty, is decided in gdpr-information-duties-items-and-further-processing (information_items_missing/2, which reads items_data_subject_already_has); that order defers neither unit.
+
+    **Consequence for a user:** This order does not read items_data_subject_already_has (SPLIT SCOPE): its deadline and verdict are given whatever the data subject already has; whether an item is still owed is answered by gdpr-information-duties-items-and-further-processing.
+
+??? info "art14_5_exemptions"
+
+    **Why:** Whether an exemption of Art 14(5)(b), (c) or (d) disapplies the information duty (the Art 14(5) chapeau) is decided in gdpr-information-duties-headline-verdict (information_duty_exemption/2). That order decides points (c) and (d) and the chapeau, and point (b) in part: the archiving, research and statistical purposes and the Art 89(1) conditions inside point (b) are its own partial deferral, decided by no order.
+
+    **Consequence for a user:** This order does not read provision_impossible_or_disproportionate_effort, protective_measures_taken or the two law facts (SPLIT SCOPE): its deadline and verdict are given whatever exemption may apply; whether Art 14(5) disapplies the duty is answered by gdpr-information-duties-headline-verdict.
+
 ??? info "regulation_1182_71_article_1_scope"
 
     **Why:** Article 1 limits Regulation (EEC, Euratom) No 1182/71 to acts of the Council or Commission; Regulation (EU) 2016/679 is an act of the European Parliament and of the Council. This order applies Article 3 to the periods of Regulation (EU) 2016/679 by analogy (a lawyer point, see PERIODS), so no rule reads Article 1.
 
     **Consequence for a user:** Every deadline this order gives rests on applying Article 3 of Regulation (EEC, Euratom) No 1182/71 to Regulation (EU) 2016/679, which Article 1 of that Regulation does not itself provide: a caller that relies on the date accepts that reading, or computes the period under the rule it holds applicable.
 
-??? info "regulation_1182_71_article_2_public_holidays_and_working_days"
+??? info "regulation_1182_71_article_2_1_public_holidays"
 
-    **Why:** Article 2(1) defines public holidays as the days designated as such in the Member State or in the Community institution in which action is to be taken, as published by the Commission in the Official Journal; Article 2(2) defines working days as all days other than public holidays, Sundays and Saturdays. This order chooses no Member State or institution and reads no published list: public holidays arrive as the outside fact public_holidays, and PERIODS states the working day of the Article 3(4) shift itself.
+    **Why:** Article 2(1) defines public holidays as the days designated as such in the Member State or in the Community institution in which action is to be taken, as published by the Commission in the Official Journal. This order chooses no Member State or institution and reads no published list: public holidays arrive as the outside fact public_holidays. Article 2(2), the working day of the Article 3(4) shift, is Union law and is quoted and read (PERIODS); it is not in this row.
 
-    **Consequence for a user:** The caller attests in public_holidays the public holidays of the Member State or Community institution in which the action is to be taken (Article 2(1)); a public holiday missing from that list, or an absent list, leaves a deadline that falls on that day unmoved, one working day early.
-
-??? info "art14_1_route_chapeau_and_items_owed"
-
-    **Why:** The chapeau of Art 14(1) is reached only as the route (the caller's crisp flag personal_data_collected_from_data_subject false selects Art 14(3), reading 1); points (a) to (f) list the items owed, answered by the sibling order gdpr-information-duties-items-and-further-processing (SPLIT SCOPE).
-
-    **Consequence for a user:** Whether the data were obtained from the data subject is the caller's statement (Q5), and which Art 14(1) items are owed is not tested here; the caller asks the sibling order for the items.
-
-??? info "art14_5_exemptions"
-
-    **Why:** The exemptions of Art 14(5) are answered by the sibling orders (SPLIT SCOPE); the keys they read (provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law) are accepted, checked by the input check and ignored here.
-
-    **Consequence for a user:** The deadline and the timing verdict are given even where an Art 14(5) exemption would lift the duty; the caller asks the sibling order whether the duty applies at all before relying on a late verdict.
+    **Consequence for a user:** The caller attests in public_holidays the public holidays of the Member State or Community institution in which the action is to be taken (Article 2(1)); a public holiday missing from an attested list leaves a deadline that falls on that day unmoved, one working day early; an absent list refers where a public holiday could change the answer (DEADLINE is a date only when a limb (b) or (c) date falls on or before the limb (a) date counted without public holidays, and is otherwise always the referral, whatever the date or weekday) (THE ANSWERS (P)).
 

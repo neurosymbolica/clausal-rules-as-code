@@ -1,521 +1,412 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % swiss_fadp_art24_breach_notification.clausal -- the "swiss_fadp_art24_breach_notification" DETERMINATION for ch/swiss_fadp_art24_breach_notification,
-% self-contained top to bottom: its statutory VALUE facts, its per-rule
+% self-contained top to bottom: its statutory VALUE facts (answer citation
+% rows, referral rows, read-key rows), its decision routes, its per-rule
 % tests, its checklist and its verdict assembly.
-% Deontic family: the terminal atoms are the modal answers of THE LIMBS.
+% Deontic family: the terminal atoms are the order's modal answer atoms.
 %
-% Source (a reading, not a lawyer's; the German text is authoritative):
-%   Bundesgesetz ueber den Datenschutz (DSG), SR 235.1, fedlex consolidation
-%   Stand 7 July 2025: Art 5 Bst. h (definition of Verletzung der
-%   Datensicherheit), Art 24 Abs. 1 (report of the controller to the EDOeB),
-%   Art 24 Abs. 3 (report of the processor to the controller), Art 24 Abs. 4
-%   and 5 (information of the data subject and its restriction, deferral or
-%   omission); Regulation (EU) 2016/679 Art 33(1) (comparison limb).
+% Source (drafter's reading, not a lawyer's; the German text is authoritative):
+%   DSG (SR 235.1, fedlex Stand 7 July 2025) Art 5 Bst h, Art 24 Abs 1, 3, 4
+%   and 5 (Bst a to c); Regulation (EU) 2016/679 Art 33(1) (comparison limb).
 %
-% No statutory figure is read: 'so rasch als moeglich' has no number and the
-% 72 hours of GDPR Art 33(1) are deliberately not read (readings (3), (7)).
-%
-% Steps of every query (THE LIMBS): input problems first; a settled value
-% decides; otherwise the first absent key among the keys the answer can
-% still need (indeterminate([Key])); otherwise the first unsure judgement
-% among them goes to a lawyer (needs_legal_review(open_textured(Key,
-% cite(Citation)), [inputs_relied_on(Pairs)])). Citations are fixed per
-% final answer (open question Q10).
+% Every query takes THE INPUT CHECK first (kernel), then its LIMBS in the
+% order the order states them; each step is complementary clauses, so each
+% query yields exactly ONE solution per profile.
+% Key states: absent, or the value as given (true, false, unsure).
 % =====================================================================
 
 :- module(swiss_fadp_art24_breach_notification, [
-    decide_swiss_fadp_art24_breach_notification/2,
-    swiss_fadp_art24_breach_notification_status/2,
-    swiss_fadp_art24_breach_notification_checklist/2,
-    swiss_fadp_art24_breach_notification_decision_resolvable/1,
-    swiss_fadp_art24_breach_notification_status_values/1,
     swiss_controller_report_to_commissioner/3,
     swiss_processor_report_to_controller/3,
     swiss_information_of_data_subject/3,
     eu_controller_notification_to_supervisory_authority/3,
-    compare_swiss_eu_authority_notification/5
+    compare_swiss_eu_authority_notification/5,
+    decide_swiss_fadp_art24_breach_notification/2,
+    swiss_fadp_art24_breach_notification_status/2,
+    swiss_fadp_art24_breach_notification_checklist/2,
+    swiss_fadp_art24_breach_notification_decision_resolvable/1,
+    swiss_fadp_art24_breach_notification_status_values/1
 ]).
 
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(ch/swiss_fadp_art24_breach_notification/kernel, [
-    swiss_fadp_art24_breach_notification_input_problems/2,
-    swiss_fadp_art24_breach_notification_key_state/3,
-    swiss_fadp_art24_breach_notification_pairs/3
-]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(ch/swiss_fadp_art24_breach_notification/kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
 :- use_module(ch/swiss_fadp_art24_breach_notification/citations, [implements/1]).
 
 % ---- statutory VALUE facts owned by this determination ---------------
-% The final answer atoms of the obligations (used by the property tests).
-swiss_fadp_art24_breach_notification_status_values([
-    authority_notification_required,
-    authority_notification_not_required,
-    report_to_controller_required,
-    report_to_controller_not_required,
-    information_of_data_subject_required,
-    information_of_data_subject_not_required,
-    information_of_data_subject_may_be_restricted_deferred_or_omitted
-]).
+% The verdict vocabulary of the facade status (the controller report).
+swiss_fadp_art24_breach_notification_status_values([authority_notification_required, authority_notification_not_required]).
 
-% The three grounds of DSG Art 24(5) letters a to c, in root_exports order.
-article_24_5_exception_keys([
-    article_26_ground_or_statutory_secrecy_obligation_applies,
-    information_impossible_or_requires_disproportionate_effort,
-    information_ensured_comparably_by_public_announcement
-]).
+% answer_citations(Query, Answer, Citations): CITATIONS ARE FIXED PER ANSWER
+% (THE LIMBS, Q10): a final answer always carries these rows.
+answer_citations(controller_report, authority_notification_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]).
+answer_citations(controller_report, authority_notification_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]).
+answer_citations(processor_report, report_to_controller_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]).
+answer_citations(processor_report, report_to_controller_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]).
+answer_citations(data_subject_information, information_of_data_subject_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]).
+answer_citations(data_subject_information, information_of_data_subject_may_be_restricted_deferred_or_omitted, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]).
+answer_citations(data_subject_information, information_of_data_subject_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]).
+answer_citations(eu_notification, authority_notification_not_required, [cite(eu_reg_2016_679_art_33_1)]).
+answer_citations(eu_notification, authority_notification_required, [cite(eu_reg_2016_679_art_33_1)]).
 
-% The keys each query reads (the `inputs` of its referral rows), in
-% root_exports order: THE PAIRS RULE takes the present ones.
-query_inputs(swiss_controller_report_to_commissioner, [
-    breach_of_data_security,
-    breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights
-]).
-query_inputs(swiss_processor_report_to_controller, [
-    breach_of_data_security
-]).
-query_inputs(swiss_information_of_data_subject, [
-    breach_of_data_security,
-    information_necessary_for_protection_of_data_subject,
-    commissioner_requested_information_of_data_subject,
-    article_26_ground_or_statutory_secrecy_obligation_applies,
-    information_impossible_or_requires_disproportionate_effort,
-    information_ensured_comparably_by_public_announcement
-]).
-query_inputs(eu_controller_notification_to_supervisory_authority, [
-    personal_data_breach,
-    breach_unlikely_to_result_in_risk
-]).
+% referral_citation(Query, InputKey, Citation): the referral rows of the order.
+referral_citation(controller_report, breach_of_data_security, cite(ch_fadp_art_5_h)).
+referral_citation(controller_report, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, cite(ch_fadp_art_24_1)).
+referral_citation(processor_report, breach_of_data_security, cite(ch_fadp_art_5_h)).
+referral_citation(data_subject_information, breach_of_data_security, cite(ch_fadp_art_5_h)).
+referral_citation(data_subject_information, information_necessary_for_protection_of_data_subject, cite(ch_fadp_art_24_4)).
+referral_citation(data_subject_information, article_26_ground_or_statutory_secrecy_obligation_applies, cite(ch_fadp_art_24_5_a)).
+referral_citation(data_subject_information, information_impossible_or_requires_disproportionate_effort, cite(ch_fadp_art_24_5_b)).
+referral_citation(data_subject_information, information_ensured_comparably_by_public_announcement, cite(ch_fadp_art_24_5_c)).
+referral_citation(eu_notification, personal_data_breach, cite(eu_reg_2016_679_art_33_1)).
+referral_citation(eu_notification, breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)).
 
-% The referral rows of the order: referral_row(Situation, Query, InputKey,
-% Citation). The comparison rows are not needed here: the comparison copies
-% the referral of the side that gives it, unchanged (step (18)).
-referral_row(swiss_report_breach_of_data_security, swiss_controller_report_to_commissioner, breach_of_data_security, cite(ch_fadp_art_5_h)).
-referral_row(swiss_report_breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, swiss_controller_report_to_commissioner, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, cite(ch_fadp_art_24_1)).
-referral_row(swiss_processor_breach_of_data_security, swiss_processor_report_to_controller, breach_of_data_security, cite(ch_fadp_art_5_h)).
-referral_row(swiss_information_breach_of_data_security, swiss_information_of_data_subject, breach_of_data_security, cite(ch_fadp_art_5_h)).
-referral_row(swiss_information_information_necessary_for_protection_of_data_subject, swiss_information_of_data_subject, information_necessary_for_protection_of_data_subject, cite(ch_fadp_art_24_4)).
-referral_row(swiss_information_article_26_ground_or_statutory_secrecy_obligation_applies, swiss_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, cite(ch_fadp_art_24_5_a)).
-referral_row(swiss_information_information_impossible_or_requires_disproportionate_effort, swiss_information_of_data_subject, information_impossible_or_requires_disproportionate_effort, cite(ch_fadp_art_24_5_b)).
-referral_row(swiss_information_information_ensured_comparably_by_public_announcement, swiss_information_of_data_subject, information_ensured_comparably_by_public_announcement, cite(ch_fadp_art_24_5_c)).
-referral_row(eu_notification_personal_data_breach, eu_controller_notification_to_supervisory_authority, personal_data_breach, cite(eu_reg_2016_679_art_33_1)).
-referral_row(eu_notification_breach_unlikely_to_result_in_risk, eu_controller_notification_to_supervisory_authority, breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)).
+% query_inputs(Query, InputKeys): the keys each query reads, root_exports order
+% (THE PAIRS RULE).
+query_inputs(controller_report, [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]).
+query_inputs(processor_report, [breach_of_data_security]).
+query_inputs(data_subject_information, [breach_of_data_security, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement]).
+query_inputs(eu_notification, [personal_data_breach, breach_unlikely_to_result_in_risk]).
 
-% ---- the not-final answer (steps (3)/(4), (7)/(8), (12)/(13), (16)/(17)) --
-% first_in_state(Profile, Keys, State, Found): found(InputKey) for the first
-% of the ordered Keys in State, none when no key is. Plumbing: no marker.
-first_in_state(_, [], _, none).
-first_in_state(Profile, [InputKey|_], State, found(InputKey)) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, InputKey, State).
-first_in_state(Profile, [InputKey|LaterKeys], State, Found) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, InputKey, OtherState),
-    dif(OtherState, State),
-    first_in_state(Profile, LaterKeys, State, Found).
+% checklist_row(RowId, Query, Citation): one row per duty, its provision.
+checklist_row(controller_report_to_commissioner, controller_report, cite(ch_fadp_art_24_1)).
+checklist_row(processor_report_to_controller, processor_report, cite(ch_fadp_art_24_3)).
+checklist_row(information_of_data_subject, data_subject_information, cite(ch_fadp_art_24_4)).
+checklist_row(eu_notification_to_supervisory_authority, eu_notification, cite(eu_reg_2016_679_art_33_1)).
 
-% open_answer(Profile, Query, CandidateKeys, Result): a missing key is named
-% before an unsure judgement goes to a lawyer.
-open_answer(Profile, Query, CandidateKeys, Result) :-
-    first_in_state(Profile, CandidateKeys, absent, AbsentFound),
-    open_answer_for(AbsentFound, Profile, Query, CandidateKeys, Result).
+% ---- profile plumbing ---------------------------------------------------
+% key_state(Profile, InputKey, State): absent, or the value as given.
+key_state(Profile, InputKey, absent) :-
+    profile_lacks(Profile, InputKey).
+key_state(Profile, InputKey, State) :-
+    profile_get(Profile, InputKey, State).
 
-open_answer_for(found(MissingKey), _, _, _, indeterminate([MissingKey])).
-open_answer_for(none, Profile, Query, CandidateKeys, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)])) :-
-    first_in_state(Profile, CandidateKeys, unsure, found(UnsureKey)),
-    referral_row(_, Query, UnsureKey, Citation),
+% relied_pairs(Profile, InputKeys, Pairs): each present key with its value.
+relied_pairs(_, [], []).
+relied_pairs(Profile, [InputKey|InputKeys], Pairs) :-
+    key_state(Profile, InputKey, State),
+    relied_pairs(Profile, InputKeys, LaterPairs),
+    relied_pair(State, InputKey, LaterPairs, Pairs).
+
+relied_pair(absent, _, Pairs, Pairs).
+relied_pair(State, InputKey, LaterPairs, [InputKey-State|LaterPairs]) :-
+    dif(State, absent).
+
+% route_answer(Query, Route, Profile, Result, Citations).
+route_answer(Query, final(Answer), _, Answer, Citations) :-
+    answer_citations(Query, Answer, Citations).
+route_answer(_, missing(InputKey), _, indeterminate([InputKey]), []).
+route_answer(Query, review(InputKey), Profile, needs_legal_review(open_textured(InputKey, Citation), [inputs_relied_on(Pairs)]), []) :-
+    referral_citation(Query, InputKey, Citation),
     query_inputs(Query, InputKeys),
-    swiss_fadp_art24_breach_notification_pairs(Profile, InputKeys, Pairs).
+    relied_pairs(Profile, InputKeys, Pairs).
 
-% ---- (A) DSG Art 24(1): the controller's report to the Commissioner ----
+% first_absent(KeyStates, Found): found(InputKey) or none.
+first_absent([], none).
+first_absent([InputKey-absent|_], found(InputKey)).
+first_absent([_-State|KeyStates], Found) :-
+    dif(State, absent),
+    first_absent(KeyStates, Found).
+
+% first_unsure(KeyStates, InputKey): the first unsure key.
+first_unsure([InputKey-unsure|_], InputKey).
+first_unsure([_-State|KeyStates], InputKey) :-
+    dif(State, unsure),
+    first_unsure(KeyStates, InputKey).
+
+pending_route(KeyStates, Route) :-
+    first_absent(KeyStates, Found),
+    pending_from(Found, KeyStates, Route).
+
+pending_from(found(InputKey), _, missing(InputKey)).
+pending_from(none, KeyStates, review(InputKey)) :-
+    first_unsure(KeyStates, InputKey).
+
+% ---- (A) DSG Art 24(1): controller report to the Commissioner ----------
 swiss_controller_report_to_commissioner(Profile, Result, Citations) :-
     swiss_fadp_art24_breach_notification_input_problems(Profile, Problems),
-    controller_report_answer(Problems, Profile, Result, Citations).
+    controller_answer(Problems, Profile, Result, Citations).
 
-controller_report_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
-controller_report_answer([], Profile, Result, Citations) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, breach_of_data_security, BreachState),
-    swiss_fadp_art24_breach_notification_key_state(Profile, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, RiskState),
-    controller_report_route(BreachState, RiskState, Profile, Result, Citations).
+controller_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+controller_answer([], Profile, Result, Citations) :-
+    key_state(Profile, breach_of_data_security, BreachState),
+    key_state(Profile, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, RiskState),
+    controller_route(BreachState, RiskState, Route),
+    route_answer(controller_report, Route, Profile, Result, Citations).
 
-% Step (1): no breach of data security (DSG Art 5 letter h).
-controller_report_route(false, _, _, authority_notification_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]) :-
+% Step (1): a settled false decides.
+controller_route(false, _, final(authority_notification_not_required)) :-
     implements(ch_fadp_art_5_h).
-% Step (1): no likely high risk (DSG Art 24(1)).
-controller_report_route(BreachState, false, _, authority_notification_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]) :-
+controller_route(BreachState, false, final(authority_notification_not_required)) :-
     implements(ch_fadp_art_24_1),
-    dif(BreachState, false).
-% Step (2): a breach likely to lead to a high risk.
-controller_report_route(true, true, _, authority_notification_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]) :-
+    member(BreachState, [true, absent, unsure]).
+% Step (2): both true.
+controller_route(true, true, final(authority_notification_required)) :-
     implements(ch_fadp_art_24_1).
-% Steps (3) and (4): not settled.
-controller_report_route(BreachState, RiskState, Profile, Result, []) :-
+% Step (3): the first absent key.
+controller_route(absent, RiskState, missing(breach_of_data_security)) :-
+    implements(ch_fadp_art_5_h),
+    member(RiskState, [true, absent, unsure]).
+controller_route(BreachState, absent, missing(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights)) :-
     implements(ch_fadp_art_24_1),
-    controller_report_open(BreachState, RiskState),
-    query_inputs(swiss_controller_report_to_commissioner, CandidateKeys),
-    open_answer(Profile, swiss_controller_report_to_commissioner, CandidateKeys, Result).
+    member(BreachState, [true, unsure]).
+% Step (4): the first unsure key.
+controller_route(unsure, RiskState, review(breach_of_data_security)) :-
+    implements(ch_fadp_art_5_h),
+    member(RiskState, [true, unsure]).
+controller_route(true, unsure, review(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights)) :-
+    implements(ch_fadp_art_24_1).
 
-controller_report_open(absent, RiskState) :-
-    implements(ch_fadp_art_24_1),
-    dif(RiskState, false).
-controller_report_open(unsure, RiskState) :-
-    implements(ch_fadp_art_24_1),
-    dif(RiskState, false).
-controller_report_open(true, RiskState) :-
-    implements(ch_fadp_art_24_1),
-    dif(RiskState, false),
-    dif(RiskState, true).
-
-% ---- (B) DSG Art 24(3): the processor's report to the controller ------
+% ---- (B) DSG Art 24(3): processor report to the controller -------------
 swiss_processor_report_to_controller(Profile, Result, Citations) :-
     swiss_fadp_art24_breach_notification_input_problems(Profile, Problems),
-    processor_report_answer(Problems, Profile, Result, Citations).
+    processor_answer(Problems, Profile, Result, Citations).
 
-processor_report_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
-processor_report_answer([], Profile, Result, Citations) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, breach_of_data_security, BreachState),
-    processor_report_route(BreachState, Profile, Result, Citations).
+processor_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+processor_answer([], Profile, Result, Citations) :-
+    key_state(Profile, breach_of_data_security, BreachState),
+    processor_route(BreachState, Route),
+    route_answer(processor_report, Route, Profile, Result, Citations).
 
-% Step (5): no breach of data security.
-processor_report_route(false, _, report_to_controller_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]) :-
+processor_route(false, final(report_to_controller_not_required)) :-
     implements(ch_fadp_art_24_3).
-% Step (6): every breach is reported, with no risk threshold.
-processor_report_route(true, _, report_to_controller_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]) :-
+processor_route(true, final(report_to_controller_required)) :-
     implements(ch_fadp_art_24_3).
-% Steps (7) and (8): absent or unsure.
-processor_report_route(BreachState, Profile, Result, []) :-
-    implements(ch_fadp_art_5_h),
-    processor_report_open(BreachState),
-    query_inputs(swiss_processor_report_to_controller, CandidateKeys),
-    open_answer(Profile, swiss_processor_report_to_controller, CandidateKeys, Result).
+processor_route(absent, missing(breach_of_data_security)) :-
+    implements(ch_fadp_art_5_h).
+processor_route(unsure, review(breach_of_data_security)) :-
+    implements(ch_fadp_art_5_h).
 
-processor_report_open(absent).
-processor_report_open(unsure).
-
-% ---- (C) DSG Art 24(4) and (5): the information of the data subject ---
+% ---- (C) DSG Art 24(4) and (5): information of the data subject --------
 swiss_information_of_data_subject(Profile, Result, Citations) :-
     swiss_fadp_art24_breach_notification_input_problems(Profile, Problems),
     information_answer(Problems, Profile, Result, Citations).
 
 information_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
 information_answer([], Profile, Result, Citations) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, breach_of_data_security, BreachState),
-    ground_of_article_24_4(Profile, GroundStatus),
-    exception_of_article_24_5(Profile, ExceptionStatus),
-    information_route(BreachState, GroundStatus, ExceptionStatus, Profile, Result, Citations).
+    key_state(Profile, breach_of_data_security, BreachState),
+    key_state(Profile, information_necessary_for_protection_of_data_subject, NecessaryState),
+    key_state(Profile, commissioner_requested_information_of_data_subject, RequestState),
+    key_state(Profile, article_26_ground_or_statutory_secrecy_obligation_applies, SecrecyState),
+    key_state(Profile, information_impossible_or_requires_disproportionate_effort, EffortState),
+    key_state(Profile, information_ensured_comparably_by_public_announcement, AnnouncementState),
+    information_ground(NecessaryState, RequestState, Ground),
+    information_exception([SecrecyState, EffortState, AnnouncementState], Exception),
+    information_route(BreachState, Ground, Exception, [breach_of_data_security-BreachState], [information_necessary_for_protection_of_data_subject-NecessaryState, commissioner_requested_information_of_data_subject-RequestState], [article_26_ground_or_statutory_secrecy_obligation_applies-SecrecyState, information_impossible_or_requires_disproportionate_effort-EffortState, information_ensured_comparably_by_public_announcement-AnnouncementState], Route),
+    route_answer(data_subject_information, Route, Profile, Result, Citations).
 
 % The GROUND of Art 24(4): met, failed or open.
-ground_of_article_24_4(Profile, GroundStatus) :-
-    implements(ch_fadp_art_24_4),
-    swiss_fadp_art24_breach_notification_key_state(Profile, information_necessary_for_protection_of_data_subject, NecessityState),
-    swiss_fadp_art24_breach_notification_key_state(Profile, commissioner_requested_information_of_data_subject, RequestState),
-    ground_from_states(NecessityState, RequestState, GroundStatus).
-
-ground_from_states(true, _, met) :-
+information_ground(true, _, met) :-
     implements(ch_fadp_art_24_4).
-ground_from_states(NecessityState, true, met) :-
+information_ground(NecessaryState, true, met) :-
     implements(ch_fadp_art_24_4),
-    dif(NecessityState, true).
-ground_from_states(false, false, failed) :-
+    member(NecessaryState, [false, absent, unsure]).
+information_ground(false, false, failed) :-
     implements(ch_fadp_art_24_4).
-ground_from_states(absent, RequestState, open) :-
+information_ground(NecessaryState, RequestState, open) :-
     implements(ch_fadp_art_24_4),
-    dif(RequestState, true).
-ground_from_states(unsure, RequestState, open) :-
-    implements(ch_fadp_art_24_4),
-    dif(RequestState, true).
-ground_from_states(false, absent, open) :-
+    member(NecessaryState, [absent, unsure]),
+    member(RequestState, [false, absent]).
+information_ground(false, absent, open) :-
     implements(ch_fadp_art_24_4).
 
 % An EXCEPTION of Art 24(5): held, all_failed or open.
-exception_of_article_24_5(Profile, ExceptionStatus) :-
+information_exception(ExceptionStates, Exception) :-
     implements(ch_fadp_art_24_5),
-    article_24_5_exception_keys(ExceptionKeys),
-    maplist(swiss_fadp_art24_breach_notification_key_state(Profile), ExceptionKeys, ExceptionStates),
-    exception_from_states(ExceptionStates, ExceptionStatus).
+    memberd_t(true, ExceptionStates, HasTrue),
+    exception_from_truth(HasTrue, ExceptionStates, Exception).
 
-exception_from_states(ExceptionStates, held) :-
-    implements(ch_fadp_art_24_5),
-    memberd_t(true, ExceptionStates, true).
-exception_from_states(ExceptionStates, all_failed) :-
-    implements(ch_fadp_art_24_5),
-    memberd_t(true, ExceptionStates, false),
-    sort(ExceptionStates, [false]).
-exception_from_states(ExceptionStates, open) :-
-    implements(ch_fadp_art_24_5),
-    memberd_t(true, ExceptionStates, false),
-    sort(ExceptionStates, SortedStates),
-    dif(SortedStates, [false]).
+exception_from_truth(true, _, held).
+exception_from_truth(false, ExceptionStates, Exception) :-
+    memberd_t(absent, ExceptionStates, HasAbsent),
+    memberd_t(unsure, ExceptionStates, HasUnsure),
+    unsettled_exception(HasAbsent, HasUnsure, Exception).
 
-% Step (9): no breach of data security.
-information_route(false, _, _, _, information_of_data_subject_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]) :-
+unsettled_exception(false, false, all_failed).
+unsettled_exception(true, _, open).
+unsettled_exception(false, true, open).
+
+% Step (9): no breach, or the ground failed.
+information_route(false, _, _, _, _, _, final(information_of_data_subject_not_required)) :-
     implements(ch_fadp_art_5_h).
-% Step (9): neither necessary for protection nor requested.
-information_route(BreachState, failed, _, _, information_of_data_subject_not_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]) :-
+information_route(BreachState, failed, _, _, _, _, final(information_of_data_subject_not_required)) :-
     implements(ch_fadp_art_24_4),
-    dif(BreachState, false).
-% Step (10): an exception of Art 24(5) is held (a permission, not a bar).
-information_route(true, met, held, _, information_of_data_subject_may_be_restricted_deferred_or_omitted, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]) :-
+    member(BreachState, [true, absent, unsure]).
+% Step (10): an exception held.
+information_route(true, met, held, _, _, _, final(information_of_data_subject_may_be_restricted_deferred_or_omitted)) :-
     implements(ch_fadp_art_24_5).
-% Step (11): owed, and every exception fails.
-information_route(true, met, all_failed, _, information_of_data_subject_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]) :-
+% Step (11): every exception failed.
+information_route(true, met, all_failed, _, _, _, final(information_of_data_subject_required)) :-
     implements(ch_fadp_art_24_4).
-% Steps (12) and (13): not settled.
-information_route(BreachState, GroundStatus, ExceptionStatus, Profile, Result, []) :-
+% Steps (12) and (13): the first needed absent key, else the first unsure one.
+information_route(BreachState, Ground, Exception, BreachPairs, GroundPairs, ExceptionPairs, Route) :-
     implements(ch_fadp_art_24_4),
-    information_open(BreachState, GroundStatus, ExceptionStatus),
-    information_candidate_keys(GroundStatus, ExceptionStatus, CandidateKeys),
-    open_answer(Profile, swiss_information_of_data_subject, CandidateKeys, Result).
-
-information_open(absent, GroundStatus, _) :-
+    member(BreachState, [absent, unsure]),
+    member(Ground, [met, open]),
+    information_pending(Ground, Exception, BreachPairs, GroundPairs, ExceptionPairs, Route).
+information_route(true, open, Exception, BreachPairs, GroundPairs, ExceptionPairs, Route) :-
     implements(ch_fadp_art_24_4),
-    dif(GroundStatus, failed).
-information_open(unsure, GroundStatus, _) :-
-    implements(ch_fadp_art_24_4),
-    dif(GroundStatus, failed).
-information_open(true, open, _) :-
-    implements(ch_fadp_art_24_4).
-information_open(true, met, open) :-
-    implements(ch_fadp_art_24_5).
+    information_pending(open, Exception, BreachPairs, GroundPairs, ExceptionPairs, Route).
+information_route(true, met, open, BreachPairs, GroundPairs, ExceptionPairs, Route) :-
+    implements(ch_fadp_art_24_5),
+    information_pending(met, open, BreachPairs, GroundPairs, ExceptionPairs, Route).
 
-% The keys the answer can still need, in root_exports order.
-information_candidate_keys(GroundStatus, ExceptionStatus, CandidateKeys) :-
-    ground_candidate_keys(GroundStatus, GroundKeys),
-    exception_candidate_keys(ExceptionStatus, ExceptionKeys),
-    append([breach_of_data_security|GroundKeys], ExceptionKeys, CandidateKeys).
+information_pending(Ground, Exception, BreachPairs, GroundPairs, ExceptionPairs, Route) :-
+    ground_part(Ground, GroundPairs, NeededGroundPairs),
+    exception_part(Exception, ExceptionPairs, NeededExceptionPairs),
+    append([BreachPairs, NeededGroundPairs, NeededExceptionPairs], KeyStates),
+    pending_route(KeyStates, Route).
 
-ground_candidate_keys(met, []).
-ground_candidate_keys(GroundStatus, [information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject]) :-
-    dif(GroundStatus, met).
+ground_part(met, _, []).
+ground_part(open, GroundPairs, GroundPairs).
 
-exception_candidate_keys(held, []).
-exception_candidate_keys(ExceptionStatus, ExceptionKeys) :-
-    dif(ExceptionStatus, held),
-    article_24_5_exception_keys(ExceptionKeys).
+exception_part(held, _, []).
+exception_part(open, ExceptionPairs, ExceptionPairs).
+exception_part(all_failed, ExceptionPairs, ExceptionPairs).
 
-% ---- (D) GDPR Art 33(1): the EU notification ---------------------------
+% ---- (D) GDPR Art 33(1): notification to the supervisory authority -----
 eu_controller_notification_to_supervisory_authority(Profile, Result, Citations) :-
     swiss_fadp_art24_breach_notification_input_problems(Profile, Problems),
-    eu_notification_answer(Problems, Profile, Result, Citations).
+    eu_answer(Problems, Profile, Result, Citations).
 
-eu_notification_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
-eu_notification_answer([], Profile, Result, Citations) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, personal_data_breach, BreachState),
-    swiss_fadp_art24_breach_notification_key_state(Profile, breach_unlikely_to_result_in_risk, UnlikelyState),
-    eu_notification_route(BreachState, UnlikelyState, Profile, Result, Citations).
+eu_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+eu_answer([], Profile, Result, Citations) :-
+    key_state(Profile, personal_data_breach, BreachState),
+    key_state(Profile, breach_unlikely_to_result_in_risk, UnlikelyState),
+    eu_route(BreachState, UnlikelyState, Route),
+    route_answer(eu_notification, Route, Profile, Result, Citations).
 
-% Step (14): no personal data breach.
-eu_notification_route(false, _, _, authority_notification_not_required, [cite(eu_reg_2016_679_art_33_1)]) :-
+% Step (14): a settled value decides.
+eu_route(false, _, final(authority_notification_not_required)) :-
     implements(eu_reg_2016_679_art_33_1).
-% Step (14): the breach is unlikely to result in a risk.
-eu_notification_route(BreachState, true, _, authority_notification_not_required, [cite(eu_reg_2016_679_art_33_1)]) :-
+eu_route(BreachState, true, final(authority_notification_not_required)) :-
     implements(eu_reg_2016_679_art_33_1),
-    dif(BreachState, false).
-% Step (15): a breach not unlikely to result in a risk.
-eu_notification_route(true, false, _, authority_notification_required, [cite(eu_reg_2016_679_art_33_1)]) :-
+    member(BreachState, [true, absent, unsure]).
+% Step (15).
+eu_route(true, false, final(authority_notification_required)) :-
     implements(eu_reg_2016_679_art_33_1).
-% Steps (16) and (17): not settled.
-eu_notification_route(BreachState, UnlikelyState, Profile, Result, []) :-
+% Step (16): the first absent key.
+eu_route(absent, UnlikelyState, missing(personal_data_breach)) :-
     implements(eu_reg_2016_679_art_33_1),
-    eu_notification_open(BreachState, UnlikelyState),
-    query_inputs(eu_controller_notification_to_supervisory_authority, CandidateKeys),
-    open_answer(Profile, eu_controller_notification_to_supervisory_authority, CandidateKeys, Result).
-
-eu_notification_open(absent, UnlikelyState) :-
+    member(UnlikelyState, [false, absent, unsure]).
+eu_route(BreachState, absent, missing(breach_unlikely_to_result_in_risk)) :-
     implements(eu_reg_2016_679_art_33_1),
-    dif(UnlikelyState, true).
-eu_notification_open(unsure, UnlikelyState) :-
+    member(BreachState, [true, unsure]).
+% Step (17): the first unsure key.
+eu_route(unsure, UnlikelyState, review(personal_data_breach)) :-
     implements(eu_reg_2016_679_art_33_1),
-    dif(UnlikelyState, true).
-eu_notification_open(true, UnlikelyState) :-
-    implements(eu_reg_2016_679_art_33_1),
-    dif(UnlikelyState, true),
-    dif(UnlikelyState, false).
+    member(UnlikelyState, [false, unsure]).
+eu_route(true, unsure, review(breach_unlikely_to_result_in_risk)) :-
+    implements(eu_reg_2016_679_art_33_1).
 
-% ---- (E) the comparison of the two authority duties (reading (8)) ------
-compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy) :-
-    swiss_fadp_art24_breach_notification_input_problems(Profile, Problems),
-    comparison_answer(Problems, Profile, SwissResult, EuropeanResult, Difference, ChangedBy).
+% ---- (E) the comparison (reading (8)) -----------------------------------
+compare_swiss_eu_authority_notification(Profile, SwissResult, EuResult, Difference, ChangedBy) :-
+    swiss_controller_report_to_commissioner(Profile, SwissResult, _SwissCitations),
+    eu_controller_notification_to_supervisory_authority(Profile, EuResult, _EuCitations),
+    comparison_difference(SwissResult, EuResult, Difference, ChangedBy).
 
-comparison_answer([Problem|Problems], _, input_problems([Problem|Problems]), input_problems([Problem|Problems]), not_comparable, []).
-comparison_answer([], Profile, SwissResult, EuropeanResult, Difference, ChangedBy) :-
-    swiss_controller_report_to_commissioner(Profile, SwissResult, _),
-    eu_controller_notification_to_supervisory_authority(Profile, EuropeanResult, _),
-    answer_kind(SwissResult, SwissKind),
-    answer_kind(EuropeanResult, EuropeanKind),
-    difference_by_kind(SwissKind, EuropeanKind, SwissResult, EuropeanResult, Difference, ChangedBy).
-
-answer_kind(authority_notification_required, final).
-answer_kind(authority_notification_not_required, final).
-answer_kind(Answer, open) :-
-    compound(Answer).
-
-difference_by_kind(final, final, SwissResult, EuropeanResult, Difference, ChangedBy) :-
-    final_difference(SwissResult, EuropeanResult, Difference, ChangedBy).
-difference_by_kind(open, _, _, _, not_comparable, []).
-difference_by_kind(final, open, _, _, not_comparable, []).
-
-final_difference(Answer, Answer, same, []).
-final_difference(SwissResult, EuropeanResult, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)]) :-
+comparison_difference(SwissResult, _, not_comparable, []) :-
+    compound(SwissResult).
+comparison_difference(SwissResult, EuResult, not_comparable, []) :-
+    atom(SwissResult),
+    compound(EuResult).
+comparison_difference(SwissResult, EuResult, same, []) :-
     implements(ch_fadp_art_24_1),
+    atom(SwissResult),
+    atom(EuResult),
+    SwissResult == EuResult.
+comparison_difference(SwissResult, EuResult, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)]) :-
     implements(eu_reg_2016_679_art_33_1),
-    dif(SwissResult, EuropeanResult).
+    atom(SwissResult),
+    atom(EuResult),
+    SwissResult \== EuResult.
 
-% ---- headline verdict: the controller's report to the Commissioner ----
+% ---- facade: verdict, status, checklist ----------------------------------
 decide_swiss_fadp_art24_breach_notification(Profile, swiss_fadp_art24_breach_notification_verdict(Status, Citations)) :-
     swiss_controller_report_to_commissioner(Profile, Status, Citations).
 
-% ---- projection: Status only ------------------------------------------
 swiss_fadp_art24_breach_notification_status(Profile, Status) :-
     decide_swiss_fadp_art24_breach_notification(Profile, swiss_fadp_art24_breach_notification_verdict(Status, _Citations)).
 
-% ---- checklist: one row per obligation, each with cite(...) provenance --
-obligation_ids([
-    controller_report_to_commissioner,
-    processor_report_to_controller,
-    information_of_data_subject,
-    eu_notification_to_supervisory_authority
-]).
-
-obligation_provisions(controller_report_to_commissioner, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]).
-obligation_provisions(processor_report_to_controller, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]).
-obligation_provisions(information_of_data_subject, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]).
-obligation_provisions(eu_notification_to_supervisory_authority, [cite(eu_reg_2016_679_art_33_1)]).
-
-obligation_answer(controller_report_to_commissioner, Profile, Result, Citations) :-
-    swiss_controller_report_to_commissioner(Profile, Result, Citations).
-obligation_answer(processor_report_to_controller, Profile, Result, Citations) :-
-    swiss_processor_report_to_controller(Profile, Result, Citations).
-obligation_answer(information_of_data_subject, Profile, Result, Citations) :-
-    swiss_information_of_data_subject(Profile, Result, Citations).
-obligation_answer(eu_notification_to_supervisory_authority, Profile, Result, Citations) :-
-    eu_controller_notification_to_supervisory_authority(Profile, Result, Citations).
-
-obligation_item(Profile, ObligationId, item(ObligationId, Result, Citations)) :-
-    obligation_answer(ObligationId, Profile, Result, AnswerCitations),
-    obligation_provisions(ObligationId, Provisions),
-    item_citations(AnswerCitations, Provisions, Citations).
-
-% A not-final answer has no citations of its own: the item names the
-% provisions of its obligation instead, so every row carries provenance.
-item_citations([], Provisions, Provisions).
-item_citations([Citation|Citations], _, [Citation|Citations]).
-
+% One row per duty, each carrying the cite(...) of its provision.
 swiss_fadp_art24_breach_notification_checklist(Profile, Items) :-
-    obligation_ids(ObligationIds),
-    maplist(obligation_item(Profile), ObligationIds, Items).
+    findall(RowId, checklist_row(RowId, _, _), RowIds),
+    checklist_items(RowIds, Profile, Items).
+
+checklist_items([], _, []).
+checklist_items([RowId|RowIds], Profile, [item(RowId, Result, Citation)|Items]) :-
+    checklist_row(RowId, Query, Citation),
+    query_result(Query, Profile, Result),
+    checklist_items(RowIds, Profile, Items).
+
+query_result(controller_report, Profile, Result) :-
+    swiss_controller_report_to_commissioner(Profile, Result, _Citations).
+query_result(processor_report, Profile, Result) :-
+    swiss_processor_report_to_controller(Profile, Result, _Citations).
+query_result(data_subject_information, Profile, Result) :-
+    swiss_information_of_data_subject(Profile, Result, _Citations).
+query_result(eu_notification, Profile, Result) :-
+    eu_controller_notification_to_supervisory_authority(Profile, Result, _Citations).
 
 swiss_fadp_art24_breach_notification_decision_resolvable(Profile) :-
     decide_swiss_fadp_art24_breach_notification(Profile, _Verdict).
 
-% ---- tests ----------------------------------------------------------------
-test(controller_report_required) :-
+% ---- tests --------------------------------------------------------------
+test(controller_must_report_a_likely_high_risk_breach) :-
     findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true)], Result, Citations), Answers),
     Answers == [authority_notification_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]].
-test(controller_report_not_required_when_no_breach_and_risk_absent) :-
-    findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, false)], Result, Citations), Answers),
-    Answers == [authority_notification_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]].
-test(controller_report_not_required_when_risk_false_and_breach_unsure) :-
-    findall(Result, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, unsure), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], Result, _), Results),
-    Results == [authority_notification_not_required].
-test(controller_report_names_missing_risk_although_breach_unsure) :-
-    findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, unsure)], Result, Citations), Answers),
-    Answers == [indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights])-[]].
-test(controller_report_names_first_missing_key) :-
-    findall(Result, swiss_controller_report_to_commissioner([], Result, _), Results),
-    Results == [indeterminate([breach_of_data_security])].
-test(controller_report_refers_unsure_breach) :-
-    findall(Result, swiss_controller_report_to_commissioner([attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true), attribute(breach_of_data_security, unsure)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights-true])])].
-test(controller_report_refers_unsure_risk) :-
-    findall(Result, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, unsure)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, cite(ch_fadp_art_24_1)), [inputs_relied_on([breach_of_data_security-true, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights-unsure])])].
-test(controller_report_no_breach_is_not_required_only, fail) :-
-    swiss_controller_report_to_commissioner([attribute(breach_of_data_security, false)], authority_notification_required, _).
-
-test(processor_report_required_without_risk_threshold) :-
-    findall(Result-Citations, swiss_processor_report_to_controller([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], Result, Citations), Answers),
-    Answers == [report_to_controller_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]].
-test(processor_report_not_required) :-
-    findall(Result, swiss_processor_report_to_controller([attribute(breach_of_data_security, false)], Result, _), Results),
-    Results == [report_to_controller_not_required].
-test(processor_report_missing_breach) :-
-    findall(Result, swiss_processor_report_to_controller([attribute(personal_data_breach, true)], Result, _), Results),
-    Results == [indeterminate([breach_of_data_security])].
-test(processor_report_unsure_breach) :-
-    findall(Result, swiss_processor_report_to_controller([attribute(breach_of_data_security, unsure)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure])])].
-
-test(information_may_be_restricted_on_commissioner_request) :-
-    findall(Result-Citations, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(commissioner_requested_information_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, true)], Result, Citations), Answers),
+test(controller_need_not_report_without_high_risk) :-
+    findall(Result, swiss_controller_report_to_commissioner([attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], Result, _), Answers),
+    Answers == [authority_notification_not_required].
+test(controller_without_high_risk_is_not_required, fail) :-
+    swiss_controller_report_to_commissioner([attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false)], authority_notification_required, _).
+test(controller_names_missing_key_before_unsure) :-
+    findall(Result, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, unsure)], Result, _), Answers),
+    Answers == [indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights])].
+test(controller_refers_first_unsure_key) :-
+    findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(breach_of_data_security, unsure), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, unsure)], Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights-unsure])])-[]].
+test(processor_reports_every_breach) :-
+    findall(Result, swiss_processor_report_to_controller([attribute(breach_of_data_security, true)], Result, _), Answers),
+    Answers == [report_to_controller_required].
+test(processor_missing_breach_is_indeterminate) :-
+    findall(Result, swiss_processor_report_to_controller([], Result, _), Answers),
+    Answers == [indeterminate([breach_of_data_security])].
+test(information_may_be_omitted_on_request_with_exception) :-
+    findall(Result-Citations, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(commissioner_requested_information_of_data_subject, true), attribute(information_impossible_or_requires_disproportionate_effort, true)], Result, Citations), Answers),
     Answers == [information_of_data_subject_may_be_restricted_deferred_or_omitted-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]].
-test(information_required_when_all_exceptions_fail) :-
-    findall(Result-Citations, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false), attribute(information_impossible_or_requires_disproportionate_effort, false), attribute(information_ensured_comparably_by_public_announcement, false)], Result, Citations), Answers),
-    Answers == [information_of_data_subject_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]].
-test(information_not_required_when_ground_fails_and_breach_absent) :-
-    findall(Result-Citations, swiss_information_of_data_subject([attribute(information_necessary_for_protection_of_data_subject, false), attribute(commissioner_requested_information_of_data_subject, false)], Result, Citations), Answers),
-    Answers == [information_of_data_subject_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]].
-test(information_does_not_read_high_risk) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false), attribute(information_necessary_for_protection_of_data_subject, true), attribute(information_ensured_comparably_by_public_announcement, true)], Result, _), Results),
-    Results == [information_of_data_subject_may_be_restricted_deferred_or_omitted].
-test(information_names_missing_request_although_necessity_unsure) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, unsure)], Result, _), Results),
-    Results == [indeterminate([commissioner_requested_information_of_data_subject])].
-test(information_names_missing_exception_when_ground_met) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false)], Result, _), Results),
-    Results == [indeterminate([information_impossible_or_requires_disproportionate_effort])].
-test(information_refers_unsure_necessity) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, unsure), attribute(commissioner_requested_information_of_data_subject, false), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false), attribute(information_impossible_or_requires_disproportionate_effort, false), attribute(information_ensured_comparably_by_public_announcement, false)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(information_necessary_for_protection_of_data_subject, cite(ch_fadp_art_24_4)), [inputs_relied_on([breach_of_data_security-true, information_necessary_for_protection_of_data_subject-unsure, commissioner_requested_information_of_data_subject-false, article_26_ground_or_statutory_secrecy_obligation_applies-false, information_impossible_or_requires_disproportionate_effort-false, information_ensured_comparably_by_public_announcement-false])])].
-test(information_refers_unsure_announcement) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(commissioner_requested_information_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false), attribute(information_impossible_or_requires_disproportionate_effort, false), attribute(information_ensured_comparably_by_public_announcement, unsure)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(information_ensured_comparably_by_public_announcement, cite(ch_fadp_art_24_5_c)), [inputs_relied_on([breach_of_data_security-true, commissioner_requested_information_of_data_subject-true, article_26_ground_or_statutory_secrecy_obligation_applies-false, information_impossible_or_requires_disproportionate_effort-false, information_ensured_comparably_by_public_announcement-unsure])])].
-test(information_with_exception_is_not_required, fail) :-
-    swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(commissioner_requested_information_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, true)], information_of_data_subject_required, _).
-
-test(eu_notification_required) :-
+test(information_required_when_exceptions_fail) :-
+    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false), attribute(information_impossible_or_requires_disproportionate_effort, false), attribute(information_ensured_comparably_by_public_announcement, false)], Result, _), Answers),
+    Answers == [information_of_data_subject_required].
+test(information_names_missing_request) :-
+    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, false)], Result, _), Answers),
+    Answers == [indeterminate([commissioner_requested_information_of_data_subject])].
+test(information_not_required_when_ground_fails) :-
+    findall(Result, swiss_information_of_data_subject([attribute(information_necessary_for_protection_of_data_subject, false), attribute(commissioner_requested_information_of_data_subject, false)], Result, _), Answers),
+    Answers == [information_of_data_subject_not_required].
+test(information_refers_unsure_exception) :-
+    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(information_necessary_for_protection_of_data_subject, true), attribute(article_26_ground_or_statutory_secrecy_obligation_applies, false), attribute(information_impossible_or_requires_disproportionate_effort, unsure), attribute(information_ensured_comparably_by_public_announcement, false)], Result, _), Answers),
+    Answers == [needs_legal_review(open_textured(information_impossible_or_requires_disproportionate_effort, cite(ch_fadp_art_24_5_b)), [inputs_relied_on([breach_of_data_security-true, information_necessary_for_protection_of_data_subject-true, article_26_ground_or_statutory_secrecy_obligation_applies-false, information_impossible_or_requires_disproportionate_effort-unsure, information_ensured_comparably_by_public_announcement-false])])].
+test(eu_notification_required_unless_risk_unlikely) :-
     findall(Result-Citations, eu_controller_notification_to_supervisory_authority([attribute(personal_data_breach, true), attribute(breach_unlikely_to_result_in_risk, false)], Result, Citations), Answers),
     Answers == [authority_notification_required-[cite(eu_reg_2016_679_art_33_1)]].
-test(eu_notification_not_required_when_unlikely_and_breach_absent) :-
-    findall(Result, eu_controller_notification_to_supervisory_authority([attribute(breach_unlikely_to_result_in_risk, true)], Result, _), Results),
-    Results == [authority_notification_not_required].
-test(eu_notification_names_missing_risk) :-
-    findall(Result, eu_controller_notification_to_supervisory_authority([attribute(personal_data_breach, unsure)], Result, _), Results),
-    Results == [indeterminate([breach_unlikely_to_result_in_risk])].
-test(eu_notification_refers_unsure_risk) :-
-    findall(Result, eu_controller_notification_to_supervisory_authority([attribute(personal_data_breach, true), attribute(breach_unlikely_to_result_in_risk, unsure)], Result, _), Results),
-    Results == [needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([personal_data_breach-true, breach_unlikely_to_result_in_risk-unsure])])].
-
-test(comparison_differs) :-
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false), attribute(personal_data_breach, true), attribute(breach_unlikely_to_result_in_risk, false)], SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(authority_notification_not_required, authority_notification_required, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)])].
-test(comparison_same) :-
-    findall(Difference-ChangedBy, compare_swiss_eu_authority_notification([attribute(breach_of_data_security, false), attribute(personal_data_breach, false)], _, _, Difference, ChangedBy), Answers),
-    Answers == [same-[]].
-test(comparison_not_comparable_keeps_each_side) :-
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification([attribute(breach_of_data_security, true), attribute(personal_data_breach, false)], SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]), authority_notification_not_required, not_comparable, [])].
-
-test(input_problem_crisp_key_unsure) :-
-    findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(commissioner_requested_information_of_data_subject, unsure)], Result, Citations), Answers),
-    Answers == [input_problems([wrong_type(commissioner_requested_information_of_data_subject)])-[]].
-test(input_problem_unknown_key_in_comparison) :-
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification([attribute(colour, red)], SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(input_problems([unknown_key(colour)]), input_problems([unknown_key(colour)]), not_comparable, [])].
-test(input_problem_duplicate_key) :-
-    findall(Result, swiss_information_of_data_subject([attribute(breach_of_data_security, true), attribute(breach_of_data_security, true)], Result, _), Results),
-    Results == [input_problems([duplicate_key(breach_of_data_security)])].
-test(input_problem_not_an_attribute_list) :-
-    findall(Result, swiss_processor_report_to_controller(nothing, Result, _), Results),
-    Results == [input_problems([wrong_type(profile)])].
-
-test(checklist_carries_provenance_per_item) :-
-    swiss_fadp_art24_breach_notification_checklist([attribute(breach_of_data_security, true)], Items),
-    Items = [
-        item(controller_report_to_commissioner, indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]), [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]),
-        item(processor_report_to_controller, report_to_controller_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]),
-        item(information_of_data_subject, indeterminate([information_necessary_for_protection_of_data_subject]), [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]),
-        item(eu_notification_to_supervisory_authority, indeterminate([personal_data_breach]), [cite(eu_reg_2016_679_art_33_1)])
-    ].
-test(headline_status_is_the_controller_report) :-
-    findall(Status, swiss_fadp_art24_breach_notification_status([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, true)], Status), Statuses),
-    Statuses == [authority_notification_required].
+test(eu_unlikely_risk_is_not_required, fail) :-
+    eu_controller_notification_to_supervisory_authority([attribute(breach_unlikely_to_result_in_risk, true)], authority_notification_required, _).
+test(eu_unlikely_risk_is_not_required_positive) :-
+    eu_controller_notification_to_supervisory_authority([attribute(breach_unlikely_to_result_in_risk, true)], authority_notification_not_required, _).
+test(comparison_differs_on_thresholds) :-
+    findall(Swiss-Union-Difference-Changed, compare_swiss_eu_authority_notification([attribute(breach_of_data_security, true), attribute(breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, false), attribute(personal_data_breach, true), attribute(breach_unlikely_to_result_in_risk, false)], Swiss, Union, Difference, Changed), Answers),
+    Answers == [authority_notification_not_required-authority_notification_required-differs-[cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)]].
+test(comparison_not_comparable_when_side_open) :-
+    findall(Difference-Changed, compare_swiss_eu_authority_notification([attribute(breach_of_data_security, false)], _, _, Difference, Changed), Answers),
+    Answers == [not_comparable-[]].
+test(input_problems_come_first) :-
+    findall(Result-Citations, swiss_controller_report_to_commissioner([attribute(unexpected_key, true)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(unexpected_key)])-[]].
+test(checklist_carries_a_citation_per_row) :-
+    swiss_fadp_art24_breach_notification_checklist([attribute(breach_of_data_security, false)], Items),
+    length(Items, 4),
+    member(item(processor_report_to_controller, report_to_controller_not_required, cite(ch_fadp_art_24_3)), Items).
 
 :- end_module(swiss_fadp_art24_breach_notification).

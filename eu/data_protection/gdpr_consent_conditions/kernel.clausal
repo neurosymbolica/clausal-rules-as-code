@@ -2,41 +2,79 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_consent_conditions (deontic family).
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL -- possibly none, which is why
-% the export list below starts empty.
-% Exception: the scaffold writes the order's input check gdpr_consent_conditions_input_problems/2 here, exported, for every slice to import.
-% deontic family: STATUS is a modal vocabulary (cf. eu/procurement/exclusion_grounds must_exclude/may_exclude/not_excluded).
+% PREDICATES that two or more files CALL.
 %
-% Atoms and data terms need NO declaration and NO import: a slice writes
-% `eligible` or `widget_verdict(Status, Citations)` directly. So nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% Source: Regulation (EU) 2016/679 (GDPR) Art 7(1), 7(2), 7(3) (third and
+% fourth sentences), 7(4), Art 11(1) and Art 11(2), pinned unit text of
+% 02016R0679-20160504 (the consolidated English Formex text, fetched
+% 2026-11-11), units parag_007.001 to parag_007.004, parag_011.001 and
+% parag_011.002. The attested outside-fact wrapper read here follows the
+% operator's rulings of 2026-11-11: each open-textured limb is
+% stated by a human or another system as
+%   attested(true | false, attestation(By, At, Reason, Evidence))
+% and the order never decides it; an absent statement refers.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file. Move a predicate here the moment a SECOND file
-% calls it, and only then; export it as `name/arity` and import it where
-% it is called:
-%   :- use_module(eu/data_protection/gdpr_consent_conditions/kernel, [shared_predicate/2]).
+% deontic family: STATUS is a modal vocabulary.
 %
-% Spell every result and verdict atom exactly as REQUIRED PUBLIC
-% PREDICATES and the order pin it: an atom spelled differently is a
-% DIFFERENT atom, and nothing will warn you.
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
 %
-% Result terms -- one per determination slice. `status` is the slice's
-% verdict atom (its pinned vocabulary is the `<slice>_status_values/1`
-% table in the slice file), `citations` a list of cite(Key) terms:
-%   gdpr_consent_conditions_verdict(status, citations)
-% Shared across the slices: the checklist row id `overall` and the
-% profile key `as_of_date` (atoms -- nothing to export).
+% ---- RESULT TERMS (spelled exactly as the order pins them) ----------
+% consent_conditions_status(Profile, Status, Basis, Citations)
+%   Status    not_applicable | conditions_met | conditions_not_met
+%             | indeterminate(MissingKeys) | needs_legal_review(Reason, Context)
+%             | input_problems(Problems)
+%   Basis     list of outside_fact(Key, Attested), Attested copied exactly as
+%             supplied; [] unless the Status is final and turned on outside facts
+%   Citations set-like list of cite(Key), Key from the citation vocabulary
+% consent_declaration_effect(Profile, Status, Citations)
+%   Status    not_applicable | part_not_binding | no_part_infringing
+%             | indeterminate(MissingKeys) | input_problems(Problems)
+% consent_assessment_factors(Profile, Factors)
+%   Factors   [] | [factor(contract_conditional_on_unneeded_consent,
+%             cite(eu_reg_2016_679_art_7_4))] | indeterminate(MissingKeys)
+%             | input_problems(Problems)   (ONE list, ONE solution)
+% identification_obligation(Profile, Status, Basis, Citations)
+%   Status    not_obliged_to_acquire_identifying_information
+%             | art11_1_not_engaged | indeterminate(_) | needs_legal_review(_, _)
+%             | input_problems(_)
+% identification_information_duty(Profile, Status, Basis, Citations)
+%   Status    must_inform_data_subject | need_not_inform_data_subject
+%             | art11_2_not_engaged | indeterminate(_) | needs_legal_review(_, _)
+%             | input_problems(_)
+% identification_rights_effect(Profile, Status, Basis, Citations)
+%   Status    articles_15_to_20_apply | articles_15_to_20_do_not_apply
+%             | art11_2_not_engaged | indeterminate(_) | needs_legal_review(_, _)
+%             | input_problems(_)
+% The referral (the only needs_legal_review this order produces):
+%   needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
+%       [resolution(cite(Target), not_attempted), inputs_relied_on([Key-absent])])
+%   Citation and Target from the outside_fact_entry/3 row of Key (citations).
+% The bare atom indeterminate is NEVER written (atom-shadowing trap).
+% Slice verdict term (the facade):
+%   gdpr_consent_conditions_verdict(Status, Citations)
 %
-% TODO: add the predicates two or more slices genuinely share (names
-% spelled out in full dictionary words -- no abbreviations, C6).
-% Source: TODO (instrument + article).
+% ---- SHARED PREDICATES ----------------------------------------------
+% gdpr_consent_conditions_input_problems/2  the order's input check (scaffold)
+% gdpr_consent_conditions_key_order/1       the thirteen keys, contract order
+% outside_fact_limb/4                       reads one attested outside fact
+% crisp_limb/3                              reads one crisp key
+% The two readers are profile plumbing (presence first, then value, read only
+% with profile_get/3); they decide no statutory condition and carry no
+% implements/1 marker: the slice clause that applies a limb carries it.
+% Each reader is called only after the input check has given [], so a key
+% occurs at most once and each reader yields exactly one solution.
 % =====================================================================
 
-:- module(kernel, [gdpr_consent_conditions_input_problems/2]).
+:- module(kernel, [
+    gdpr_consent_conditions_input_problems/2,
+    gdpr_consent_conditions_key_order/1,
+    outside_fact_limb/4,
+    crisp_limb/3
+]).
 
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_consent_conditions_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -205,5 +243,123 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+% ---- the key order (root_exports / input_contract order) ----------
+% Used by the slice and the queries to order MISSING_KEYS, BASIS and the
+% first absent outside fact a referral names. The same thirteen keys, in the
+% same order, as the scaffold's input check above.
+gdpr_consent_conditions_key_order([
+    processing_based_on_consent,
+    consent_demonstrable,
+    consent_in_declaration_with_other_matters,
+    request_clearly_distinguishable_and_intelligible,
+    declaration_part_infringes_regulation,
+    informed_of_withdrawal_right_before_consent,
+    withdrawal_as_easy_as_giving_consent,
+    contract_conditional_on_unneeded_consent,
+    consent_freely_given,
+    purposes_do_not_require_identification,
+    able_to_demonstrate_not_in_position_to_identify,
+    informing_data_subject_possible,
+    additional_identifying_information_provided
+]).
+
+% ---- limb readers (profile plumbing, called after a clean input check) ----
+% outside_fact_limb(Profile, Key, Limb, Attested): Limb is absent, met or unmet;
+% Attested is the atom absent for an absent key, else the attested term exactly
+% as supplied (By, At, Reason and Evidence are copied, never read).
+outside_fact_limb(Profile, Key, absent, absent) :-
+    profile_lacks(Profile, Key).
+outside_fact_limb(Profile, Key, met, attested(true, Attestation)) :-
+    profile_get(Profile, Key, attested(true, Attestation)).
+outside_fact_limb(Profile, Key, unmet, attested(false, Attestation)) :-
+    profile_get(Profile, Key, attested(false, Attestation)).
+
+% crisp_limb(Profile, Key, Limb): Limb is absent, met (true) or unmet (false).
+crisp_limb(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+crisp_limb(Profile, Key, met) :-
+    profile_get(Profile, Key, true).
+crisp_limb(Profile, Key, unmet) :-
+    profile_get(Profile, Key, false).
+
+% ---- tests ----------------------------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    gdpr_consent_conditions_input_problems([], []).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(processing_based_on_consent, true),
+         attribute(consent_demonstrable, attested(true, attestation(by, at, reason, none)))],
+        []).
+test(a_bare_true_on_an_outside_fact_is_wrong_type) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(consent_demonstrable, true)],
+        [wrong_type(consent_demonstrable)]).
+test(unsure_on_a_crisp_key_is_wrong_type) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(processing_based_on_consent, unsure)],
+        [wrong_type(processing_based_on_consent)]).
+test(an_unbound_attestation_argument_is_wrong_type) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(consent_freely_given, attested(true, attestation(_, at, reason, none)))],
+        [wrong_type(consent_freely_given)]).
+test(a_duplicate_key_is_never_also_wrong_type) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(processing_based_on_consent, true),
+         attribute(processing_based_on_consent, maybe)],
+        [duplicate_key(processing_based_on_consent)]).
+test(a_number_key_is_an_unknown_key_as_given) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(1, true)],
+        [unknown_key(1)]).
+test(contract_problems_come_before_unknown_keys) :-
+    gdpr_consent_conditions_input_problems(
+        [attribute(colour, red),
+         attribute(colour, blue),
+         attribute(consent_demonstrable, false)],
+        [wrong_type(consent_demonstrable), unknown_key(colour)]).
+test(an_unbound_profile_is_wrong_type_profile) :-
+    gdpr_consent_conditions_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_wrong_type_profile) :-
+    gdpr_consent_conditions_input_problems([attribute(processing_based_on_consent, true)|_], [wrong_type(profile)]).
+test(a_non_attribute_element_is_wrong_type_profile) :-
+    gdpr_consent_conditions_input_problems([foo], [wrong_type(profile)]).
+test(the_input_check_yields_one_solution) :-
+    findall(Problems, gdpr_consent_conditions_input_problems([attribute(colour, red)], Problems), Answers),
+    Answers == [[unknown_key(colour)]].
+test(the_key_order_holds_thirteen_keys) :-
+    gdpr_consent_conditions_key_order(Keys),
+    length(Keys, 13).
+test(an_attested_true_outside_fact_is_met) :-
+    outside_fact_limb(
+        [attribute(consent_demonstrable, attested(true, attestation(by, at, reason, none)))],
+        consent_demonstrable,
+        met,
+        attested(true, attestation(by, at, reason, none))).
+test(an_attested_false_outside_fact_is_unmet) :-
+    outside_fact_limb(
+        [attribute(consent_demonstrable, attested(false, attestation(by, at, reason, none)))],
+        consent_demonstrable,
+        unmet,
+        _).
+test(an_attested_false_outside_fact_is_not_met, fail) :-
+    outside_fact_limb(
+        [attribute(consent_demonstrable, attested(false, attestation(by, at, reason, none)))],
+        consent_demonstrable,
+        met,
+        _).
+test(an_absent_outside_fact_is_absent) :-
+    outside_fact_limb([], consent_demonstrable, absent, absent).
+test(the_outside_fact_reader_yields_one_solution) :-
+    findall(Limb, outside_fact_limb([], consent_demonstrable, Limb, _), Limbs),
+    Limbs == [absent].
+test(a_true_crisp_key_is_met) :-
+    crisp_limb([attribute(processing_based_on_consent, true)], processing_based_on_consent, met).
+test(a_false_crisp_key_is_unmet) :-
+    crisp_limb([attribute(processing_based_on_consent, false)], processing_based_on_consent, unmet).
+test(a_false_crisp_key_is_not_met, fail) :-
+    crisp_limb([attribute(processing_based_on_consent, false)], processing_based_on_consent, met).
+test(an_absent_crisp_key_is_absent) :-
+    crisp_limb([], processing_based_on_consent, absent).
 
 :- end_module(kernel).

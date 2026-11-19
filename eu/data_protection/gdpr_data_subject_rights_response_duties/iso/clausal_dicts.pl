@@ -1,7 +1,7 @@
 % SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_dicts.pl
 % Clausal's dict predicate forms for the Clausal Prolog
-% (.clausal) ISO export, under the ENGINE's names :
+% (.clausal) ISO export, under the ENGINE's names:
 % the exported code calls get/3 exactly as the source does. A dict is an
 % attribute(Key, Value) list -- the profile representation the vendored
 % formalize_lib and query_combinators already use, so a dict built here flows

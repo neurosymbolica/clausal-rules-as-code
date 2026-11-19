@@ -4,134 +4,193 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
 :- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_gdpr_administrative_fine_maximum, [administrative_fine_maximum/3, decide_gdpr_administrative_fine_maximum/2, gdpr_administrative_fine_maximum_status/2, gdpr_administrative_fine_maximum_checklist/2, gdpr_administrative_fine_maximum_decision_resolvable/1, gdpr_administrative_fine_maximum_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_fixtures, [gdpr_administrative_fine_maximum_subject/1, gdpr_administrative_fine_maximum_profile_for/2, gdpr_administrative_fine_maximum_assess/2]).
-:- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_queries, [gdpr_administrative_fine_maximum_what_if/4]).
 :- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_kernel, [gdpr_administrative_fine_maximum_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_administrative_fine_maximum_fixtures, [gdpr_administrative_fine_maximum_subject/1, gdpr_administrative_fine_maximum_profile_for/2, gdpr_administrative_fine_maximum_assess/2]).
 
-expect(Subject, Verdict, Citations) :-
-    findall(Result, gdpr_administrative_fine_maximum_assess(Subject, Result), Results),
-    Results == [gdpr_administrative_fine_maximum_verdict(Verdict, Citations)].
+expected_status(lower_tier_turnover_at_tie, fine_maximum_determined).
+expected_status(lower_tier_turnover_just_above_tie, fine_maximum_determined).
+expected_status(higher_tier_turnover_at_tie, fine_maximum_determined).
+expected_status(higher_tier_turnover_just_above_tie, fine_maximum_determined).
+expected_status(non_undertaking_certification_body, fine_maximum_determined).
+expected_status(undertaking_with_zero_turnover, fine_maximum_determined).
+expected_status(supervisory_order_non_undertaking, fine_maximum_determined).
+expected_status(combined_linked_and_intentional, fine_maximum_determined).
+expected_status(separate_not_intentional_or_negligent, separate_fine_maxima_determined).
+expected_status(linked_operations_unsure, referred_for_legal_review).
+expected_status(missing_turnover_unsure_undertaking, required_input_missing).
+expected_status(unsure_undertaking_with_turnover, referred_for_legal_review).
+expected_status(unlisted_provision, referred_for_legal_review).
+expected_status(listed_neighbour_provision, fine_maximum_determined).
+expected_status(negative_turnover_rejected, input_rejected).
+expected_status(zero_turnover_accepted, fine_maximum_determined).
 
-test(lower_percentage_basis) :-
-    expect(lower_percentage_basis, fine_maximum(lower_maximum_tier, percentage_of_turnover, 2000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]).
-test(lower_tie_is_the_fixed_amount) :-
-    expect(lower_tie_at_fixed, fine_maximum(lower_maximum_tier, fixed_amount, 1000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]).
-test(lower_one_euro_above_the_tie_is_percentage) :-
-    expect(lower_one_euro_above_tie, fine_maximum(lower_maximum_tier, percentage_of_turnover, 1000000002), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]).
-test(lower_one_euro_below_the_tie_is_fixed) :-
-    expect(lower_one_euro_below_tie, fine_maximum(lower_maximum_tier, fixed_amount, 1000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]).
-test(higher_fixed_basis) :-
-    expect(higher_fixed_basis, fine_maximum(higher_maximum_tier, fixed_amount, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]).
-test(higher_tie_is_the_fixed_amount) :-
-    expect(higher_tie_at_fixed, fine_maximum(higher_maximum_tier, fixed_amount, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]).
-test(higher_one_euro_above_the_tie_is_percentage) :-
-    expect(higher_one_euro_above_tie, fine_maximum(higher_maximum_tier, percentage_of_turnover, 2000000004), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]).
-test(lower_non_undertaking) :-
-    expect(lower_non_undertaking, fine_maximum(lower_maximum_tier, fixed_amount_for_non_undertaking, 1000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)]).
-test(higher_non_undertaking_ignores_turnover) :-
-    expect(higher_non_undertaking_ignores_turnover, fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]).
-test(certification_body_cites_both_points) :-
-    expect(certification_body_article_42, fine_maximum(lower_maximum_tier, fixed_amount, 1000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_4_b)]).
-test(monitoring_body) :-
-    expect(monitoring_body_article_41_paragraph_4, fine_maximum(lower_maximum_tier, fixed_amount_for_non_undertaking, 1000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_c)]).
-test(member_state_law) :-
-    expect(member_state_law_chapter_ix, fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_d)]).
-test(order_non_compliance_cites_paragraph_six) :-
-    expect(order_non_compliance, fine_maximum(higher_maximum_tier, fixed_amount, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6), cite(eu_reg_2016_679_art_83_5_e)]).
-test(access_failure_does_not_cite_paragraph_six) :-
-    expect(access_failure, fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_e)]).
-test(a_provision_named_twice_is_one_infringement) :-
-    expect(provision_named_twice, fine_maximum(higher_maximum_tier, fixed_amount_for_non_undertaking, 2000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]).
-test(combined_takes_the_gravest_tier) :-
-    expect(combined_gravest_is_higher, fine_maximum(higher_maximum_tier, percentage_of_turnover, 4000000000), [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a), cite(eu_reg_2016_679_art_83_3)]).
-test(combined_all_lower_stays_lower) :-
-    expect(combined_all_lower, fine_maximum(lower_maximum_tier, percentage_of_turnover, 2000000000), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_3)]).
-test(separate_when_not_linked) :-
-    expect(separate_not_linked, separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_5, higher_maximum_tier, percentage_of_turnover, 4000000000)]), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)]).
-test(separate_when_not_negligent) :-
-    expect(separate_not_negligent, separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_5, higher_maximum_tier, percentage_of_turnover, 4000000000)]), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)]).
-test(a_false_key_settles_separate_without_the_other) :-
-    expect(separate_one_unsure_one_false, separate_fine_maxima([infringement_maximum(article_32, lower_maximum_tier, percentage_of_turnover, 2000000000), infringement_maximum(article_5, higher_maximum_tier, percentage_of_turnover, 4000000000)]), [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)]).
-test(unsure_undertaking_refers) :-
-    expect(unsure_undertaking, needs_legal_review(open_textured(infringer_is_undertaking, cite(eu_reg_2016_679_art_83_4)), [inputs_relied_on([infringer_is_undertaking - unsure])]), []).
-test(unsure_first_art_83_3_key_refers) :-
-    expect(unsure_first_art_83_3_key, needs_legal_review(open_textured(infringements_concern_same_or_linked_processing_operations, cite(eu_reg_2016_679_art_83_3)), [inputs_relied_on([infringer_is_undertaking - true, infringements_concern_same_or_linked_processing_operations - unsure, infringements_intentional_or_negligent - true])]), []).
-test(unsure_second_art_83_3_key_refers) :-
-    expect(unsure_second_art_83_3_key, needs_legal_review(open_textured(infringements_intentional_or_negligent, cite(eu_reg_2016_679_art_83_3)), [inputs_relied_on([infringer_is_undertaking - true, infringements_concern_same_or_linked_processing_operations - true, infringements_intentional_or_negligent - unsure])]), []).
-test(unsure_undertaking_refers_even_in_separate_mode) :-
-    expect(unsure_undertaking_in_separate_mode, needs_legal_review(open_textured(infringer_is_undertaking, cite(eu_reg_2016_679_art_83_4)), [inputs_relied_on([infringer_is_undertaking - unsure, infringements_concern_same_or_linked_processing_operations - false, infringements_intentional_or_negligent - true])]), []).
-test(missing_turnover) :-
-    expect(missing_turnover, indeterminate([total_worldwide_annual_turnover_in_euros]), []).
-test(missing_art_83_3_keys_in_order) :-
-    expect(missing_art_83_3_keys, indeterminate([infringements_concern_same_or_linked_processing_operations, infringements_intentional_or_negligent]), []).
-test(missing_provisions_never_names_the_art_83_3_keys) :-
-    expect(missing_provisions, indeterminate([infringed_provisions]), []).
-test(missing_everything) :-
-    expect(missing_everything, indeterminate([infringed_provisions, infringer_is_undertaking, total_worldwide_annual_turnover_in_euros]), []).
-test(unlisted_provision_is_not_governed_here) :-
-    expect(unlisted_provision, needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6)]), [inputs_relied_on([infringed_provisions - [article_24]])]), []).
-test(unlisted_context_keeps_the_list_as_given) :-
-    expect(unlisted_with_duplicates, needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6)]), [inputs_relied_on([infringed_provisions - [article_5, article_24, article_24]])]), []).
-test(negative_turnover_is_a_problem) :-
-    expect(input_negative_turnover, input_problems([wrong_type(total_worldwide_annual_turnover_in_euros)]), []).
-test(unknown_key_is_a_problem) :-
-    expect(input_unknown_key, input_problems([unknown_key(surprise_key)]), []).
-test(duplicate_key_is_a_problem) :-
-    expect(input_duplicate_key, input_problems([duplicate_key(infringer_is_undertaking)]), []).
-test(an_unread_key_is_still_checked) :-
-    expect(input_wrong_judgement_unread, input_problems([wrong_type(infringements_intentional_or_negligent)]), []).
-test(a_good_profile_has_no_input_problem) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    gdpr_administrative_fine_maximum_input_problems(Profile, []).
-test(status_of_a_final_answer) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    gdpr_administrative_fine_maximum_status(Profile, fine_maximum).
-test(status_of_a_referral) :-
-    gdpr_administrative_fine_maximum_profile_for(unsure_undertaking, Profile),
-    gdpr_administrative_fine_maximum_status(Profile, needs_legal_review).
-test(status_is_in_the_status_table) :-
-    gdpr_administrative_fine_maximum_profile_for(separate_not_linked, Profile),
-    gdpr_administrative_fine_maximum_status(Profile, Status),
-    gdpr_administrative_fine_maximum_status_values(StatusValues),
-    member(Status, StatusValues).
-test(checklist_carries_a_citation_per_item) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    findall(Items, gdpr_administrative_fine_maximum_checklist(Profile, Items), Answers),
-    Answers == [[item(eu_reg_2016_679_art_83_4, met, cite(eu_reg_2016_679_art_83_4)), item(eu_reg_2016_679_art_83_4_a, met, cite(eu_reg_2016_679_art_83_4_a))]].
-test(checklist_of_a_referral_is_not_empty) :-
-    gdpr_administrative_fine_maximum_profile_for(unsure_undertaking, Profile),
-    findall(Items, gdpr_administrative_fine_maximum_checklist(Profile, Items), Answers),
-    Answers == [[item(overall, unknown([infringer_is_undertaking]), cite(eu_reg_2016_679_art_83_4))]].
-test(decision_is_resolvable) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    gdpr_administrative_fine_maximum_decision_resolvable(Profile).
-test(what_if_a_lower_turnover_flips_the_basis) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    findall(Verdict, gdpr_administrative_fine_maximum_what_if(Profile, total_worldwide_annual_turnover_in_euros, 500000000, Verdict), Verdicts),
-    Verdicts == [fine_maximum(lower_maximum_tier, fixed_amount, 1000000000)].
-test(what_if_not_an_undertaking_drops_the_percentage) :-
-    gdpr_administrative_fine_maximum_profile_for(lower_percentage_basis, Profile),
-    findall(Verdict, gdpr_administrative_fine_maximum_what_if(Profile, infringer_is_undertaking, false, Verdict), Verdicts),
-    Verdicts == [fine_maximum(lower_maximum_tier, fixed_amount_for_non_undertaking, 1000000000)].
-test(the_calculation_predicate_answers_directly) :-
-    gdpr_administrative_fine_maximum_profile_for(higher_fixed_basis, Profile),
+subject_answer(Subject, Verdict, Citations) :-
+    gdpr_administrative_fine_maximum_profile_for(Subject, Profile),
+    administrative_fine_maximum(Profile, Verdict, Citations).
+
+subject_answers_once(Subject) :-
+    gdpr_administrative_fine_maximum_profile_for(Subject, Profile),
     findall(Verdict - Citations, administrative_fine_maximum(Profile, Verdict, Citations), Answers),
-    Answers == [fine_maximum(higher_maximum_tier, fixed_amount, 2000000000) - [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a)]].
-test(decide_wraps_the_verdict) :-
-    gdpr_administrative_fine_maximum_profile_for(higher_fixed_basis, Profile),
-    decide_gdpr_administrative_fine_maximum(Profile, gdpr_administrative_fine_maximum_verdict(fine_maximum(higher_maximum_tier, fixed_amount, 2000000000), _)).
-test(every_subject_resolves_exactly_once) :-
+    length(Answers, 1).
+
+subject_checklist_is_non_empty(Subject) :-
+    gdpr_administrative_fine_maximum_profile_for(Subject, Profile),
+    gdpr_administrative_fine_maximum_checklist(Profile, [_|_]).
+
+test(every_subject_resolves_to_its_expected_status_exactly_once) :-
+    findall(Subject - Status, (gdpr_administrative_fine_maximum_subject(Subject), gdpr_administrative_fine_maximum_assess(Subject, gdpr_administrative_fine_maximum_verdict(Status, _))), Resolved),
+    findall(Subject - Status, expected_status(Subject, Status), Expected),
+    clausal_msort(Resolved, SortedResolved),
+    clausal_msort(Expected, SortedExpected),
+    SortedResolved == SortedExpected.
+test(every_subject_answers_the_contract_exactly_once) :-
     findall(Subject, gdpr_administrative_fine_maximum_subject(Subject), Subjects),
-    Subjects = [_|_],
-    findall(Count, (member(Subject, Subjects), findall(Result, gdpr_administrative_fine_maximum_assess(Subject, Result), Results), length(Results, Count)), Counts),
-    sort(Counts, [1]).
+    maplist(subject_answers_once, Subjects).
+test(every_status_is_in_the_vocabulary) :-
+    gdpr_administrative_fine_maximum_status_values(StatusValues),
+    findall(Status, expected_status(_, Status), Statuses),
+    sort(Statuses, DistinctStatuses),
+    sort(StatusValues, DistinctStatusValues),
+    DistinctStatuses == DistinctStatusValues.
+test(every_subject_has_a_non_empty_checklist_and_is_resolvable) :-
+    findall(Subject, gdpr_administrative_fine_maximum_subject(Subject), Subjects),
+    maplist(subject_checklist_is_non_empty, Subjects),
+    gdpr_administrative_fine_maximum_profile_for(lower_tier_turnover_at_tie, Profile),
+    gdpr_administrative_fine_maximum_decision_resolvable(Profile).
+test(checklist_rows_of_a_final_answer_carry_a_citation) :-
+    gdpr_administrative_fine_maximum_profile_for(separate_not_intentional_or_negligent, Profile),
+    gdpr_administrative_fine_maximum_checklist(Profile, [item(overall, Status, _)|ItemRows]),
+    Status == separate_fine_maxima_determined,
+    ItemRows = [item(_, met, cite(FirstCitationKey)), item(_, met, cite(SecondCitationKey))],
+    FirstCitationKey == eu_reg_2016_679_art_83_4,
+    SecondCitationKey == eu_reg_2016_679_art_83_5.
+test(lower_tier_at_tie_keeps_the_fixed_amount) :-
+    subject_answer(lower_tier_turnover_at_tie, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == lower_maximum_tier,
+    Basis == fixed_amount,
+    CapInEuroCents =:= 1000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)].
+test(lower_tier_just_above_tie_takes_the_percentage) :-
+    subject_answer(lower_tier_turnover_just_above_tie, fine_maximum(MaximumTier, Basis, CapInEuroCents), _),
+    MaximumTier == lower_maximum_tier,
+    Basis == percentage_of_turnover,
+    CapInEuroCents =:= 1000000002.
+test(higher_tier_at_tie_keeps_the_fixed_amount) :-
+    subject_answer(higher_tier_turnover_at_tie, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == higher_maximum_tier,
+    Basis == fixed_amount,
+    CapInEuroCents =:= 2000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_b)].
+test(higher_tier_just_above_tie_takes_the_percentage) :-
+    subject_answer(higher_tier_turnover_just_above_tie, fine_maximum(MaximumTier, Basis, CapInEuroCents), _),
+    MaximumTier == higher_maximum_tier,
+    Basis == percentage_of_turnover,
+    CapInEuroCents =:= 2000000004.
+test(non_undertaking_gets_the_fixed_amount_alone) :-
+    subject_answer(non_undertaking_certification_body, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == lower_maximum_tier,
+    Basis == fixed_amount_for_non_undertaking,
+    CapInEuroCents =:= 1000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_4_b)].
+test(undertaking_with_zero_turnover_gets_fixed_amount) :-
+    subject_answer(undertaking_with_zero_turnover, fine_maximum(MaximumTier, Basis, CapInEuroCents), _),
+    MaximumTier == lower_maximum_tier,
+    Basis == fixed_amount,
+    CapInEuroCents =:= 1000000000.
+test(supervisory_order_cites_article_83_6_after_83_5) :-
+    subject_answer(supervisory_order_non_undertaking, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == higher_maximum_tier,
+    Basis == fixed_amount_for_non_undertaking,
+    CapInEuroCents =:= 2000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6), cite(eu_reg_2016_679_art_83_5_e)].
+test(combined_takes_the_gravest_tier_and_cites_article_83_3_last) :-
+    subject_answer(combined_linked_and_intentional, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == higher_maximum_tier,
+    Basis == fixed_amount,
+    CapInEuroCents =:= 2000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_5_a), cite(eu_reg_2016_679_art_83_3)].
+test(separate_gives_each_maximum_never_summed) :-
+    subject_answer(separate_not_intentional_or_negligent, separate_fine_maxima([infringement_maximum(FirstProvision, FirstTier, FirstBasis, FirstCapInEuroCents), infringement_maximum(SecondProvision, SecondTier, SecondBasis, SecondCapInEuroCents)]), Citations),
+    FirstProvision == article_33,
+    FirstTier == lower_maximum_tier,
+    FirstBasis == fixed_amount,
+    FirstCapInEuroCents =:= 1000000000,
+    SecondProvision == article_6,
+    SecondTier == higher_maximum_tier,
+    SecondBasis == fixed_amount,
+    SecondCapInEuroCents =:= 2000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_4_a), cite(eu_reg_2016_679_art_83_5_a)].
+test(unsure_linked_operations_refers_with_three_pairs) :-
+    subject_answer(linked_operations_unsure, Verdict, Citations),
+    Verdict == needs_legal_review(open_textured(infringements_concern_same_or_linked_processing_operations, cite(eu_reg_2016_679_art_83_3)), [inputs_relied_on([infringer_is_undertaking - true, infringements_concern_same_or_linked_processing_operations - unsure, infringements_intentional_or_negligent - true])]),
+    Citations == [].
+test(unsure_undertaking_without_turnover_names_the_turnover) :-
+    subject_answer(missing_turnover_unsure_undertaking, Verdict, Citations),
+    Verdict == indeterminate([total_worldwide_annual_turnover_in_euros]),
+    Citations == [].
+test(unsure_undertaking_with_turnover_refers) :-
+    subject_answer(unsure_undertaking_with_turnover, Verdict, Citations),
+    Verdict == needs_legal_review(open_textured(infringer_is_undertaking, cite(eu_reg_2016_679_art_83_4)), [inputs_relied_on([infringer_is_undertaking - unsure])]),
+    Citations == [].
+test(empty_profile_names_the_three_needed_keys) :-
+    administrative_fine_maximum([], Verdict, Citations),
+    Verdict == indeterminate([infringed_provisions, infringer_is_undertaking, total_worldwide_annual_turnover_in_euros]),
+    Citations == [].
+test(unlisted_provision_is_not_governed_here) :-
+    subject_answer(unlisted_provision, Verdict, Citations),
+    Verdict == needs_legal_review(not_governed_here([cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_5), cite(eu_reg_2016_679_art_83_6)]), [inputs_relied_on([infringed_provisions - [article_24]])]),
+    Citations == [].
+test(listed_neighbour_provision_gets_a_maximum) :-
+    subject_answer(listed_neighbour_provision, fine_maximum(MaximumTier, Basis, CapInEuroCents), Citations),
+    MaximumTier == lower_maximum_tier,
+    Basis == fixed_amount_for_non_undertaking,
+    CapInEuroCents =:= 1000000000,
+    Citations == [cite(eu_reg_2016_679_art_83_4), cite(eu_reg_2016_679_art_83_4_a)].
+test(negative_turnover_is_rejected) :-
+    subject_answer(negative_turnover_rejected, Verdict, Citations),
+    Verdict == input_problems([wrong_type(total_worldwide_annual_turnover_in_euros)]),
+    Citations == [].
+test(negative_turnover_problems_from_the_input_check) :-
+    gdpr_administrative_fine_maximum_profile_for(negative_turnover_rejected, Profile),
+    gdpr_administrative_fine_maximum_input_problems(Profile, Problems),
+    Problems == [wrong_type(total_worldwide_annual_turnover_in_euros)].
+test(zero_turnover_is_accepted) :-
+    gdpr_administrative_fine_maximum_profile_for(zero_turnover_accepted, Profile),
+    gdpr_administrative_fine_maximum_input_problems(Profile, Problems),
+    Problems == [],
+    administrative_fine_maximum(Profile, fine_maximum(MaximumTier, Basis, CapInEuroCents), _),
+    MaximumTier == higher_maximum_tier,
+    Basis == fixed_amount,
+    CapInEuroCents =:= 2000000000.
+test(a_non_list_profile_is_rejected_through_the_facade) :-
+    decide_gdpr_administrative_fine_maximum(profile_text, Verdict),
+    Verdict == gdpr_administrative_fine_maximum_verdict(input_rejected, []).
 
-test(the_tie_is_not_percentage, fail) :-
-    gdpr_administrative_fine_maximum_assess(lower_tie_at_fixed, gdpr_administrative_fine_maximum_verdict(fine_maximum(_, percentage_of_turnover, _), _)).
+test(lower_tier_at_tie_is_not_percentage, fail) :-
+    subject_answer(lower_tier_turnover_at_tie, fine_maximum(_, percentage_of_turnover, _), _).
+test(lower_tier_just_above_tie_is_not_fixed, fail) :-
+    subject_answer(lower_tier_turnover_just_above_tie, fine_maximum(_, fixed_amount, _), _).
+test(higher_tier_just_above_tie_is_not_fixed, fail) :-
+    subject_answer(higher_tier_turnover_just_above_tie, fine_maximum(_, fixed_amount, _), _).
+test(undertaking_is_not_treated_as_non_undertaking, fail) :-
+    subject_answer(undertaking_with_zero_turnover, fine_maximum(_, fixed_amount_for_non_undertaking, _), _).
+test(combined_is_not_separate, fail) :-
+    subject_answer(combined_linked_and_intentional, separate_fine_maxima(_), _).
+test(separate_is_not_a_single_fine_maximum, fail) :-
+    subject_answer(separate_not_intentional_or_negligent, fine_maximum(_, _, _), _).
+test(unsure_linked_operations_gives_no_maximum, fail) :-
+    subject_answer(linked_operations_unsure, fine_maximum(_, _, _), _).
+test(unsure_undertaking_with_turnover_is_not_missing, fail) :-
+    gdpr_administrative_fine_maximum_assess(unsure_undertaking_with_turnover, gdpr_administrative_fine_maximum_verdict(required_input_missing, _)).
+test(listed_neighbour_provision_is_not_referred, fail) :-
+    subject_answer(listed_neighbour_provision, needs_legal_review(_, _), _).
+test(zero_turnover_is_not_rejected, fail) :-
+    gdpr_administrative_fine_maximum_status([attribute(infringed_provisions, [article_6]), attribute(infringer_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 0)], input_rejected).
 
-cp_test_names([lower_percentage_basis, lower_tie_is_the_fixed_amount, lower_one_euro_above_the_tie_is_percentage, lower_one_euro_below_the_tie_is_fixed, higher_fixed_basis, higher_tie_is_the_fixed_amount, higher_one_euro_above_the_tie_is_percentage, lower_non_undertaking, higher_non_undertaking_ignores_turnover, certification_body_cites_both_points, monitoring_body, member_state_law, order_non_compliance_cites_paragraph_six, access_failure_does_not_cite_paragraph_six, a_provision_named_twice_is_one_infringement, combined_takes_the_gravest_tier, combined_all_lower_stays_lower, separate_when_not_linked, separate_when_not_negligent, a_false_key_settles_separate_without_the_other, unsure_undertaking_refers, unsure_first_art_83_3_key_refers, unsure_second_art_83_3_key_refers, unsure_undertaking_refers_even_in_separate_mode, missing_turnover, missing_art_83_3_keys_in_order, missing_provisions_never_names_the_art_83_3_keys, missing_everything, unlisted_provision_is_not_governed_here, unlisted_context_keeps_the_list_as_given, negative_turnover_is_a_problem, unknown_key_is_a_problem, duplicate_key_is_a_problem, an_unread_key_is_still_checked, a_good_profile_has_no_input_problem, status_of_a_final_answer, status_of_a_referral, status_is_in_the_status_table, checklist_carries_a_citation_per_item, checklist_of_a_referral_is_not_empty, decision_is_resolvable, what_if_a_lower_turnover_flips_the_basis, what_if_not_an_undertaking_drops_the_percentage, the_calculation_predicate_answers_directly, decide_wraps_the_verdict, every_subject_resolves_exactly_once]).
-cp_test_fail_names([the_tie_is_not_percentage]).
+cp_test_names([every_subject_resolves_to_its_expected_status_exactly_once, every_subject_answers_the_contract_exactly_once, every_status_is_in_the_vocabulary, every_subject_has_a_non_empty_checklist_and_is_resolvable, checklist_rows_of_a_final_answer_carry_a_citation, lower_tier_at_tie_keeps_the_fixed_amount, lower_tier_just_above_tie_takes_the_percentage, higher_tier_at_tie_keeps_the_fixed_amount, higher_tier_just_above_tie_takes_the_percentage, non_undertaking_gets_the_fixed_amount_alone, undertaking_with_zero_turnover_gets_fixed_amount, supervisory_order_cites_article_83_6_after_83_5, combined_takes_the_gravest_tier_and_cites_article_83_3_last, separate_gives_each_maximum_never_summed, unsure_linked_operations_refers_with_three_pairs, unsure_undertaking_without_turnover_names_the_turnover, unsure_undertaking_with_turnover_refers, empty_profile_names_the_three_needed_keys, unlisted_provision_is_not_governed_here, listed_neighbour_provision_gets_a_maximum, negative_turnover_is_rejected, negative_turnover_problems_from_the_input_check, zero_turnover_is_accepted, a_non_list_profile_is_rejected_through_the_facade]).
+cp_test_fail_names([lower_tier_at_tie_is_not_percentage, lower_tier_just_above_tie_is_not_fixed, higher_tier_just_above_tie_is_not_fixed, undertaking_is_not_treated_as_non_undertaking, combined_is_not_separate, separate_is_not_a_single_fine_maximum, unsure_linked_operations_gives_no_maximum, unsure_undertaking_with_turnover_is_not_missing, listed_neighbour_provision_is_not_referred, zero_turnover_is_not_rejected]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

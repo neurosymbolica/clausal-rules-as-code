@@ -1,82 +1,73 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_information_duties_timing (deontic family).
-% DAG root of the determination-slices layout:
-%   kernel -> citations -> parameters -> information_deadline_basis
-%          -> information_timing_verdict -> queries -> fixtures -> facade
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL, plus the input check that the
+% scaffold writes here from the order's typed input contract.
 %
-% Sources (the law the slices formalize; this floor decides none of it):
-%   - Regulation (EU) 2016/679 (GDPR) Art 13(1), chapeau (consolidated text
-%     02016R0679-20160504, unit parag_013.001): information 'at the time
-%     when personal data are obtained';
-%   - Regulation (EU) 2016/679 (GDPR) Art 14(3)(a), (b) and (c) (units
-%     parag_014.003, point_014.003_a to point_014.003_c): the three upper
-%     bounds, the earliest applicable one binding (Q1, ruled 2026-11-01);
-%   - Regulation (EEC, Euratom) No 1182/71 Art 3(1) second subparagraph,
-%     Art 3(2)(c) and Art 3(4) (CELEX 31971R1182), applied to the GDPR by
-%     the G4 order for the one-month period of Art 14(3)(a).
+% Source: Regulation (EU) 2016/679 (GDPR) Art 13(1) and Art 14(3)(a)-(c)
+% (consolidated text 02016R0679-20160504, with the 2018 corrigendum), with the
+% calendar rule of Regulation (EEC, Euratom) No 1182/71 Art 3(1) second
+% subparagraph, Art 3(2)(c), Art 3(4) and Art 2(2), applied to the GDPR by the
+% PERIODS order (G4, ruled 2026-11-01).
 %
-% WHAT LIVES HERE, and why:
-%   1. gdpr_information_duties_timing_input_problems/2 -- the input check
-%      (K) written by the scaffold from the typed input contract; every
-%      relation (D), (E), (F) calls it first. Kept exactly as written.
-%   2. gdpr_information_duties_timing_date_order/3 -- the comparison of two
-%      date(Year, Month, Day) terms by Year, then Month, then Day, as
-%      integers (reading 5: dates are compared by value, never as strings
-%      or floats). Both slices call it: information_deadline_basis to pick
-%      the earliest applicable limb of Art 14(3), information_timing_verdict
-%      to compare provision_date with DEADLINE. It is comparison plumbing,
-%      not a statutory condition, and the kernel sits BELOW citations in
-%      the DAG, so it carries no implements/1 marker: the slice clauses
-%      that apply it to a statutory bound carry the marker of that bound.
-%   Everything else (the route, the limb dates, the one-month calendar
-%   rule, the reasonable-period judgement, the checklists) is owned by the
-%   one slice that decides it.
+% NOTHING STATUTORY IS DECIDED HERE. The kernel is the DAG root, below
+% citations, so it carries no implements/1 marker: every predicate below is
+% profile, date-order or result-term plumbing. Each statutory test (the route,
+% the limbs, the one-month period, the reasonable-period judgement) is decided
+% in its determination slice, under its own marker.
 %
-% Atoms and data terms need NO declaration and NO import. The result
-% terms are RECORDED here so that every file spells them alike:
+% Atoms and data terms need NO declaration and NO import. The block below only
+% RECORDS the result terms so every file spells them alike.
 %
-%   information_deadline_basis_verdict(Status, Citations)
-%     Status: one of the bare atoms art13_1 | art14_3_a | art14_3_b |
-%       art14_3_c (the limb that fixes DEADLINE; on a tie the first of
-%       (a), (b), (c)), or the compound indeterminate(MissingKeys)
-%       (MissingKeys a non-empty list of bare profile-key atoms in
-%       root_exports order, no duplicates), or the compound
-%       input_problems(Problems) (Problems the non-empty list of (K)).
-%     Citations: [cite(Key)] for the limb of Status, Key one of
-%       eu_reg_2016_679_art_13_1 | eu_reg_2016_679_art_14_3_a |
-%       eu_reg_2016_679_art_14_3_b | eu_reg_2016_679_art_14_3_c;
-%       [] for every non-final Status.
+% Result terms -- one per determination slice:
+%   information_deadline_basis_decision(Basis, Citations)
+%     Basis: art13_1 | art14_3_a | art14_3_b | art14_3_c, or one status
+%     compound (indeterminate(MissingKeys), input_problems(Problems), or the
+%     public-holidays referral below); Citations: [cite(Key)] for a final Basis,
+%     [] otherwise.
+%   information_timing_verdict_decision(Verdict, Citations)
+%     Verdict: timely | late, or one status compound (as above, plus the
+%     open-texture review needs_legal_review(open_textured(
+%     provided_within_reasonable_period, cite(eu_reg_2016_679_art_14_3_a)),
+%     [inputs_relied_on([provided_within_reasonable_period-unsure])]));
+%     Citations: [cite(Key)] when Verdict is timely or late, [] otherwise.
+%   deadline_resolution(Profile, Resolution), exported by the basis slice to the
+%     verdict slice, Resolution one of fixed(DateTerm, Basis),
+%     missing(MissingKeys), holidays_unattested(LimbADateWithoutHolidays,
+%     EarliestEventLimb), problems(Problems).
+%   The public-holidays referral (THE ANSWERS (P)), built by
+%     public_holidays_referral/2 below:
+%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_1971_1182_art_3_4),
+%       cite(public_holidays_applicable_to_the_period)),
+%       [resolution(cite(public_holidays_applicable_to_the_period), not_attempted),
+%        inputs_relied_on(Pairs)])
+%     Pairs: [] or [provided_within_reasonable_period-Value].
+% The bare atom indeterminate is NEVER written; only indeterminate/1.
 %
-%   information_timing_verdict_verdict(Status, Citations)
-%     Status: the bare atom timely or late, or a non-final compound:
-%       indeterminate(MissingKeys);
-%       needs_legal_review(open_textured(provided_within_reasonable_period,
-%           cite(eu_reg_2016_679_art_14_3_a)),
-%         [inputs_relied_on(Pairs), provenance(Clause, CitationList)])
-%         where Pairs are the Key-Value pairs of the judgement keys read
-%         (here [provided_within_reasonable_period-unsure]) and the
-%         trailing provenance/2 is optional and unscored;
-%       input_problems(Problems).
-%     Citations: [cite(eu_reg_2016_679_art_13_1)] on the Art 13 route;
-%       [cite(K)] for the limb of the basis on the Art 14 route
-%       (_a when provided_within_reasonable_period is false); [] for
-%       every non-final Status.
-%
-%   information_deadline/2 answers DEADLINE as date(Year, Month, Day) of
-%   bare integers, or indeterminate(MissingKeys), or input_problems(P).
-%
-%   Checklist rows are formalize_lib item(Id, Status, cite(Key)) terms,
-%   Status met | unmet(Reason) | unknown(Keys) | inapplicable.
-%
-% The bare atom indeterminate is NEVER written (atom-shadowing trap).
-% The atoms true and false are the crisp values; unsure is the third
-% value of a judgement. No as-of date is carried (Q12).
+% Shared predicates (each called by both slices):
+%   contract_keys/1            the twenty-six keys in root_exports order
+%   profile_key_status/3       present(Value) or absent, via formalize_lib
+%   keys_in_contract_order/2   MISSING_KEYS in contract order, no duplicates
+%   calendar_date_relation/3   before | same | after, compared as integers
+%   calendar_date_on_or_before/2, calendar_date_before/2
+%   public_holidays_referral/2 the REF term of THE ANSWERS (P)
 % =====================================================================
 
-:- module(kernel, [gdpr_information_duties_timing_input_problems/2, gdpr_information_duties_timing_date_order/3]).
+:- module(kernel, [
+    gdpr_information_duties_timing_input_problems/2,
+    contract_keys/1,
+    profile_key_status/3,
+    keys_in_contract_order/2,
+    calendar_date_relation/3,
+    calendar_date_on_or_before/2,
+    calendar_date_before/2,
+    public_holidays_referral/2
+]).
 
+:- use_module(library(clpz)).
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_information_duties_timing_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -379,109 +370,113 @@ gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
 gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
     FourYearRemainder =\= 0.
 
-% ---- shared: the order of two calendar dates ---------------------
-% gdpr_information_duties_timing_date_order(FirstDate, SecondDate, Order): Order is
-% before, same or after, comparing date(Year, Month, Day) terms by Year, then Month,
-% then Day, each as an integer (reading 5: by value, never as strings or floats).
-% Called only on dates the input check has accepted (three integers of a real
-% calendar day), so compare/3 orders them numerically. Exactly one solution.
-gdpr_information_duties_timing_date_order(
-        date(FirstYear, FirstMonth, FirstDay),
-        date(SecondYear, SecondMonth, SecondDay),
-        Order) :-
-    compare(YearComparison, FirstYear, SecondYear),
-    compare(MonthComparison, FirstMonth, SecondMonth),
-    compare(DayComparison, FirstDay, SecondDay),
-    lexicographic_order(YearComparison, MonthComparison, DayComparison, Order).
+% ---- shared plumbing: called by both determination slices -------
 
-lexicographic_order((<), _, _, before).
-lexicographic_order((>), _, _, after).
-lexicographic_order((=), (<), _, before).
-lexicographic_order((=), (>), _, after).
-lexicographic_order((=), (=), (<), before).
-lexicographic_order((=), (=), (=), same).
-lexicographic_order((=), (=), (>), after).
+% contract_keys(Keys): the twenty-six contract keys in root_exports order, read from the
+% key_type/2 table of the input check (one source of the order).
+contract_keys(Keys) :-
+    findall(Key, key_type(Key, _), Keys).
 
-% ---- tests ---------------------------------------------------------
+% profile_key_status(Profile, Key, Status): Status is present(Value) when Profile gives Key,
+% absent when it does not. Read with formalize_lib only, by presence first and then by value.
+% Called only after the input check gave [], so a key occurs at most once.
+profile_key_status(Profile, Key, present(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+profile_key_status(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+
+% keys_in_contract_order(Keys, Ordered): the contract keys among Keys, in root_exports order,
+% each once (the MISSING_KEYS order of THE ANSWERS).
+keys_in_contract_order(Keys, Ordered) :-
+    contract_keys(ContractKeys),
+    contract_order(ContractKeys, Keys, Ordered).
+
+contract_order([], _, []).
+contract_order([ContractKey|ContractKeys], Keys, Ordered) :-
+    memberd_t(ContractKey, Keys, IsNamed),
+    keep_named_key(IsNamed, ContractKey, ContractKeys, Keys, Ordered).
+
+keep_named_key(true, ContractKey, ContractKeys, Keys, [ContractKey|Ordered]) :-
+    contract_order(ContractKeys, Keys, Ordered).
+keep_named_key(false, _, ContractKeys, Keys, Ordered) :-
+    contract_order(ContractKeys, Keys, Ordered).
+
+% calendar_date_number(DateTerm, DateNumber): the exact integer Year*10000 + Month*100 + Day,
+% so dates compare by value as integers, never as floats, strings or compound terms.
+calendar_date_number(date(Year, Month, DayNumber), DateNumber) :-
+    DateNumber #= Year * 10000 + Month * 100 + DayNumber.
+
+% calendar_date_relation(First, Second, Relation): Relation is before, same or after.
+% Three complementary clauses: exactly one holds for two real calendar dates.
+calendar_date_relation(First, Second, before) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #< SecondNumber.
+calendar_date_relation(First, Second, same) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #= SecondNumber.
+calendar_date_relation(First, Second, after) :-
+    calendar_date_number(First, FirstNumber),
+    calendar_date_number(Second, SecondNumber),
+    FirstNumber #> SecondNumber.
+
+calendar_date_on_or_before(Earlier, Later) :-
+    calendar_date_number(Earlier, EarlierNumber),
+    calendar_date_number(Later, LaterNumber),
+    EarlierNumber #=< LaterNumber.
+
+calendar_date_before(Earlier, Later) :-
+    calendar_date_number(Earlier, EarlierNumber),
+    calendar_date_number(Later, LaterNumber),
+    EarlierNumber #< LaterNumber.
+
+% public_holidays_referral(Pairs, Referral): the REF term of THE ANSWERS (P), for an absent
+% public_holidays where a public holiday could change the answer. Data only: the slice that
+% decides to refer carries the marker.
+public_holidays_referral(Pairs,
+                         needs_legal_review(
+                             cross_reference_unresolved(
+                                 cite(eu_reg_1971_1182_art_3_4),
+                                 cite(public_holidays_applicable_to_the_period)),
+                             [resolution(cite(public_holidays_applicable_to_the_period), not_attempted),
+                              inputs_relied_on(Pairs)])).
+
 test(an_empty_profile_has_no_problem) :-
     gdpr_information_duties_timing_input_problems([], []).
-test(a_well_typed_profile_has_no_problem) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(personal_data_collected_from_data_subject, false),
-         attribute(obtaining_date, date(2028, 2, 29)),
-         attribute(provided_within_reasonable_period, unsure),
-         attribute(items_provided, []),
-         attribute(public_holidays,
-                   attested([date(2027, 2, 1)], attestation(host, moment, reason, none)))],
-        []).
-test(a_crisp_flag_given_true_has_no_problem) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(personal_data_collected_from_data_subject, true)],
-        []).
-test(a_crisp_flag_given_unsure_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(personal_data_collected_from_data_subject, unsure)],
-        [wrong_type(personal_data_collected_from_data_subject)]).
-test(a_crisp_flag_given_unsure_is_not_well_formed, fail) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(personal_data_collected_from_data_subject, unsure)],
-        []).
-test(a_date_that_is_not_a_calendar_day_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(obtaining_date, date(2026, 2, 29))],
-        [wrong_type(obtaining_date)]).
-test(a_leap_day_is_a_calendar_day) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(obtaining_date, date(2028, 2, 29))],
-        []).
-test(a_repeated_key_is_a_duplicate_only) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(obtaining_date, date(2026, 1, 15)),
-         attribute(obtaining_date, not_a_date)],
-        [duplicate_key(obtaining_date)]).
-test(an_unknown_key_is_named_once) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(as_of_date, first), attribute(as_of_date, second)],
-        [unknown_key(as_of_date)]).
-test(other_purpose_information_is_not_an_item_provided) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(items_provided, [other_purpose_information])],
-        [wrong_type(items_provided)]).
-test(a_malformed_holiday_list_is_wrong_type) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(public_holidays,
-                   attested([date(2027, 2, 30)], attestation(host, moment, reason, none)))],
-        [wrong_type(public_holidays)]).
-test(problems_follow_contract_order_then_unknown_keys) :-
-    gdpr_information_duties_timing_input_problems(
-        [attribute(zebra, 1),
-         attribute(provision_date, not_a_date),
-         attribute(personal_data_collected_from_data_subject, yes)],
-        [wrong_type(personal_data_collected_from_data_subject),
-         wrong_type(provision_date),
-         unknown_key(zebra)]).
-test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+test(a_non_list_is_not_a_profile) :-
     gdpr_information_duties_timing_input_problems(profile, [wrong_type(profile)]).
-test(the_input_check_has_exactly_one_answer) :-
-    findall(Problems,
-            gdpr_information_duties_timing_input_problems(
-                [attribute(obtaining_date, date(2026, 1, 15))], Problems),
-            Answers),
-    Answers == [[]].
-test(an_earlier_year_is_before) :-
-    gdpr_information_duties_timing_date_order(date(2026, 12, 31), date(2027, 1, 1), before).
-test(a_later_day_is_after) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 16), date(2026, 2, 15), after).
-test(day_two_is_before_day_fifteen) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), before).
-test(day_two_is_not_after_day_fifteen, fail) :-
-    gdpr_information_duties_timing_date_order(date(2026, 2, 2), date(2026, 2, 15), after).
-test(the_same_date_is_same) :-
-    gdpr_information_duties_timing_date_order(date(2026, 3, 2), date(2026, 3, 2), same).
-test(the_date_order_has_exactly_one_answer) :-
-    findall(Order,
-            gdpr_information_duties_timing_date_order(date(2026, 3, 2), date(2026, 3, 2), Order),
-            Orders),
-    Orders == [same].
+test(a_false_calendar_day_is_wrong_type) :-
+    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2026, 2, 29))],
+                                                 [wrong_type(obtaining_date)]).
+test(a_leap_day_is_a_real_day) :-
+    gdpr_information_duties_timing_input_problems([attribute(obtaining_date, date(2028, 2, 29))], []).
+test(the_contract_has_twenty_six_keys) :-
+    contract_keys(Keys),
+    length(Keys, 26).
+test(missing_keys_follow_the_contract_order) :-
+    keys_in_contract_order([provision_date, personal_data_collected_from_data_subject, provision_date],
+                           Ordered),
+    Ordered == [personal_data_collected_from_data_subject, provision_date].
+test(a_present_key_is_read) :-
+    profile_key_status([attribute(obtaining_date, date(2026, 1, 15))], obtaining_date, Status),
+    Status == present(date(2026, 1, 15)).
+test(an_absent_key_is_absent) :-
+    profile_key_status([], obtaining_date, absent).
+test(dates_compare_by_value) :-
+    calendar_date_relation(date(2026, 2, 2), date(2026, 2, 15), before).
+test(dates_compare_by_value_not_as_strings, fail) :-
+    calendar_date_relation(date(2026, 2, 2), date(2026, 2, 15), after).
+test(one_relation_per_pair) :-
+    findall(Relation, calendar_date_relation(date(2026, 12, 31), date(2027, 1, 1), Relation), Relations),
+    Relations == [before].
+test(the_last_day_is_inclusive) :-
+    calendar_date_on_or_before(date(2026, 2, 16), date(2026, 2, 16)).
+test(the_same_day_is_not_before, fail) :-
+    calendar_date_before(date(2026, 2, 16), date(2026, 2, 16)).
+test(the_referral_carries_its_pairs) :-
+    public_holidays_referral([], needs_legal_review(cross_reference_unresolved(_, _),
+                                                    [resolution(_, not_attempted), inputs_relied_on([])])).
 
 :- end_module(kernel).

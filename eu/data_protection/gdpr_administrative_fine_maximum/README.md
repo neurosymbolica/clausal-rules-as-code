@@ -4,7 +4,7 @@
 
 ## Scope
 
-The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6): the tier (10000000 EUR / 2 % or 20000000 EUR / 4 %) by infringed provision, the higher-of fixed amount and percentage of the economic unit's total worldwide annual turnover for an undertaking (integer euro cents, tie gives the fixed amount), the fixed amount alone for a non-undertaking, the gravest-infringement rule of Art 83(3) for several linked, intentional or negligent infringements, and separate maxima otherwise. Out of scope, handed to the lawyer: the amount actually imposed (Art 83(1)-(2)), public authorities (Art 83(7)), procedure (Art 83(8)-(9)), whether the infringer is an undertaking, foreign-currency turnover, and provisions Art 83(4)-(6) do not list.
+Regulation (EU) 2016/679 (GDPR) Article 83(3) to (6): the legal MAXIMUM of the administrative fine for one or several listed infringements. Decided here: the tier of each listed provision (Art 83(4), lower: EUR 10000000 or 2 %; Art 83(5) and (6), higher: EUR 20000000 or 4 %), whichever is higher for an undertaking, computed exactly in integer euro cents, and for several distinct provisions the gravest-infringement limit of Art 83(3) when the infringements concern the same or linked processing operations and were intentional or negligent, otherwise a separate maximum for each infringement (never summed). Handed to the user as judgements: whether the infringer is an undertaking (economic unit of competition law), same or linked processing operations, intent or negligence. Out of scope: the amount actually imposed (Art 83(1) and (2)), public authorities (Art 83(7)), procedure (Art 83(8) and (9)), the composition of the economic unit's turnover, currency conversion and the reference year of the preceding financial year; a provision Art 83(4) to (6) does not list is referred (not_governed_here).
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ The MAXIMUM administrative fine under Regulation (EU) 2016/679 Art 83(3) to (6):
 
 ## What was checked
 
-- 186 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 164 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

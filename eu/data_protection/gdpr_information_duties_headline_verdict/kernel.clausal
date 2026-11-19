@@ -1,39 +1,105 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_information_duties_headline_verdict (deontic family).
-% Source: Regulation (EU) 2016/679 (GDPR) Arts 13 and 14, with Regulation (EEC, Euratom) No 1182/71 Art 3.
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. Today that is the order's input check
-% gdpr_information_duties_headline_verdict_input_problems/2, written here by the scaffold and exported
-% for every slice to import. No threshold or period lives in the kernel.
+% PREDICATES that two or more files CALL, plus the order's input check.
 %
-% Atoms and data terms need NO declaration and NO import. Nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% Source: Regulation (EU) 2016/679 (GDPR) Art 13 and Art 14 (pinned
+% consolidated text 02016R0679-20160504), read through the order's INPUT
+% CONTRACT (G1, ruled 2026-11-01) and THE PROFILE / THE OUTSIDE FACTS
+% interface. Nothing here decides a statutory condition: the predicates
+% below are profile plumbing (presence first, then value) and the input
+% check. Every statutory decision lives in a determination slice, under
+% its own implements/1 marker.
 %
-% A predicate only ONE file calls is defined in THAT file. Move a predicate here the moment a
-% SECOND file calls it, and only then; export it as name/arity and import it where it is called:
-%   :- use_module(eu/data_protection/gdpr_information_duties_headline_verdict/kernel, [shared_predicate/2]).
+% Atoms and data terms need NO declaration and NO import. This block
+% RECORDS the result terms so every file spells them alike.
 %
-% Result terms -- one per determination slice. status is the slice's verdict atom,
-% citations a list of cite(Key) terms:
-%   information_duty_exemption_verdict(Status, Citations)
-%       Status: none | impossible_or_disproportionate_effort
-%               | law_lays_down_obtaining_or_disclosure | professional_secrecy_obligation
-%       Citations: [cite(eu_reg_2016_679_art_14_5_b)], _c or _d for an exemption.
-%   information_duty_verdict_verdict(Status, Citations)
-%       Status: eligible | ineligible
-%       Citations: cite(Key) terms: the route paragraph, the missing items, the timing
-%       limb, the further-processing paragraph, or the exemption point.
-% Non-final answers, in every slice: indeterminate(MissingKeys) with a non-empty list of
-% key atoms; needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]);
-% input_problems(Problems).
-% Shared across the slices: the checklist row id overall (an atom -- nothing to export).
+% Result terms, one per determination slice (the facade's decide_* term):
+%   information_duty_exemption_result(Exemption, Citations)
+%     Exemption: none | impossible_or_disproportionate_effort |
+%                law_lays_down_obtaining_or_disclosure |
+%                professional_secrecy_obligation | indeterminate(MissingKeys) |
+%                needs_legal_review(open_textured(Input, cite(Key)), Context) |
+%                input_problems(Problems)
+%     Citations: [cite(eu_reg_2016_679_art_14_5_b|c|d)] when an exemption
+%                is MET, else [].
+%   information_duty_verdict_result(Verdict, Citations)
+%     Verdict:   eligible | ineligible | indeterminate(MissingKeys) |
+%                needs_legal_review(open_textured(Input, cite(Key)), Context) |
+%                input_problems(Problems)
+%     Citations: a list of cite(Key) terms; [] for every non-final Verdict.
+% Context is [inputs_relied_on(Pairs)], Pairs the Key-Value pairs of the
+% judgement keys the ending stage read, in contract order, optionally
+% followed by one provenance(Clause, Citations).
+% The bare atom indeterminate is NEVER written (only indeterminate/1).
+%
+% Status terms the shared readers below return (data, no import):
+%   key_status/3:      value(Value) | unknown([Key])
+%   attested_status/3: value(AttestedValue) | absent
+%     (an outside fact is never unknown: absent is UNMET, ruling A2).
 % =====================================================================
 
-:- module(kernel, [gdpr_information_duties_headline_verdict_input_problems/2]).
+:- module(kernel, [
+    gdpr_information_duties_headline_verdict_input_problems/2,
+    contract_keys/1,
+    key_status/3,
+    attested_status/3
+]).
 
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+% ---- the contract keys, in contract (root_exports) order ----------
+% The order MISSING_KEYS, PROBLEMS and PAIRS follow.
+contract_keys([
+    personal_data_collected_from_data_subject,
+    items_provided,
+    items_data_subject_already_has,
+    data_protection_officer_designated,
+    processing_based_on_legitimate_interests,
+    recipients_exist,
+    transfer_intended,
+    processing_based_on_consent,
+    automated_decision_making_under_article_22,
+    obtaining_date,
+    provision_date,
+    data_used_for_communication_with_data_subject,
+    first_communication_date,
+    disclosure_to_another_recipient_envisaged,
+    first_disclosure_date,
+    provided_within_reasonable_period,
+    provision_impossible_or_disproportionate_effort,
+    protective_measures_taken,
+    obtaining_or_disclosure_laid_down_by_law,
+    professional_secrecy_obligation_by_law,
+    further_processing_for_another_purpose_intended,
+    further_processing_start_date,
+    further_processing_information_date,
+    further_processing_items_provided,
+    paragraph_2_information_relevant_to_further_processing,
+    public_holidays
+]).
+
+% ---- shared readers (presence first, then value) ------------------
+% key_status(Profile, Key, Status): a crisp flag, a judgement, a date or a
+% list. Status is unknown([Key]) when the key is absent, value(Value) when
+% present. Called on a profile the input check passed (no duplicate key).
+key_status(Profile, Key, unknown([Key])) :-
+    profile_lacks(Profile, Key).
+key_status(Profile, Key, value(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+% attested_status(Profile, Key, Status): an outside fact. Status is absent
+% when the key is not supplied, value(AttestedValue) when it arrives as
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)). By, At,
+% Reason and Evidence are never read here.
+attested_status(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+attested_status(Profile, Key, value(AttestedValue)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, attested(AttestedValue, _)).
 
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_information_duties_headline_verdict_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -58,7 +124,7 @@ gdpr_information_duties_headline_verdict_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays],
+    contract_keys(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -335,5 +401,74 @@ gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
     FourCenturyRemainder =\= 0.
 gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
     FourYearRemainder =\= 0.
+
+% ---- tests ---------------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(personal_data_collected_from_data_subject, true),
+         attribute(obtaining_date, date(2028, 2, 29)),
+         attribute(automated_decision_making_under_article_22, unsure)],
+        []).
+test(the_empty_profile_has_no_problem) :-
+    gdpr_information_duties_headline_verdict_input_problems([], []).
+test(an_atom_is_not_a_profile) :-
+    gdpr_information_duties_headline_verdict_input_problems(foo, [wrong_type(profile)]).
+test(an_atom_is_not_a_clean_profile, fail) :-
+    gdpr_information_duties_headline_verdict_input_problems(foo, []).
+test(duplicate_wrong_type_and_unknown_in_order) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(items_provided, []),
+         attribute(obtaining_date, date(2026, 2, 30)),
+         attribute(items_provided, [not_an_item]),
+         attribute(colour, red),
+         attribute(colour, blue)],
+        [duplicate_key(items_provided), wrong_type(obtaining_date), unknown_key(colour)]).
+test(other_purpose_information_is_not_an_item_provided) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(items_provided, [other_purpose_information])],
+        [wrong_type(items_provided)]).
+test(other_purpose_information_may_be_already_held) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(items_data_subject_already_has, [other_purpose_information])],
+        []).
+test(a_crisp_flag_given_unsure_is_wrong_type) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(recipients_exist, unsure)],
+        [wrong_type(recipients_exist)]).
+test(an_attested_outside_fact_is_well_formed) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(professional_secrecy_obligation_by_law,
+                   attested(true, attestation(by, at, reason, none))),
+         attribute(public_holidays,
+                   attested([date(2026, 12, 25)], attestation(by, at, reason, none)))],
+        []).
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_information_duties_headline_verdict_input_problems(
+        [attribute(obtaining_or_disclosure_laid_down_by_law, true)],
+        [wrong_type(obtaining_or_disclosure_laid_down_by_law)]).
+test(the_input_check_has_one_answer) :-
+    findall(Problems,
+            gdpr_information_duties_headline_verdict_input_problems(
+                [attribute(recipients_exist, true)], Problems),
+            Answers),
+    Answers == [[]].
+test(an_absent_key_is_unknown) :-
+    key_status([attribute(recipients_exist, true)], transfer_intended, unknown([transfer_intended])).
+test(an_absent_key_has_no_value, fail) :-
+    key_status([attribute(recipients_exist, true)], transfer_intended, value(_)).
+test(a_present_key_gives_its_value) :-
+    key_status([attribute(provided_within_reasonable_period, unsure)],
+               provided_within_reasonable_period,
+               value(unsure)).
+test(an_absent_outside_fact_is_absent) :-
+    attested_status([], professional_secrecy_obligation_by_law, absent).
+test(an_attested_outside_fact_gives_its_value) :-
+    attested_status([attribute(obtaining_or_disclosure_laid_down_by_law,
+                               attested(false, attestation(by, at, reason, none)))],
+                    obtaining_or_disclosure_laid_down_by_law,
+                    value(false)).
+test(the_contract_has_twenty_six_keys) :-
+    contract_keys(Keys),
+    length(Keys, 26).
 
 :- end_module(kernel).

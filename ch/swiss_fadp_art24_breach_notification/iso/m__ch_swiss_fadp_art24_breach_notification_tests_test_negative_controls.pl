@@ -4,113 +4,123 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__ch_swiss_fadp_art24_breach_notification_swiss_fadp_art24_breach_notification, [swiss_fadp_art24_breach_notification_status_values/1, swiss_controller_report_to_commissioner/3, swiss_processor_report_to_controller/3, swiss_information_of_data_subject/3, eu_controller_notification_to_supervisory_authority/3, compare_swiss_eu_authority_notification/5]).
+:- use_module(m__ch_swiss_fadp_art24_breach_notification_swiss_fadp_art24_breach_notification, [swiss_controller_report_to_commissioner/3, swiss_processor_report_to_controller/3, swiss_information_of_data_subject/3, eu_controller_notification_to_supervisory_authority/3, compare_swiss_eu_authority_notification/5, swiss_fadp_art24_breach_notification_status_values/1]).
 :- use_module(m__ch_swiss_fadp_art24_breach_notification_kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
 :- use_module(m__ch_swiss_fadp_art24_breach_notification_fixtures, [swiss_fadp_art24_breach_notification_profile_for/2]).
 
-test(near_miss_atoms_are_status_values) :-
+test(the_status_table_holds_both_controller_atoms) :-
     swiss_fadp_art24_breach_notification_status_values(StatusValues),
     member(authority_notification_required, StatusValues),
-    member(authority_notification_not_required, StatusValues),
-    member(report_to_controller_required, StatusValues),
-    member(report_to_controller_not_required, StatusValues),
-    member(information_of_data_subject_required, StatusValues),
-    member(information_of_data_subject_not_required, StatusValues),
-    member(information_of_data_subject_may_be_restricted_deferred_or_omitted, StatusValues).
-test(controller_report_required_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
+    member(authority_notification_not_required, StatusValues).
+test(controller_required_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
     swiss_controller_report_to_commissioner(Profile, authority_notification_required, _).
-test(controller_report_near_miss_not_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, Profile),
+test(controller_near_miss_gets_not_required) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
     swiss_controller_report_to_commissioner(Profile, authority_notification_not_required, _).
-test(controller_referral_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach, Profile),
+test(controller_no_breach_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
+    swiss_controller_report_to_commissioner(Profile, authority_notification_not_required, _).
+test(controller_indeterminate_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_absent, Profile),
+    swiss_controller_report_to_commissioner(Profile, indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]), []).
+test(controller_review_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(breach_unsure, Profile),
     swiss_controller_report_to_commissioner(Profile, needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), _), []).
-test(controller_referral_near_miss_settled) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach_settled_by_risk, Profile),
-    swiss_controller_report_to_commissioner(Profile, authority_notification_not_required, _).
-test(processor_report_required_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_only, Profile),
+test(controller_review_near_miss_gets_indeterminate) :-
+    swiss_fadp_art24_breach_notification_profile_for(breach_unsure_high_risk_absent, Profile),
+    swiss_controller_report_to_commissioner(Profile, indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]), []).
+test(processor_required_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
     swiss_processor_report_to_controller(Profile, report_to_controller_required, _).
-test(processor_report_near_miss_not_required) :-
+test(processor_near_miss_gets_not_required) :-
     swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
     swiss_processor_report_to_controller(Profile, report_to_controller_not_required, _).
-test(processor_report_required_without_high_risk) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, Profile),
-    swiss_processor_report_to_controller(Profile, report_to_controller_required, _).
-test(information_may_be_restricted_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_with_public_announcement, Profile),
+test(information_exception_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(public_announcement_exception, Profile),
     swiss_information_of_data_subject(Profile, information_of_data_subject_may_be_restricted_deferred_or_omitted, _).
-test(information_near_miss_without_exception_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_without_exception, Profile),
+test(information_exception_near_miss_gets_required) :-
+    swiss_fadp_art24_breach_notification_profile_for(public_announcement_false_control, Profile),
     swiss_information_of_data_subject(Profile, information_of_data_subject_required, _).
-test(information_near_miss_ground_failed_not_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_ground_failed, Profile),
-    swiss_information_of_data_subject(Profile, information_of_data_subject_not_required, _).
-test(information_referral_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure, Profile),
-    swiss_information_of_data_subject(Profile, needs_legal_review(open_textured(information_impossible_or_requires_disproportionate_effort, cite(ch_fadp_art_24_5_b)), _), []).
-test(information_referral_near_miss_settled) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure_settled_by_announcement, Profile),
+test(information_request_with_exception_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(commissioner_request_with_exception, Profile),
     swiss_information_of_data_subject(Profile, information_of_data_subject_may_be_restricted_deferred_or_omitted, _).
-test(eu_not_required_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(eu_unlikely_risk_settles_absent_breach, Profile),
-    eu_controller_notification_to_supervisory_authority(Profile, authority_notification_not_required, _).
-test(eu_near_miss_names_missing_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(eu_not_unlikely_risk_absent_breach, Profile),
-    eu_controller_notification_to_supervisory_authority(Profile, indeterminate([personal_data_breach]), []).
+test(information_request_near_miss_gets_required) :-
+    swiss_fadp_art24_breach_notification_profile_for(commissioner_request_only, Profile),
+    swiss_information_of_data_subject(Profile, information_of_data_subject_required, _).
+test(information_ground_failed_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(ground_failed, Profile),
+    swiss_information_of_data_subject(Profile, information_of_data_subject_not_required, _).
+test(information_review_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(necessity_unsure, Profile),
+    swiss_information_of_data_subject(Profile, needs_legal_review(open_textured(information_necessary_for_protection_of_data_subject, cite(ch_fadp_art_24_4)), _), []).
+test(information_review_near_miss_gets_required) :-
+    swiss_fadp_art24_breach_notification_profile_for(necessity_unsure_request_met, Profile),
+    swiss_information_of_data_subject(Profile, information_of_data_subject_required, _).
 test(eu_required_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
     eu_controller_notification_to_supervisory_authority(Profile, authority_notification_required, _).
-test(eu_required_near_miss_not_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(swiss_and_eu_both_true_thresholds, Profile),
+test(eu_near_miss_gets_not_required) :-
+    swiss_fadp_art24_breach_notification_profile_for(both_risk_judgements_true, Profile),
     eu_controller_notification_to_supervisory_authority(Profile, authority_notification_not_required, _).
-test(comparison_differs_positive) :-
-    swiss_fadp_art24_breach_notification_profile_for(swiss_and_eu_both_true_thresholds, Profile),
-    compare_swiss_eu_authority_notification(Profile, _, _, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)]).
-test(comparison_near_miss_same) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
+test(eu_review_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(eu_unsure, Profile),
+    eu_controller_notification_to_supervisory_authority(Profile, needs_legal_review(open_textured(personal_data_breach, cite(eu_reg_2016_679_art_33_1)), _), []).
+test(comparison_same_positive) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
     compare_swiss_eu_authority_notification(Profile, _, _, same, []).
-test(input_check_positive_crisp_unsure) :-
-    swiss_fadp_art24_breach_notification_profile_for(crisp_key_unsure, Profile),
-    swiss_fadp_art24_breach_notification_input_problems(Profile, [wrong_type(commissioner_requested_information_of_data_subject)]).
-test(input_check_near_miss_crisp_true) :-
-    swiss_fadp_art24_breach_notification_profile_for(crisp_key_true, Profile),
+test(comparison_near_miss_gets_differs) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
+    compare_swiss_eu_authority_notification(Profile, _, _, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)]).
+test(input_problem_positive_crisp_unsure) :-
+    swiss_fadp_art24_breach_notification_profile_for(crisp_unsure, Profile),
+    swiss_controller_report_to_commissioner(Profile, input_problems([wrong_type(commissioner_requested_information_of_data_subject)]), []).
+test(input_problem_near_miss_is_well_formed) :-
+    swiss_fadp_art24_breach_notification_profile_for(crisp_true_control, Profile),
     swiss_fadp_art24_breach_notification_input_problems(Profile, []).
 
-test(controller_report_near_miss_is_not_required_answer, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, Profile),
+test(controller_required_near_miss_high_risk_false, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
     swiss_controller_report_to_commissioner(Profile, authority_notification_required, _).
-test(controller_referral_near_miss_is_not_referred, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach_settled_by_risk, Profile),
+test(controller_no_breach_near_miss_breach_true, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    swiss_controller_report_to_commissioner(Profile, authority_notification_not_required, _).
+test(controller_indeterminate_near_miss_key_present, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    swiss_controller_report_to_commissioner(Profile, indeterminate(_), _).
+test(controller_review_near_miss_other_key_absent, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(breach_unsure_high_risk_absent, Profile),
     swiss_controller_report_to_commissioner(Profile, needs_legal_review(_, _), _).
-test(processor_report_near_miss_is_not_required_answer, fail) :-
+test(processor_required_near_miss_no_breach, fail) :-
     swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
     swiss_processor_report_to_controller(Profile, report_to_controller_required, _).
-test(information_near_miss_without_exception_is_not_restricted, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_without_exception, Profile),
+test(information_exception_near_miss_announcement_false, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(public_announcement_false_control, Profile),
     swiss_information_of_data_subject(Profile, information_of_data_subject_may_be_restricted_deferred_or_omitted, _).
-test(information_near_miss_ground_failed_is_not_required_answer, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_ground_failed, Profile),
-    swiss_information_of_data_subject(Profile, information_of_data_subject_required, _).
-test(information_referral_near_miss_is_not_referred, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure_settled_by_announcement, Profile),
+test(information_request_near_miss_no_exception, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(commissioner_request_only, Profile),
+    swiss_information_of_data_subject(Profile, information_of_data_subject_may_be_restricted_deferred_or_omitted, _).
+test(information_ground_failed_near_miss_request_true, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(commissioner_request_only, Profile),
+    swiss_information_of_data_subject(Profile, information_of_data_subject_not_required, _).
+test(information_review_near_miss_request_met, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(necessity_unsure_request_met, Profile),
     swiss_information_of_data_subject(Profile, needs_legal_review(_, _), _).
-test(eu_near_miss_is_not_settled, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(eu_not_unlikely_risk_absent_breach, Profile),
-    eu_controller_notification_to_supervisory_authority(Profile, authority_notification_not_required, _).
-test(eu_required_near_miss_is_not_required_answer, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(swiss_and_eu_both_true_thresholds, Profile),
+test(eu_required_near_miss_risk_unlikely, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(both_risk_judgements_true, Profile),
     eu_controller_notification_to_supervisory_authority(Profile, authority_notification_required, _).
-test(comparison_near_miss_does_not_differ, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
-    compare_swiss_eu_authority_notification(Profile, _, _, differs, _).
-test(input_check_near_miss_gets_no_input_problems_answer, fail) :-
-    swiss_fadp_art24_breach_notification_profile_for(crisp_key_true, Profile),
+test(eu_review_near_miss_breach_true, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    eu_controller_notification_to_supervisory_authority(Profile, needs_legal_review(_, _), _).
+test(comparison_same_near_miss_high_risk_false, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
+    compare_swiss_eu_authority_notification(Profile, _, _, same, _).
+test(input_problem_near_miss_crisp_true, fail) :-
+    swiss_fadp_art24_breach_notification_profile_for(crisp_true_control, Profile),
     swiss_controller_report_to_commissioner(Profile, input_problems(_), _).
 
-cp_test_names([near_miss_atoms_are_status_values, controller_report_required_positive, controller_report_near_miss_not_required, controller_referral_positive, controller_referral_near_miss_settled, processor_report_required_positive, processor_report_near_miss_not_required, processor_report_required_without_high_risk, information_may_be_restricted_positive, information_near_miss_without_exception_required, information_near_miss_ground_failed_not_required, information_referral_positive, information_referral_near_miss_settled, eu_not_required_positive, eu_near_miss_names_missing_breach, eu_required_positive, eu_required_near_miss_not_required, comparison_differs_positive, comparison_near_miss_same, input_check_positive_crisp_unsure, input_check_near_miss_crisp_true]).
-cp_test_fail_names([controller_report_near_miss_is_not_required_answer, controller_referral_near_miss_is_not_referred, processor_report_near_miss_is_not_required_answer, information_near_miss_without_exception_is_not_restricted, information_near_miss_ground_failed_is_not_required_answer, information_referral_near_miss_is_not_referred, eu_near_miss_is_not_settled, eu_required_near_miss_is_not_required_answer, comparison_near_miss_does_not_differ, input_check_near_miss_gets_no_input_problems_answer]).
+cp_test_names([the_status_table_holds_both_controller_atoms, controller_required_positive, controller_near_miss_gets_not_required, controller_no_breach_positive, controller_indeterminate_positive, controller_review_positive, controller_review_near_miss_gets_indeterminate, processor_required_positive, processor_near_miss_gets_not_required, information_exception_positive, information_exception_near_miss_gets_required, information_request_with_exception_positive, information_request_near_miss_gets_required, information_ground_failed_positive, information_review_positive, information_review_near_miss_gets_required, eu_required_positive, eu_near_miss_gets_not_required, eu_review_positive, comparison_same_positive, comparison_near_miss_gets_differs, input_problem_positive_crisp_unsure, input_problem_near_miss_is_well_formed]).
+cp_test_fail_names([controller_required_near_miss_high_risk_false, controller_no_breach_near_miss_breach_true, controller_indeterminate_near_miss_key_present, controller_review_near_miss_other_key_absent, processor_required_near_miss_no_breach, information_exception_near_miss_announcement_false, information_request_near_miss_no_exception, information_ground_failed_near_miss_request_true, information_review_near_miss_request_met, eu_required_near_miss_risk_unlikely, eu_review_near_miss_breach_true, comparison_same_near_miss_high_risk_false, input_problem_near_miss_crisp_true]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

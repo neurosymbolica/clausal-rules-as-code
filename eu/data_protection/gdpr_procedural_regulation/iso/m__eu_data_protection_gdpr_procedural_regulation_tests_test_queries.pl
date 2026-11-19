@@ -4,100 +4,62 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_procedural_regulation_queries, [gdpr_procedural_regulation_profile_keys/1, gdpr_procedural_regulation_what_if/4, admissible/0, inadmissible/0, simple_procedure_available/0, part_applies/0, no_extension/0, up_to/0, exactly/0, weeks/0, months/0, within/0, at_least_before/0, receipt_of_complaint/0, expiry_of_simple_procedure_time_limit/0, date/3, draft_decision_limit/2, extension/3, limit/5, indeterminate/1, needs_legal_review/2, open_textured/2, cross_reference_unresolved/2, resolution/2, inputs_relied_on/1, outside_fact/2, attested/2, attestation/4, url/2, document/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_queries, [gdpr_procedural_regulation_profile_keys/1, gdpr_procedural_regulation_what_if/4]).
 :- use_module(m__eu_data_protection_gdpr_procedural_regulation_kernel, [gdpr_procedural_regulation_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_procedural_regulation_gdpr_procedural_regulation, [complaint_admissibility/3, simple_cooperation_procedure/4, procedural_time_limit/4, late_step_effect/4]).
 :- use_module(m__eu_data_protection_gdpr_procedural_regulation_fixtures, [gdpr_procedural_regulation_profile_for/2]).
+
+fixture(Subject, Profile) :-
+    gdpr_procedural_regulation_profile_for(Subject, Profile).
 
 test(profile_keys_are_the_contract_keys) :-
     gdpr_procedural_regulation_profile_keys(ProfileKeys),
     ProfileKeys == [complaint_lodged_by, lodging_person_name_and_contact_details_included, proof_of_proper_constitution_included, proof_of_data_subject_mandate_included, controller_or_processor_identification_information_included, alleged_infringement_description_included, complaint_concerns_right_exercised_by_request, request_made_to_controller_before_complaint, complaint_concerns_chapter_iii_rights, end_of_infringement_established_on_supporting_evidence, complainant_objected_to_early_resolution_in_time, early_resolution_procedure_before, case_handled_under_article_56_2, lead_authority_considers_no_reasonable_doubt_as_to_scope, issues_addressable_without_additional_cooperation, concerned_authority_objected_to_simple_procedure_in_time, simple_cooperation_procedure_applied, draft_decision_time_limit_extended, board_request_under_article_11_6_made, extension_justified_by_exceptional_complexity, national_law_requires_domestic_proceedings_after_time_limit, time_limit_set_by_this_regulation_or_article_65_6].
-test(what_if_dropping_the_description_makes_the_complaint_inadmissible) :-
-    gdpr_procedural_regulation_profile_for(admissible_data_subject_complaint, Profile),
-    gdpr_procedural_regulation_what_if(Profile, alleged_infringement_description_included, false, NewStatus),
-    NewStatus == inadmissible.
-test(what_if_adding_the_description_makes_the_complaint_admissible) :-
-    gdpr_procedural_regulation_profile_for(inadmissible_missing_description, Profile),
-    gdpr_procedural_regulation_what_if(Profile, alleged_infringement_description_included, true, NewStatus),
-    NewStatus == admissible.
-test(what_if_an_unchanged_value_keeps_the_status) :-
-    gdpr_procedural_regulation_profile_for(admissible_data_subject_complaint, Profile),
-    gdpr_procedural_regulation_what_if(Profile, complaint_lodged_by, data_subject, NewStatus),
-    NewStatus == admissible.
-test(the_reexported_input_check_answers) :-
-    gdpr_procedural_regulation_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
-test(the_root_export_atoms_are_served) :-
-    admissible,
-    inadmissible,
-    simple_procedure_available,
-    part_applies,
-    no_extension,
-    up_to,
-    exactly,
-    weeks,
-    months,
-    within,
-    at_least_before,
-    receipt_of_complaint,
-    expiry_of_simple_procedure_time_limit.
-test(date_holds_for_a_leap_day) :-
-    date(2028, 2, 29).
-test(limit_enumerates_the_fifteen_distinct_limits_once) :-
-    findall(limit(Length, TimeUnit, Relation, Event, Extension), limit(Length, TimeUnit, Relation, Event, Extension), Limits),
-    length(Limits, 15),
-    sort(Limits, DistinctLimits),
-    length(DistinctLimits, 15).
-test(limit_holds_for_the_draft_decision_row) :-
-    limit(15, months, within, confirmation_of_competence_or_board_binding_decision, extension(up_to, 12, months)).
-test(extension_enumerates_the_three_extensions) :-
-    findall(extension(ExtensionKind, Length, TimeUnit), extension(ExtensionKind, Length, TimeUnit), Extensions),
-    sort(Extensions, SortedExtensions),
-    SortedExtensions == [extension(exactly, 2, weeks), extension(up_to, 2, months), extension(up_to, 12, months)].
-test(draft_decision_limit_enumerates_the_four_results) :-
-    findall(draft_decision_limit(Months, Extension), draft_decision_limit(Months, Extension), Results),
-    sort(Results, SortedResults),
-    SortedResults == [draft_decision_limit(12, no_extension), draft_decision_limit(12, extension(up_to, 2, months)), draft_decision_limit(15, no_extension), draft_decision_limit(15, extension(up_to, 12, months))].
-test(indeterminate_names_nineteen_keys_never_an_outside_fact) :-
-    findall(ProfileKey, indeterminate([ProfileKey]), ProfileKeys),
-    length(ProfileKeys, 19).
-test(needs_legal_review_enumerates_the_six_referral_rows) :-
-    findall(Reason, needs_legal_review(Reason, _), Reasons),
-    length(Reasons, 6).
-test(open_textured_enumerates_the_three_judgements) :-
-    findall(Input - Citation, open_textured(Input, Citation), Referrals),
-    sort(Referrals, SortedReferrals),
-    SortedReferrals == [complaint_concerns_right_exercised_by_request - cite(eu_reg_2025_2518_art_4_3), extension_justified_by_exceptional_complexity - cite(eu_reg_2025_2518_art_12_3), issues_addressable_without_additional_cooperation - cite(eu_reg_2025_2518_art_6_1_b)].
-test(cross_reference_unresolved_holds_for_the_article_14_statement) :-
-    cross_reference_unresolved(cite(eu_reg_2025_2518_art_14), cite(time_limit_source_statement)).
-test(resolution_is_not_attempted) :-
-    resolution(cite(national_domestic_proceedings_statement), not_attempted).
-test(inputs_relied_on_holds_for_an_absent_outside_fact) :-
-    inputs_relied_on([case_handled_under_article_56_2 - absent]).
-test(outside_fact_holds_for_a_well_formed_attestation) :-
-    outside_fact(time_limit_set_by_this_regulation_or_article_65_6, attested(true, attestation(by, at, reason, none))).
-test(attested_and_attestation_hold_for_well_formed_terms) :-
-    attested(false, attestation(by, at, reason, url(address, retrieved_at))),
-    attestation(by, at, reason, document(upload, digest)),
-    url(address, retrieved_at),
-    document(upload, digest).
-test(input_problem_constructors_hold) :-
-    input_problems([duplicate_key(complaint_lodged_by), wrong_type(step), unknown_key(colour)]),
-    unknown_key(colour),
-    wrong_type(event_date),
-    duplicate_key(time_limit_set_by_this_regulation_or_article_65_6).
+test(every_schema_key_is_known_to_the_input_check) :-
+    gdpr_procedural_regulation_profile_keys(ProfileKeys),
+    findall(Key, (member(Key, ProfileKeys), gdpr_procedural_regulation_input_problems([attribute(Key, not_a_value)], [wrong_type(Key)])), CheckedKeys),
+    CheckedKeys == ProfileKeys.
+test(a_key_outside_the_schema_is_unknown) :-
+    gdpr_procedural_regulation_input_problems([attribute(complaint_colour, red)], [unknown_key(complaint_colour)]).
+test(what_if_adding_the_mandate_makes_the_complaint_admissible) :-
+    fixture(article_80_1_body_complaint_without_mandate, Profile),
+    complaint_admissibility(Profile, inadmissible, _),
+    findall(Status, gdpr_procedural_regulation_what_if(Profile, proof_of_data_subject_mandate_included, true, Status), Statuses),
+    Statuses == [admissible].
+test(what_if_a_body_lodges_asks_for_its_constitution) :-
+    fixture(admissible_data_subject_complaint, Profile),
+    gdpr_procedural_regulation_what_if(Profile, complaint_lodged_by, article_80_1_body, indeterminate([proof_of_proper_constitution_included])).
+test(what_if_replaces_a_duplicated_key) :-
+    fixture(malformed_profile_case, Profile),
+    gdpr_procedural_regulation_what_if(Profile, complaint_lodged_by, data_subject, input_problems([unknown_key(complaint_reference)])).
+test(what_if_on_a_non_list_profile_reports_it) :-
+    gdpr_procedural_regulation_what_if(nonsense, complaint_lodged_by, data_subject, input_problems([wrong_type(profile)])).
+test(status_determination_on_an_article_80_2_body_complaint) :-
+    fixture(admissible_article_80_2_body_complaint, Profile),
+    findall(Result, complaint_admissibility(Profile, Result, _), Results),
+    Results == [admissible].
+test(compliance_check_the_lead_authority_may_use_the_simple_procedure) :-
+    fixture(simple_procedure_open_case, Profile),
+    findall(Result, simple_cooperation_procedure(Profile, Result, _, _), Results),
+    Results == [simple_procedure_available].
+test(compliance_check_an_objection_excludes_it) :-
+    fixture(simple_procedure_objected_case, Profile),
+    findall(Result, simple_cooperation_procedure(Profile, Result, _, _), Results),
+    Results == [simple_procedure_excluded_by_objection].
+test(deadline_transmission_within_six_weeks_of_receipt) :-
+    findall(Limit, procedural_time_limit([], transmit_complaint_to_presumed_lead_authority, Limit, _), Limits),
+    Limits == [limit(6, weeks, within, receipt_of_complaint, no_extension)].
+test(deadline_consequence_of_missing_a_limit_of_this_regulation) :-
+    fixture(late_step_after_regulation_time_limit, Profile),
+    findall(Result, late_step_effect(Profile, Result, _, _), Results),
+    Results == [legality_and_validity_not_affected].
 
-test(date_rejects_an_impossible_day, fail) :-
-    date(2027, 2, 29).
-test(indeterminate_never_names_an_outside_fact, fail) :-
-    indeterminate([case_handled_under_article_56_2]).
-test(outside_fact_rejects_a_crisp_key, fail) :-
-    outside_fact(simple_cooperation_procedure_applied, attested(true, attestation(by, at, reason, none))).
-test(attested_rejects_unsure, fail) :-
-    attested(unsure, attestation(by, at, reason, none)).
-test(a_contract_key_is_not_an_unknown_key, fail) :-
-    unknown_key(complaint_lodged_by).
+test(what_if_does_not_keep_the_old_value, fail) :-
+    fixture(admissible_data_subject_complaint, Profile),
+    gdpr_procedural_regulation_what_if(Profile, lodging_person_name_and_contact_details_included, false, admissible).
 
-cp_test_names([profile_keys_are_the_contract_keys, what_if_dropping_the_description_makes_the_complaint_inadmissible, what_if_adding_the_description_makes_the_complaint_admissible, what_if_an_unchanged_value_keeps_the_status, the_reexported_input_check_answers, the_root_export_atoms_are_served, date_holds_for_a_leap_day, limit_enumerates_the_fifteen_distinct_limits_once, limit_holds_for_the_draft_decision_row, extension_enumerates_the_three_extensions, draft_decision_limit_enumerates_the_four_results, indeterminate_names_nineteen_keys_never_an_outside_fact, needs_legal_review_enumerates_the_six_referral_rows, open_textured_enumerates_the_three_judgements, cross_reference_unresolved_holds_for_the_article_14_statement, resolution_is_not_attempted, inputs_relied_on_holds_for_an_absent_outside_fact, outside_fact_holds_for_a_well_formed_attestation, attested_and_attestation_hold_for_well_formed_terms, input_problem_constructors_hold]).
-cp_test_fail_names([date_rejects_an_impossible_day, indeterminate_never_names_an_outside_fact, outside_fact_rejects_a_crisp_key, attested_rejects_unsure, a_contract_key_is_not_an_unknown_key]).
+cp_test_names([profile_keys_are_the_contract_keys, every_schema_key_is_known_to_the_input_check, a_key_outside_the_schema_is_unknown, what_if_adding_the_mandate_makes_the_complaint_admissible, what_if_a_body_lodges_asks_for_its_constitution, what_if_replaces_a_duplicated_key, what_if_on_a_non_list_profile_reports_it, status_determination_on_an_article_80_2_body_complaint, compliance_check_the_lead_authority_may_use_the_simple_procedure, compliance_check_an_objection_excludes_it, deadline_transmission_within_six_weeks_of_receipt, deadline_consequence_of_missing_a_limit_of_this_regulation]).
+cp_test_fail_names([what_if_does_not_keep_the_old_value]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

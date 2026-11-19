@@ -6,62 +6,106 @@
 :- use_module(library(dif)).
 :- use_module(m__eu_data_protection_gdpr_consent_conditions_gdpr_consent_conditions, [gdpr_consent_conditions_status/2, consent_conditions_status/4, consent_declaration_effect/3, consent_assessment_factors/2, identification_obligation/4, identification_information_duty/4, identification_rights_effect/4]).
 :- use_module(m__eu_data_protection_gdpr_consent_conditions_fixtures, [gdpr_consent_conditions_profile_for/2]).
-:- use_module(m__eu_data_protection_gdpr_consent_conditions_kernel, [gdpr_consent_conditions_input_problems/2]).
 
-test(status_holds_with_the_verdict_bound) :-
-    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
-    gdpr_consent_conditions_status(Profile, conditions_met).
-test(not_met_with_citations_bound) :-
-    gdpr_consent_conditions_profile_for(consent_two_conditions_unmet, Profile),
-    consent_conditions_status(Profile, conditions_not_met, _Basis, [cite(eu_reg_2016_679_art_7_1), cite(eu_reg_2016_679_art_7_4)]).
-test(scope_false_is_not_applicable) :-
-    gdpr_consent_conditions_profile_for(processing_not_on_consent, Profile),
+affirmed_statement(attested(true, attestation(by, at, reason, none))).
+
+denied_statement(attested(false, attestation(by, at, reason, none))).
+
+test(conditions_met_holds_with_the_status_bound) :-
+    gdpr_consent_conditions_profile_for(consent_all_conditions_met, Profile),
+    consent_conditions_status(Profile, conditions_met, _, _).
+test(conditions_not_met_holds_with_basis_and_citations_bound) :-
+    gdpr_consent_conditions_profile_for(consent_withdrawal_harder_than_giving, Profile),
+    denied_statement(Denied),
+    consent_conditions_status(Profile, conditions_not_met, [outside_fact(withdrawal_as_easy_as_giving_consent, Denied)], [cite(eu_reg_2016_679_art_7_3)]).
+test(not_applicable_holds_with_the_status_bound) :-
+    gdpr_consent_conditions_profile_for(processing_not_based_on_consent, Profile),
     consent_conditions_status(Profile, not_applicable, [], []).
-test(scope_absent_is_indeterminate) :-
-    gdpr_consent_conditions_profile_for(consent_scope_not_stated, Profile),
+test(indeterminate_scope_holds_with_the_status_bound) :-
+    gdpr_consent_conditions_profile_for(consent_scope_absent, Profile),
     consent_conditions_status(Profile, indeterminate([processing_based_on_consent]), [], []).
-test(absent_outside_fact_refers) :-
-    gdpr_consent_conditions_profile_for(consent_freely_given_not_stated, Profile),
-    consent_conditions_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_7_4), cite(consent_freely_given_statement)), [resolution(cite(consent_freely_given_statement), not_attempted), inputs_relied_on([consent_freely_given - absent])]), [], []).
-test(declaration_effect_not_binding) :-
+test(the_referral_holds_with_the_status_bound) :-
+    gdpr_consent_conditions_profile_for(consent_demonstration_statement_absent, Profile),
+    consent_conditions_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_7_1), cite(consent_demonstration_statement)), [resolution(cite(consent_demonstration_statement), not_attempted), inputs_relied_on([consent_demonstrable - absent])]), [], []).
+test(the_facade_status_holds_bound) :-
+    gdpr_consent_conditions_profile_for(consent_not_freely_given, Profile),
+    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(part_not_binding_holds_bound) :-
     gdpr_consent_conditions_profile_for(declaration_part_infringing, Profile),
     consent_declaration_effect(Profile, part_not_binding, [cite(eu_reg_2016_679_art_7_2)]).
-test(factor_reported) :-
-    gdpr_consent_conditions_profile_for(contract_conditional_consent, Profile),
+test(no_part_infringing_holds_bound) :-
+    gdpr_consent_conditions_profile_for(declaration_no_part_infringing, Profile),
+    consent_declaration_effect(Profile, no_part_infringing, [cite(eu_reg_2016_679_art_7_2)]).
+test(declaration_not_applicable_holds_bound) :-
+    gdpr_consent_conditions_profile_for(declaration_without_other_matters, Profile),
+    consent_declaration_effect(Profile, not_applicable, []).
+test(the_factor_list_holds_bound) :-
+    gdpr_consent_conditions_profile_for(contract_conditional_on_unneeded_consent_factor, Profile),
     consent_assessment_factors(Profile, [factor(contract_conditional_on_unneeded_consent, cite(eu_reg_2016_679_art_7_4))]).
-test(factor_empty_when_unconditional) :-
-    gdpr_consent_conditions_profile_for(contract_unconditional_consent, Profile),
+test(the_empty_factor_list_holds_bound) :-
+    gdpr_consent_conditions_profile_for(contract_not_conditional_on_unneeded_consent, Profile),
     consent_assessment_factors(Profile, []).
-test(obligation_relief) :-
+test(the_obligation_relief_holds_bound) :-
     gdpr_consent_conditions_profile_for(identification_not_required, Profile),
-    identification_obligation(Profile, not_obliged_to_acquire_identifying_information, _Basis, [cite(eu_reg_2016_679_art_11_1)]).
-test(duty_must_inform) :-
-    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
-    identification_information_duty(Profile, must_inform_data_subject, _Basis, [cite(eu_reg_2016_679_art_11_2)]).
-test(duty_need_not_inform) :-
-    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
-    identification_information_duty(Profile, need_not_inform_data_subject, _Basis, [cite(eu_reg_2016_679_art_11_2)]).
-test(rights_do_not_apply) :-
-    gdpr_consent_conditions_profile_for(identification_not_required, Profile),
-    identification_rights_effect(Profile, articles_15_to_20_do_not_apply, _Basis, [cite(eu_reg_2016_679_art_11_2)]).
-test(rights_apply) :-
-    gdpr_consent_conditions_profile_for(identification_information_provided, Profile),
-    identification_rights_effect(Profile, articles_15_to_20_apply, _Basis, [cite(eu_reg_2016_679_art_11_2)]).
-test(rights_indeterminate_without_key) :-
-    gdpr_consent_conditions_profile_for(identification_rights_not_stated, Profile),
-    identification_rights_effect(Profile, indeterminate([additional_identifying_information_provided]), [], []).
-test(input_problems_bound) :-
-    gdpr_consent_conditions_profile_for(input_problem_profile, Profile),
-    gdpr_consent_conditions_input_problems(Profile, [duplicate_key(processing_based_on_consent), unknown_key(unexpected_key)]).
-test(non_list_profile_is_wrong_type) :-
-    gdpr_consent_conditions_input_problems(not_a_list, [wrong_type(profile)]).
+    identification_obligation(Profile, not_obliged_to_acquire_identifying_information, _, [cite(eu_reg_2016_679_art_11_1)]).
+test(article_11_1_not_engaged_holds_bound) :-
+    gdpr_consent_conditions_profile_for(identification_required, Profile),
+    identification_obligation(Profile, art11_1_not_engaged, _, [cite(eu_reg_2016_679_art_11_1)]).
+test(must_inform_holds_bound) :-
+    gdpr_consent_conditions_profile_for(informing_data_subject_is_possible, Profile),
+    identification_information_duty(Profile, must_inform_data_subject, _, [cite(eu_reg_2016_679_art_11_2)]).
+test(need_not_inform_holds_bound) :-
+    gdpr_consent_conditions_profile_for(informing_data_subject_is_impossible, Profile),
+    identification_information_duty(Profile, need_not_inform_data_subject, _, [cite(eu_reg_2016_679_art_11_2)]).
+test(article_11_2_not_engaged_holds_bound) :-
+    gdpr_consent_conditions_profile_for(inability_to_identify_not_demonstrated, Profile),
+    identification_information_duty(Profile, art11_2_not_engaged, _, [cite(eu_reg_2016_679_art_11_2)]).
+test(articles_15_to_20_apply_holds_bound) :-
+    gdpr_consent_conditions_profile_for(identifying_information_provided, Profile),
+    identification_rights_effect(Profile, articles_15_to_20_apply, _, [cite(eu_reg_2016_679_art_11_2)]).
+test(articles_15_to_20_do_not_apply_holds_bound) :-
+    gdpr_consent_conditions_profile_for(identifying_information_not_provided, Profile),
+    identification_rights_effect(Profile, articles_15_to_20_do_not_apply, _, [cite(eu_reg_2016_679_art_11_2)]).
+test(the_order_of_the_attributes_does_not_matter) :-
+    gdpr_consent_conditions_profile_for(consent_all_conditions_met, Profile),
+    reverse(Profile, Reversed),
+    consent_conditions_status(Reversed, conditions_met, _, _).
+test(url_evidence_is_accepted_and_copied_exactly) :-
+    Statement = attested(true, attestation(host_system, '2026-11-11T10:00:00Z', review_note(seven), url('https://example.org/record', '2026-11-11'))),
+    identification_obligation([attribute(purposes_do_not_require_identification, Statement)], not_obliged_to_acquire_identifying_information, [outside_fact(purposes_do_not_require_identification, Statement)], [cite(eu_reg_2016_679_art_11_1)]).
+test(document_evidence_is_accepted) :-
+    Statement = attested(false, attestation(host_system, moment, reason, document(upload_one, digest_value))),
+    identification_obligation([attribute(purposes_do_not_require_identification, Statement)], art11_1_not_engaged, [outside_fact(purposes_do_not_require_identification, Statement)], [cite(eu_reg_2016_679_art_11_1)]).
+test(a_bare_true_outside_fact_is_an_input_problem_in_every_query) :-
+    Profile = [attribute(consent_demonstrable, true)],
+    Problems = [wrong_type(consent_demonstrable)],
+    consent_conditions_status(Profile, input_problems(Problems), [], []),
+    consent_declaration_effect(Profile, input_problems(Problems), []),
+    consent_assessment_factors(Profile, input_problems(Problems)),
+    identification_obligation(Profile, input_problems(Problems), [], []),
+    identification_information_duty(Profile, input_problems(Problems), [], []),
+    identification_rights_effect(Profile, input_problems(Problems), [], []).
+test(unsure_on_a_crisp_key_is_wrong_type) :-
+    consent_conditions_status([attribute(informed_of_withdrawal_right_before_consent, unsure)], input_problems([wrong_type(informed_of_withdrawal_right_before_consent)]), [], []).
+test(a_three_argument_attestation_is_wrong_type) :-
+    identification_obligation([attribute(purposes_do_not_require_identification, attested(true, attestation(by, at, reason)))], input_problems([wrong_type(purposes_do_not_require_identification)]), [], []).
+test(a_non_attribute_element_is_wrong_type_profile) :-
+    consent_declaration_effect([attribute(consent_in_declaration_with_other_matters, true), loose_term], input_problems([wrong_type(profile)]), []).
+test(a_duplicate_key_is_reported_once_whatever_its_values) :-
+    consent_conditions_status([attribute(consent_freely_given, true), attribute(consent_freely_given, unsure), attribute(consent_freely_given, maybe)], input_problems([duplicate_key(consent_freely_given)]), [], []).
+test(a_compound_key_is_an_unknown_key_as_given) :-
+    identification_rights_effect([attribute(key(one), true)], input_problems([unknown_key(key(one))]), [], []).
+test(a_key_the_query_does_not_read_is_still_checked) :-
+    consent_declaration_effect([attribute(consent_in_declaration_with_other_matters, false), attribute(informing_data_subject_possible, unsure)], input_problems([wrong_type(informing_data_subject_possible)]), []).
+test(an_absent_key_is_never_an_input_problem) :-
+    consent_assessment_factors([], indeterminate([contract_conditional_on_unneeded_consent])).
 
-test(the_wrong_bound_status_is_rejected, fail) :-
-    gdpr_consent_conditions_profile_for(consent_met_plain, Profile),
-    gdpr_consent_conditions_status(Profile, conditions_not_met).
+test(conditions_met_profile_rejects_conditions_not_met, fail) :-
+    gdpr_consent_conditions_profile_for(consent_all_conditions_met, Profile),
+    consent_conditions_status(Profile, conditions_not_met, _, _).
 
-cp_test_names([status_holds_with_the_verdict_bound, not_met_with_citations_bound, scope_false_is_not_applicable, scope_absent_is_indeterminate, absent_outside_fact_refers, declaration_effect_not_binding, factor_reported, factor_empty_when_unconditional, obligation_relief, duty_must_inform, duty_need_not_inform, rights_do_not_apply, rights_apply, rights_indeterminate_without_key, input_problems_bound, non_list_profile_is_wrong_type]).
-cp_test_fail_names([the_wrong_bound_status_is_rejected]).
+cp_test_names([conditions_met_holds_with_the_status_bound, conditions_not_met_holds_with_basis_and_citations_bound, not_applicable_holds_with_the_status_bound, indeterminate_scope_holds_with_the_status_bound, the_referral_holds_with_the_status_bound, the_facade_status_holds_bound, part_not_binding_holds_bound, no_part_infringing_holds_bound, declaration_not_applicable_holds_bound, the_factor_list_holds_bound, the_empty_factor_list_holds_bound, the_obligation_relief_holds_bound, article_11_1_not_engaged_holds_bound, must_inform_holds_bound, need_not_inform_holds_bound, article_11_2_not_engaged_holds_bound, articles_15_to_20_apply_holds_bound, articles_15_to_20_do_not_apply_holds_bound, the_order_of_the_attributes_does_not_matter, url_evidence_is_accepted_and_copied_exactly, document_evidence_is_accepted, a_bare_true_outside_fact_is_an_input_problem_in_every_query, unsure_on_a_crisp_key_is_wrong_type, a_three_argument_attestation_is_wrong_type, a_non_attribute_element_is_wrong_type_profile, a_duplicate_key_is_reported_once_whatever_its_values, a_compound_key_is_an_unknown_key_as_given, a_key_the_query_does_not_read_is_still_checked, an_absent_key_is_never_an_input_problem]).
+cp_test_fail_names([conditions_met_profile_rejects_conditions_not_met]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

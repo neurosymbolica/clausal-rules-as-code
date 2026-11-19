@@ -15,26 +15,26 @@ modules:
   - "breach_notification_verdict"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only (atoms need no export), grouped
-# per submodule -- keep in sync with the :- module(...) export lists re-exported
-# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal.
 public_interface:
   # -- kernel.clausal --
+  # (gdpr_arts33_34_breach_notification_input_problems/2 is re-exported by queries.clausal)
   # -- citations.clausal --
   - "citation/2"
-  - "implements/1"
   # -- breach_notification_verdict.clausal --
+  - "decide_breach_notification_verdict/2"
+  - "breach_notification_verdict_status/2"
+  - "breach_notification_verdict_checklist/2"
+  - "breach_notification_verdict_decision_resolvable/1"
+  - "breach_notification_verdict_status_values/1"
   - "breach_notification_verdict/4"
   - "notification_obligation/2"
   - "authority_notification_deadline/3"
   - "authority_notification_period_end/3"
   - "authority_notification_content_check/2"
   - "data_subject_communication_check/2"
-  - "decide_breach_notification_verdict/2"
-  - "breach_notification_verdict_status/2"
-  - "breach_notification_verdict_checklist/2"
-  - "breach_notification_verdict_decision_resolvable/1"
-  - "breach_notification_verdict_status_values/1"
   - "no_notification_required/1"
   - "notify_supervisory_authority/1"
   - "notify_controller/1"
@@ -65,42 +65,85 @@ public_interface:
   - "gdpr_arts33_34_breach_notification_profile_for/2"
   - "gdpr_arts33_34_breach_notification_assess/2"
 
+# root_atoms: the order's ROOT EXPORTS (the twenty-five profile keys, the
+# seven enumeration atoms and the judgement value unsure), read by the scorer
+# as package-root attributes. Atoms are never in a :- module export list; the
+# generated package facade carries them.
+root_atoms:
+  - "breach_unlikely_to_result_in_risk"
+  - "breach_likely_to_result_in_high_risk"
+  - "delay_justified_by_reasons"
+  - "party_role"
+  - "notification_made_without_undue_delay"
+  - "notification_accompanied_by_reasons_for_delay"
+  - "supervisory_authority_decision_on_communication"
+  - "appropriate_protection_measures_applied_to_affected_data"
+  - "subsequent_measures_ensure_high_risk_no_longer_likely"
+  - "communication_would_involve_disproportionate_effort"
+  - "notification_describes_nature_of_breach"
+  - "notification_gives_categories_and_approximate_numbers"
+  - "categories_and_approximate_numbers_possible"
+  - "notification_gives_contact_point"
+  - "notification_describes_likely_consequences"
+  - "notification_describes_measures_taken_or_proposed"
+  - "notification_describes_mitigation_measures"
+  - "mitigation_measures_appropriate"
+  - "information_not_possible_to_provide_at_the_same_time"
+  - "communication_made_without_undue_delay"
+  - "communication_describes_nature_in_clear_and_plain_language"
+  - "communication_gives_contact_point"
+  - "communication_describes_likely_consequences"
+  - "communication_describes_measures_taken_or_proposed"
+  - "communication_describes_mitigation_measures"
+  - "controller"
+  - "processor"
+  - "no_decision"
+  - "required_communication"
+  - "decided_point_a_condition_met"
+  - "decided_point_b_condition_met"
+  - "decided_point_c_condition_met"
+  - "unsure"
+
 # Independence classification: no external scorer yet -- the only check is a
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. This domain imports only kit modules (formalize_lib) and
-# library(datetime), no shared backbone package.
+# domain imports. It imports only kit modules (formalize_lib, kit/deadline_lib)
+# and library(datetime), none of which is a shared domain backbone package.
 uses: []
 
-scope: >-
-  The personal data breach duties of Regulation (EU) 2016/679 Articles 33 and 34
-  (pinned consolidated text 02016R0679-20160504): whether the controller's
-  notification to the supervisory authority under Art 33(1) was in order (timing,
-  undue delay, reasons for a delay beyond 72 hours); which duties arise for the
-  controller (Art 33(1) notification, Art 33(5) documentation, Art 34(1)
-  communication to the data subject, the Art 34(3) exemptions and the Art 34(4)
-  decision of the supervisory authority) or for the processor (Art 33(2)); the
-  calendar day and the full UTC hour at which the 72-hour period ends, applying
-  Regulation (EEC, Euratom) No 1182/71 Art 3 by analogy; and whether a notification
-  meets Art 33(3) and 33(4) and a communication meets Art 34(1) timing and Art 34(2).
-  Every open-textured assessment (risk, high risk, undue delay, justified reasons,
-  appropriate measures, possible, disproportionate effort, clear and plain language)
-  is stated by the caller as a tri-state judgement and an unsure one is referred to
-  a lawyer. Out of scope: which supervisory authority is competent (Art 55), whether
-  an incident is a personal data breach (Art 4(12)), the adequacy of security
-  measures (Arts 24, 25, 32) and soft-law guidance.
+scope: "Personal data breach notification under Regulation (EU) 2016/679 (GDPR)
+  Articles 33 and 34. Decided here: (1) whether the controller's notification to
+  the supervisory authority met Art 33(1) given the hours of the period begun at
+  the notification (eligible, ineligible when the breach is unlikely to result in
+  a risk, or notification_requirement_not_met for undue delay inside 72 hours or
+  no reasons beyond them; a notification after 72 hours is never ineligible on
+  lateness alone); (2) the duties owed: Art 33(1) notification, Art 33(2)
+  processor notification, Art 33(5) documentation of every breach, and the Art
+  34 communication to the data subject with the Art 34(3) exemptions and the
+  Art 34(4) decision of the supervisory authority; (3) the 72-hour period of Art
+  33(1), its last calendar day and the full UTC hour at which it expires,
+  counted under Regulation (EEC, Euratom) No 1182/71 Art 3 applied by analogy and
+  never extended for a Saturday, Sunday or public holiday; (4) the content of the
+  notification against Art 33(3) and 33(4) and of the communication against Art
+  34(1) timing and 34(2). Open-textured assessments (risk, high risk, undue
+  delay, justification of the delay, appropriateness, possibility,
+  disproportionate effort, clear and plain language) are stated by the caller
+  as tri-state judgements; an unsure one refers the answer to a lawyer. Out of
+  scope: which authority is competent (Art 55), whether a personal data breach
+  occurred (Art 4(12)), the adequacy of security measures (Arts 24, 25, 32),
+  EDPB guidance, and Member State time zones beyond the UTC reading."
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504, Articles 33(1) to 33(5) and 34(1) to 34(4)"
-  - "Regulation (EEC, Euratom) No 1182/71 of the Council determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971, p. 1 (CELEX 31971R1182), Article 3(1), 3(2)(a), 3(3) and 3(4), applied by analogy"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504: Art 33(1), 33(2), 33(3), 33(4), 33(5), Art 34(1), 34(2), 34(3) points (a) to (c), 34(4)"
+  - "Regulation (EEC, Euratom) No 1182/71 of the Council of 3 June 1971 determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971, p. 1 (CELEX 31971R1182): Art 3(1) first subparagraph, Art 3(2) opening words and point (a), Art 3(3), Art 3(4), applied by analogy (Art 3(5) deferred, reading (13))"
 
 query_interface:
-  2: "breach_notification_verdict/4"      # eligibility: the Art 33(1) notification verdict with its citations
-  14: "notification_obligation/2"         # obligation surfacing: the duties of Arts 33 and 34
-  15: "authority_notification_deadline/3" # deadline: the day the 72-hour period ends (period_end via authority_notification_period_end/3)
-  16: "gdpr_arts33_34_breach_notification_what_if/4"    # what_if: re-evaluate under an overridden key
+  2: "breach_notification_verdict/4"                   # eligibility verdict with cited checklist
+  14: "notification_obligation/2"                      # obligation surfacing: the duties owed
+  15: "authority_notification_deadline/3"              # deadline: last calendar day of the 72-hour period
+  16: "gdpr_arts33_34_breach_notification_what_if/4"   # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings

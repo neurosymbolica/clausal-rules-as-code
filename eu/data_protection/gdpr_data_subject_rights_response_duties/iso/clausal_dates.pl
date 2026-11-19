@@ -237,7 +237,7 @@ date_between(Start, End, D) :-
 % the name from the import list WITHOUT a G1 finding.
 %
 % These two RAISE on a non-date, unlike the FAIL-on-bad-date predicates
-% above (ruling 2026-10-02, the same rule as kit/date_guard's
+% above (operator ruling 2026-10-02, the same rule as kit/date_guard's
 % must_be_date/1): a guard that fails turns `\+ date_min(...)` into a silent
 % verdict. Standard order is chronological on date(Y, M, D) with integer
 % components, and only there -- hence the guard on BOTH operands BEFORE the

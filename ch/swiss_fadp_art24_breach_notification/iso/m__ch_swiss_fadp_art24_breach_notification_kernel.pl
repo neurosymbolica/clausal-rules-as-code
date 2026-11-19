@@ -1,40 +1,10 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__ch_swiss_fadp_art24_breach_notification_kernel, [swiss_fadp_art24_breach_notification_input_problems/2, swiss_fadp_art24_breach_notification_contract_keys/1, swiss_fadp_art24_breach_notification_key_state/3, swiss_fadp_art24_breach_notification_first_key_in_state/4, swiss_fadp_art24_breach_notification_pairs/3]).
+:- module(m__ch_swiss_fadp_art24_breach_notification_kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
-
-swiss_fadp_art24_breach_notification_contract_keys([breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement, personal_data_breach, breach_unlikely_to_result_in_risk]).
-
-swiss_fadp_art24_breach_notification_key_state(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
-swiss_fadp_art24_breach_notification_key_state(Profile, Key, State) :-
-    profile_get(Profile, Key, Value),
-    present_state(Value, State).
-
-present_state(true, true).
-present_state(false, false).
-present_state(unsure, unsure).
-
-swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|_], State, Key) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State).
-swiss_fadp_art24_breach_notification_first_key_in_state(Profile, [Key|Keys], State, Found) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, OtherState),
-    dif(OtherState, State),
-    swiss_fadp_art24_breach_notification_first_key_in_state(Profile, Keys, State, Found).
-
-swiss_fadp_art24_breach_notification_pairs(_, [], []).
-swiss_fadp_art24_breach_notification_pairs(Profile, [Key|Keys], Pairs) :-
-    swiss_fadp_art24_breach_notification_key_state(Profile, Key, State),
-    swiss_fadp_art24_breach_notification_pairs(Profile, Keys, LaterPairs),
-    pair_for_state(State, Key, LaterPairs, Pairs).
-
-pair_for_state(absent, _, Pairs, Pairs).
-pair_for_state(State, Key, Pairs, [Key - State|Pairs]) :-
-    dif(State, absent).
 
 swiss_fadp_art24_breach_notification_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -42,7 +12,7 @@ swiss_fadp_art24_breach_notification_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    swiss_fadp_art24_breach_notification_contract_keys(Keys),
+    Keys = [breach_of_data_security, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights, information_necessary_for_protection_of_data_subject, commissioner_requested_information_of_data_subject, article_26_ground_or_statutory_secrecy_obligation_applies, information_impossible_or_requires_disproportionate_effort, information_ensured_comparably_by_public_announcement, personal_data_breach, breach_unlikely_to_result_in_risk],
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 

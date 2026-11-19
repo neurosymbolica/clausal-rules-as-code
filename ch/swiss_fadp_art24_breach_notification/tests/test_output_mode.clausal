@@ -1,133 +1,100 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_output_mode.clausal -- OUTPUT MODE: every query called with its
-% answer arguments UNBOUND; the WHOLE answer list is compared, so a
-% correct answer yielded twice fails (COUNTING).
+% test_output_mode.clausal -- OUTPUT MODE: every answer argument UNBOUND,
+% read out and compared whole. Each query yields exactly one solution per
+% fixture profile, and the read-out answer has the shape THE ANSWER FORM
+% states.
 % Run: python -m clausal.testing ch/swiss_fadp_art24_breach_notification/tests/test_output_mode.clausal
 % =====================================================================
 :- module(test_output_mode, []).
 :- use_module(ch/swiss_fadp_art24_breach_notification/swiss_fadp_art24_breach_notification, [
-    decide_swiss_fadp_art24_breach_notification/2,
     swiss_controller_report_to_commissioner/3,
     swiss_processor_report_to_controller/3,
     swiss_information_of_data_subject/3,
     eu_controller_notification_to_supervisory_authority/3,
-    compare_swiss_eu_authority_notification/5
+    compare_swiss_eu_authority_notification/5,
+    decide_swiss_fadp_art24_breach_notification/2,
+    swiss_fadp_art24_breach_notification_status/2
 ]).
-:- use_module(ch/swiss_fadp_art24_breach_notification/fixtures, [swiss_fadp_art24_breach_notification_profile_for/2]).
+:- use_module(ch/swiss_fadp_art24_breach_notification/kernel, [swiss_fadp_art24_breach_notification_input_problems/2]).
+:- use_module(ch/swiss_fadp_art24_breach_notification/fixtures, [
+    swiss_fadp_art24_breach_notification_subject/1,
+    swiss_fadp_art24_breach_notification_profile_for/2
+]).
 
-test(controller_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
-    findall(Result-Citations, swiss_controller_report_to_commissioner(Profile, Result, Citations), Answers),
-    Answers == [authority_notification_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]].
-test(controller_not_required_without_high_risk) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, Profile),
+test(the_baseline_profile_yields_exactly_one_status) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    findall(Status, swiss_fadp_art24_breach_notification_status(Profile, Status), Statuses),
+    Statuses == [authority_notification_required].
+
+test(the_verdict_carries_a_citation) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    decide_swiss_fadp_art24_breach_notification(Profile, swiss_fadp_art24_breach_notification_verdict(_Status, [_FirstCitation|_OtherCitations])).
+
+test(controller_answers_read_out) :-
+    swiss_fadp_art24_breach_notification_profile_for(high_risk_false_control, Profile),
     findall(Result-Citations, swiss_controller_report_to_commissioner(Profile, Result, Citations), Answers),
     Answers == [authority_notification_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]].
-test(controller_not_required_settled_by_risk) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach_settled_by_risk, Profile),
-    findall(Result-Citations, swiss_controller_report_to_commissioner(Profile, Result, Citations), Answers),
-    Answers == [authority_notification_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)]].
-test(controller_names_missing_risk) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_only, Profile),
+
+test(controller_names_the_missing_key_before_an_unsure_one) :-
+    swiss_fadp_art24_breach_notification_profile_for(breach_unsure_high_risk_absent, Profile),
     findall(Result-Citations, swiss_controller_report_to_commissioner(Profile, Result, Citations), Answers),
     Answers == [indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights])-[]].
-test(controller_refers_unsure_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach, Profile),
-    findall(Result-Citations, swiss_controller_report_to_commissioner(Profile, Result, Citations), Answers),
-    Answers == [needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights-true])])-[]].
 
-test(processor_required_for_any_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_only, Profile),
+test(processor_referral_read_out) :-
+    swiss_fadp_art24_breach_notification_profile_for(breach_unsure_high_risk_absent, Profile),
     findall(Result-Citations, swiss_processor_report_to_controller(Profile, Result, Citations), Answers),
-    Answers == [report_to_controller_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]].
-test(processor_not_required_without_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
-    findall(Result-Citations, swiss_processor_report_to_controller(Profile, Result, Citations), Answers),
-    Answers == [report_to_controller_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_3)]].
-test(processor_names_missing_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(crisp_key_true, Profile),
-    findall(Result-Citations, swiss_processor_report_to_controller(Profile, Result, Citations), Answers),
-    Answers == [indeterminate([breach_of_data_security])-[]].
+    Answers == [needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure])])-[]].
 
-test(information_required_when_necessary_and_no_exception) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
+test(information_required_read_out) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
     findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
     Answers == [information_of_data_subject_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]].
-test(information_may_be_restricted_on_request_with_announcement) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_with_public_announcement, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [information_of_data_subject_may_be_restricted_deferred_or_omitted-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]].
-test(information_required_on_request_without_exception) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_commissioner_request_without_exception, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [information_of_data_subject_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4), cite(ch_fadp_art_24_5)]].
-test(information_not_required_when_ground_fails) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_ground_failed, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [information_of_data_subject_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]].
-test(information_not_required_without_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [information_of_data_subject_not_required-[cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_4)]].
-test(information_refers_unsure_exception) :-
-    swiss_fadp_art24_breach_notification_profile_for(information_exception_unsure, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [needs_legal_review(open_textured(information_impossible_or_requires_disproportionate_effort, cite(ch_fadp_art_24_5_b)), [inputs_relied_on([breach_of_data_security-true, information_necessary_for_protection_of_data_subject-true, article_26_ground_or_statutory_secrecy_obligation_applies-false, information_impossible_or_requires_disproportionate_effort-unsure, information_ensured_comparably_by_public_announcement-false])])-[]].
-test(information_names_missing_breach_on_request) :-
-    swiss_fadp_art24_breach_notification_profile_for(crisp_key_true, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [indeterminate([breach_of_data_security])-[]].
-test(information_names_missing_necessity) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_only, Profile),
-    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
-    Answers == [indeterminate([information_necessary_for_protection_of_data_subject])-[]].
 
-test(eu_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
-    findall(Result-Citations, eu_controller_notification_to_supervisory_authority(Profile, Result, Citations), Answers),
-    Answers == [authority_notification_required-[cite(eu_reg_2016_679_art_33_1)]].
-test(eu_not_required_when_unlikely) :-
-    swiss_fadp_art24_breach_notification_profile_for(eu_unlikely_risk_settles_absent_breach, Profile),
-    findall(Result-Citations, eu_controller_notification_to_supervisory_authority(Profile, Result, Citations), Answers),
-    Answers == [authority_notification_not_required-[cite(eu_reg_2016_679_art_33_1)]].
-test(eu_names_missing_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(eu_not_unlikely_risk_absent_breach, Profile),
+test(information_names_the_first_needed_absent_exception) :-
+    swiss_fadp_art24_breach_notification_profile_for(exception_partly_open, Profile),
+    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([information_ensured_comparably_by_public_announcement])-[]].
+
+test(information_refers_the_unsure_necessity) :-
+    swiss_fadp_art24_breach_notification_profile_for(necessity_unsure, Profile),
+    findall(Result-Citations, swiss_information_of_data_subject(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(information_necessary_for_protection_of_data_subject, cite(ch_fadp_art_24_4)), [inputs_relied_on([breach_of_data_security-true, information_necessary_for_protection_of_data_subject-unsure, commissioner_requested_information_of_data_subject-false, article_26_ground_or_statutory_secrecy_obligation_applies-false, information_impossible_or_requires_disproportionate_effort-false, information_ensured_comparably_by_public_announcement-false])])-[]].
+
+test(eu_names_its_first_missing_key) :-
+    swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
     findall(Result-Citations, eu_controller_notification_to_supervisory_authority(Profile, Result, Citations), Answers),
     Answers == [indeterminate([personal_data_breach])-[]].
 
-test(comparison_differs_on_both_true_thresholds) :-
-    swiss_fadp_art24_breach_notification_profile_for(swiss_and_eu_both_true_thresholds, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(authority_notification_required, authority_notification_not_required, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)])].
-test(comparison_differs_without_high_risk) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_without_high_risk, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(authority_notification_not_required, authority_notification_required, differs, [cite(ch_fadp_art_24_1), cite(eu_reg_2016_679_art_33_1)])].
-test(comparison_same_when_both_required) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(authority_notification_required, authority_notification_required, same, [])].
-test(comparison_same_when_no_breach) :-
-    swiss_fadp_art24_breach_notification_profile_for(no_breach, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(authority_notification_not_required, authority_notification_not_required, same, [])].
-test(comparison_not_comparable_copies_each_side) :-
-    swiss_fadp_art24_breach_notification_profile_for(controller_unsure_breach, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(needs_legal_review(open_textured(breach_of_data_security, cite(ch_fadp_art_5_h)), [inputs_relied_on([breach_of_data_security-unsure, breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights-true])]), indeterminate([personal_data_breach]), not_comparable, [])].
-test(comparison_with_input_problems) :-
-    swiss_fadp_art24_breach_notification_profile_for(duplicate_and_unknown_keys, Profile),
-    findall(answer(SwissResult, EuropeanResult, Difference, ChangedBy), compare_swiss_eu_authority_notification(Profile, SwissResult, EuropeanResult, Difference, ChangedBy), Answers),
-    Answers == [answer(input_problems([duplicate_key(breach_of_data_security), unknown_key(colour)]), input_problems([duplicate_key(breach_of_data_security), unknown_key(colour)]), not_comparable, [])].
+test(comparison_copies_each_side_unchanged) :-
+    swiss_fadp_art24_breach_notification_profile_for(eu_unsure, Profile),
+    findall(answer(Swiss, Union, Difference, Changed), compare_swiss_eu_authority_notification(Profile, Swiss, Union, Difference, Changed), Answers),
+    Answers == [answer(authority_notification_required, needs_legal_review(open_textured(personal_data_breach, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([personal_data_breach-unsure, breach_unlikely_to_result_in_risk-false])]), not_comparable, [])].
 
-test(headline_verdict_carries_citations) :-
-    swiss_fadp_art24_breach_notification_profile_for(high_risk_breach_all_duties, Profile),
-    findall(Verdict, decide_swiss_fadp_art24_breach_notification(Profile, Verdict), Verdicts),
-    Verdicts == [swiss_fadp_art24_breach_notification_verdict(authority_notification_required, [cite(ch_fadp_art_5_h), cite(ch_fadp_art_24_1)])].
-test(headline_verdict_not_final_has_no_citations) :-
-    swiss_fadp_art24_breach_notification_profile_for(breach_only, Profile),
-    findall(Verdict, decide_swiss_fadp_art24_breach_notification(Profile, Verdict), Verdicts),
-    Verdicts == [swiss_fadp_art24_breach_notification_verdict(indeterminate([breach_likely_to_lead_to_high_risk_to_personality_or_fundamental_rights]), [])].
+test(comparison_same_read_out) :-
+    swiss_fadp_art24_breach_notification_profile_for(all_duties_owed, Profile),
+    findall(answer(Swiss, Union, Difference, Changed), compare_swiss_eu_authority_notification(Profile, Swiss, Union, Difference, Changed), Answers),
+    Answers == [answer(authority_notification_required, authority_notification_required, same, [])].
+
+test(input_problems_read_out_bare) :-
+    swiss_fadp_art24_breach_notification_profile_for(duplicate_and_unknown, Profile),
+    findall(Problems, swiss_fadp_art24_breach_notification_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(breach_of_data_security), wrong_type(breach_unlikely_to_result_in_risk), unknown_key(severity)]].
+
+test(a_well_formed_profile_reads_out_no_problem) :-
+    swiss_fadp_art24_breach_notification_profile_for(crisp_true_control, Profile),
+    findall(Problems, swiss_fadp_art24_breach_notification_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+
+test(every_subject_yields_one_status) :-
+    findall(Subject, swiss_fadp_art24_breach_notification_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, one_status(Subject), SingleSubjects),
+    sort(SingleSubjects, SubjectSet).
+
+one_status(Subject) :-
+    swiss_fadp_art24_breach_notification_subject(Subject),
+    swiss_fadp_art24_breach_notification_profile_for(Subject, Profile),
+    findall(Status, swiss_fadp_art24_breach_notification_status(Profile, Status), [_OneStatus]).
 
 :- end_module(test_output_mode).

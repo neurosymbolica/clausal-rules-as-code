@@ -2,6 +2,12 @@
 id: eu/data_protection/gdpr_data_subject_rights_response_duties
 shape_family: deontic
 kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -9,8 +15,16 @@ modules:
   - "gdpr_data_subject_rights_response_duties"
   - "queries"
   - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
+  # -- kernel.clausal --
+  # (gdpr_data_subject_rights_response_duties_input_problems/2 is defined here and
+  #  re-exported by queries.clausal; listed once, below)
+  # -- citations.clausal --
   - "citation/2"
+  # -- gdpr_data_subject_rights_response_duties.clausal --
   - "decide_gdpr_data_subject_rights_response_duties/2"
   - "gdpr_data_subject_rights_response_duties_status/2"
   - "gdpr_data_subject_rights_response_duties_checklist/2"
@@ -42,28 +56,55 @@ public_interface:
   - "inform_data_subject_of_recipients/1"
   - "recipient_notification_excused/1"
   - "recipient_notification_not_applicable/1"
+  # -- queries.clausal --
   - "gdpr_data_subject_rights_response_duties_profile_keys/1"
   - "gdpr_data_subject_rights_response_duties_input_problems/2"
   - "gdpr_data_subject_rights_response_duties_what_if/4"
+  # -- fixtures.clausal --
   - "gdpr_data_subject_rights_response_duties_subject/1"
   - "gdpr_data_subject_rights_response_duties_profile_for/2"
   - "gdpr_data_subject_rights_response_duties_assess/2"
 
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The package imports only the kit library formalize_lib and
+# the system libraries clpz and reif, none of them a shared backbone package.
 uses: []
 
-scope: "Whether a controller must comply with a data subject request invoking one of the rights of Regulation (EU) 2016/679 Arts 15, 16, 17, 18, 20, 21 or 22 (Art 12(2) to (6) response rules, Art 17(3), 20(3)-(4), 21 and 22(2)-(4) exceptions, Art 23 restriction as an attested outside fact); the response deadline (one month, or three months from receipt where the extension is available) computed under Regulation (EEC, Euratom) No 1182/71 Art 3 applied to the GDPR; the controller's response duties (Art 12(3), 12(4)); and the Art 19 recipient notification duty. Out of scope, handed to the lawyer or a sibling domain: the content and form of the answer, Art 15(2)-(4), Art 17(2), Art 18(2)-(3), Art 20(2), Art 21(4)-(5), the grounds and content rules of Art 23(1)-(2), lawfulness under Arts 6 and 9, joint controllers and processors, remedies and fines."
+scope: >-
+  Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: for one
+  request by a data subject under Art 15 (access), 16 (rectification), 17 (erasure),
+  18 (restriction), 20 (portability), 21 (objection) or 22 (automated decision),
+  this order decides internally whether the controller must comply (the right is
+  engaged under Art 15(1), 16, 17(1), 18(1), 20(1), 21(1), (2) or (6), or 22(1);
+  no exception of Art 17(3), 20(3) second sentence, 20(4), 21(1), 21(6), 22(2)
+  read with 22(4), 12(5), 12(2) or 23(1) relieves it; Art 12(6) suspends the duty
+  while the identity is unconfirmed) and answers three queries: the deadline of
+  the response (request_response_deadline/2: one month from receipt, or three
+  months from receipt when an extension is claimed and necessary, Art 12(3);
+  one month for a refusal, Art 12(4); computed by Regulation (EEC, Euratom)
+  No 1182/71 Art 3(1), 3(2)(c) and 3(4), applied to the GDPR as a lawyer point,
+  with attested public holidays), the response duties (response_duties/2, Art
+  12(3) and 12(4)) and the Art 19 communication to recipients
+  (recipient_notification/2). Open-textured judgements are the user's (unsure
+  refers to a lawyer); Union or Member State law arrives as attested outside
+  facts. Out of scope: the content of the answer (Art 15(1)(a)-(h), 15(2)-(4)),
+  Art 17(2), Arts 18(2)-(3), 20(2), 21(4)-(5), the grounds and content of an
+  Art 23 measure, Arts 13, 14, 34, joint controllers and processors, remedies
+  and fines (see deferred_set and excluded_set).
 
 sources:
-  - "Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 12(2)-(6), Art 15(1) opening words, Art 16, Art 17(1) and (3), Art 18(1), Art 19, Art 20(1), (3), (4), Art 21(1), (2), (3), (6), Art 22(1)-(4), Art 23(1) opening words"
-  - "Regulation (EEC, Euratom) No 1182/71 of the Council of 3 June 1971 determining the rules applicable to periods, dates and time limits (OJ L 124, 8.6.1971), Art 3(1), 3(2)(c), 3(4), applied to the GDPR periods (a lawyer point)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504: Art 12(2) to 12(6), Art 15(1) opening words, Art 16, Art 17(1) and 17(3), Art 18(1), Art 19, Art 20(1), 20(3) and 20(4), Art 21(1), 21(2), 21(3) and 21(6), Art 22(1) to 22(4), Art 23(1) opening words"
+  - "Regulation (EEC, Euratom) No 1182/71 of the Council of 3 June 1971 determining the rules applicable to periods, dates and time limits, OJ L 124, 8.6.1971, p. 1 (CELEX 31971R1182): Art 2(2), Art 3(1) second subparagraph, Art 3(2)(c), Art 3(4)"
 
 query_interface:
-  2: "gdpr_data_subject_rights_response_duties_status/2"
-  14: "response_duties/2"
-  15: "request_response_deadline/2"
-  16: "gdpr_data_subject_rights_response_duties_what_if/4"
+  2: "gdpr_data_subject_rights_response_duties_status/2"      # status of the internal decision
+  14: "response_duties/2"                                    # obligation_surfacing: what the controller must do (Art 12(3), 12(4)); see also recipient_notification/2 (Art 19)
+  15: "request_response_deadline/2"                          # deadline: when the response is due (Art 12(3), 12(4); Reg 1182/71 Art 3)
+  16: "gdpr_data_subject_rights_response_duties_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings
@@ -144,7 +185,8 @@ deferred_set:
   declaration: not_an_exception
   open: formalisable; to be formalised in a later change to the orders, not in this
     order's rules; the deferral stands for this run.
-- what: art12_2_first_sentence_facilitate
+- debt: true
+  what: art12_2_first_sentence_facilitate
   units:
   - 02016R0679-20160504#parag_012.002
   partial: true
@@ -155,8 +197,6 @@ deferred_set:
     the rights (Art 12(2), first sentence), for example by offering a usable way to
     make a request: the caller checks that general duty itself.'
   declaration: not_an_exception
-  not_formalized_because: in_sibling
-  decided_in: gdpr-data-subject-rights
 - debt: true
   what: art12_3_electronic_means
   units:
@@ -172,6 +212,7 @@ deferred_set:
     12(3), last sentence).'
   declaration: not_an_exception
 - debt: true
+  partial: true
   what: art12_5_fee_amount
   units:
   - 02016R0679-20160504#point_012.005_a
@@ -355,7 +396,8 @@ deferred_set:
     on that attestation.'
   declaration: exception_modelled
   not_formalized_because: national_law
-- what: art23_1_chapeau_essence_and_proportionality
+- debt: true
+  what: art23_1_chapeau_essence_and_proportionality
   units:
   - 02016R0679-20160504#parag_023.001
   partial: true
@@ -368,8 +410,6 @@ deferred_set:
     the right invoked (Art 23(1)): the caller relies on whoever attests legislative_restriction_applies_to_the_right
     to have checked that.'
   declaration: exception_modelled
-  not_formalized_because: in_sibling
-  decided_in: gdpr-data-subject-rights
 - what: art22_3_safeguards_content
   units:
   - 02016R0679-20160504#parag_022.003
@@ -433,19 +473,30 @@ deferred_set:
   what: regulation_1182_71_article_2_public_holidays_and_working_days
   units:
   - 31971R1182#parag_002.001
-  - 31971R1182#parag_002.002
   reason: 'Article 2(1) defines public holidays as the days designated as such in
     the Member State or in the Community institution in which action is to be taken,
-    as published by the Commission in the Official Journal; Article 2(2) defines working
-    days as all days other than public holidays, Sundays and Saturdays. This order
-    chooses no Member State or institution and reads no published list: public holidays
-    arrive as the outside fact public_holidays, and PERIODS states the working day
-    of the Article 3(4) shift itself.'
+    as published by the Commission in the Official Journal. This order chooses no
+    Member State or institution and reads no published list: public holidays arrive
+    as the outside fact public_holidays. Article 2(2), the working day, is quoted
+    above and has its own row.'
   consequence: The caller attests in public_holidays the public holidays of the Member
     State or Community institution in which the action is to be taken (Article 2(1));
     a public holiday missing from that list, or an absent list, leaves a deadline
     that falls on that day unmoved, one working day early.
   declaration: answered_with_caveat
+- debt: true
+  what: regulation_1182_71_article_2_2_working_days
+  units:
+  - 31971R1182#parag_002.002
+  reason: Article 2(2) defines working days as all days other than public holidays,
+    Sundays and Saturdays. PERIODS applies it in the Article 3(4) shift and quotes
+    it, but no clause of the package carries a mark for it, so the unit is listed
+    here until the package marks it.
+  consequence: 'None for a caller: the deadline uses the working day of Article 2(2),
+    as PERIODS states.'
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
 - debt: true
   what: regulation_1182_71_article_3_rules_not_applied
   units:
@@ -483,21 +534,7 @@ deferred_set:
     force or expiry of an act, or an action fixed at a specified moment or date.'
   declaration: not_an_exception
 - debt: true
-  what: art22_4_special_categories_bar
-  units:
-  - 02016R0679-20160504#parag_022.004
-  reason: The bar of Art 22(4) (decisions under Art 22(2) shall not rest on special
-    categories unless Art 9(2)(a) or (g) applies with suitable safeguards) is read
-    through the profile facts decision_based_on_special_categories and special_category_condition_and_safeguards_met_for_decision;
-    the Art 9 conditions themselves are not applied here.
-  consequence: 'The answer takes whether Art 9(2)(a) or (g) applies and whether suitable
-    safeguards are in place as a fact stated in the profile: the caller establishes
-    it under Art 9 before relying on the answer.'
-  declaration: answered_with_caveat
-  open: formalisable; to be formalised in a later change to the orders, not in this
-    order's rules; the deferral stands for this run.
-- debt: true
-  what: art17_1_and_art18_1_and_art20_1_paragraph_chapeaux_and_points
+  what: citation_key_unit_mapping_gap
   units:
   - 02016R0679-20160504#parag_017.001
   - 02016R0679-20160504#point_017.001_b
@@ -508,80 +545,97 @@ deferred_set:
   - 02016R0679-20160504#parag_020.001
   - 02016R0679-20160504#point_020.001_a
   - 02016R0679-20160504#point_020.001_b
-  reason: The engagement conditions of Arts 17(1), 18(1) and 20(1) are decided by
-    the engagement rules of the determination slice, which cite them through the Art
-    17(1), 18(1) and 20(1) citation records; the units are listed here so that the
-    paragraph and each of its points is accounted for.
-  consequence: The answer relies on the engagement rules as written; the caller checks
-    the facts it supplies against the text of each point.
-  declaration: not_an_exception
-  open: the engagement rules cite these units through the citation records; the deferral
-    stands for this run.
-- debt: true
-  what: art17_3_art21_2_art21_3_art22_2_exceptions_and_objection_points
-  units:
-  - 02016R0679-20160504#parag_017.003
   - 02016R0679-20160504#parag_021.002
   - 02016R0679-20160504#parag_021.003
   - 02016R0679-20160504#parag_022.002
   - 02016R0679-20160504#point_022.002_b
   - 02016R0679-20160504#point_022.002_c
-  reason: The exceptions of Art 17(3) and Art 22(2) and the direct marketing objection
-    of Art 21(2) and (3) are decided by the exception and engagement rules of the
-    determination slice, which cite them through their citation records; the units
-    are listed here so that the paragraph and each of its points is accounted for.
-  consequence: The answer relies on the exception and engagement rules as written;
-    the caller checks the facts it supplies against the text of each point.
+  - 02016R0679-20160504#parag_022.004
+  reason: The order's citation lexicon names no citation key for these units, so no
+    clause or data row of the package can be counted as citing them. Their content
+    is applied by the engagement and exception rows of the determination slice (engagement_point/4
+    for Art 17(1), 18(1), 20(1) and 21(2); separable_exception_tag/1 for Art 21(3);
+    exception_row/4 and specific_exception_total/2 for Art 22(2); special_category_bar_row/2
+    for Art 22(4)) under the package's own keys eu_reg_2016_679_art_17_1 to _17_1_f,
+    _18_1 to _18_1_d, _20_1, _21_2, _21_3, _22_2 to _22_2_c and _22_4, which the order
+    does not map to these units. They are listed here until a key of the order names
+    them.
+  consequence: 'None for a caller: the grounds of Art 17(1), 18(1) and 20(1), the
+    direct-marketing objection of Art 21(2) and 21(3), the exceptions of Art 22(2)
+    and the bar of Art 22(4) are applied as INTERFACE - THE ENGAGEMENT OF EACH RIGHT
+    and INTERFACE - THE EXCEPTIONS state; only the unit-level accounting is deferred.'
   declaration: not_an_exception
-  open: the exception rules cite these units through the citation records; the deferral
-    stands for this run.
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
 
 excluded_set:
 - what: art11_2_identification_not_required
   instrument: Regulation (EU) 2016/679 Art 11(2)
   cites:
   - 02016R0679-20160504#parag_011.002
-  reason: Art 12(2) refers to the cases of Art 11(2) (the controller does not need to identify the data subject). Not pinned; the key controller_demonstrates_unable_to_identify_data_subject presupposes such a case (reading 6).
-  consequence: The caller states through controller_demonstrates_unable_to_identify_data_subject whether the controller can show it is not in a position to identify the data subject; the order does not check the Art 11(2) case itself.
+  reason: Art 12(2) refers to the cases of Art 11(2) (the controller does not need
+    to identify the data subject). Not pinned; the key controller_demonstrates_unable_to_identify_data_subject
+    presupposes such a case (reading 6).
+  consequence: The caller states through controller_demonstrates_unable_to_identify_data_subject
+    whether the controller can show it is not in a position to identify the data subject;
+    the order does not check the Art 11(2) case itself.
 - what: art13_art14_information_duties
   instrument: Regulation (EU) 2016/679 Arts 13 and 14
   cites:
   - 02016R0679-20160504#art_013
   - 02016R0679-20160504#art_014
-  reason: Information provided when data are collected; Art 12 governs both, but this order is about the requests of Arts 15 to 22.
-  consequence: The order does not test the information to be given when data are collected; a caller checks Arts 13 and 14 itself (see the sibling order gdpr-information-duties).
+  reason: Information provided when data are collected; Art 12 governs both, but this
+    order is about the requests of Arts 15 to 22.
+  consequence: The order does not test the information to be given when data are collected;
+    a caller checks Arts 13 and 14 itself (see the sibling orders gdpr-information-duties-headline-verdict,
+    gdpr-information-duties-items-and-further-processing and gdpr-information-duties-timing).
 - what: art34_communication_of_a_breach
   instrument: Regulation (EU) 2016/679 Art 34
   cites:
   - 02016R0679-20160504#art_034
-  reason: Art 12 also governs the communication under Art 34; the sibling eu/data-protection/gdpr-arts33-34-breach-notification owns it.
-  consequence: The order does not test the communication of a breach to the data subject; a caller uses the sibling eu/data-protection/gdpr-arts33-34-breach-notification for it.
+  reason: Art 12 also governs the communication under Art 34; the sibling order gdpr-breach-notification
+    owns it.
+  consequence: The order does not test the communication of a breach to the data subject;
+    a caller uses the sibling order gdpr-breach-notification for it.
 - what: art26_joint_controllers_and_art28_processors
   instrument: Regulation (EU) 2016/679 Arts 26 and 28
   cites:
   - 02016R0679-20160504#art_026
   - 02016R0679-20160504#art_028
-  reason: Who answers a request when there are joint controllers or a processor is a separate question; not pinned (Q18).
-  consequence: The order assumes the request reached the controller who must answer it; where there are joint controllers or a processor, the caller works out who answers under Arts 26 and 28 itself.
+  reason: Who answers a request when there are joint controllers or a processor is
+    a separate question; not pinned (Q18).
+  consequence: The order assumes the request reached the controller who must answer
+    it; where there are joint controllers or a processor, the caller works out who
+    answers under Arts 26 and 28 itself.
 - what: art77_to_art79_remedies
   instrument: Regulation (EU) 2016/679 Arts 77 to 79
   cites:
   - 02016R0679-20160504#art_077
   - 02016R0679-20160504#art_078
   - 02016R0679-20160504#art_079
-  reason: The complaint and judicial remedy that Art 12(4) requires the controller to mention are not formalized; the duty term names them only through its constructor.
-  consequence: The order does not test whether a complaint or a judicial remedy is available or succeeds; a caller applies Arts 77 to 79 itself.
+  reason: The complaint and judicial remedy that Art 12(4) requires the controller
+    to mention are not formalized; the duty term names them only through its constructor.
+  consequence: The order does not test whether a complaint or a judicial remedy is
+    available or succeeds; a caller applies Arts 77 to 79 itself.
 - what: art83_5_b_fines_for_breach_of_data_subject_rights
   instrument: Regulation (EU) 2016/679 Art 83(5)(b)
   cites:
   - 02016R0679-20160504#point_083.005_b
   reason: The consequence of failing a duty here is owned by the sibling eu/data-protection/gdpr-administrative-fine-maximum.
-  consequence: The order says whether a duty is met, not what fine follows; a caller uses the sibling eu/data-protection/gdpr-administrative-fine-maximum for the maximum fine.
+  consequence: The order says whether a duty is met, not what fine follows; a caller
+    uses the sibling eu/data-protection/gdpr-administrative-fine-maximum for the maximum
+    fine.
 - what: regulatory_guidance
-  instrument: EDPB Guidelines 01/2022 on data subject rights - right of access; Guidelines 4/2019 on Article 25; WP29 Guidelines on automated individual decision-making and on data portability
+  instrument: EDPB Guidelines 01/2022 on data subject rights - right of access; Guidelines
+    4/2019 on Article 25; WP29 Guidelines on automated individual decision-making
+    and on data portability
   cites:
   - 02016R0679-20160504#parag_070.001
   - 02016R0679-20160504#point_070.001_e
   - 02016R0679-20160504#point_070.001_f
-  reason: Soft law, not pinned, not quoted and relied on by no reading here (the 'provided by' scope of Art 20, the clock start, and the meaning of 'solely' in Art 22 are in the guidance and are open questions).
-  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance itself. A caller who relies on the guidance on access, portability or automated decisions reads it and applies it itself.
+  reason: Soft law, not pinned, not quoted and relied on by no reading here (the 'provided
+    by' scope of Art 20, the clock start, and the meaning of 'solely' in Art 22 are
+    in the guidance and are open questions).
+  consequence: The cites are the Board's guideline mandate in Art 70(1), not the guidance
+    itself. A caller who relies on the guidance on access, portability or automated
+    decisions reads it and applies it itself.

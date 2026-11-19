@@ -2,6 +2,12 @@
 id: eu/data_protection/gdpr_consent_conditions
 shape_family: deontic
 kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -9,6 +15,9 @@ modules:
   - "gdpr_consent_conditions"
   - "queries"
   - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal.
 public_interface:
   # -- kernel.clausal --
   # -- citations.clausal --
@@ -25,6 +34,13 @@ public_interface:
   - "identification_obligation/4"
   - "identification_information_duty/4"
   - "identification_rights_effect/4"
+  # -- queries.clausal --
+  - "gdpr_consent_conditions_profile_keys/1"
+  - "gdpr_consent_conditions_input_problems/2"
+  - "gdpr_consent_conditions_what_if/4"
+  - "gdpr_consent_conditions_eligibility/2"
+  - "gdpr_consent_conditions_obligations/2"
+  - "gdpr_consent_conditions_compliance/3"
   - "not_applicable/0"
   - "conditions_met/0"
   - "conditions_not_met/0"
@@ -53,30 +69,52 @@ public_interface:
   - "attestation/4"
   - "url/2"
   - "document/2"
-  # -- queries.clausal --
-  - "gdpr_consent_conditions_profile_keys/1"
-  - "gdpr_consent_conditions_input_problems/2"
-  - "gdpr_consent_conditions_what_if/4"
   # -- fixtures.clausal --
   - "gdpr_consent_conditions_subject/1"
   - "gdpr_consent_conditions_profile_for/2"
   - "gdpr_consent_conditions_assess/2"
+  - "gdpr_consent_conditions_expected/3"
 
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: shared backbone packages this domain imports.
+# It imports only the kit (formalize_lib), no shared backbone package.
 uses: []
 
-scope: "Regulation (EU) 2016/679 (GDPR) Art 7(1) to (4) (conditions for consent on which processing is based: demonstrability, presentation of the request within a written declaration, information on and ease of withdrawal, freely-given assessment with the contract-conditionality factor) and Art 11(1) and (2) (processing which does not require identification: relief from acquiring identifying information, the duty to inform the data subject if possible, and the non-application of Arts 15 to 20 unless additional identifying information is provided). Decided: whether the stated conditions of Art 7 are met on the facts stated, the effect of an infringing part of a declaration, the reported assessment factor, and the Art 11 statuses. Open-textured limbs are outside facts stated by the caller as attested values and never decided here. Out of scope (sibling orders or a lawyer): whether a statement is a consent (Art 4(11)), whether processing rests on consent (Art 6(1)(a)), Arts 8 and 9, the content of Arts 15 to 20, and the first two sentences of Art 7(3)."
+scope: "Regulation (EU) 2016/679 (GDPR) Art 7(1), 7(2), 7(3) third and fourth
+  sentences and 7(4), and Art 11(1) and 11(2). Decided here, on facts the caller
+  states: whether the conditions for consent in Art 7 are met for processing the
+  caller states is based on consent (consent_conditions_status); the consequence
+  of Art 7(2) last sentence that an infringing part of a written declaration is
+  not binding (consent_declaration_effect); the one Art 7(4) factor, reported and
+  deciding nothing (consent_assessment_factors); the Art 11(1) relief from
+  acquiring identifying information (identification_obligation); the Art 11(2)
+  duty to inform the data subject, if possible (identification_information_duty);
+  and whether Arts 15 to 20 apply under Art 11(2) (identification_rights_effect).
+  The seven open-textured limbs are OUTSIDE FACTS (operator rulings
+  of 2026-11-11): each is stated as attested(true or false, attestation(By, At,
+  Reason, Evidence)), copied into the answer and never decided; an absent one the
+  answer turns on refers (cross_reference_unresolved). Out of scope: whether a
+  statement is a consent (Art 4(11)), whether processing rests on consent (Art
+  6(1)(a)), Arts 8 and 9(2)(a), the content of Arts 15 to 20 (sibling orders), and
+  Art 7(3) first two sentences (deferred, open question Q4)."
 
 sources:
-  - "Regulation (EU) 2016/679 (GDPR), consolidated English Formex text 02016R0679-20160504, Art 7(1) [parag_007.001], Art 7(2) [parag_007.002], Art 7(3) [parag_007.003], Art 7(4) [parag_007.004]"
-  - "Regulation (EU) 2016/679 (GDPR), Art 11(1) [parag_011.001], Art 11(2) [parag_011.002]"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 on the protection of natural persons with regard to the processing of
+    personal data and on the free movement of such data (General Data Protection
+    Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504
+    (English Formex, fetched 2026-11-11), Art 7(1) [parag_007.001], Art 7(2)
+    [parag_007.002], Art 7(3) [parag_007.003] third and fourth sentences, Art 7(4)
+    [parag_007.004], Art 11(1) [parag_011.001], Art 11(2) [parag_011.002]."
 
 query_interface:
-  2: "consent_conditions_status/4"
-  13: "identification_obligation/4"
-  14: "identification_information_duty/4"
-  16: "gdpr_consent_conditions_what_if/4"
+  2: "gdpr_consent_conditions_eligibility/2"     # eligibility verdict with a cited checklist
+  13: "gdpr_consent_conditions_compliance/3"     # compliance check of a proposed action
+  14: "gdpr_consent_conditions_obligations/2"    # obligation surfacing
+  16: "gdpr_consent_conditions_what_if/4"        # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings

@@ -1,42 +1,84 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_data_subject_rights_response_duties (deontic family).
-% Source: Regulation (EU) 2016/679 (GDPR) Arts 12 and 15 to 23, consolidated text
-% 02016R0679-20160504; period calendar rule: Regulation (EEC, Euratom) No 1182/71 Art 3.
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
 %
-% DAG root of the determination-slices layout. It holds ONLY the predicates
-% that two or more files CALL. This domain has a single determination slice,
-% so the only shared predicate is the order's input check
-% gdpr_data_subject_rights_response_duties_input_problems/2, written here from
-% the order's typed input contract and exported for every slice to import:
-%   :- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/kernel, [gdpr_data_subject_rights_response_duties_input_problems/2]).
+% Sources (the law this package formalizes):
+%   Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504:
+%     Art 12(2) to 12(6), Art 15(1) opening words, Art 16, Art 17(1) and 17(3),
+%     Art 18(1), Art 19, Art 20(1), 20(3) and 20(4), Art 21(1), 21(2), 21(3)
+%     and 21(6), Art 22(1) to 22(4), Art 23(1) opening words.
+%   Regulation (EEC, Euratom) No 1182/71 (CELEX 31971R1182): Art 2(2),
+%     Art 3(1) second subparagraph, Art 3(2)(c), Art 3(4) (the calendar rule
+%     of the Art 12(3) and 12(4) periods; applied to the GDPR, a lawyer point).
 %
-% Atoms and data terms need NO declaration and NO import. The comment block
-% below only RECORDS the result terms so every file spells them alike.
+% SHARED PREDICATES: there is ONE determination slice
+% (gdpr_data_subject_rights_response_duties.clausal), so no domain
+% predicate is shared between slices. The only export is the order's input
+% check, written here by the scaffold from the typed input contract and
+% imported by the slice and re-exported by queries.clausal:
+%   :- use_module(eu/data_protection/gdpr_data_subject_rights_response_duties/kernel,
+%                 [gdpr_data_subject_rights_response_duties_input_problems/2]).
 %
-% Result terms (one slice):
-%   gdpr_data_subject_request_verdict(Comply, Basis, Exception, Conditions, Citations)
-%     Comply     : must_comply | need_not_comply | indeterminate(MissingKeys)
-%                  | needs_legal_review(Reason, Context)
-%                  | suspended(art12_6_identity_not_confirmed)
-%                  | input_problems(Problems)
-%     Basis      : the engaged provision atom, or none
-%     Exception  : the relieving exception atom, or none
-%     Conditions : a list of condition atoms ([] when none)
-%     Citations  : a list of citation keys
-%   needs_legal_review(Reason, Context)
-%     Reason     : open_textured(Input, cite(Key))
-%                  | cross_reference_unresolved(cite(Citation), cite(Target))
-%     Context    : [resolution(cite(Target), not_attempted)] (cross reference only),
-%                  then inputs_relied_on(Pairs), optionally provenance(Clause, Citations)
-%   input_problems(Problems): items duplicate_key(Key), wrong_type(Key), unknown_key(Key)
-%   Duties: respond_with_action_taken(Period, cite(Key)),
-%     inform_of_extension_with_reasons(Period, cite(Key)),
-%     inform_of_reasons_and_remedies(Period, cite(Key)),
-%     communicate_to_each_recipient(cite(Key)), inform_data_subject_of_recipients(cite(Key)),
-%     recipient_notification_excused(cite(Key)), recipient_notification_not_applicable(cite(Key))
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms so every file spells them alike.
 %
-% Spell every result and verdict atom exactly as the order pins it.
+% RESULT TERMS
+%
+% 1. The internal decision of the slice (not exported, SCOPE OF THIS ORDER):
+%      gdpr_data_subject_request_verdict(Comply, Basis, Exception, Conditions, Citations)
+%    Comply     exactly one of: must_comply | need_not_comply |
+%               indeterminate(MissingKeys) | needs_legal_review(Reason, Context) |
+%               suspended(art12_6_identity_not_confirmed) | input_problems(Problems).
+%               The bare atom indeterminate is NEVER written.
+%    Basis      art15_1 | art16_inaccurate_data | art16_incomplete_data |
+%               art17_1_a .. art17_1_f | art18_1_a .. art18_1_d | art20_1 |
+%               art21_1 | art21_2 | art21_6 | art22_1 | none.
+%    Exception  art17_3_a .. art17_3_e | art20_3_public_task |
+%               art20_4_rights_of_others | art21_1_compelling_legitimate_grounds |
+%               art21_1_legal_claims | art21_6_public_interest_task |
+%               art22_2_a | art22_2_b | art22_2_c |
+%               art12_5_manifestly_unfounded_or_excessive |
+%               art12_2_unable_to_identify | art23_legislative_restriction | none.
+%    Conditions [] | [reasonable_fee_may_be_charged] (Art 12(5)(a)) |
+%               [human_intervention, express_point_of_view, contest_decision]
+%               (Art 22(3), for art22_2_a and art22_2_c).
+%    Citations  [] (the verdict is internal; its citations reach no output).
+%
+% 2. needs_legal_review(Reason, Context):
+%    Reason   open_textured(InputKey, cite(CitationKey)) |
+%             cross_reference_unresolved(cite(CitationKey), cite(TargetKey)).
+%    Context  [resolution(cite(TargetKey), not_attempted)] (cross_reference only)
+%             followed by inputs_relied_on(Pairs), Pairs a list of Key-Value,
+%             optionally followed by provenance(Clause, Citations) (unscored).
+%
+% 3. The public queries (each yields EXACTLY ONE solution per profile):
+%    request_response_deadline(Profile, Deadline): Deadline is date(Y, M, D)
+%      with bare integers, or one status compound (indeterminate/1,
+%      needs_legal_review/2, suspended/1, input_problems/1).
+%    response_duties(Profile, Duties): a non-empty list of
+%      respond_with_action_taken(Period, cite(eu_reg_2016_679_art_12_3)),
+%      inform_of_extension_with_reasons(first_period, cite(eu_reg_2016_679_art_12_3)),
+%      inform_of_reasons_and_remedies(first_period, cite(eu_reg_2016_679_art_12_4)),
+%      or one status compound. Period is first_period | extended_period.
+%    recipient_notification(Profile, Duties): a non-empty list of
+%      communicate_to_each_recipient(cite(eu_reg_2016_679_art_19)),
+%      inform_data_subject_of_recipients(cite(eu_reg_2016_679_art_19)),
+%      recipient_notification_excused(cite(eu_reg_2016_679_art_19)),
+%      recipient_notification_not_applicable(cite(eu_reg_2016_679_art_19)),
+%      or one status compound.
+%    gdpr_data_subject_rights_response_duties_input_problems(Profile, Problems):
+%      Problems a list of duplicate_key(Key) | wrong_type(Key) | unknown_key(Key),
+%      or [wrong_type(profile)].
+%
+% 4. The facade verdict of the package:
+%      gdpr_data_subject_rights_response_duties_verdict(Status, Citations)
+%    Status the internal Comply above; Citations a list of citation keys.
+%
+% Outside facts arrive as attested(Value, attestation(By, At, Reason, Evidence)),
+% Evidence url(Url, RetrievedAt) | document(UploadId, Sha256) | none. The judgement
+% value besides true and false is unsure; the outside-fact marker is absent.
 % =====================================================================
 
 :- module(kernel, [gdpr_data_subject_rights_response_duties_input_problems/2]).

@@ -1,219 +1,264 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_information_duties_timing.
-% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
-% predicates it calls, and nothing else.
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_information_duties_timing.
+% A TOP-LAYER consumer. It imports the PUBLIC predicates of the determination slices it
+% calls, and the kernel's input check, which it re-exports unchanged. Nothing else.
 %
-% Query types served (with the slice relations themselves):
-%   #2  eligibility          information_timing_verdict/3 (timely | late,
-%                            cited checklist information_timing_verdict_checklist/2)
-%   #13 compliance_check     gdpr_information_duties_timing_what_if/4: is a
-%                            proposed provision (one key overridden, typically
-%                            provision_date) in time?
-%   #14 obligation_surfacing gdpr_information_duties_timing_obligation/2: what
-%                            the controller must do, by when, on which limb
-%   #15 deadline             information_deadline/2 and information_deadline_basis/2
-%                            (consequence of missing it: the verdict late)
+% The scored relations of THE ANSWERS. Each is called with the PROFILE only and gives
+% exactly one solution:
+%   information_deadline(Profile, Deadline)                   (D), query type #15 deadline
+%   information_deadline_basis(Profile, Basis)                (E)
+%   information_timing_verdict(Profile, Verdict, Citations)   (F), query type #2 eligibility
+%   gdpr_information_duties_timing_input_problems(Profile, Problems)   (K), re-exported
 %
-% gdpr_information_duties_timing_profile_keys/1: top-level profile key schema
-% gdpr_information_duties_timing_input_problems/2: the problems a profile has ([] = none)
+% The query-type helpers. None is a scored relation, and the scored contract still
+% carries no date argument:
+%   gdpr_information_duties_timing_compliance_check(Profile, ProposedProvisionDate, Verdict)
+%     #13: is giving the information on ProposedProvisionDate allowed, that is, timely?
+%   gdpr_information_duties_timing_obligation(Profile, Obligation)
+%     #14: what the controller must do: provide the information by DEADLINE under BASIS.
+%     The consequence of missing DEADLINE (#15) is the verdict late of (F).
+%   gdpr_information_duties_timing_what_if(Profile, Key, Value, Verdict)
+%     #16: (F) with one key hypothetically replaced.
+%   gdpr_information_duties_timing_profile_keys(Keys): the twenty-six contract keys.
 %
-% RESULT CONSTRUCTORS (exported, never called as queries): indeterminate/1,
-% needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2,
-% input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, attested/2,
-% attestation/4, url/2, document/2. Each is defined here by the shape the
-% order gives it, so the package root serves it.
+% The profile is an ATTRIBUTE LIST, not a dict, so the dict-based override_key/4 of
+% kit/query_combinators does not apply; the replacement below is list plumbing.
 %
-% ROOT ATOMS: the twenty-six profile key atoms, the fifteen item atoms, the
-% answer atoms (art13_1, art14_3_a, art14_3_b, art14_3_c, timely, late), the
-% judgement value unsure and the input-problem argument atom profile are
-% listed under root_atoms: in manifest.yaml (an export list holds name/arity
-% entries only). The atoms true and false are reserved and never listed.
+% RESULT CONSTRUCTORS (exported, never called as queries): input_problems/1,
+% unknown_key/1, wrong_type/1, duplicate_key/1, indeterminate/1, needs_legal_review/2,
+% open_textured/2, cross_reference_unresolved/2, resolution/2, inputs_relied_on/1,
+% provenance/2, attested/2, attestation/4, url/2, document/2. Each clause only
+% recognizes a well-formed term of its shape. No answer is built by calling them.
 %
-% The profile is an ATTRIBUTE LIST, not a dict: the what-if override replaces
-% every attribute(Key, _) entry of the overridden key by one new entry, so a
-% hypothesis never carries a duplicate key of its own making.
+% ROOT EXPORTS (bare atoms the scorer reads as package-root attributes): the twenty-six
+% profile keys, the fifteen item atoms, art13_1, art14_3_a, art14_3_b, art14_3_c, timely,
+% late, unsure, not_attempted and profile. An export list holds only name/arity, so these
+% atoms are listed under root_atoms in manifest.yaml, not here. true and false are
+% reserved and not exported.
 % =====================================================================
 
 :- module(queries, [
-    gdpr_information_duties_timing_profile_keys/1,
+    information_deadline/2,
+    information_deadline_basis/2,
+    information_timing_verdict/3,
     gdpr_information_duties_timing_input_problems/2,
+    gdpr_information_duties_timing_profile_keys/1,
     gdpr_information_duties_timing_what_if/4,
+    gdpr_information_duties_timing_compliance_check/3,
     gdpr_information_duties_timing_obligation/2,
-    indeterminate/1,
-    needs_legal_review/2,
-    open_textured/2,
-    inputs_relied_on/1,
-    provenance/2,
     input_problems/1,
     unknown_key/1,
     wrong_type/1,
     duplicate_key/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
     attested/2,
     attestation/4,
     url/2,
     document/2
 ]).
 
+:- use_module(library(reif), [memberd_t/3]).
 :- use_module(eu/data_protection/gdpr_information_duties_timing/kernel, [gdpr_information_duties_timing_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_information_duties_timing/information_deadline_basis, [decide_information_deadline_basis/2, information_deadline/2]).
-:- use_module(eu/data_protection/gdpr_information_duties_timing/information_timing_verdict, [information_timing_verdict/3]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/information_deadline_basis, [
+    decide_information_deadline/2,
+    decide_information_deadline_basis/2,
+    information_deadline_basis_status/2
+]).
+:- use_module(eu/data_protection/gdpr_information_duties_timing/information_timing_verdict, [
+    decide_information_timing_verdict/2,
+    information_timing_verdict_status/2
+]).
 
-% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+% ---- the scored relations -------------------------------------------
+
+% (D) DEADLINE: date(Year, Month, Day), or one status compound.
+information_deadline(Profile, Deadline) :-
+    decide_information_deadline(Profile, Deadline).
+
+% (E) BASIS: art13_1 | art14_3_a | art14_3_b | art14_3_c, or one status compound.
+information_deadline_basis(Profile, Basis) :-
+    information_deadline_basis_status(Profile, Basis).
+
+% (F) VERDICT: timely | late, or one status compound; CITES [cite(Key)] or [].
+information_timing_verdict(Profile, Verdict, Citations) :-
+    decide_information_timing_verdict(Profile, information_timing_verdict_verdict(Verdict, Citations)).
+
+% ---- schema ------------------------------------------------------------
+
+% The keys of the order's typed input contract, in root_exports order.
 gdpr_information_duties_timing_profile_keys([personal_data_collected_from_data_subject, items_provided, items_data_subject_already_has, data_protection_officer_designated, processing_based_on_legitimate_interests, recipients_exist, transfer_intended, processing_based_on_consent, automated_decision_making_under_article_22, obtaining_date, provision_date, data_used_for_communication_with_data_subject, first_communication_date, disclosure_to_another_recipient_envisaged, first_disclosure_date, provided_within_reasonable_period, provision_impossible_or_disproportionate_effort, protective_measures_taken, obtaining_or_disclosure_laid_down_by_law, professional_secrecy_obligation_by_law, further_processing_for_another_purpose_intended, further_processing_start_date, further_processing_information_date, further_processing_items_provided, paragraph_2_information_relevant_to_further_processing, public_holidays]).
 
-% ---- #13 compliance check / what-if ----------------------------------
-% gdpr_information_duties_timing_what_if(Profile, OverriddenKey, NewValue, NewVerdict):
-% NewVerdict is the timing verdict (F) of Profile with OverriddenKey set to
-% NewValue. A Profile that is not an attribute list cannot be overridden: its
-% answer is the input problem itself. Exactly one solution.
-gdpr_information_duties_timing_what_if(Profile, _, _, input_problems([wrong_type(profile)])) :-
-    gdpr_information_duties_timing_input_problems(Profile, [wrong_type(profile)]).
+% ---- list plumbing: one key replaced in an attribute list ---------------
+
+% profile_with_value(Profile, Key, Value, Hypothesis): every attribute(Key, _) dropped and
+% attribute(Key, Value) added at the end. Other items are kept in their order. A term that
+% is not a list is kept as it is, so the input check still reports it.
+profile_with_value([], Key, Value, [attribute(Key, Value)]).
+profile_with_value([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Rest]) :-
+    dif(ElementKey, Key),
+    profile_with_value(Elements, Key, Value, Rest).
+profile_with_value([attribute(Key, _)|Elements], Key, Value, Rest) :-
+    profile_with_value(Elements, Key, Value, Rest).
+profile_with_value([Element|Elements], Key, Value, [Element|Rest]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    profile_with_value(Elements, Key, Value, Rest).
+profile_with_value(Profile, _, _, Profile) :-
+    nonvar(Profile),
+    Profile \= [],
+    Profile \= [_|_].
+
+% ---- #16 what-if --------------------------------------------------------
+
 gdpr_information_duties_timing_what_if(Profile, OverriddenKey, NewValue, NewVerdict) :-
-    gdpr_information_duties_timing_input_problems(Profile, Problems),
-    dif(Problems, [wrong_type(profile)]),
     profile_with_value(Profile, OverriddenKey, NewValue, Hypothesis),
-    information_timing_verdict(Hypothesis, NewVerdict, _Citations).
+    information_timing_verdict_status(Hypothesis, NewVerdict).
 
-% profile_with_value(Profile, OverriddenKey, NewValue, Changed): list plumbing.
-profile_with_value(Profile, OverriddenKey, NewValue, Changed) :-
-    entries_without_key(Profile, OverriddenKey, RemainingEntries),
-    append(RemainingEntries, [attribute(OverriddenKey, NewValue)], Changed).
+% ---- #13 compliance check -----------------------------------------------
 
-entries_without_key([], _, []).
-entries_without_key([attribute(EntryKey, EntryValue)|Entries], OverriddenKey, [attribute(EntryKey, EntryValue)|RemainingEntries]) :-
-    EntryKey \== OverriddenKey,
-    entries_without_key(Entries, OverriddenKey, RemainingEntries).
-entries_without_key([attribute(EntryKey, _)|Entries], OverriddenKey, RemainingEntries) :-
-    EntryKey == OverriddenKey,
-    entries_without_key(Entries, OverriddenKey, RemainingEntries).
+% Is giving the information on ProposedProvisionDate allowed? The answer is (F) for the
+% profile with that provision_date: timely (allowed), late (not allowed) or a status.
+gdpr_information_duties_timing_compliance_check(Profile, ProposedProvisionDate, Verdict) :-
+    profile_with_value(Profile, provision_date, ProposedProvisionDate, Proposal),
+    information_timing_verdict_status(Proposal, Verdict).
 
-% ---- #14 obligation surfacing ------------------------------------------
-% gdpr_information_duties_timing_obligation(Profile, Obligation): Obligation is
-%   obligation(provide_information, by(date(Y, M, D)), Basis, [cite(K)])
-% the controller's duty under Art 13(1) or Art 14(3), or the non-final
-% indeterminate(MissingKeys) / input_problems(Problems). Missing the date
-% gives the verdict late of information_timing_verdict/3. Exactly one solution.
+% ---- #14 obligation surfacing -------------------------------------------
+
+% Obligation is obligation(provide_information, by(Deadline), basis(Basis),
+% consequence(late), Citations) when (D) and (E) are both final; otherwise it is the
+% status compound of (D), or, when (D) is final, the status compound of (E).
 gdpr_information_duties_timing_obligation(Profile, Obligation) :-
-    decide_information_deadline_basis(Profile, information_deadline_basis_verdict(Status, Citations)),
-    information_deadline(Profile, Deadline),
-    obligation_term(Status, Deadline, Citations, Obligation).
+    decide_information_deadline(Profile, Deadline),
+    decide_information_deadline_basis(Profile, information_deadline_basis_verdict(Basis, Citations)),
+    deadline_kind(Deadline, DeadlineKind),
+    basis_kind(Basis, BasisKind),
+    obligation_answer(DeadlineKind, BasisKind, Deadline, Basis, Citations, Obligation).
 
-final_basis(art13_1).
-final_basis(art14_3_a).
-final_basis(art14_3_b).
-final_basis(art14_3_c).
+obligation_answer(final, final, Deadline, Basis, Citations, obligation(provide_information, by(Deadline), basis(Basis), consequence(late), Citations)).
+obligation_answer(pending, _, Deadline, _, _, Deadline).
+obligation_answer(final, pending, _, Basis, _, Basis).
 
-obligation_term(Basis, Deadline, Citations, obligation(provide_information, by(Deadline), Basis, Citations)) :-
-    final_basis(Basis).
-obligation_term(indeterminate(MissingKeys), _, [], indeterminate(MissingKeys)).
-obligation_term(input_problems(Problems), _, [], input_problems(Problems)).
+deadline_kind(date(_, _, _), final).
+deadline_kind(Deadline, pending) :-
+    Deadline \= date(_, _, _).
 
-% ---- result constructors: the shape of each answer term ----------------
-indeterminate(MissingKeys) :-
-    is_list(MissingKeys).
+basis_kind(Basis, Kind) :-
+    memberd_t(Basis, [art13_1, art14_3_a, art14_3_b, art14_3_c], IsFinal),
+    final_kind(IsFinal, Kind).
+
+final_kind(true, final).
+final_kind(false, pending).
+
+% ---- result constructors (recognizers, never queried) ------------------
+
+input_problems([Problem|Problems]) :-
+    is_list([Problem|Problems]).
+
+unknown_key(Key) :-
+    ground(Key).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+indeterminate([MissingKey|MissingKeys]) :-
+    is_list([MissingKey|MissingKeys]).
 
 needs_legal_review(Reason, Context) :-
     compound(Reason),
     is_list(Context).
 
-open_textured(Input, cite(CitationKey)) :-
+open_textured(Input, cite(Citation)) :-
     atom(Input),
-    atom(CitationKey).
+    atom(Citation).
+
+cross_reference_unresolved(cite(Citation), cite(Target)) :-
+    atom(Citation),
+    atom(Target).
+
+resolution(cite(Target), Status) :-
+    atom(Target),
+    atom(Status).
 
 inputs_relied_on(Pairs) :-
     is_list(Pairs).
 
-provenance(DecidingClause, Citations) :-
-    atom(DecidingClause),
+provenance(Clause, Citations) :-
+    ground(Clause),
     is_list(Citations).
 
-input_problems(Problems) :-
-    is_list(Problems).
-
-unknown_key(ProfileKey) :-
-    ground(ProfileKey).
-
-wrong_type(ProfileKey) :-
-    atom(ProfileKey).
-
-duplicate_key(ProfileKey) :-
-    atom(ProfileKey).
-
-attested(AttestedValue, attestation(Attestor, AttestedMoment, Reason, Evidence)) :-
-    ground(AttestedValue),
-    attestation(Attestor, AttestedMoment, Reason, Evidence).
-
-attestation(Attestor, AttestedMoment, Reason, Evidence) :-
-    ground(Attestor),
-    ground(AttestedMoment),
+attested(Value, attestation(AttestedBy, AttestedAt, Reason, Evidence)) :-
+    ground(Value),
+    ground(AttestedBy),
+    ground(AttestedAt),
     ground(Reason),
-    evidence_form(Evidence).
+    ground(Evidence).
 
-evidence_form(none).
-evidence_form(url(Address, RetrievedMoment)) :-
-    url(Address, RetrievedMoment).
-evidence_form(document(UploadIdentifier, ContentHash)) :-
-    document(UploadIdentifier, ContentHash).
+attestation(AttestedBy, AttestedAt, Reason, Evidence) :-
+    ground(AttestedBy),
+    ground(AttestedAt),
+    ground(Reason),
+    ground(Evidence).
 
-url(Address, RetrievedMoment) :-
-    ground(Address),
-    ground(RetrievedMoment).
+url(Address, RetrievedAt) :-
+    atomic(Address),
+    ground(RetrievedAt).
 
-document(UploadIdentifier, ContentHash) :-
+document(UploadIdentifier, Sha256Digest) :-
     ground(UploadIdentifier),
-    ground(ContentHash).
+    atomic(Sha256Digest).
 
-% ---- tests ---------------------------------------------------------
-test(what_if_an_earlier_provision_is_timely) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 11))],
-        provision_date,
-        date(2026, 3, 10),
-        timely).
-test(what_if_a_later_provision_is_not_timely, fail) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 10))],
-        provision_date,
-        date(2026, 3, 11),
-        timely).
-test(what_if_a_later_provision_is_late) :-
-    gdpr_information_duties_timing_what_if(
-        [attribute(personal_data_collected_from_data_subject, true),
-         attribute(obtaining_date, date(2026, 3, 10)),
-         attribute(provision_date, date(2026, 3, 10))],
-        provision_date,
-        date(2026, 3, 11),
-        late).
-test(what_if_adds_an_absent_key) :-
-    findall(Verdict,
-            gdpr_information_duties_timing_what_if(
-                [attribute(personal_data_collected_from_data_subject, true),
-                 attribute(obtaining_date, date(2026, 3, 10))],
-                provision_date,
-                date(2026, 3, 9),
-                Verdict),
-            Verdicts),
-    Verdicts == [timely].
-test(what_if_on_a_non_list_profile) :-
-    gdpr_information_duties_timing_what_if(profile, provision_date, date(2026, 3, 9), input_problems([wrong_type(profile)])).
-test(obligation_on_the_article_14_route) :-
-    gdpr_information_duties_timing_obligation(
-        [attribute(personal_data_collected_from_data_subject, false),
-         attribute(obtaining_date, date(2026, 1, 15)),
-         attribute(data_used_for_communication_with_data_subject, false),
-         attribute(disclosure_to_another_recipient_envisaged, false)],
-        obligation(provide_information, by(date(2026, 2, 16)), art14_3_a, [cite(eu_reg_2016_679_art_14_3_a)])).
-test(obligation_while_keys_are_absent) :-
-    findall(Obligation, gdpr_information_duties_timing_obligation([], Obligation), Obligations),
-    Obligations == [indeterminate([personal_data_collected_from_data_subject, obtaining_date])].
-test(a_result_constructor_accepts_its_shape) :-
-    indeterminate([obtaining_date]).
-test(a_result_constructor_rejects_another_shape, fail) :-
-    indeterminate(obtaining_date).
+% ---- tests ---------------------------------------------------------------
+
+test(the_deadline_relation_gives_one_date) :-
+    findall(Deadline,
+            information_deadline([attribute(personal_data_collected_from_data_subject, true),
+                                  attribute(obtaining_date, date(2026, 3, 10))],
+                                 Deadline),
+            Deadlines),
+    Deadlines == [date(2026, 3, 10)].
+test(the_verdict_relation_gives_one_answer) :-
+    findall(Verdict-Citations,
+            information_timing_verdict([attribute(personal_data_collected_from_data_subject, true),
+                                        attribute(obtaining_date, date(2026, 3, 10)),
+                                        attribute(provision_date, date(2026, 3, 10))],
+                                       Verdict,
+                                       Citations),
+            Answers),
+    Answers == [timely-[cite(eu_reg_2016_679_art_13_1)]].
+test(a_replaced_key_is_given_once) :-
+    profile_with_value([attribute(provision_date, date(2026, 3, 10)), attribute(obtaining_date, date(2026, 3, 10))],
+                       provision_date,
+                       date(2026, 3, 11),
+                       Hypothesis),
+    Hypothesis == [attribute(obtaining_date, date(2026, 3, 10)), attribute(provision_date, date(2026, 3, 11))].
+test(the_compliance_check_refuses_a_late_date) :-
+    gdpr_information_duties_timing_compliance_check([attribute(personal_data_collected_from_data_subject, true),
+                                                     attribute(obtaining_date, date(2026, 3, 10))],
+                                                    date(2026, 3, 11),
+                                                    late).
+test(the_compliance_check_allows_the_obtaining_day) :-
+    gdpr_information_duties_timing_compliance_check([attribute(personal_data_collected_from_data_subject, true),
+                                                     attribute(obtaining_date, date(2026, 3, 10))],
+                                                    date(2026, 3, 10),
+                                                    timely).
+test(the_obligation_names_its_deadline_and_basis) :-
+    findall(Obligation,
+            gdpr_information_duties_timing_obligation([attribute(personal_data_collected_from_data_subject, true),
+                                                       attribute(obtaining_date, date(2026, 3, 10))],
+                                                      Obligation),
+            Obligations),
+    Obligations == [obligation(provide_information, by(date(2026, 3, 10)), basis(art13_1), consequence(late), [cite(eu_reg_2016_679_art_13_1)])].
+test(the_obligation_with_the_route_unknown_is_indeterminate) :-
+    gdpr_information_duties_timing_obligation([], indeterminate([personal_data_collected_from_data_subject, obtaining_date])).
 
 :- end_module(queries).

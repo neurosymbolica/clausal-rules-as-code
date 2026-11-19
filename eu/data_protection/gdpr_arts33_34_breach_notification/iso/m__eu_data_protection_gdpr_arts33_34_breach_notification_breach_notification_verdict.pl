@@ -1,73 +1,52 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [breach_notification_verdict/4, notification_obligation/2, authority_notification_deadline/3, authority_notification_period_end/3, authority_notification_content_check/2, data_subject_communication_check/2, decide_breach_notification_verdict/2, breach_notification_verdict_status/2, breach_notification_verdict_checklist/2, breach_notification_verdict_decision_resolvable/1, breach_notification_verdict_status_values/1, no_notification_required/1, notify_supervisory_authority/1, notify_controller/1, document_breach/1, communicate_to_data_subject/1, no_communication_required/1, public_communication_or_similar_measure/1, notification_requirement_not_met/1, period_end/2, requirements_not_met/1, information_to_follow_in_phases/1, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, contradictory_inputs/1]).
+:- module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [decide_breach_notification_verdict/2, breach_notification_verdict_status/2, breach_notification_verdict_checklist/2, breach_notification_verdict_decision_resolvable/1, breach_notification_verdict_status_values/1, breach_notification_verdict/4, notification_obligation/2, authority_notification_deadline/3, authority_notification_period_end/3, authority_notification_content_check/2, data_subject_communication_check/2, no_notification_required/1, notify_supervisory_authority/1, notify_controller/1, document_breach/1, communicate_to_data_subject/1, no_communication_required/1, public_communication_or_similar_measure/1, notification_requirement_not_met/1, period_end/2, requirements_not_met/1, information_to_follow_in_phases/1, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, contradictory_inputs/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(library(pairs), [pairs_values/2, map_list_to_pairs/3]).
-:- use_module(clausal_lists_extra, [is_list/1]).
+:- use_module(clausal_lists_extra, [clausal_is_list/1]).
 :- use_module(library(clpz)).
 :- use_module(clausal_datetime, [timedelta/3, date_add/3]).
+:- use_module(deadline_lib, [month_last_day/3]).
 :- use_module(formalize_lib, [profile_get/3]).
 :- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_citations, [implements/1]).
 
+authority_notification_period_hours(72, cite(eu_reg_2016_679_art_33_1)).
+
+excluded_hour_of_awareness(1, cite(eu_reg_1971_1182_art_3_1)).
+
+hours_in_a_calendar_day(24).
+
+judgement_citation(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)).
+judgement_citation(breach_likely_to_result_in_high_risk, cite(eu_reg_2016_679_art_34_1)).
+judgement_citation(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)).
+judgement_citation(notification_made_without_undue_delay, cite(eu_reg_2016_679_art_33_1)).
+judgement_citation(appropriate_protection_measures_applied_to_affected_data, cite(eu_reg_2016_679_art_34_3_a)).
+judgement_citation(subsequent_measures_ensure_high_risk_no_longer_likely, cite(eu_reg_2016_679_art_34_3_b)).
+judgement_citation(communication_would_involve_disproportionate_effort, cite(eu_reg_2016_679_art_34_3_c)).
+judgement_citation(categories_and_approximate_numbers_possible, cite(eu_reg_2016_679_art_33_3_a)).
+judgement_citation(mitigation_measures_appropriate, cite(eu_reg_2016_679_art_33_3_d)).
+judgement_citation(information_not_possible_to_provide_at_the_same_time, cite(eu_reg_2016_679_art_33_4)).
+judgement_citation(communication_made_without_undue_delay, cite(eu_reg_2016_679_art_34_1)).
+judgement_citation(communication_describes_nature_in_clear_and_plain_language, cite(eu_reg_2016_679_art_34_2)).
+
 breach_notification_verdict_status_values([eligible, ineligible]).
 
-authority_decision_term(required_communication, communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4))).
-authority_decision_term(decided_point_a_condition_met, no_communication_required(cite(eu_reg_2016_679_art_34_4))).
-authority_decision_term(decided_point_b_condition_met, no_communication_required(cite(eu_reg_2016_679_art_34_4))).
-authority_decision_term(decided_point_c_condition_met, public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_4))).
+input_problems(Problems) :-
+    clausal_is_list(Problems).
 
-processor_duty(notify_controller(cite(eu_reg_2016_679_art_33_2))).
+unknown_key(Key) :-
+    atom(Key).
 
-documentation_duty(document_breach(cite(eu_reg_2016_679_art_33_5))).
+wrong_type(Key) :-
+    atom(Key).
 
-notification_duty_term(true, no_notification_required(cite(eu_reg_2016_679_art_33_1))).
-notification_duty_term(false, notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1))).
+duplicate_key(Key) :-
+    atom(Key).
 
-effort_terms(true, [public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))]).
-effort_terms(false, [communicate_to_data_subject(cite(eu_reg_2016_679_art_34_1))]).
-effort_terms(unsure, []).
-
-referral_row(risk_assessment_for_notification, breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1), [breach_unlikely_to_result_in_risk]).
-referral_row(risk_assessment_for_communication, breach_likely_to_result_in_high_risk, cite(eu_reg_2016_679_art_34_1), [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk]).
-referral_row(notification_after_72_hours, delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1), [hours_elapsed, breach_unlikely_to_result_in_risk, delay_justified_by_reasons]).
-referral_row(undue_delay_within_72_hours, notification_made_without_undue_delay, cite(eu_reg_2016_679_art_33_1), [hours_elapsed, breach_unlikely_to_result_in_risk, notification_made_without_undue_delay]).
-referral_row(exemption_protection_measures, appropriate_protection_measures_applied_to_affected_data, cite(eu_reg_2016_679_art_34_3_a), [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, appropriate_protection_measures_applied_to_affected_data]).
-referral_row(exemption_subsequent_measures, subsequent_measures_ensure_high_risk_no_longer_likely, cite(eu_reg_2016_679_art_34_3_b), [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, appropriate_protection_measures_applied_to_affected_data, subsequent_measures_ensure_high_risk_no_longer_likely]).
-referral_row(exemption_disproportionate_effort, communication_would_involve_disproportionate_effort, cite(eu_reg_2016_679_art_34_3_c), [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, appropriate_protection_measures_applied_to_affected_data, subsequent_measures_ensure_high_risk_no_longer_likely, communication_would_involve_disproportionate_effort]).
-referral_row(categories_and_numbers_possible, categories_and_approximate_numbers_possible, cite(eu_reg_2016_679_art_33_3_a), [categories_and_approximate_numbers_possible]).
-referral_row(mitigation_measures_appropriate, mitigation_measures_appropriate, cite(eu_reg_2016_679_art_33_3_d), [categories_and_approximate_numbers_possible, mitigation_measures_appropriate]).
-referral_row(information_in_phases, information_not_possible_to_provide_at_the_same_time, cite(eu_reg_2016_679_art_33_4), [categories_and_approximate_numbers_possible, mitigation_measures_appropriate, information_not_possible_to_provide_at_the_same_time]).
-referral_row(communication_undue_delay, communication_made_without_undue_delay, cite(eu_reg_2016_679_art_34_1), [mitigation_measures_appropriate, communication_made_without_undue_delay]).
-referral_row(communication_clear_and_plain_language, communication_describes_nature_in_clear_and_plain_language, cite(eu_reg_2016_679_art_34_2), [mitigation_measures_appropriate, communication_made_without_undue_delay, communication_describes_nature_in_clear_and_plain_language]).
-
-key_rank(breach_unlikely_to_result_in_risk, 1).
-key_rank(breach_likely_to_result_in_high_risk, 2).
-key_rank(delay_justified_by_reasons, 3).
-key_rank(party_role, 4).
-key_rank(notification_made_without_undue_delay, 5).
-key_rank(notification_accompanied_by_reasons_for_delay, 6).
-key_rank(supervisory_authority_decision_on_communication, 7).
-key_rank(appropriate_protection_measures_applied_to_affected_data, 8).
-key_rank(subsequent_measures_ensure_high_risk_no_longer_likely, 9).
-key_rank(communication_would_involve_disproportionate_effort, 10).
-key_rank(notification_describes_nature_of_breach, 11).
-key_rank(notification_gives_categories_and_approximate_numbers, 12).
-key_rank(categories_and_approximate_numbers_possible, 13).
-key_rank(notification_gives_contact_point, 14).
-key_rank(notification_describes_likely_consequences, 15).
-key_rank(notification_describes_measures_taken_or_proposed, 16).
-key_rank(notification_describes_mitigation_measures, 17).
-key_rank(mitigation_measures_appropriate, 18).
-key_rank(information_not_possible_to_provide_at_the_same_time, 19).
-key_rank(communication_made_without_undue_delay, 20).
-key_rank(communication_describes_nature_in_clear_and_plain_language, 21).
-key_rank(communication_gives_contact_point, 22).
-key_rank(communication_describes_likely_consequences, 23).
-key_rank(communication_describes_measures_taken_or_proposed, 24).
-key_rank(communication_describes_mitigation_measures, 25).
+contradictory_inputs(Keys) :-
+    clausal_is_list(Keys).
 
 no_notification_required(cite(Key)) :-
     atom(Key).
@@ -97,329 +76,212 @@ period_end(date(Year, Month, Day), EndHour) :-
     integer(Year),
     integer(Month),
     integer(Day),
-    integer(EndHour).
+    integer(EndHour),
+    EndHour #>= 1,
+    EndHour #< 25.
 
 requirements_not_met(Items) :-
-    nonempty_list(Items).
+    clausal_is_list(Items).
 
 information_to_follow_in_phases(Items) :-
-    nonempty_list(Items).
+    clausal_is_list(Items).
 
 indeterminate(Keys) :-
-    nonempty_list(Keys).
+    clausal_is_list(Keys).
 
-needs_legal_review(open_textured(Key, cite(Citation)), Context) :-
-    atom(Key),
-    atom(Citation),
-    is_list(Context).
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    clausal_is_list(Context).
 
-open_textured(Key, cite(Citation)) :-
+open_textured(Key, cite(CitationKey)) :-
     atom(Key),
-    atom(Citation).
+    atom(CitationKey).
 
 inputs_relied_on(Pairs) :-
-    is_list(Pairs).
+    clausal_is_list(Pairs).
 
 provenance(Clause, Citations) :-
-    ground(Clause),
-    is_list(Citations).
+    atom(Clause),
+    clausal_is_list(Citations).
 
-input_problems(Problems) :-
-    nonempty_list(Problems).
-
-unknown_key(Key) :-
-    atom(Key).
-
-wrong_type(Key) :-
-    atom(Key).
-
-duplicate_key(Key) :-
-    atom(Key).
-
-contradictory_inputs([FirstKey, SecondKey]) :-
-    atom(FirstKey),
-    atom(SecondKey).
-
-nonempty_list(List) :-
-    is_list(List),
-    length(List, Count),
-    Count #>= 1.
-
-key_state(Profile, Key, State) :-
+key_value(Profile, Key, State) :-
     findall(Value, profile_get(Profile, Key, Value), Values),
     values_state(Values, State).
 
 values_state([], absent).
-values_state([Value], Value).
+values_state([Value], present(Value)).
 
-stated_judgement(true).
-stated_judgement(false).
-stated_judgement(unsure).
+holds_t(Goal, Truth) :-
+    findall(holds, call(Goal), Witnesses),
+    sort(Witnesses, Distinct),
+    witness_truth(Distinct, Truth).
 
-settled_judgement(true).
-settled_judgement(false).
+witness_truth([], false).
+witness_truth([holds], true).
 
-unsure_prefix([], none).
-unsure_prefix([Key - unsure|_], found(Key, [Key - unsure])).
-unsure_prefix([Key - Value|Pairs], Found) :-
-    settled_judgement(Value),
-    unsure_prefix(Pairs, LaterFound),
-    prepend_pair(LaterFound, Key - Value, Found).
+argument_problems(true, _, []).
+argument_problems(false, Name, [wrong_type(Name)]).
 
-prepend_pair(none, _, none).
-prepend_pair(found(Key, Pairs), Pair, found(Key, [Pair|Pairs])).
+real_calendar_day(Aware) :-
+    nonvar(Aware),
+    Aware = date(Year, Month, Day),
+    integer(Year),
+    integer(Month),
+    integer(Day),
+    Year #>= 1,
+    Year #< 10000,
+    Month #>= 1,
+    Month #< 13,
+    month_last_day(Year, Month, LastDay),
+    Day #>= 1,
+    Day #=< LastDay.
 
-refer(Key, Pairs, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)])) :-
-    referral_row(_, Key, Citation, _).
+clock_hour(AwarenessHour) :-
+    integer(AwarenessHour),
+    AwarenessHour #>= 0,
+    AwarenessHour #< 24.
 
-absent_keys([], []).
-absent_keys([Key - absent|Pairs], [Key|Keys]) :-
-    absent_keys(Pairs, Keys).
-absent_keys([_ - State|Pairs], Keys) :-
-    dif(State, absent),
-    absent_keys(Pairs, Keys).
+non_negative_integer(HoursElapsed) :-
+    integer(HoursElapsed),
+    HoursElapsed #>= 0.
 
-in_root_order(Keys, Ordered) :-
-    map_list_to_pairs(key_rank, Keys, Ranked),
-    keysort(Ranked, Sorted),
-    pairs_values(Sorted, Ordered).
+hours_elapsed_problems(HoursElapsed, Problems) :-
+    holds_t(non_negative_integer(HoursElapsed), IsCount),
+    argument_problems(IsCount, hours_elapsed, Problems).
 
-pairs_in_root_order(Pairs, Ordered) :-
-    map_list_to_pairs(pair_rank, Pairs, Ranked),
-    keysort(Ranked, Sorted),
-    pairs_values(Sorted, Ordered).
-
-pair_rank(Key - _, Rank) :-
-    key_rank(Key, Rank).
-
-truth_and(true, Truth, Truth).
-truth_and(false, _, false).
-
-witnessed_t([], false).
-witnessed_t([_], true).
-
-integer_t(Term, Truth) :-
-    findall(Term, integer(Term), Witnesses),
-    witnessed_t(Witnesses, Truth).
-
-in_range_t(Number, Lowest, Highest, true) :-
-    Number #>= Lowest,
-    Number #=< Highest.
-in_range_t(Number, Lowest, _, false) :-
-    Number #< Lowest.
-in_range_t(Number, _, Highest, false) :-
-    Number #> Highest.
-
-non_negative_integer_t(Term, Truth) :-
-    integer_t(Term, IsInteger),
-    non_negative_t(IsInteger, Term, Truth).
-
-non_negative_t(false, _, false).
-non_negative_t(true, Number, true) :-
-    Number #>= 0.
-non_negative_t(true, Number, false) :-
-    Number #< 0.
-
-clock_hour_t(Term, Truth) :-
-    integer_t(Term, IsInteger),
-    clock_hour_range_t(IsInteger, Term, Truth).
-
-clock_hour_range_t(false, _, false).
-clock_hour_range_t(true, Hour, Truth) :-
-    LastHour #= 24 - 1,
-    in_range_t(Hour, 0, LastHour, Truth).
-
-calendar_day_t(Term, Truth) :-
-    findall(parts(Year, Month, Day), date_term_parts(Term, Year, Month, Day), Found),
-    found_day_t(Found, Truth).
-
-date_term_parts(Term, Year, Month, Day) :-
-    nonvar(Term),
-    Term = date(Year, Month, Day).
-
-found_day_t([], false).
-found_day_t([parts(Year, Month, Day)], Truth) :-
-    integer_t(Year, YearIsInteger),
-    integer_t(Month, MonthIsInteger),
-    integer_t(Day, DayIsInteger),
-    truth_and(YearIsInteger, MonthIsInteger, YearMonthAreIntegers),
-    truth_and(YearMonthAreIntegers, DayIsInteger, AllAreIntegers),
-    integer_day_t(AllAreIntegers, Year, Month, Day, Truth).
-
-integer_day_t(false, _, _, _, false).
-integer_day_t(true, Year, Month, Day, Truth) :-
-    FirstYear #= 1,
-    LastYear #= 9999,
-    LastMonth #= 12,
-    in_range_t(Year, FirstYear, LastYear, YearInRange),
-    in_range_t(Month, 1, LastMonth, MonthInRange),
-    truth_and(YearInRange, MonthInRange, YearMonthInRange),
-    month_day_t(YearMonthInRange, Year, Month, Day, Truth).
-
-month_day_t(false, _, _, _, false).
-month_day_t(true, Year, Month, Day, Truth) :-
-    month_length(Year, Month, LastDay),
-    in_range_t(Day, 1, LastDay, Truth).
-
-month_length(Year, 2, Length) :-
-    leap_year_t(Year, Leap),
-    february_length(Leap, Length).
-month_length(_, Month, Length) :-
-    fixed_month_length(Month, Length).
-
-fixed_month_length(1, 31).
-fixed_month_length(3, 31).
-fixed_month_length(4, 30).
-fixed_month_length(5, 31).
-fixed_month_length(6, 30).
-fixed_month_length(7, 31).
-fixed_month_length(8, 31).
-fixed_month_length(9, 30).
-fixed_month_length(10, 31).
-fixed_month_length(11, 30).
-fixed_month_length(12, 31).
-
-february_length(true, 29).
-february_length(false, 28).
-
-leap_year_t(Year, true) :-
-    Year mod 400 #= 0.
-leap_year_t(Year, false) :-
-    Year mod 400 #> 0,
-    Year mod 100 #= 0.
-leap_year_t(Year, true) :-
-    Year mod 100 #> 0,
-    Year mod 4 #= 0.
-leap_year_t(Year, false) :-
-    Year mod 4 #> 0.
-
-period_end_day(Aware, Day) :-
+period_last_day(Aware, LastDay) :-
     implements(eu_reg_1971_1182_art_3_2_a),
-    PeriodDays #= 72 // 24,
-    timedelta(PeriodDays, 0, NotificationPeriod),
-    date_add(Aware, NotificationPeriod, Day).
+    implements(eu_reg_1971_1182_art_3_3),
+    implements(eu_reg_1971_1182_art_3_4),
+    authority_notification_period_hours(PeriodHours, cite(eu_reg_2016_679_art_33_1)),
+    hours_in_a_calendar_day(HoursPerDay),
+    CalendarDays #= PeriodHours // HoursPerDay,
+    timedelta(CalendarDays, 0, NotificationPeriod),
+    date_add(Aware, NotificationPeriod, LastDay).
 
 period_end_hour(AwarenessHour, EndHour) :-
     implements(eu_reg_1971_1182_art_3_1),
-    EndHour #= AwarenessHour + 1.
-
-statutory_notification_hours(Hours) :-
-    implements(eu_reg_2016_679_art_33_1),
-    Hours #= 72.
-
-authority_notification_deadline(Aware, Deadline, Hours) :-
-    statutory_notification_hours(Hours),
-    calendar_day_t(Aware, IsCalendarDay),
-    deadline_for(IsCalendarDay, Aware, Deadline).
-
-deadline_for(false, _, input_problems([wrong_type(awareness_date)])).
-deadline_for(true, Aware, Deadline) :-
-    implements(eu_reg_1971_1182_art_3_3),
-    implements(eu_reg_1971_1182_art_3_4),
-    period_end_day(Aware, Deadline).
-
-authority_notification_period_end(Aware, AwarenessHour, PeriodEnd) :-
-    calendar_day_t(Aware, IsCalendarDay),
-    clock_hour_t(AwarenessHour, IsClockHour),
-    awareness_date_problems(IsCalendarDay, DateProblems),
-    awareness_hour_problems(IsClockHour, HourProblems),
-    append(DateProblems, HourProblems, Problems),
-    period_end_for_problems(Problems, Aware, AwarenessHour, PeriodEnd).
-
-awareness_date_problems(true, []).
-awareness_date_problems(false, [wrong_type(awareness_date)]).
-
-awareness_hour_problems(true, []).
-awareness_hour_problems(false, [wrong_type(awareness_hour)]).
-
-period_end_for_problems([Problem|Problems], _, _, input_problems([Problem|Problems])).
-period_end_for_problems([], Aware, AwarenessHour, period_end(Day, EndHour)) :-
-    implements(eu_reg_1971_1182_art_3_2),
-    period_end_day(Aware, Day),
-    period_end_hour(AwarenessHour, EndHour).
-
-breach_notification_verdict(Profile, HoursElapsed, Verdict, Citations) :-
-    verdict_input_problems(Profile, HoursElapsed, Problems),
-    verdict_for_problems(Problems, Profile, HoursElapsed, Verdict, Citations).
-
-verdict_input_problems(Profile, HoursElapsed, Problems) :-
-    gdpr_arts33_34_breach_notification_input_problems(Profile, ProfileProblems),
-    non_negative_integer_t(HoursElapsed, HoursWellFormed),
-    hours_elapsed_problems(HoursWellFormed, HoursProblems),
-    append(ProfileProblems, HoursProblems, Problems).
-
-hours_elapsed_problems(true, []).
-hours_elapsed_problems(false, [wrong_type(hours_elapsed)]).
-
-verdict_for_problems([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
-verdict_for_problems([], Profile, HoursElapsed, Verdict, Citations) :-
-    key_state(Profile, breach_unlikely_to_result_in_risk, Risk),
-    risk_verdict(Risk, Profile, HoursElapsed, Verdict, Citations).
-
-risk_verdict(absent, _, _, indeterminate([breach_unlikely_to_result_in_risk]), []).
-risk_verdict(true, _, _, ineligible, [cite(eu_reg_2016_679_art_33_1)]) :-
-    implements(eu_reg_2016_679_art_33_1).
-risk_verdict(Risk, Profile, HoursElapsed, Verdict, Citations) :-
-    implements(eu_reg_2016_679_art_33_1),
-    risk_not_ruled_out(Risk),
-    notification_window(HoursElapsed, Window),
-    window_verdict(Window, Risk, Profile, HoursElapsed, Verdict, Citations).
-
-risk_not_ruled_out(false).
-risk_not_ruled_out(unsure).
+    implements(eu_reg_1971_1182_art_3_2_a),
+    excluded_hour_of_awareness(ExcludedHours, cite(eu_reg_1971_1182_art_3_1)),
+    EndHour #= AwarenessHour + ExcludedHours.
 
 notification_window(HoursElapsed, within_period) :-
     implements(eu_reg_2016_679_art_33_1),
-    HoursElapsed #< 73.
+    implements(eu_reg_1971_1182_art_3_2_a),
+    authority_notification_period_hours(PeriodHours, cite(eu_reg_2016_679_art_33_1)),
+    HoursElapsed #=< PeriodHours.
 notification_window(HoursElapsed, after_period) :-
     implements(eu_reg_2016_679_art_33_1),
-    HoursElapsed #> 72.
+    implements(eu_reg_1971_1182_art_3_2_a),
+    authority_notification_period_hours(PeriodHours, cite(eu_reg_2016_679_art_33_1)),
+    HoursElapsed #> PeriodHours.
 
-window_verdict(within_period, Risk, Profile, HoursElapsed, Verdict, Citations) :-
-    key_state(Profile, notification_made_without_undue_delay, Promptness),
-    prompt_verdict(Promptness, Risk, HoursElapsed, Verdict, Citations).
-window_verdict(after_period, Risk, Profile, HoursElapsed, Verdict, Citations) :-
-    key_state(Profile, notification_accompanied_by_reasons_for_delay, Reasons),
-    reasons_verdict(Reasons, Risk, Profile, HoursElapsed, Verdict, Citations).
+authority_notification_deadline(Aware, Deadline, Hours) :-
+    implements(eu_reg_2016_679_art_33_1),
+    authority_notification_period_hours(Hours, cite(eu_reg_2016_679_art_33_1)),
+    holds_t(real_calendar_day(Aware), IsRealDay),
+    deadline_answer(IsRealDay, Aware, Deadline).
 
-prompt_verdict(absent, _, _, indeterminate([notification_made_without_undue_delay]), []).
-prompt_verdict(Promptness, unsure, _, Review, []) :-
-    implements(eu_reg_2016_679_art_33_1),
-    stated_judgement(Promptness),
-    refer(breach_unlikely_to_result_in_risk, [breach_unlikely_to_result_in_risk - unsure], Review).
-prompt_verdict(unsure, false, HoursElapsed, Review, []) :-
-    implements(eu_reg_2016_679_art_33_1),
-    refer(notification_made_without_undue_delay, [hours_elapsed - HoursElapsed, breach_unlikely_to_result_in_risk - false, notification_made_without_undue_delay - unsure], Review).
-prompt_verdict(true, false, _, eligible, [cite(eu_reg_2016_679_art_33_1)]) :-
+deadline_answer(false, _, input_problems([wrong_type(awareness_date)])).
+deadline_answer(true, Aware, Deadline) :-
+    period_last_day(Aware, Deadline).
+
+authority_notification_period_end(Aware, AwarenessHour, PeriodEnd) :-
+    holds_t(real_calendar_day(Aware), IsRealDay),
+    holds_t(clock_hour(AwarenessHour), IsClockHour),
+    argument_problems(IsRealDay, awareness_date, DateProblems),
+    argument_problems(IsClockHour, awareness_hour, HourProblems),
+    append(DateProblems, HourProblems, Problems),
+    period_end_answer(Problems, Aware, AwarenessHour, PeriodEnd).
+
+period_end_answer([Problem|Problems], _, _, input_problems([Problem|Problems])).
+period_end_answer([], Aware, AwarenessHour, period_end(LastDay, EndHour)) :-
+    implements(eu_reg_1971_1182_art_3_2),
+    period_last_day(Aware, LastDay),
+    period_end_hour(AwarenessHour, EndHour).
+
+notification_risk_referral(needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([breach_unlikely_to_result_in_risk - unsure])])).
+
+high_risk_referral(needs_legal_review(open_textured(breach_likely_to_result_in_high_risk, cite(eu_reg_2016_679_art_34_1)), [inputs_relied_on([breach_unlikely_to_result_in_risk - false, breach_likely_to_result_in_high_risk - unsure])])).
+
+judgement_referral(Key, Relied, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Relied)])) :-
+    judgement_citation(Key, Citation).
+
+first_unsure([], _, none).
+first_unsure([Key - unsure|_], Before, unsure(Key, Relied)) :-
+    append(Before, [Key - unsure], Relied).
+first_unsure([Key - Value|Pairs], Before, Outcome) :-
+    sure_judgement(Value),
+    append(Before, [Key - Value], Seen),
+    first_unsure(Pairs, Seen, Outcome).
+
+sure_judgement(true).
+sure_judgement(false).
+
+open_judgement(false).
+open_judgement(unsure).
+
+breach_notification_verdict(Profile, HoursElapsed, Verdict, Citations) :-
+    verdict_request_problems(Profile, HoursElapsed, Problems),
+    verdict_for_problems(Problems, Profile, HoursElapsed, Verdict, Citations).
+
+verdict_request_problems(Profile, HoursElapsed, Problems) :-
+    gdpr_arts33_34_breach_notification_input_problems(Profile, ProfileProblems),
+    hours_elapsed_problems(HoursElapsed, ArgumentProblems),
+    append(ProfileProblems, ArgumentProblems, Problems).
+
+verdict_for_problems([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+verdict_for_problems([], Profile, HoursElapsed, Verdict, Citations) :-
+    key_value(Profile, breach_unlikely_to_result_in_risk, RiskState),
+    risk_route(RiskState, Profile, HoursElapsed, Verdict, Citations).
+
+risk_route(absent, _, _, indeterminate([breach_unlikely_to_result_in_risk]), []).
+risk_route(present(true), _, _, ineligible, [cite(eu_reg_2016_679_art_33_1)]) :-
     implements(eu_reg_2016_679_art_33_1).
-prompt_verdict(false, false, _, notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)]) :-
+risk_route(present(false), Profile, HoursElapsed, Verdict, Citations) :-
+    implements(eu_reg_2016_679_art_33_1),
+    notification_window(HoursElapsed, Window),
+    timing_route(Window, false, Profile, HoursElapsed, Verdict, Citations).
+risk_route(present(unsure), Profile, HoursElapsed, Verdict, Citations) :-
+    implements(eu_reg_2016_679_art_33_1),
+    notification_window(HoursElapsed, Window),
+    timing_route(Window, unsure, Profile, HoursElapsed, Verdict, Citations).
+
+timing_route(within_period, RiskJudgement, Profile, HoursElapsed, Verdict, Citations) :-
+    key_value(Profile, notification_made_without_undue_delay, DelayState),
+    undue_delay_route(DelayState, RiskJudgement, HoursElapsed, Verdict, Citations).
+timing_route(after_period, RiskJudgement, Profile, HoursElapsed, Verdict, Citations) :-
+    key_value(Profile, notification_accompanied_by_reasons_for_delay, ReasonsState),
+    reasons_route(ReasonsState, RiskJudgement, Profile, HoursElapsed, Verdict, Citations).
+
+undue_delay_route(absent, _, _, indeterminate([notification_made_without_undue_delay]), []).
+undue_delay_route(present(_), unsure, _, Referral, []) :-
+    notification_risk_referral(Referral).
+undue_delay_route(present(true), false, _, eligible, [cite(eu_reg_2016_679_art_33_1)]) :-
+    implements(eu_reg_2016_679_art_33_1).
+undue_delay_route(present(false), false, _, notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)]) :-
+    implements(eu_reg_2016_679_art_33_1).
+undue_delay_route(present(unsure), false, HoursElapsed, needs_legal_review(open_textured(notification_made_without_undue_delay, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - HoursElapsed, breach_unlikely_to_result_in_risk - false, notification_made_without_undue_delay - unsure])]), []) :-
     implements(eu_reg_2016_679_art_33_1).
 
-reasons_verdict(absent, _, _, _, indeterminate([notification_accompanied_by_reasons_for_delay]), []).
-reasons_verdict(false, unsure, _, _, Review, []) :-
-    implements(eu_reg_2016_679_art_33_1),
-    refer(breach_unlikely_to_result_in_risk, [breach_unlikely_to_result_in_risk - unsure], Review).
-reasons_verdict(false, false, _, _, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]) :-
+reasons_route(absent, _, _, _, indeterminate([notification_accompanied_by_reasons_for_delay]), []).
+reasons_route(present(false), unsure, _, _, Referral, []) :-
+    notification_risk_referral(Referral).
+reasons_route(present(false), false, _, _, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]) :-
     implements(eu_reg_2016_679_art_33_1).
-reasons_verdict(true, Risk, Profile, HoursElapsed, Verdict, Citations) :-
+reasons_route(present(true), RiskJudgement, Profile, HoursElapsed, Verdict, Citations) :-
     implements(eu_reg_2016_679_art_33_1),
-    key_state(Profile, delay_justified_by_reasons, Justification),
-    justification_verdict(Justification, Risk, HoursElapsed, Verdict, Citations).
+    key_value(Profile, delay_justified_by_reasons, JustifiedState),
+    justified_delay_route(JustifiedState, RiskJudgement, HoursElapsed, Verdict, Citations).
 
-justification_verdict(absent, _, _, indeterminate([delay_justified_by_reasons]), []).
-justification_verdict(Justification, unsure, _, Review, []) :-
-    implements(eu_reg_2016_679_art_33_1),
-    stated_judgement(Justification),
-    refer(breach_unlikely_to_result_in_risk, [breach_unlikely_to_result_in_risk - unsure], Review).
-justification_verdict(true, false, _, eligible, [cite(eu_reg_2016_679_art_33_1)]) :-
+justified_delay_route(absent, _, _, indeterminate([delay_justified_by_reasons]), []).
+justified_delay_route(present(_), unsure, _, Referral, []) :-
+    notification_risk_referral(Referral).
+justified_delay_route(present(true), false, _, eligible, [cite(eu_reg_2016_679_art_33_1)]) :-
     implements(eu_reg_2016_679_art_33_1).
-justification_verdict(Justification, false, HoursElapsed, Review, []) :-
+justified_delay_route(present(Justified), false, HoursElapsed, needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - HoursElapsed, breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - Justified])]), []) :-
     implements(eu_reg_2016_679_art_33_1),
-    unsettled_justification(Justification),
-    refer(delay_justified_by_reasons, [hours_elapsed - HoursElapsed, breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - Justification], Review).
-
-unsettled_justification(false).
-unsettled_justification(unsure).
+    open_judgement(Justified).
 
 notification_obligation(Profile, Obligation) :-
     gdpr_arts33_34_breach_notification_input_problems(Profile, Problems),
@@ -427,415 +289,530 @@ notification_obligation(Profile, Obligation) :-
 
 obligation_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
 obligation_for_problems([], Profile, Obligation) :-
-    key_state(Profile, party_role, Role),
-    role_obligation(Role, Profile, Obligation).
+    key_value(Profile, party_role, RoleState),
+    party_role_route(RoleState, Profile, Obligation).
 
-role_obligation(absent, _, indeterminate([party_role])).
-role_obligation(processor, _, [Duty]) :-
-    implements(eu_reg_2016_679_art_33_2),
-    processor_duty(Duty).
-role_obligation(controller, Profile, Obligation) :-
+party_role_route(absent, _, indeterminate([party_role])).
+party_role_route(present(processor), _, [notify_controller(cite(eu_reg_2016_679_art_33_2))]) :-
+    implements(eu_reg_2016_679_art_33_2).
+party_role_route(present(controller), Profile, Obligation) :-
     implements(eu_reg_2016_679_art_33_1),
-    key_state(Profile, breach_unlikely_to_result_in_risk, Risk),
-    key_state(Profile, supervisory_authority_decision_on_communication, Decision),
-    absent_keys([breach_unlikely_to_result_in_risk - Risk, supervisory_authority_decision_on_communication - Decision], Missing),
-    controller_obligation(Missing, Risk, Decision, Profile, Obligation).
-
-controller_obligation([Key|Keys], _, _, _, indeterminate([Key|Keys])).
-controller_obligation([], Risk, Decision, Profile, Obligation) :-
-    communication_outcome(Decision, Risk, Profile, Outcome),
-    outcome_obligation(Outcome, Risk, Obligation).
-
-communication_outcome(Decision, Risk, _, settled([Term], [breach_unlikely_to_result_in_risk - Risk])) :-
     implements(eu_reg_2016_679_art_34_4),
-    authority_decision_term(Decision, Term).
-communication_outcome(no_decision, Risk, Profile, Outcome) :-
-    implements(eu_reg_2016_679_art_34_1),
-    risk_communication_outcome(Risk, Profile, Outcome).
+    key_value(Profile, breach_unlikely_to_result_in_risk, RiskState),
+    key_value(Profile, supervisory_authority_decision_on_communication, AuthorityState),
+    missing_when_read(read, RiskState, breach_unlikely_to_result_in_risk, RiskMissing),
+    missing_when_read(read, AuthorityState, supervisory_authority_decision_on_communication, AuthorityMissing),
+    append(RiskMissing, AuthorityMissing, MissingKeys),
+    controller_route(MissingKeys, RiskState, AuthorityState, Profile, Obligation).
 
-risk_communication_outcome(true, _, settled([], [breach_unlikely_to_result_in_risk - true])) :-
-    implements(eu_reg_2016_679_art_33_1).
-risk_communication_outcome(Risk, Profile, Outcome) :-
-    implements(eu_reg_2016_679_art_34_1),
-    risk_not_ruled_out(Risk),
-    key_state(Profile, breach_likely_to_result_in_high_risk, HighRisk),
-    high_risk_outcome(HighRisk, Risk, Profile, Outcome).
+controller_route([Missing|MoreMissing], _, _, _, indeterminate([Missing|MoreMissing])).
+controller_route([], present(RiskJudgement), present(Authority), Profile, Obligation) :-
+    authority_reading(Authority, Reading),
+    controller_judgement_route(Reading, RiskJudgement, Profile, Obligation).
 
-high_risk_outcome(absent, _, _, missing([breach_likely_to_result_in_high_risk])).
-high_risk_outcome(false, Risk, _, settled([], [breach_unlikely_to_result_in_risk - Risk, breach_likely_to_result_in_high_risk - false])) :-
-    implements(eu_reg_2016_679_art_34_1).
-high_risk_outcome(HighRisk, Risk, Profile, Outcome) :-
-    implements(eu_reg_2016_679_art_34_3),
-    high_risk_not_ruled_out(HighRisk),
-    key_state(Profile, appropriate_protection_measures_applied_to_affected_data, Protection),
-    key_state(Profile, subsequent_measures_ensure_high_risk_no_longer_likely, Subsequent),
-    key_state(Profile, communication_would_involve_disproportionate_effort, Effort),
-    exemption_outcome(Protection, Subsequent, Effort, [breach_unlikely_to_result_in_risk - Risk, breach_likely_to_result_in_high_risk - HighRisk], Outcome).
-
-high_risk_not_ruled_out(true).
-high_risk_not_ruled_out(unsure).
-
-exemption_outcome(true, _, _, Read, settled([no_communication_required(cite(eu_reg_2016_679_art_34_3_a))], Read)) :-
+authority_reading(no_decision, own_judgements).
+authority_reading(required_communication, decided(communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4)))) :-
+    implements(eu_reg_2016_679_art_34_4).
+authority_reading(decided_point_a_condition_met, decided(no_communication_required(cite(eu_reg_2016_679_art_34_4)))) :-
+    implements(eu_reg_2016_679_art_34_4),
     implements(eu_reg_2016_679_art_34_3_a).
-exemption_outcome(Protection, true, _, Read, settled([no_communication_required(cite(eu_reg_2016_679_art_34_3_b))], Read)) :-
+authority_reading(decided_point_b_condition_met, decided(no_communication_required(cite(eu_reg_2016_679_art_34_4)))) :-
+    implements(eu_reg_2016_679_art_34_4),
+    implements(eu_reg_2016_679_art_34_3_b).
+authority_reading(decided_point_c_condition_met, decided(public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_4)))) :-
+    implements(eu_reg_2016_679_art_34_4),
+    implements(eu_reg_2016_679_art_34_3_c).
+
+article_33_duties(true, [no_notification_required(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]) :-
+    implements(eu_reg_2016_679_art_33_1),
+    implements(eu_reg_2016_679_art_33_5).
+article_33_duties(false, [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]) :-
+    implements(eu_reg_2016_679_art_33_1),
+    implements(eu_reg_2016_679_art_33_5).
+
+article_33_answer(unsure, Referral) :-
+    notification_risk_referral(Referral).
+article_33_answer(false, Duties) :-
+    article_33_duties(false, Duties).
+
+controller_judgement_route(decided(_Term), unsure, _, Referral) :-
+    notification_risk_referral(Referral).
+controller_judgement_route(decided(Term), RiskJudgement, _, Obligation) :-
+    article_33_duties(RiskJudgement, Duties),
+    append(Duties, [Term], Obligation).
+controller_judgement_route(own_judgements, true, _, Duties) :-
+    article_33_duties(true, Duties).
+controller_judgement_route(own_judgements, false, Profile, Obligation) :-
+    high_risk_stage(false, Profile, Obligation).
+controller_judgement_route(own_judgements, unsure, Profile, Obligation) :-
+    high_risk_stage(unsure, Profile, Obligation).
+
+high_risk_stage(RiskJudgement, Profile, Obligation) :-
+    key_value(Profile, breach_likely_to_result_in_high_risk, HighRiskState),
+    high_risk_route(HighRiskState, RiskJudgement, Profile, Obligation).
+
+high_risk_route(absent, _, _, indeterminate([breach_likely_to_result_in_high_risk])).
+high_risk_route(present(false), RiskJudgement, _, Obligation) :-
+    implements(eu_reg_2016_679_art_34_1),
+    article_33_answer(RiskJudgement, Obligation).
+high_risk_route(present(HighRisk), RiskJudgement, Profile, Obligation) :-
+    implements(eu_reg_2016_679_art_34_1),
+    communication_risk_open(HighRisk),
+    exemption_outcome(Profile, Outcome),
+    exemption_answer(Outcome, RiskJudgement, HighRisk, Obligation).
+
+communication_risk_open(true).
+communication_risk_open(unsure).
+
+exemption_outcome(Profile, Outcome) :-
+    implements(eu_reg_2016_679_art_34_3),
+    key_value(Profile, appropriate_protection_measures_applied_to_affected_data, ProtectionState),
+    key_value(Profile, subsequent_measures_ensure_high_risk_no_longer_likely, SubsequentState),
+    key_value(Profile, communication_would_involve_disproportionate_effort, EffortState),
+    exemption_from_states(ProtectionState, SubsequentState, EffortState, Outcome).
+
+not_true_state(absent).
+not_true_state(present(false)).
+not_true_state(present(unsure)).
+
+exemption_from_states(present(true), _, _, communication_term(no_communication_required(cite(eu_reg_2016_679_art_34_3_a)))) :-
+    implements(eu_reg_2016_679_art_34_3_a).
+exemption_from_states(ProtectionState, present(true), _, communication_term(no_communication_required(cite(eu_reg_2016_679_art_34_3_b)))) :-
     implements(eu_reg_2016_679_art_34_3_b),
-    exemption_not_true(Protection).
-exemption_outcome(absent, Subsequent, _, _, missing([appropriate_protection_measures_applied_to_affected_data])) :-
-    implements(eu_reg_2016_679_art_34_3_a),
-    exemption_not_true(Subsequent).
-exemption_outcome(Protection, absent, _, _, missing([subsequent_measures_ensure_high_risk_no_longer_likely])) :-
-    implements(eu_reg_2016_679_art_34_3_b),
-    exemption_stated_not_true(Protection).
-exemption_outcome(Protection, Subsequent, absent, _, missing([communication_would_involve_disproportionate_effort])) :-
-    implements(eu_reg_2016_679_art_34_3_c),
-    exemption_stated_not_true(Protection),
-    exemption_stated_not_true(Subsequent).
-exemption_outcome(Protection, Subsequent, Effort, Read, settled(Terms, AllRead)) :-
-    implements(eu_reg_2016_679_art_34_3_c),
-    exemption_stated_not_true(Protection),
-    exemption_stated_not_true(Subsequent),
-    effort_terms(Effort, Terms),
-    append(Read, [appropriate_protection_measures_applied_to_affected_data - Protection, subsequent_measures_ensure_high_risk_no_longer_likely - Subsequent, communication_would_involve_disproportionate_effort - Effort], AllRead).
+    not_true_state(ProtectionState).
+exemption_from_states(ProtectionState, SubsequentState, EffortState, Outcome) :-
+    implements(eu_reg_2016_679_art_34_3),
+    not_true_state(ProtectionState),
+    not_true_state(SubsequentState),
+    exemption_remaining(ProtectionState, SubsequentState, EffortState, Outcome).
 
-exemption_not_true(false).
-exemption_not_true(unsure).
-exemption_not_true(absent).
+exemption_remaining(absent, _, _, missing(appropriate_protection_measures_applied_to_affected_data)).
+exemption_remaining(present(_), absent, _, missing(subsequent_measures_ensure_high_risk_no_longer_likely)).
+exemption_remaining(present(_), present(_), absent, missing(communication_would_involve_disproportionate_effort)).
+exemption_remaining(present(Protection), present(Subsequent), present(Effort), Outcome) :-
+    exemption_judged(Protection, Subsequent, Effort, Outcome).
 
-exemption_stated_not_true(false).
-exemption_stated_not_true(unsure).
+exemption_judged(unsure, _, _, unsure(appropriate_protection_measures_applied_to_affected_data, [appropriate_protection_measures_applied_to_affected_data - unsure])).
+exemption_judged(false, unsure, _, unsure(subsequent_measures_ensure_high_risk_no_longer_likely, [appropriate_protection_measures_applied_to_affected_data - false, subsequent_measures_ensure_high_risk_no_longer_likely - unsure])).
+exemption_judged(false, false, unsure, unsure(communication_would_involve_disproportionate_effort, [appropriate_protection_measures_applied_to_affected_data - false, subsequent_measures_ensure_high_risk_no_longer_likely - false, communication_would_involve_disproportionate_effort - unsure])).
+exemption_judged(false, false, true, communication_term(public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c)))) :-
+    implements(eu_reg_2016_679_art_34_3_c).
+exemption_judged(false, false, false, communication_term(communicate_to_data_subject(cite(eu_reg_2016_679_art_34_1)))) :-
+    implements(eu_reg_2016_679_art_34_1).
 
-outcome_obligation(missing(Keys), _, indeterminate(Keys)).
-outcome_obligation(settled(Terms, Read), Risk, Obligation) :-
-    unsure_prefix(Read, Found),
-    settled_obligation(Found, Terms, Risk, Obligation).
+exemption_answer(missing(Key), _, _, indeterminate([Key])).
+exemption_answer(communication_term(_), unsure, _, Referral) :-
+    notification_risk_referral(Referral).
+exemption_answer(communication_term(_), false, unsure, Referral) :-
+    high_risk_referral(Referral).
+exemption_answer(communication_term(Term), false, true, Obligation) :-
+    article_33_duties(false, Duties),
+    append(Duties, [Term], Obligation).
+exemption_answer(unsure(_, _), unsure, _, Referral) :-
+    notification_risk_referral(Referral).
+exemption_answer(unsure(_, _), false, unsure, Referral) :-
+    high_risk_referral(Referral).
+exemption_answer(unsure(Key, Pairs), false, true, Referral) :-
+    append([breach_unlikely_to_result_in_risk - false, breach_likely_to_result_in_high_risk - true], Pairs, Relied),
+    judgement_referral(Key, Relied, Referral).
 
-settled_obligation(found(Key, Pairs), _, _, Review) :-
-    refer(Key, Pairs, Review).
-settled_obligation(none, Terms, Risk, [NotificationTerm, DocumentationTerm|Terms]) :-
-    implements(eu_reg_2016_679_art_33_5),
-    notification_duty_term(Risk, NotificationTerm),
-    documentation_duty(DocumentationTerm).
+crisp_key_read(present(false), not_read).
+crisp_key_read(present(true), read).
+crisp_key_read(present(unsure), read).
+crisp_key_read(absent, read).
 
-simple_item(Item, _, true, item_result(Item, out, [], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
-simple_item(Item, _, false, item_result(Item, included, [], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
-simple_item(Item, CrispKey, absent, item_result(Item, open, [CrispKey], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
+judgement_key_read(present(false), read).
+judgement_key_read(present(true), not_read).
+judgement_key_read(absent, not_read).
 
-contact_point_item(CrispKey, State, ItemResult) :-
-    implements(eu_reg_2016_679_art_33_3_b),
-    simple_item(contact_point, CrispKey, State, ItemResult).
+missing_when_read(not_read, _, _, []).
+missing_when_read(read, absent, Key, [Key]).
+missing_when_read(read, present(_), _, []).
 
-likely_consequences_item(CrispKey, State, ItemResult) :-
-    implements(eu_reg_2016_679_art_33_3_c),
-    simple_item(likely_consequences, CrispKey, State, ItemResult).
+judgement_pair_when(present(false), Key, present(Value), [Key - Value]).
+judgement_pair_when(present(false), _, absent, []).
+judgement_pair_when(present(true), _, _, []).
+judgement_pair_when(absent, _, _, []).
 
-qualified_item(Item, _, true, _, _, item_result(Item, out, [], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, _, false, JudgementKey, true, item_result(Item, included, [], [JudgementKey - true])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, _, false, JudgementKey, false, item_result(Item, out, [], [JudgementKey - false])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, _, false, JudgementKey, unsure, item_result(Item, waiting, [], [JudgementKey - unsure])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, _, false, JudgementKey, absent, item_result(Item, open, [JudgementKey], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, _, absent, _, false, item_result(Item, out, [], [])) :-
-    implements(eu_reg_2016_679_art_33_3).
-qualified_item(Item, CrispKey, absent, _, JudgementState, item_result(Item, open, [CrispKey], [])) :-
-    implements(eu_reg_2016_679_art_33_3),
-    judgement_not_false(JudgementState).
+item_when_false(present(false), Item, [Item]).
+item_when_false(present(true), _, []).
+item_when_false(present(unsure), _, []).
+item_when_false(absent, _, []).
 
-judgement_not_false(true).
-judgement_not_false(unsure).
-judgement_not_false(absent).
+item_when_false_and_true(present(false), present(true), Item, [Item]).
+item_when_false_and_true(present(false), present(false), _, []).
+item_when_false_and_true(present(false), present(unsure), _, []).
+item_when_false_and_true(present(false), absent, _, []).
+item_when_false_and_true(present(true), _, _, []).
+item_when_false_and_true(absent, _, _, []).
 
-judgement_item(Item, Key, true, item_result(Item, out, [], [Key - true])) :-
-    implements(eu_reg_2016_679_art_34_2).
-judgement_item(Item, Key, false, item_result(Item, included, [], [Key - false])) :-
-    implements(eu_reg_2016_679_art_34_2).
-judgement_item(Item, Key, unsure, item_result(Item, waiting, [], [Key - unsure])) :-
-    implements(eu_reg_2016_679_art_34_2).
-judgement_item(Item, Key, absent, item_result(Item, open, [Key], [])) :-
-    implements(eu_reg_2016_679_art_34_2).
+crisp_item_flags(absent, 1, 0).
+crisp_item_flags(present(false), 1, 1).
+crisp_item_flags(present(true), 0, 0).
 
-item_missing(item_result(_, _, Missing, _), Missing).
-
-item_read(item_result(_, _, _, Read), Read).
-
-items_missing(Items, Missing) :-
-    maplist(item_missing, Items, MissingLists),
-    append(MissingLists, Missing).
-
-items_read(Items, Reads) :-
-    maplist(item_read, Items, ReadLists),
-    append(ReadLists, Reads).
-
-included_items([], []).
-included_items([item_result(Item, included, _, _)|Results], [Item|Items]) :-
-    included_items(Results, Items).
-included_items([item_result(_, Status, _, _)|Results], Items) :-
-    not_included_status(Status),
-    included_items(Results, Items).
-
-not_included_status(out).
-not_included_status(open).
-not_included_status(waiting).
-
-status_weights(out, 0, 0, 0).
-status_weights(included, 1, 1, 0).
-status_weights(open, 0, 1, 0).
-status_weights(waiting, 0, 1, 1).
-
-item_tally([], 0, 0, 0).
-item_tally([item_result(_, Status, _, _)|Results], IncludedCount, PossibleCount, WaitingCount) :-
-    status_weights(Status, IncludedWeight, PossibleWeight, WaitingWeight),
-    item_tally(Results, LaterIncluded, LaterPossible, LaterWaiting),
-    IncludedCount #= LaterIncluded + IncludedWeight,
-    PossibleCount #= LaterPossible + PossibleWeight,
-    WaitingCount #= LaterWaiting + WaitingWeight.
-
-phases_needed_t(IncludedCount, _, true) :-
-    implements(eu_reg_2016_679_art_33_4),
-    IncludedCount #>= 1.
-phases_needed_t(IncludedCount, PossibleCount, true) :-
-    implements(eu_reg_2016_679_art_33_4),
-    IncludedCount #= 0,
-    PossibleCount #>= 2.
-phases_needed_t(IncludedCount, PossibleCount, false) :-
-    implements(eu_reg_2016_679_art_33_4),
-    IncludedCount #= 0,
-    PossibleCount #< 2.
-
-phase_keys(true, absent, [information_not_possible_to_provide_at_the_same_time], []).
-phase_keys(true, Value, [], [information_not_possible_to_provide_at_the_same_time - Value]) :-
-    stated_judgement(Value).
-phase_keys(false, _, [], []).
+judged_item_flags(present(true), _, 0, 0).
+judged_item_flags(absent, present(false), 0, 0).
+judged_item_flags(present(false), present(false), 0, 0).
+judged_item_flags(absent, absent, 1, 0).
+judged_item_flags(absent, present(true), 1, 0).
+judged_item_flags(absent, present(unsure), 1, 0).
+judged_item_flags(present(false), present(true), 1, 1).
+judged_item_flags(present(false), present(unsure), 1, 0).
+judged_item_flags(present(false), absent, 1, 0).
 
 authority_notification_content_check(Profile, Result) :-
     gdpr_arts33_34_breach_notification_input_problems(Profile, Problems),
-    notification_check_for_problems(Problems, Profile, Result).
+    notification_content_for_problems(Problems, Profile, Result).
 
-notification_check_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
-notification_check_for_problems([], Profile, Result) :-
+notification_content_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+notification_content_for_problems([], Profile, Result) :-
+    key_value(Profile, notification_describes_nature_of_breach, NatureState),
+    key_value(Profile, notification_gives_categories_and_approximate_numbers, CategoriesState),
+    key_value(Profile, categories_and_approximate_numbers_possible, PossibleState),
+    key_value(Profile, notification_gives_contact_point, ContactState),
+    key_value(Profile, notification_describes_likely_consequences, ConsequencesState),
+    key_value(Profile, notification_describes_measures_taken_or_proposed, MeasuresState),
+    key_value(Profile, notification_describes_mitigation_measures, MitigationState),
+    key_value(Profile, mitigation_measures_appropriate, AppropriateState),
+    key_value(Profile, information_not_possible_to_provide_at_the_same_time, PhasesState),
+    notification_content(content(NatureState, CategoriesState, PossibleState, ContactState, ConsequencesState, MeasuresState, MitigationState, AppropriateState), PhasesState, Result).
+
+notification_content(Content, PhasesState, Result) :-
     implements(eu_reg_2016_679_art_33_3),
-    key_state(Profile, notification_describes_nature_of_breach, NatureState),
-    key_state(Profile, notification_gives_categories_and_approximate_numbers, CategoriesState),
-    key_state(Profile, categories_and_approximate_numbers_possible, PossibleState),
-    key_state(Profile, notification_gives_contact_point, ContactState),
-    key_state(Profile, notification_describes_likely_consequences, ConsequencesState),
-    key_state(Profile, notification_describes_measures_taken_or_proposed, MeasuresState),
-    key_state(Profile, notification_describes_mitigation_measures, MitigationState),
-    key_state(Profile, mitigation_measures_appropriate, AppropriateState),
-    key_state(Profile, information_not_possible_to_provide_at_the_same_time, PhaseState),
-    simple_item(nature_of_breach, notification_describes_nature_of_breach, NatureState, NatureItem),
-    qualified_item(categories_and_approximate_numbers, notification_gives_categories_and_approximate_numbers, CategoriesState, categories_and_approximate_numbers_possible, PossibleState, CategoriesItem),
-    contact_point_item(notification_gives_contact_point, ContactState, ContactItem),
-    likely_consequences_item(notification_describes_likely_consequences, ConsequencesState, ConsequencesItem),
-    simple_item(measures_taken_or_proposed, notification_describes_measures_taken_or_proposed, MeasuresState, MeasuresItem),
-    qualified_item(mitigation_measures, notification_describes_mitigation_measures, MitigationState, mitigation_measures_appropriate, AppropriateState, MitigationItem),
-    notification_items_answer([NatureItem, CategoriesItem, ContactItem, ConsequencesItem, MeasuresItem, MitigationItem], PhaseState, Result).
+    item_counts(Content, CouldCount, AlreadyCount),
+    phases_read(CouldCount, AlreadyCount, PhasesRead),
+    notification_missing_keys(Content, PhasesRead, PhasesState, MissingKeys),
+    notification_content_route(MissingKeys, Content, CouldCount, PhasesState, Result).
 
-notification_items_answer(Items, PhaseState, Result) :-
-    item_tally(Items, IncludedCount, PossibleCount, WaitingCount),
-    phases_needed_t(IncludedCount, PossibleCount, PhasesNeeded),
-    phase_keys(PhasesNeeded, PhaseState, PhaseMissing, PhaseRead),
-    items_missing(Items, ItemMissing),
-    append(ItemMissing, PhaseMissing, Missing),
-    items_read(Items, ItemReads),
-    append(ItemReads, PhaseRead, Reads),
-    notification_content_answer(Missing, PhaseState, WaitingCount, Reads, Items, Result).
+item_counts(content(NatureState, CategoriesState, PossibleState, ContactState, ConsequencesState, MeasuresState, MitigationState, AppropriateState), CouldCount, AlreadyCount) :-
+    crisp_item_flags(NatureState, NatureCould, NatureAlready),
+    judged_item_flags(CategoriesState, PossibleState, CategoriesCould, CategoriesAlready),
+    crisp_item_flags(ContactState, ContactCould, ContactAlready),
+    crisp_item_flags(ConsequencesState, ConsequencesCould, ConsequencesAlready),
+    crisp_item_flags(MeasuresState, MeasuresCould, MeasuresAlready),
+    judged_item_flags(MitigationState, AppropriateState, MitigationCould, MitigationAlready),
+    sum_list([NatureCould, CategoriesCould, ContactCould, ConsequencesCould, MeasuresCould, MitigationCould], CouldCount),
+    sum_list([NatureAlready, CategoriesAlready, ContactAlready, ConsequencesAlready, MeasuresAlready, MitigationAlready], AlreadyCount).
 
-notification_content_answer([Key|Keys], _, _, _, _, indeterminate([Key|Keys])).
-notification_content_answer([], PhaseState, WaitingCount, Reads, Items, Result) :-
-    phase_wait(PhaseState, WaitingCount, Wait),
-    notification_waiting_answer(Wait, Reads, Items, PhaseState, Result).
-
-phase_wait(absent, WaitingCount, wait) :-
+phases_read(_, AlreadyCount, read) :-
     implements(eu_reg_2016_679_art_33_4),
-    WaitingCount #>= 1.
-phase_wait(absent, WaitingCount, proceed) :-
+    AlreadyCount #>= 1.
+phases_read(CouldCount, 0, read) :-
     implements(eu_reg_2016_679_art_33_4),
-    WaitingCount #= 0.
-phase_wait(PhaseState, _, proceed) :-
+    CouldCount #>= 2.
+phases_read(CouldCount, 0, not_read) :-
     implements(eu_reg_2016_679_art_33_4),
-    stated_judgement(PhaseState).
+    CouldCount #< 2.
 
-notification_waiting_answer(wait, _, _, _, indeterminate([information_not_possible_to_provide_at_the_same_time])).
-notification_waiting_answer(proceed, Reads, Items, PhaseState, Result) :-
-    unsure_prefix(Reads, Found),
-    notification_found_answer(Found, Items, PhaseState, Result).
+notification_missing_keys(content(NatureState, CategoriesState, PossibleState, ContactState, ConsequencesState, MeasuresState, MitigationState, AppropriateState), PhasesRead, PhasesState, MissingKeys) :-
+    crisp_key_read(PossibleState, CategoriesRead),
+    judgement_key_read(CategoriesState, PossibleRead),
+    crisp_key_read(AppropriateState, MitigationRead),
+    judgement_key_read(MitigationState, AppropriateRead),
+    missing_when_read(read, NatureState, notification_describes_nature_of_breach, NatureMissing),
+    missing_when_read(CategoriesRead, CategoriesState, notification_gives_categories_and_approximate_numbers, CategoriesMissing),
+    missing_when_read(PossibleRead, PossibleState, categories_and_approximate_numbers_possible, PossibleMissing),
+    missing_when_read(read, ContactState, notification_gives_contact_point, ContactMissing),
+    missing_when_read(read, ConsequencesState, notification_describes_likely_consequences, ConsequencesMissing),
+    missing_when_read(read, MeasuresState, notification_describes_measures_taken_or_proposed, MeasuresMissing),
+    missing_when_read(MitigationRead, MitigationState, notification_describes_mitigation_measures, MitigationMissing),
+    missing_when_read(AppropriateRead, AppropriateState, mitigation_measures_appropriate, AppropriateMissing),
+    missing_when_read(PhasesRead, PhasesState, information_not_possible_to_provide_at_the_same_time, PhasesMissing),
+    append([NatureMissing, CategoriesMissing, PossibleMissing, ContactMissing, ConsequencesMissing, MeasuresMissing, MitigationMissing, AppropriateMissing, PhasesMissing], MissingKeys).
 
-notification_found_answer(found(Key, Pairs), _, _, Review) :-
-    refer(Key, Pairs, Review).
-notification_found_answer(none, Items, PhaseState, Result) :-
-    included_items(Items, Included),
-    notification_items_result(Included, PhaseState, Result).
+notification_content_route([Missing|MoreMissing], _, _, _, indeterminate([Missing|MoreMissing])).
+notification_content_route([], Content, CouldCount, PhasesState, Result) :-
+    phases_pending(PhasesState, CouldCount, Pending),
+    pending_phases_route(Pending, Content, PhasesState, Result).
 
-notification_items_result([], _, all_requirements_met) :-
-    implements(eu_reg_2016_679_art_33_3).
-notification_items_result([Item|Items], true, information_to_follow_in_phases([Item|Items])) :-
+phases_pending(absent, CouldCount, pending) :-
+    CouldCount #= 1.
+phases_pending(absent, CouldCount, settled) :-
+    CouldCount #< 1.
+phases_pending(absent, CouldCount, settled) :-
+    CouldCount #>= 2.
+phases_pending(present(_), _, settled).
+
+pending_phases_route(pending, _, _, indeterminate([information_not_possible_to_provide_at_the_same_time])) :-
     implements(eu_reg_2016_679_art_33_4).
-notification_items_result([Item|Items], false, requirements_not_met([Item|Items])) :-
+pending_phases_route(settled, Content, PhasesState, Result) :-
+    content_judgements(Content, Judged),
+    first_unsure(Judged, [], Outcome),
+    judged_content_route(Outcome, Content, Judged, PhasesState, Result).
+
+content_judgements(content(_, CategoriesState, PossibleState, _, _, _, MitigationState, AppropriateState), Judged) :-
+    judgement_pair_when(CategoriesState, categories_and_approximate_numbers_possible, PossibleState, PossiblePairs),
+    judgement_pair_when(MitigationState, mitigation_measures_appropriate, AppropriateState, AppropriatePairs),
+    append(PossiblePairs, AppropriatePairs, Judged).
+
+judged_content_route(unsure(Key, Relied), _, _, _, Referral) :-
+    judgement_referral(Key, Relied, Referral).
+judged_content_route(none, Content, Judged, PhasesState, Result) :-
+    notification_items(Content, Items),
+    notification_items_route(Items, Judged, PhasesState, Result).
+
+notification_items(content(NatureState, CategoriesState, PossibleState, ContactState, ConsequencesState, MeasuresState, MitigationState, AppropriateState), Items) :-
+    implements(eu_reg_2016_679_art_33_3_a),
+    implements(eu_reg_2016_679_art_33_3_b),
+    implements(eu_reg_2016_679_art_33_3_c),
+    implements(eu_reg_2016_679_art_33_3_d),
+    item_when_false(NatureState, nature_of_breach, NatureItems),
+    item_when_false_and_true(CategoriesState, PossibleState, categories_and_approximate_numbers, CategoriesItems),
+    item_when_false(ContactState, contact_point, ContactItems),
+    item_when_false(ConsequencesState, likely_consequences, ConsequencesItems),
+    item_when_false(MeasuresState, measures_taken_or_proposed, MeasuresItems),
+    item_when_false_and_true(MitigationState, AppropriateState, mitigation_measures, MitigationItems),
+    append([NatureItems, CategoriesItems, ContactItems, ConsequencesItems, MeasuresItems, MitigationItems], Items).
+
+notification_items_route([], _, _, all_requirements_met) :-
     implements(eu_reg_2016_679_art_33_3).
+notification_items_route([Item|Items], Judged, PhasesState, Result) :-
+    implements(eu_reg_2016_679_art_33_3),
+    phases_route(PhasesState, [Item|Items], Judged, Result).
+
+phases_route(present(unsure), _, Judged, Referral) :-
+    implements(eu_reg_2016_679_art_33_4),
+    append(Judged, [information_not_possible_to_provide_at_the_same_time - unsure], Relied),
+    judgement_referral(information_not_possible_to_provide_at_the_same_time, Relied, Referral).
+phases_route(present(true), Items, _, information_to_follow_in_phases(Items)) :-
+    implements(eu_reg_2016_679_art_33_4).
+phases_route(present(false), Items, _, requirements_not_met(Items)) :-
+    implements(eu_reg_2016_679_art_33_4).
 
 data_subject_communication_check(Profile, Result) :-
     gdpr_arts33_34_breach_notification_input_problems(Profile, Problems),
-    communication_check_for_problems(Problems, Profile, Result).
+    communication_for_problems(Problems, Profile, Result).
 
-communication_check_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
-communication_check_for_problems([], Profile, Result) :-
+communication_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+communication_for_problems([], Profile, Result) :-
+    key_value(Profile, mitigation_measures_appropriate, AppropriateState),
+    key_value(Profile, communication_made_without_undue_delay, DelayState),
+    key_value(Profile, communication_describes_nature_in_clear_and_plain_language, LanguageState),
+    key_value(Profile, communication_gives_contact_point, ContactState),
+    key_value(Profile, communication_describes_likely_consequences, ConsequencesState),
+    key_value(Profile, communication_describes_measures_taken_or_proposed, MeasuresState),
+    key_value(Profile, communication_describes_mitigation_measures, MitigationState),
+    communication_content(communication(AppropriateState, DelayState, LanguageState, ContactState, ConsequencesState, MeasuresState, MitigationState), Result).
+
+communication_content(Communication, Result) :-
     implements(eu_reg_2016_679_art_34_2),
-    key_state(Profile, communication_made_without_undue_delay, DelayState),
-    key_state(Profile, communication_describes_nature_in_clear_and_plain_language, LanguageState),
-    key_state(Profile, communication_gives_contact_point, ContactState),
-    key_state(Profile, communication_describes_likely_consequences, ConsequencesState),
-    key_state(Profile, communication_describes_measures_taken_or_proposed, MeasuresState),
-    key_state(Profile, communication_describes_mitigation_measures, MitigationState),
-    key_state(Profile, mitigation_measures_appropriate, AppropriateState),
-    judgement_item(without_undue_delay, communication_made_without_undue_delay, DelayState, DelayItem),
-    judgement_item(nature_of_breach_in_clear_and_plain_language, communication_describes_nature_in_clear_and_plain_language, LanguageState, LanguageItem),
-    contact_point_item(communication_gives_contact_point, ContactState, ContactItem),
-    likely_consequences_item(communication_describes_likely_consequences, ConsequencesState, ConsequencesItem),
-    simple_item(measures_taken_or_proposed, communication_describes_measures_taken_or_proposed, MeasuresState, MeasuresItem),
-    qualified_item(mitigation_measures, communication_describes_mitigation_measures, MitigationState, mitigation_measures_appropriate, AppropriateState, MitigationItem),
-    communication_items_answer([DelayItem, LanguageItem, ContactItem, ConsequencesItem, MeasuresItem, MitigationItem], Result).
+    communication_missing_keys(Communication, MissingKeys),
+    communication_route(MissingKeys, Communication, Result).
 
-communication_items_answer(Items, Result) :-
-    items_missing(Items, ItemMissing),
-    in_root_order(ItemMissing, Missing),
-    items_read(Items, ItemReads),
-    pairs_in_root_order(ItemReads, Reads),
-    communication_answer(Missing, Reads, Items, Result).
+communication_missing_keys(communication(AppropriateState, DelayState, LanguageState, ContactState, ConsequencesState, MeasuresState, MitigationState), MissingKeys) :-
+    crisp_key_read(AppropriateState, MitigationRead),
+    judgement_key_read(MitigationState, AppropriateRead),
+    missing_when_read(AppropriateRead, AppropriateState, mitigation_measures_appropriate, AppropriateMissing),
+    missing_when_read(read, DelayState, communication_made_without_undue_delay, DelayMissing),
+    missing_when_read(read, LanguageState, communication_describes_nature_in_clear_and_plain_language, LanguageMissing),
+    missing_when_read(read, ContactState, communication_gives_contact_point, ContactMissing),
+    missing_when_read(read, ConsequencesState, communication_describes_likely_consequences, ConsequencesMissing),
+    missing_when_read(read, MeasuresState, communication_describes_measures_taken_or_proposed, MeasuresMissing),
+    missing_when_read(MitigationRead, MitigationState, communication_describes_mitigation_measures, MitigationMissing),
+    append([AppropriateMissing, DelayMissing, LanguageMissing, ContactMissing, ConsequencesMissing, MeasuresMissing, MitigationMissing], MissingKeys).
 
-communication_answer([Key|Keys], _, _, indeterminate([Key|Keys])).
-communication_answer([], Reads, Items, Result) :-
-    unsure_prefix(Reads, Found),
-    communication_found_answer(Found, Items, Result).
+communication_route([Missing|MoreMissing], _, indeterminate([Missing|MoreMissing])).
+communication_route([], Communication, Result) :-
+    communication_judgements(Communication, Judged),
+    first_unsure(Judged, [], Outcome),
+    judged_communication_route(Outcome, Communication, Result).
 
-communication_found_answer(found(Key, Pairs), _, Review) :-
-    refer(Key, Pairs, Review).
-communication_found_answer(none, Items, Result) :-
-    included_items(Items, Included),
-    communication_items_result(Included, Result).
+communication_judgements(communication(AppropriateState, present(Delay), present(Language), _, _, _, MitigationState), Judged) :-
+    judgement_pair_when(MitigationState, mitigation_measures_appropriate, AppropriateState, AppropriatePairs),
+    append(AppropriatePairs, [communication_made_without_undue_delay - Delay, communication_describes_nature_in_clear_and_plain_language - Language], Judged).
 
-communication_items_result([], all_requirements_met) :-
+judged_communication_route(unsure(Key, Relied), _, Referral) :-
+    judgement_referral(Key, Relied, Referral).
+judged_communication_route(none, Communication, Result) :-
+    communication_items(Communication, Items),
+    communication_items_route(Items, Result).
+
+communication_items(communication(AppropriateState, DelayState, LanguageState, ContactState, ConsequencesState, MeasuresState, MitigationState), Items) :-
+    implements(eu_reg_2016_679_art_34_1),
+    implements(eu_reg_2016_679_art_34_2),
+    implements(eu_reg_2016_679_art_33_3_d),
+    item_when_false(DelayState, without_undue_delay, DelayItems),
+    item_when_false(LanguageState, nature_of_breach_in_clear_and_plain_language, LanguageItems),
+    item_when_false(ContactState, contact_point, ContactItems),
+    item_when_false(ConsequencesState, likely_consequences, ConsequencesItems),
+    item_when_false(MeasuresState, measures_taken_or_proposed, MeasuresItems),
+    item_when_false_and_true(MitigationState, AppropriateState, mitigation_measures, MitigationItems),
+    append([DelayItems, LanguageItems, ContactItems, ConsequencesItems, MeasuresItems, MitigationItems], Items).
+
+communication_items_route([], all_requirements_met) :-
     implements(eu_reg_2016_679_art_34_2).
-communication_items_result([Item|Items], requirements_not_met([Item|Items])) :-
+communication_items_route([Item|Items], requirements_not_met([Item|Items])) :-
     implements(eu_reg_2016_679_art_34_2).
 
-decide_breach_notification_verdict(case(Profile, HoursElapsed), breach_notification_verdict(Verdict, Citations)) :-
-    breach_notification_verdict(Profile, HoursElapsed, Verdict, Citations).
+decide_breach_notification_verdict(breach_notification_request(Profile, HoursElapsed), breach_notification_verdict_verdict(Status, Citations)) :-
+    breach_notification_verdict(Profile, HoursElapsed, Status, Citations).
 
 breach_notification_verdict_status(Request, Status) :-
-    decide_breach_notification_verdict(Request, breach_notification_verdict(Status, _)).
+    decide_breach_notification_verdict(Request, breach_notification_verdict_verdict(Status, _Citations)).
 
-breach_notification_verdict_checklist(case(Profile, HoursElapsed), Items) :-
-    verdict_input_problems(Profile, HoursElapsed, Problems),
+breach_notification_verdict_decision_resolvable(Request) :-
+    decide_breach_notification_verdict(Request, _Verdict).
+
+breach_notification_verdict_checklist(breach_notification_request(Profile, HoursElapsed), Items) :-
+    verdict_request_problems(Profile, HoursElapsed, Problems),
     checklist_for_problems(Problems, Profile, HoursElapsed, Items).
 
 checklist_for_problems([Problem|Problems], _, _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2016_679_art_33_1))]).
-checklist_for_problems([], Profile, HoursElapsed, [item(notification_duty_arises, RiskStatus, cite(eu_reg_2016_679_art_33_1)), item(notification_within_72_hours, TimingStatus, cite(eu_reg_2016_679_art_33_1))]) :-
-    key_state(Profile, breach_unlikely_to_result_in_risk, Risk),
-    risk_item_status(Risk, RiskStatus),
+checklist_for_problems([], Profile, HoursElapsed, [item(notification_duty_arises, DutyStatus, cite(eu_reg_2016_679_art_33_1)), item(notified_within_the_period, WindowStatus, cite(eu_reg_2016_679_art_33_1)), item(timing_requirement_met, TimingStatus, cite(eu_reg_2016_679_art_33_1))]) :-
+    key_value(Profile, breach_unlikely_to_result_in_risk, RiskState),
+    duty_status(RiskState, DutyStatus),
     notification_window(HoursElapsed, Window),
-    window_item_status(Window, TimingStatus).
+    window_status(Window, WindowStatus),
+    timing_status(Window, Profile, TimingStatus).
 
-risk_item_status(false, met) :-
+duty_status(absent, unknown([breach_unlikely_to_result_in_risk])).
+duty_status(present(unsure), unknown([breach_unlikely_to_result_in_risk])).
+duty_status(present(false), met) :-
     implements(eu_reg_2016_679_art_33_1).
-risk_item_status(true, unmet(breach_unlikely_to_result_in_risk)) :-
+duty_status(present(true), unmet(breach_unlikely_to_result_in_risk)) :-
     implements(eu_reg_2016_679_art_33_1).
-risk_item_status(unsure, unknown([breach_unlikely_to_result_in_risk])).
-risk_item_status(absent, unknown([breach_unlikely_to_result_in_risk])).
 
-window_item_status(within_period, met).
-window_item_status(after_period, unmet(notification_after_72_hours)).
+window_status(within_period, met).
+window_status(after_period, unmet(notified_after_the_period)).
 
-breach_notification_verdict_decision_resolvable(Request) :-
-    decide_breach_notification_verdict(Request, _).
+timing_status(within_period, Profile, Status) :-
+    implements(eu_reg_2016_679_art_33_1),
+    key_value(Profile, notification_made_without_undue_delay, DelayState),
+    undue_delay_status(DelayState, Status).
+timing_status(after_period, Profile, Status) :-
+    implements(eu_reg_2016_679_art_33_1),
+    key_value(Profile, notification_accompanied_by_reasons_for_delay, ReasonsState),
+    key_value(Profile, delay_justified_by_reasons, JustifiedState),
+    reasons_status(ReasonsState, JustifiedState, Status).
+
+undue_delay_status(present(true), met).
+undue_delay_status(present(false), unmet(without_undue_delay)).
+undue_delay_status(present(unsure), unknown([notification_made_without_undue_delay])).
+undue_delay_status(absent, unknown([notification_made_without_undue_delay])).
+
+reasons_status(absent, _, unknown([notification_accompanied_by_reasons_for_delay])).
+reasons_status(present(false), _, unmet(reasons_for_delay)).
+reasons_status(present(true), present(true), met).
+reasons_status(present(true), present(false), unknown([delay_justified_by_reasons])).
+reasons_status(present(true), present(unsure), unknown([delay_justified_by_reasons])).
+reasons_status(present(true), absent, unknown([delay_justified_by_reasons])).
 
 test(deadline_crosses_a_month_end) :-
-    authority_notification_deadline(date(2025, 10, 31), date(2025, 11, 3), 72).
+    authority_notification_deadline(date(2025, 10, 31), date(Year, Month, Day), Hours),
+    Year == 2025,
+    Month == 11,
+    Day == 3,
+    Hours == 72.
 test(deadline_reaches_a_leap_day) :-
-    authority_notification_deadline(date(2032, 2, 26), date(2032, 2, 29), 72).
-test(deadline_crosses_a_leap_day) :-
-    authority_notification_deadline(date(2032, 2, 27), date(2032, 3, 1), 72).
+    authority_notification_deadline(date(2032, 2, 26), date(Year, Month, Day), _),
+    Year == 2032,
+    Month == 2,
+    Day == 29.
+test(deadline_passes_a_leap_day) :-
+    authority_notification_deadline(date(2032, 2, 27), date(Year, Month, Day), _),
+    Year == 2032,
+    Month == 3,
+    Day == 1.
 test(deadline_crosses_a_year_end) :-
-    authority_notification_deadline(date(2025, 12, 30), date(2026, 1, 2), 72).
-test(deadline_refuses_a_day_that_does_not_exist) :-
-    authority_notification_deadline(date(2025, 2, 29), input_problems([wrong_type(awareness_date)]), 72).
-test(deadline_refuses_an_atom) :-
-    authority_notification_deadline(tomorrow, input_problems([wrong_type(awareness_date)]), 72).
-test(deadline_has_one_solution) :-
+    authority_notification_deadline(date(2025, 12, 30), date(Year, Month, Day), _),
+    Year == 2026,
+    Month == 1,
+    Day == 2.
+test(an_unreal_day_is_wrong_type_with_72_hours) :-
+    authority_notification_deadline(date(2025, 2, 30), Deadline, Hours),
+    Deadline == input_problems([wrong_type(awareness_date)]),
+    Hours == 72.
+test(the_deadline_has_one_solution) :-
     findall(Deadline - Hours, authority_notification_deadline(date(2025, 10, 31), Deadline, Hours), Answers),
     length(Answers, 1).
-test(period_ends_at_the_hour_after_awareness) :-
-    authority_notification_period_end(date(2025, 10, 31), 10, period_end(date(2025, 11, 3), 11)).
-test(period_ends_at_the_end_of_the_day) :-
-    authority_notification_period_end(date(2025, 12, 30), 23, period_end(date(2026, 1, 2), 24)).
-test(period_end_names_both_arguments) :-
-    authority_notification_period_end(date(2025, 13, 1), 24, input_problems([wrong_type(awareness_date), wrong_type(awareness_hour)])).
-test(prompt_notification_is_eligible) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72, eligible, [cite(eu_reg_2016_679_art_33_1)]).
-test(unduly_delayed_notification_is_not_met) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, false)], 12, notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)]).
-test(late_without_reasons_is_not_met) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, false)], 73, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]).
-test(late_with_justified_reasons_is_eligible) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, true)], 100, eligible, [cite(eu_reg_2016_679_art_33_1)]).
-test(late_with_unjustified_reasons_refers) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, false)], 80, needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - 80, breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - false])]), []).
-test(unlikely_risk_is_ineligible) :-
+test(period_end_is_the_next_full_hour_three_days_later) :-
+    authority_notification_period_end(date(2025, 10, 31), 10, period_end(date(Year, Month, Day), EndHour)),
+    Year == 2025,
+    Month == 11,
+    Day == 3,
+    EndHour == 11.
+test(awareness_in_the_last_hour_ends_at_the_end_of_the_day) :-
+    authority_notification_period_end(date(2025, 12, 30), 23, period_end(date(Year, Month, Day), EndHour)),
+    Year == 2026,
+    Month == 1,
+    Day == 2,
+    EndHour == 24.
+test(period_end_names_both_bad_arguments) :-
+    authority_notification_period_end(nothing, 24, PeriodEnd),
+    PeriodEnd == input_problems([wrong_type(awareness_date), wrong_type(awareness_hour)]).
+test(unlikely_risk_is_ineligible_whatever_the_hours) :-
     breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], 500, ineligible, [cite(eu_reg_2016_679_art_33_1)]).
-test(absent_risk_is_indeterminate) :-
+test(an_absent_risk_judgement_is_indeterminate) :-
     breach_notification_verdict([], 10, indeterminate([breach_unlikely_to_result_in_risk]), []).
-test(negative_hours_are_an_input_problem) :-
-    breach_notification_verdict([], -1, input_problems([wrong_type(hours_elapsed)]), []).
-test(unsure_promptness_refers_with_the_hours) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, unsure)], 10, needs_legal_review(open_textured(notification_made_without_undue_delay, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - 10, breach_unlikely_to_result_in_risk - false, notification_made_without_undue_delay - unsure])]), []).
-test(unsure_risk_names_the_absent_timing_key) :-
+test(the_72nd_hour_without_undue_delay_is_eligible) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72, eligible, [cite(eu_reg_2016_679_art_33_1)]).
+test(undue_delay_inside_the_period_is_not_met) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, false)], 5, notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)]).
+test(no_reasons_after_the_period_is_not_met) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, false)], 73, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]).
+test(unsure_justification_refers_with_the_timing_context) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, unsure)], 80, Verdict, Citations),
+    Verdict == needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed - 80, breach_unlikely_to_result_in_risk - false, delay_justified_by_reasons - unsure])]),
+    Citations == [].
+test(an_unsure_risk_names_the_absent_timing_key) :-
     breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, unsure)], 10, indeterminate([notification_made_without_undue_delay]), []).
-test(verdict_has_one_solution) :-
-    findall(Verdict - Citations, breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 5, Verdict, Citations), Answers),
+test(a_negative_hour_count_is_an_input_problem) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], -1, input_problems([wrong_type(hours_elapsed)]), []).
+test(the_verdict_has_one_solution) :-
+    findall(Verdict - Citations, breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 3, Verdict, Citations), Answers),
     length(Answers, 1).
-test(obligation_worked_example) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false), attribute(communication_would_involve_disproportionate_effort, true)], [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))]).
-test(obligation_of_the_processor) :-
+test(the_order_example_lists_the_public_communication) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false), attribute(communication_would_involve_disproportionate_effort, true)], Obligation),
+    Obligation == [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))].
+test(the_processor_notifies_the_controller) :-
     notification_obligation([attribute(party_role, processor)], [notify_controller(cite(eu_reg_2016_679_art_33_2))]).
-test(obligation_names_both_always_needed_keys) :-
-    notification_obligation([attribute(party_role, controller)], indeterminate([breach_unlikely_to_result_in_risk, supervisory_authority_decision_on_communication])).
-test(obligation_without_party_role) :-
+test(an_absent_party_role_is_indeterminate) :-
     notification_obligation([], indeterminate([party_role])).
-test(obligation_unlikely_risk_documents_only) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision)], [no_notification_required(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]).
-test(obligation_authority_decision_governs) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(supervisory_authority_decision_on_communication, required_communication)], [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4))]).
-test(obligation_unsure_high_risk_refers) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, unsure), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, true)], needs_legal_review(open_textured(breach_likely_to_result_in_high_risk, cite(eu_reg_2016_679_art_34_1)), [inputs_relied_on([breach_unlikely_to_result_in_risk - false, breach_likely_to_result_in_high_risk - unsure])])).
-test(obligation_names_the_first_absent_exemption) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, unsure)], indeterminate([subsequent_measures_ensure_high_risk_no_longer_likely])).
-test(obligation_has_one_solution) :-
-    findall(Obligation, notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, false), attribute(supervisory_authority_decision_on_communication, no_decision)], Obligation), Answers),
-    Answers == [[notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]].
-test(content_check_all_met) :-
+test(both_always_needed_keys_are_named) :-
+    notification_obligation([attribute(party_role, controller)], indeterminate([breach_unlikely_to_result_in_risk, supervisory_authority_decision_on_communication])).
+test(a_required_communication_governs) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, required_communication)], Obligation),
+    Obligation == [no_notification_required(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4))].
+test(a_true_point_b_decides_while_point_a_is_absent) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, true)], Obligation),
+    Obligation == [notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5)), no_communication_required(cite(eu_reg_2016_679_art_34_3_b))].
+test(an_absent_high_risk_judgement_is_named_alone) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, unsure), attribute(supervisory_authority_decision_on_communication, no_decision)], indeterminate([breach_likely_to_result_in_high_risk])).
+test(an_unsure_point_b_refers_with_its_pairs) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, unsure), attribute(communication_would_involve_disproportionate_effort, true)], Obligation),
+    Obligation == needs_legal_review(open_textured(subsequent_measures_ensure_high_risk_no_longer_likely, cite(eu_reg_2016_679_art_34_3_b)), [inputs_relied_on([breach_unlikely_to_result_in_risk - false, breach_likely_to_result_in_high_risk - true, appropriate_protection_measures_applied_to_affected_data - false, subsequent_measures_ensure_high_risk_no_longer_likely - unsure])]).
+test(the_obligation_has_one_solution) :-
+    findall(Obligation, notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision)], Obligation), Answers),
+    Answers == [[no_notification_required(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]].
+test(a_complete_notification_meets_every_requirement) :-
     authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true)], all_requirements_met).
-test(content_check_in_phases) :-
-    authority_notification_content_check([attribute(notification_describes_nature_of_breach, false), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, true)], information_to_follow_in_phases([nature_of_breach])).
-test(content_check_names_the_phases_key) :-
-    authority_notification_content_check([attribute(notification_describes_nature_of_breach, false), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true)], indeterminate([information_not_possible_to_provide_at_the_same_time])).
-test(content_check_on_an_empty_profile) :-
+test(an_empty_notification_profile_names_every_key_read) :-
     authority_notification_content_check([], indeterminate([notification_describes_nature_of_breach, notification_gives_categories_and_approximate_numbers, notification_gives_contact_point, notification_describes_likely_consequences, notification_describes_measures_taken_or_proposed, notification_describes_mitigation_measures, information_not_possible_to_provide_at_the_same_time])).
-test(content_check_waits_on_an_unsure_judgement) :-
+test(a_missing_nature_with_no_phases_is_not_met) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, false), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, false)], requirements_not_met([nature_of_breach])).
+test(a_missing_nature_may_follow_in_phases) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, false), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, true)], information_to_follow_in_phases([nature_of_breach])).
+test(one_pending_item_names_the_phases_key) :-
     authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, false), attribute(categories_and_approximate_numbers_possible, unsure), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true)], indeterminate([information_not_possible_to_provide_at_the_same_time])).
-test(communication_check_on_an_empty_profile) :-
-    data_subject_communication_check([], indeterminate([communication_made_without_undue_delay, communication_describes_nature_in_clear_and_plain_language, communication_gives_contact_point, communication_describes_likely_consequences, communication_describes_measures_taken_or_proposed, communication_describes_mitigation_measures])).
-test(communication_check_orders_missing_keys) :-
-    data_subject_communication_check([attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, false)], indeterminate([mitigation_measures_appropriate, communication_made_without_undue_delay])).
-test(communication_check_not_met) :-
-    data_subject_communication_check([attribute(communication_made_without_undue_delay, false), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, false), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, true)], requirements_not_met([without_undue_delay, contact_point])).
-test(facade_projects_the_status) :-
-    breach_notification_verdict_status(case([attribute(breach_unlikely_to_result_in_risk, true)], 1), ineligible).
+test(an_unsure_possibility_refers) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, false), attribute(categories_and_approximate_numbers_possible, unsure), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, true)], Result),
+    Result == needs_legal_review(open_textured(categories_and_approximate_numbers_possible, cite(eu_reg_2016_679_art_33_3_a)), [inputs_relied_on([categories_and_approximate_numbers_possible - unsure])]).
+test(a_complete_communication_meets_every_requirement) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, true), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, true)], all_requirements_met).
+test(an_unduly_delayed_communication_is_not_met) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, false), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, true)], requirements_not_met([without_undue_delay])).
+test(an_absent_appropriateness_behind_a_false_mitigation_is_named) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, true), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, false)], indeterminate([mitigation_measures_appropriate])).
+test(an_unsure_communication_delay_refers_with_its_pairs) :-
+    data_subject_communication_check([attribute(mitigation_measures_appropriate, true), attribute(communication_made_without_undue_delay, unsure), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, false)], Result),
+    Result == needs_legal_review(open_textured(communication_made_without_undue_delay, cite(eu_reg_2016_679_art_34_1)), [inputs_relied_on([mitigation_measures_appropriate - true, communication_made_without_undue_delay - unsure])]).
+test(a_contradictory_profile_is_refused_by_the_content_check) :-
+    data_subject_communication_check([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], input_problems([contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])])).
+test(the_facade_decides_through_the_request) :-
+    decide_breach_notification_verdict(breach_notification_request([attribute(breach_unlikely_to_result_in_risk, true)], 1), breach_notification_verdict_verdict(ineligible, [cite(eu_reg_2016_679_art_33_1)])).
+test(the_checklist_has_one_row_per_ground) :-
+    breach_notification_verdict_checklist(breach_notification_request([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 12), Items),
+    Items == [item(notification_duty_arises, met, cite(eu_reg_2016_679_art_33_1)), item(notified_within_the_period, met, cite(eu_reg_2016_679_art_33_1)), item(timing_requirement_met, met, cite(eu_reg_2016_679_art_33_1))].
 
 test(unlikely_risk_is_not_eligible, fail) :-
     breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], 500, eligible, _).
