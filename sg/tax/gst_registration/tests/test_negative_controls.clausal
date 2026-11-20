@@ -1,0 +1,93 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% Run: python -m clausal.testing sg/tax/gst_registration/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(sg/tax/gst_registration/gst_registration, [
+    gst_retrospective_liability/2,
+    gst_prospective_liability/2
+]).
+:- use_module(sg/tax/gst_registration/fixtures, [gst_registration_profile_for/2]).
+
+test(already_registered_route_positive) :-
+    gst_registration_profile_for(retrospective_already_registered_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(already_registered, _, _, _, _)).
+
+test(already_registered_near_miss_unregistered_is_not_already_registered, fail) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(already_registered, _, _, _, _)).
+
+test(not_liable_route_positive) :-
+    gst_registration_profile_for(retrospective_not_liable_at_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(not_liable, _, _, _, _)).
+
+test(not_liable_near_miss_one_cent_above_is_not_not_liable, fail) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(not_liable, _, _, _, _)).
+
+test(comptroller_satisfied_route_positive) :-
+    gst_registration_profile_for(retrospective_comptroller_satisfied_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(not_liable_comptroller_satisfied, _, _, _, _)).
+
+test(comptroller_satisfied_near_miss_no_relief_is_not_comptroller_satisfied, fail) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(not_liable_comptroller_satisfied, _, _, _, _)).
+
+test(zero_rated_route_positive) :-
+    gst_registration_profile_for(retrospective_zero_rated_exemption_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(exempted_zero_rated, _, _, _, _)).
+
+test(zero_rated_near_miss_no_exemption_is_not_exempted, fail) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(exempted_zero_rated, _, _, _, _)).
+
+test(liable_route_positive) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(liable, _, _, _, _)).
+
+test(liable_near_miss_at_threshold_is_not_liable, fail) :-
+    gst_registration_profile_for(retrospective_not_liable_at_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(liable, _, _, _, _)).
+
+test(prospective_not_liable_route_positive) :-
+    gst_registration_profile_for(prospective_not_liable_at_threshold_pre_cutover, Profile),
+    gst_prospective_liability(Profile, gst_prospective(not_liable, _, _, _, _)).
+
+test(prospective_not_liable_near_miss_above_is_not_not_liable, fail) :-
+    gst_registration_profile_for(prospective_liable_pre_cutover_just_above_threshold, Profile),
+    gst_prospective_liability(Profile, gst_prospective(not_liable, _, _, _, _)).
+
+test(prospective_zero_rated_route_positive) :-
+    gst_registration_profile_for(prospective_zero_rated_exemption_just_above_threshold, Profile),
+    gst_prospective_liability(Profile, gst_prospective(exempted_zero_rated, _, _, _, _)).
+
+test(prospective_zero_rated_near_miss_no_exemption_is_not_exempted, fail) :-
+    gst_registration_profile_for(prospective_liable_pre_cutover_just_above_threshold, Profile),
+    gst_prospective_liability(Profile, gst_prospective(exempted_zero_rated, _, _, _, _)).
+
+test(prospective_liable_route_positive) :-
+    gst_registration_profile_for(prospective_liable_pre_cutover_just_above_threshold, Profile),
+    gst_prospective_liability(Profile, gst_prospective(liable, _, _, _, _)).
+
+test(prospective_liable_near_miss_at_threshold_is_not_liable, fail) :-
+    gst_registration_profile_for(prospective_not_liable_at_threshold_pre_cutover, Profile),
+    gst_prospective_liability(Profile, gst_prospective(liable, _, _, _, _)).
+
+test(indeterminate_route_positive) :-
+    gst_registration_profile_for(retrospective_indeterminate_missing_taxable_supplies, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(indeterminate, _, _, _, _)).
+
+test(indeterminate_near_miss_present_is_not_indeterminate, fail) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_retrospective_liability(Profile, gst_retrospective(indeterminate, _, _, _, _)).
+
+test(prospective_indeterminate_route_positive) :-
+    gst_registration_profile_for(prospective_indeterminate_missing_forecast_start_date, Profile),
+    gst_prospective_liability(Profile, gst_prospective(indeterminate, _, _, _, _)).
+
+test(prospective_indeterminate_near_miss_present_is_not_indeterminate, fail) :-
+    gst_registration_profile_for(prospective_liable_pre_cutover_just_above_threshold, Profile),
+    gst_prospective_liability(Profile, gst_prospective(indeterminate, _, _, _, _)).
+
+:- end_module(test_negative_controls).

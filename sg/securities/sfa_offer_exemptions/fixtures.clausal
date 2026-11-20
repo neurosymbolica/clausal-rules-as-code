@@ -1,0 +1,236 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for sg/securities/sfa_offer_exemptions.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is a dict built from Key-Value pairs with dict_pairs/2 (D6);
+% dates are date(Y, M, D) terms.
+%
+% For every route: a positive (at-boundary or above) case AND a one-unit
+% near-miss control that flips the verdict.
+% =====================================================================
+
+:- module(fixtures, [
+    sfa_offer_exemptions_subject/1,
+    sfa_offer_exemptions_profile_for/2,
+    sfa_offer_exemptions_assess/2
+]).
+
+:- use_module(sg/securities/sfa_offer_exemptions/sfa_offer_exemptions, [
+    decide_sfa_offer_exemptions/2
+]).
+
+% ---- Subject registry ------------------------------------------------
+sfa_offer_exemptions_subject(s274_institutional_positive).
+sfa_offer_exemptions_subject(s274_institutional_near_miss).
+sfa_offer_exemptions_subject(s275_1_relevant_positive).
+sfa_offer_exemptions_subject(s275_1_relevant_near_miss).
+sfa_offer_exemptions_subject(s275_1a_principal_at_minimum).
+sfa_offer_exemptions_subject(s275_1a_principal_below_minimum).
+sfa_offer_exemptions_subject(s272a_small_at_amount_limit).
+sfa_offer_exemptions_subject(s272a_small_over_amount_limit).
+sfa_offer_exemptions_subject(s272b_placement_at_person_limit).
+sfa_offer_exemptions_subject(s272b_placement_over_person_limit).
+sfa_offer_exemptions_subject(s274_and_s275_combined).
+sfa_offer_exemptions_subject(indeterminate_missing_prospectus_state).
+sfa_offer_exemptions_subject(indeterminate_zero_offerees).
+
+% ---- Profiles --------------------------------------------------------
+
+% s274: one institutional offeree, no other offerees -> exempt via s274
+sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-1,
+        relevant_person_offerees-0,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% s274 near-miss: zero institutional, one other offeree, advertisement present
+% so no residual exemption applies -> prospectus_required
+sfa_offer_exemptions_profile_for(s274_institutional_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-1,
+        amount_raised_cents-1000000,
+        advertisement-true,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% s275_1: two relevant-person offerees, clean conditions -> exempt
+sfa_offer_exemptions_profile_for(s275_1_relevant_positive, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-2,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% s275_1 near-miss: advertisement present, so s275_1 fails; residual=2,
+% no residual exemption applies -> prospectus_required
+sfa_offer_exemptions_profile_for(s275_1_relevant_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-2,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-true,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% s275_1a: one other offeree, acquires as principal at exactly $200,000,
+% prior private placement pushes window persons over 50 so s272b fails
+% -> exempt via s275_1a only
+sfa_offer_exemptions_profile_for(s275_1a_principal_at_minimum, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-1,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none,
+        acquires_as_principal-true,
+        minimum_consideration_per_transaction_cents-20000000,
+        prior_private_placement_offerees-[prior(date(2025, 6, 16), 50)]
+    ]).
+
+% s275_1a near-miss: one cent below the $200,000 minimum; s272b also fails
+% (window persons = 51) -> prospectus_required
+sfa_offer_exemptions_profile_for(s275_1a_principal_below_minimum, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-1,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none,
+        acquires_as_principal-true,
+        minimum_consideration_per_transaction_cents-19999999,
+        prior_private_placement_offerees-[prior(date(2025, 6, 16), 50)]
+    ]).
+
+% s272a: one other offeree, personal offer with statement, window amount
+% exactly at the $5 million limit; s272b fails (window persons = 51)
+% -> exempt via s272a only
+sfa_offer_exemptions_profile_for(s272a_small_at_amount_limit, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-1,
+        amount_raised_cents-500000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none,
+        personal_offer-true,
+        statement_and_resale_notification_given-true,
+        prior_private_placement_offerees-[prior(date(2025, 6, 16), 50)]
+    ]).
+
+% s272a near-miss: one cent over the $5 million limit; s272b also fails
+% -> prospectus_required
+sfa_offer_exemptions_profile_for(s272a_small_over_amount_limit, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-1,
+        amount_raised_cents-500000001,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none,
+        personal_offer-true,
+        statement_and_resale_notification_given-true,
+        prior_private_placement_offerees-[prior(date(2025, 6, 16), 50)]
+    ]).
+
+% s272b: exactly 50 other offerees, no prior -> exempt at the person limit
+sfa_offer_exemptions_profile_for(s272b_placement_at_person_limit, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-50,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% s272b near-miss: 51 other offerees -> one over the limit
+sfa_offer_exemptions_profile_for(s272b_placement_over_person_limit, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-51,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% Combined: one institutional + two relevant-person offerees, all clean
+% -> exempt via [s274, s275_1]
+sfa_offer_exemptions_profile_for(s274_and_s275_combined, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-1,
+        relevant_person_offerees-2,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% Indeterminate: prospectus_state key absent
+sfa_offer_exemptions_profile_for(indeterminate_missing_prospectus_state, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-1,
+        relevant_person_offerees-0,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false
+    ]).
+
+% Indeterminate: all offeree counts zero
+sfa_offer_exemptions_profile_for(indeterminate_zero_offerees, Profile) :-
+    dict_pairs(Profile, [
+        offer_date-date(2026, 6, 15),
+        institutional_offerees-0,
+        relevant_person_offerees-0,
+        other_offerees-0,
+        amount_raised_cents-1000000,
+        advertisement-false,
+        non_permitted_selling_expenses-false,
+        prospectus_state-none
+    ]).
+
+% ---- Convenience wrapper ---------------------------------------------
+sfa_offer_exemptions_assess(Subject, Result) :-
+    sfa_offer_exemptions_profile_for(Subject, Profile),
+    decide_sfa_offer_exemptions(Profile, Result).
+
+:- end_module(fixtures).

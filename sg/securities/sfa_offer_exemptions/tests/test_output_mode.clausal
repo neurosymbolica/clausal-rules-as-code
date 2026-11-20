@@ -1,0 +1,43 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: result argument UNBOUND,
+% the predicate must produce exactly one ground answer.
+% Run: python -m clausal.testing sg/securities/sfa_offer_exemptions/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(sg/securities/sfa_offer_exemptions/sfa_offer_exemptions, [
+    decide_sfa_offer_exemptions/2,
+    sfa_offer_exemptions_status/2
+]).
+:- use_module(sg/securities/sfa_offer_exemptions/fixtures, [sfa_offer_exemptions_profile_for/2]).
+
+test(institutional_profile_yields_exactly_one_status) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile),
+    findall(Status, sfa_offer_exemptions_status(Profile, Status), Statuses),
+    Statuses == [exempt].
+
+test(institutional_profile_full_result) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(exempt, [s274], 1000000, 0, [sg_sfa_2001_s274])).
+
+test(relevant_person_profile_full_result) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_positive, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(exempt, [s275_1], 1000000, 0, [sg_sfa_2001_s275_1])).
+
+test(placement_at_limit_yields_exempt_with_s272b) :-
+    sfa_offer_exemptions_profile_for(s272b_placement_at_person_limit, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(exempt, [s272b], 1000000, 50, [sg_sfa_2001_s272b_1])).
+
+test(placement_over_limit_yields_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s272b_placement_over_person_limit, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(prospectus_required, [], 1000000, 51, [sg_sfa_2001_s240])).
+
+test(combined_profile_yields_both_citations) :-
+    sfa_offer_exemptions_profile_for(s274_and_s275_combined, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(exempt, [s274, s275_1], 1000000, 0, [sg_sfa_2001_s274, sg_sfa_2001_s275_1])).
+
+test(indeterminate_profile_yields_no_aggregates) :-
+    sfa_offer_exemptions_profile_for(indeterminate_missing_prospectus_state, Profile),
+    decide_sfa_offer_exemptions(Profile, offer_exemption(indeterminate, [], n_a, n_a, [])).
+
+:- end_module(test_output_mode).

@@ -1,0 +1,441 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__sg_companies_small_company_audit_exemption_small_company_audit_exemption, [small_company_audit_exemption/2, decide_small_company_audit_exemption/2, small_company_audit_exemption_status/2, small_company_audit_exemption_checklist/2, small_company_audit_exemption_decision_resolvable/1, small_company_audit_exemption_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_dicts, [get/3]).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(library(clpz)).
+:- use_module(clausal_datetime, [date_sub/3, timedelta/3]).
+:- use_module(m__sg_companies_small_company_audit_exemption_citations, [implements/1]).
+:- use_module(formalize_lib, [profile_lacks/2, not_member/2]).
+
+small_company_cutoff_date(date(2015, 7, 1), cite(ca1967_s205c_6)).
+
+company_revenue_limit_cents(1000000000, cite(ca1967_sc13_para_2)).
+
+company_total_assets_limit_cents(1000000000, cite(ca1967_sc13_para_2)).
+
+company_employee_limit(50, cite(ca1967_sc13_para_2)).
+
+group_revenue_limit_cents(1000000000, cite(ca1967_sc13_para_7)).
+
+group_total_assets_limit_cents(1000000000, cite(ca1967_sc13_para_7)).
+
+group_employee_limit(50, cite(ca1967_sc13_para_7)).
+
+small_company_audit_exemption(Profile, audit_exemption(indeterminate, n_a, n_a, [])) :-
+    missing_required(Profile).
+small_company_audit_exemption(Profile, audit_exemption(exempt, SmallCompany, SmallGroup, [])) :-
+    implements(ca1967_s205c_1),
+    complete_required(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears),
+    compute_result(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears, SmallCompany, SmallGroup, Reasons),
+    Reasons = [].
+small_company_audit_exemption(Profile, audit_exemption(not_exempt, SmallCompany, SmallGroup, Reasons)) :-
+    implements(ca1967_s205c_1),
+    complete_required(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears),
+    compute_result(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears, SmallCompany, SmallGroup, Reasons),
+    Reasons \== [].
+
+decide_small_company_audit_exemption(Profile, Result) :-
+    small_company_audit_exemption(Profile, Result).
+
+small_company_audit_exemption_status(Profile, Decision) :-
+    small_company_audit_exemption(Profile, audit_exemption(Decision, _, _, _)).
+
+small_company_audit_exemption_status_values([exempt, not_exempt, indeterminate]).
+
+small_company_audit_exemption_decision_resolvable(Profile) :-
+    small_company_audit_exemption(Profile, _).
+
+small_company_audit_exemption_checklist(Profile, ChecklistItems) :-
+    missing_required(Profile),
+    ChecklistItems = [item(financial_year_before_1_july_2015, unknown(missing_required), cite(ca1967_s205c_6)), item(small_company, unknown(missing_required), cite(ca1967_sc13_para_2)), item(small_group, unknown(missing_required), cite(ca1967_sc13_para_7)), item(audit_requisition_notice, unknown(missing_required), cite(ca1967_s205b_7))].
+small_company_audit_exemption_checklist(Profile, ChecklistItems) :-
+    complete_required(Profile, _IncorporationDate, _FinancialYears, ParentFlag, SubsidiaryFlag, _GroupFormationDate, _GroupYears),
+    small_company_audit_exemption(Profile, audit_exemption(_, _, _, Reasons)),
+    group_membership(ParentFlag, SubsidiaryFlag, GroupMember),
+    checklist_items(Reasons, GroupMember, ChecklistItems).
+
+checklist_items(Reasons, GroupMember, ChecklistItems) :-
+    reason_member(financial_year_before_1_july_2015, Reasons, FinancialStatus),
+    reason_member(not_small_company, Reasons, SmallCompanyStatus),
+    group_checklist_status(GroupMember, Reasons, SmallGroupStatus),
+    reason_member(audit_requisition_notice, Reasons, AuditStatus),
+    ChecklistItems = [item(financial_year_before_1_july_2015, FinancialStatus, cite(ca1967_s205c_6)), item(small_company, SmallCompanyStatus, cite(ca1967_sc13_para_2)), item(small_group, SmallGroupStatus, cite(ca1967_sc13_para_7)), item(audit_requisition_notice, AuditStatus, cite(ca1967_s205b_7))].
+
+reason_member(Reason, Reasons, met) :-
+    not_member(Reason, Reasons).
+reason_member(Reason, Reasons, unmet(Reason)) :-
+    member(Reason, Reasons).
+
+group_checklist_status(false, _, inapplicable).
+group_checklist_status(true, Reasons, met) :-
+    not_member(not_small_group, Reasons).
+group_checklist_status(true, Reasons, unmet(not_small_group)) :-
+    member(not_small_group, Reasons).
+
+missing_required(Profile) :-
+    findall(Missing, missing_required_indicator(Profile, Missing), MissingList),
+    length(MissingList, MissingCount),
+    MissingCount #> 0.
+
+missing_required_indicator(Profile, incorporation_date) :-
+    profile_lacks(Profile, incorporation_date).
+missing_required_indicator(Profile, financial_years) :-
+    profile_lacks(Profile, financial_years).
+missing_required_indicator(Profile, financial_years_empty) :-
+    get(Profile, financial_years, []).
+missing_required_indicator(Profile, is_parent_company) :-
+    profile_lacks(Profile, is_parent_company).
+missing_required_indicator(Profile, is_subsidiary_company) :-
+    profile_lacks(Profile, is_subsidiary_company).
+missing_required_indicator(Profile, group_formation_date) :-
+    get(Profile, is_parent_company, true),
+    profile_lacks(Profile, group_formation_date).
+missing_required_indicator(Profile, group_formation_date) :-
+    get(Profile, is_parent_company, false),
+    get(Profile, is_subsidiary_company, true),
+    profile_lacks(Profile, group_formation_date).
+missing_required_indicator(Profile, group_financial_years) :-
+    get(Profile, is_parent_company, true),
+    profile_lacks(Profile, group_financial_years).
+missing_required_indicator(Profile, group_financial_years) :-
+    get(Profile, is_parent_company, false),
+    get(Profile, is_subsidiary_company, true),
+    profile_lacks(Profile, group_financial_years).
+missing_required_indicator(Profile, group_financial_years_empty) :-
+    get(Profile, is_parent_company, true),
+    get(Profile, group_financial_years, []).
+missing_required_indicator(Profile, group_financial_years_empty) :-
+    get(Profile, is_parent_company, false),
+    get(Profile, is_subsidiary_company, true),
+    get(Profile, group_financial_years, []).
+
+complete_required(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears) :-
+    get(Profile, incorporation_date, IncorporationDate),
+    get(Profile, financial_years, FinancialYears),
+    FinancialYears \== [],
+    get(Profile, is_parent_company, ParentFlag),
+    get(Profile, is_subsidiary_company, SubsidiaryFlag),
+    group_complete(Profile, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears).
+
+group_complete(Profile, true, _, GroupFormationDate, GroupYears) :-
+    get(Profile, group_formation_date, GroupFormationDate),
+    get(Profile, group_financial_years, GroupYears),
+    GroupYears \== [].
+group_complete(Profile, false, true, GroupFormationDate, GroupYears) :-
+    get(Profile, group_formation_date, GroupFormationDate),
+    get(Profile, group_financial_years, GroupYears),
+    GroupYears \== [].
+group_complete(_, false, false, absent, []).
+
+compute_result(Profile, IncorporationDate, FinancialYears, ParentFlag, SubsidiaryFlag, GroupFormationDate, GroupYears, SmallCompany, SmallGroup, Reasons) :-
+    last(FinancialYears, AssessedYear),
+    AssessedYear = fy(AssessedStart, AssessedEnd, _, _, _, _),
+    company_status(IncorporationDate, FinancialYears, SmallCompany),
+    group_membership(ParentFlag, SubsidiaryFlag, GroupMember),
+    group_status_value(GroupMember, GroupFormationDate, GroupYears, SmallGroup),
+    collect_reasons(Profile, AssessedStart, AssessedEnd, GroupMember, SmallCompany, SmallGroup, Reasons).
+
+group_membership(true, _, true) :-
+    implements(ca1967_sc13_para_12).
+group_membership(false, true, true) :-
+    implements(ca1967_sc13_para_12).
+group_membership(false, false, false) :-
+    implements(ca1967_sc13_para_12).
+
+group_status_value(true, GroupFormationDate, GroupYears, SmallGroup) :-
+    group_status(GroupFormationDate, GroupYears, SmallGroup).
+group_status_value(false, _, _, n_a).
+
+collect_reasons(Profile, AssessedStart, AssessedEnd, GroupMember, SmallCompany, SmallGroup, Reasons) :-
+    findall(Reason, (member(Reason, [financial_year_before_1_july_2015, not_small_company, not_small_group, audit_requisition_notice]), reason_holds(Profile, AssessedStart, AssessedEnd, GroupMember, SmallCompany, SmallGroup, Reason)), Reasons).
+
+reason_holds(_, AssessedStart, _, _, _, _, financial_year_before_1_july_2015) :-
+    implements(ca1967_s205c_6),
+    small_company_cutoff_date(Cutoff, _),
+    AssessedStart @< Cutoff.
+reason_holds(_, _, _, _, false, _, not_small_company) :-
+    implements(ca1967_s205c_1),
+    true.
+reason_holds(Profile, _, _, true, _, false, not_small_group) :-
+    get(Profile, is_parent_company, true),
+    implements(ca1967_s205c_3),
+    true.
+reason_holds(Profile, _, _, true, _, false, not_small_group) :-
+    get(Profile, is_parent_company, false),
+    get(Profile, is_subsidiary_company, true),
+    implements(ca1967_s205c_4),
+    true.
+reason_holds(Profile, AssessedStart, AssessedEnd, _, _, _, audit_requisition_notice) :-
+    implements(ca1967_s205b_7),
+    audit_requisition_notice_applies(Profile, AssessedStart, AssessedEnd).
+
+audit_requisition_notice_applies(Profile, AssessedStart, AssessedEnd) :-
+    implements(ca1967_s205b_6),
+    get(Profile, audit_requisition_notice_date, NoticeDate),
+    one_month_before(AssessedEnd, Deadline),
+    NoticeDate @>= AssessedStart,
+    NoticeDate @=< Deadline.
+
+one_month_before(date(CalendarYear, CalendarMonth, CalendarDay), ResultDate) :-
+    implements(ca1967_s205b_6),
+    timedelta(1, 0, OneDay),
+    date_sub(date(CalendarYear, CalendarMonth, 1), OneDay, LastDay),
+    LastDay = date(PreviousYear, PreviousMonth, LastDayNumber),
+    CalendarDay #=< LastDayNumber,
+    ResultDate = date(PreviousYear, PreviousMonth, CalendarDay).
+one_month_before(date(CalendarYear, CalendarMonth, CalendarDay), ResultDate) :-
+    implements(ca1967_s205b_6),
+    timedelta(1, 0, OneDay),
+    date_sub(date(CalendarYear, CalendarMonth, 1), OneDay, LastDay),
+    LastDay = date(PreviousYear, PreviousMonth, LastDayNumber),
+    CalendarDay #> LastDayNumber,
+    ResultDate = date(PreviousYear, PreviousMonth, LastDayNumber).
+
+company_status(IncorporationDate, FinancialYears, Status) :-
+    small_company_cutoff_date(Cutoff, _),
+    IncorporationDate @< Cutoff,
+    filter_company_years(Cutoff, FinancialYears, CountedYears),
+    company_walk(CountedYears, true, Status).
+company_status(IncorporationDate, FinancialYears, Status) :-
+    small_company_cutoff_date(Cutoff, _),
+    IncorporationDate @>= Cutoff,
+    filter_company_years(Cutoff, FinancialYears, CountedYears),
+    company_walk(CountedYears, false, Status).
+
+company_walk([], _, false).
+company_walk([FirstYear], BeforeCutoff, Status) :-
+    company_first_year(FirstYear, BeforeCutoff, Status).
+company_walk([FirstYear, SecondYear], BeforeCutoff, Status) :-
+    company_first_year(FirstYear, BeforeCutoff, FirstSmall),
+    company_second_year(SecondYear, BeforeCutoff, FirstSmall, Status).
+company_walk([FirstYear, SecondYear, ThirdYear|Remaining], BeforeCutoff, Status) :-
+    company_first_year(FirstYear, BeforeCutoff, FirstSmall),
+    company_second_year(SecondYear, BeforeCutoff, FirstSmall, SecondSmall),
+    company_subsequent_year(ThirdYear, SecondSmall, SecondYear, FirstYear, ThirdSmall),
+    company_walk_rest(Remaining, ThirdSmall, ThirdYear, SecondYear, Status).
+
+company_walk_rest([], CurrentSmall, _, _, CurrentSmall).
+company_walk_rest([CurrentYear|Remaining], PreviousSmall, PreviousYearOne, PreviousYearTwo, Status) :-
+    company_subsequent_year(CurrentYear, PreviousSmall, PreviousYearOne, PreviousYearTwo, NewSmall),
+    company_walk_rest(Remaining, NewSmall, CurrentYear, PreviousYearOne, Status).
+
+company_first_year(FinancialYear, true, Status) :-
+    implements(ca1967_sc13_para_4),
+    company_first_year_core(FinancialYear, Status).
+company_first_year(FinancialYear, false, Status) :-
+    implements(ca1967_sc13_para_3),
+    company_first_year_core(FinancialYear, Status).
+
+company_first_year_core(FinancialYear, true) :-
+    private_status(FinancialYear, true),
+    company_year_qualification_status(FinancialYear, true).
+company_first_year_core(FinancialYear, false) :-
+    private_status(FinancialYear, false).
+company_first_year_core(FinancialYear, false) :-
+    private_status(FinancialYear, true),
+    company_year_qualification_status(FinancialYear, false).
+
+company_second_year(_, _, true, true) :-
+    implements(ca1967_sc13_para_6),
+    true.
+company_second_year(SecondYear, true, false, Status) :-
+    implements(ca1967_sc13_para_4),
+    company_first_year_core(SecondYear, Status).
+company_second_year(SecondYear, false, false, Status) :-
+    implements(ca1967_sc13_para_3),
+    company_first_year_core(SecondYear, Status).
+
+company_subsequent_year(CurrentYear, true, PreviousYearOne, PreviousYearTwo, true) :-
+    implements(ca1967_sc13_para_5),
+    implements(ca1967_sc13_para_13),
+    private_status(CurrentYear, true),
+    company_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #>= 1.
+company_subsequent_year(CurrentYear, true, _PreviousYearOne, _PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_5),
+    private_status(CurrentYear, false).
+company_subsequent_year(CurrentYear, true, PreviousYearOne, PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_5),
+    private_status(CurrentYear, true),
+    company_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #= 0.
+company_subsequent_year(CurrentYear, false, PreviousYearOne, PreviousYearTwo, true) :-
+    implements(ca1967_sc13_para_2),
+    implements(ca1967_sc13_para_14),
+    private_status(CurrentYear, true),
+    company_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #= 2.
+company_subsequent_year(CurrentYear, false, _PreviousYearOne, _PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_2),
+    private_status(CurrentYear, false).
+company_subsequent_year(CurrentYear, false, PreviousYearOne, PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_2),
+    private_status(CurrentYear, true),
+    company_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #< 2.
+
+private_status(fy(_, _, PrivateThroughout, _, _, _), PrivateThroughout).
+
+company_year_qualification_status(FinancialYear, true) :-
+    implements(ca1967_sc13_para_2),
+    company_criteria_count(FinancialYear, CriterionCount),
+    CriterionCount #>= 2.
+company_year_qualification_status(FinancialYear, false) :-
+    implements(ca1967_sc13_para_2),
+    company_criteria_count(FinancialYear, CriterionCount),
+    CriterionCount #< 2.
+
+company_criteria_count(FinancialYear, CriterionCount) :-
+    findall(Criterion, company_criterion(FinancialYear, Criterion), Criteria),
+    length(Criteria, CriterionCount).
+
+company_criterion(fy(_, _, _, RevenueCents, _, _), revenue) :-
+    implements(ca1967_sc13_para_2),
+    company_revenue_limit_cents(LimitValue, _),
+    RevenueCents #=< LimitValue.
+company_criterion(fy(_, _, _, _, TotalAssetsCents, _), assets) :-
+    implements(ca1967_sc13_para_2),
+    company_total_assets_limit_cents(LimitValue, _),
+    TotalAssetsCents #=< LimitValue.
+company_criterion(fy(_, _, _, _, _, Employees), employees) :-
+    implements(ca1967_sc13_para_2),
+    company_employee_limit(LimitValue, _),
+    Employees #=< LimitValue.
+
+company_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount) :-
+    findall(TrueValue, (TrueValue = true, (company_year_qualification_status(PreviousYearOne, true) ; company_year_qualification_status(PreviousYearTwo, true))), TrueList),
+    length(TrueList, QualificationCount).
+
+group_status(GroupFormationDate, GroupYears, Status) :-
+    small_company_cutoff_date(Cutoff, _),
+    GroupFormationDate @< Cutoff,
+    filter_group_years(Cutoff, GroupYears, CountedYears),
+    group_walk(CountedYears, true, Status).
+group_status(GroupFormationDate, GroupYears, Status) :-
+    small_company_cutoff_date(Cutoff, _),
+    GroupFormationDate @>= Cutoff,
+    filter_group_years(Cutoff, GroupYears, CountedYears),
+    group_walk(CountedYears, false, Status).
+
+group_walk([], _, false).
+group_walk([FirstYear], BeforeCutoff, Status) :-
+    group_first_year(FirstYear, BeforeCutoff, Status).
+group_walk([FirstYear, SecondYear], BeforeCutoff, Status) :-
+    group_first_year(FirstYear, BeforeCutoff, FirstSmall),
+    group_second_year(SecondYear, BeforeCutoff, FirstSmall, Status).
+group_walk([FirstYear, SecondYear, ThirdYear|Remaining], BeforeCutoff, Status) :-
+    group_first_year(FirstYear, BeforeCutoff, FirstSmall),
+    group_second_year(SecondYear, BeforeCutoff, FirstSmall, SecondSmall),
+    group_subsequent_year(ThirdYear, SecondSmall, SecondYear, FirstYear, ThirdSmall),
+    group_walk_rest(Remaining, ThirdSmall, ThirdYear, SecondYear, Status).
+
+group_walk_rest([], CurrentSmall, _, _, CurrentSmall).
+group_walk_rest([CurrentYear|Remaining], PreviousSmall, PreviousYearOne, PreviousYearTwo, Status) :-
+    group_subsequent_year(CurrentYear, PreviousSmall, PreviousYearOne, PreviousYearTwo, NewSmall),
+    group_walk_rest(Remaining, NewSmall, CurrentYear, PreviousYearOne, Status).
+
+group_first_year(GroupYear, true, Status) :-
+    implements(ca1967_sc13_para_9),
+    group_first_year_core(GroupYear, Status).
+group_first_year(GroupYear, false, Status) :-
+    implements(ca1967_sc13_para_8),
+    group_first_year_core(GroupYear, Status).
+
+group_first_year_core(GroupYear, true) :-
+    group_year_qualification_status(GroupYear, true).
+group_first_year_core(GroupYear, false) :-
+    group_year_qualification_status(GroupYear, false).
+
+group_second_year(_, _, true, true) :-
+    implements(ca1967_sc13_para_11),
+    true.
+group_second_year(SecondYear, true, false, Status) :-
+    implements(ca1967_sc13_para_9),
+    group_first_year_core(SecondYear, Status).
+group_second_year(SecondYear, false, false, Status) :-
+    implements(ca1967_sc13_para_8),
+    group_first_year_core(SecondYear, Status).
+
+group_subsequent_year(_CurrentYear, true, PreviousYearOne, PreviousYearTwo, true) :-
+    implements(ca1967_sc13_para_10),
+    implements(ca1967_sc13_para_13),
+    group_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #>= 1.
+group_subsequent_year(_CurrentYear, true, PreviousYearOne, PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_10),
+    group_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #= 0.
+group_subsequent_year(_CurrentYear, false, PreviousYearOne, PreviousYearTwo, true) :-
+    implements(ca1967_sc13_para_7),
+    group_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #= 2.
+group_subsequent_year(_CurrentYear, false, PreviousYearOne, PreviousYearTwo, false) :-
+    implements(ca1967_sc13_para_7),
+    group_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount),
+    QualificationCount #< 2.
+
+group_year_qualification_status(GroupYear, true) :-
+    implements(ca1967_sc13_para_7),
+    group_criteria_count(GroupYear, CriterionCount),
+    CriterionCount #>= 2.
+group_year_qualification_status(GroupYear, false) :-
+    implements(ca1967_sc13_para_7),
+    group_criteria_count(GroupYear, CriterionCount),
+    CriterionCount #< 2.
+
+group_criteria_count(GroupYear, CriterionCount) :-
+    findall(Criterion, group_criterion(GroupYear, Criterion), Criteria),
+    length(Criteria, CriterionCount).
+
+group_criterion(gfy(_, _, RevenueCents, _, _), revenue) :-
+    implements(ca1967_sc13_para_7),
+    group_revenue_limit_cents(LimitValue, _),
+    RevenueCents #=< LimitValue.
+group_criterion(gfy(_, _, _, TotalAssetsCents, _), assets) :-
+    implements(ca1967_sc13_para_7),
+    group_total_assets_limit_cents(LimitValue, _),
+    TotalAssetsCents #=< LimitValue.
+group_criterion(gfy(_, _, _, _, Employees), employees) :-
+    implements(ca1967_sc13_para_7),
+    group_employee_limit(LimitValue, _),
+    Employees #=< LimitValue.
+
+group_preceding_qualification_count(PreviousYearOne, PreviousYearTwo, QualificationCount) :-
+    findall(TrueValue, (TrueValue = true, (group_year_qualification_status(PreviousYearOne, true) ; group_year_qualification_status(PreviousYearTwo, true))), TrueList),
+    length(TrueList, QualificationCount).
+
+company_year_start(fy(StartDate, _, _, _, _, _), StartDate).
+
+filter_company_years(Cutoff, YearList, FilteredList) :-
+    filter_company_years(Cutoff, YearList, [], Reversed),
+    reverse(Reversed, FilteredList).
+
+filter_company_years(_, [], Accumulated, Accumulated).
+filter_company_years(Cutoff, [Record|Remaining], Accumulated, FilteredList) :-
+    company_year_start(Record, StartDate),
+    StartDate @>= Cutoff,
+    filter_company_years(Cutoff, Remaining, [Record|Accumulated], FilteredList).
+filter_company_years(Cutoff, [Record|Remaining], Accumulated, FilteredList) :-
+    company_year_start(Record, StartDate),
+    StartDate @< Cutoff,
+    filter_company_years(Cutoff, Remaining, Accumulated, FilteredList).
+
+group_year_start(gfy(StartDate, _, _, _, _), StartDate).
+
+filter_group_years(Cutoff, YearList, FilteredList) :-
+    filter_group_years(Cutoff, YearList, [], Reversed),
+    reverse(Reversed, FilteredList).
+
+filter_group_years(_, [], Accumulated, Accumulated).
+filter_group_years(Cutoff, [Record|Remaining], Accumulated, FilteredList) :-
+    group_year_start(Record, StartDate),
+    StartDate @>= Cutoff,
+    filter_group_years(Cutoff, Remaining, [Record|Accumulated], FilteredList).
+filter_group_years(Cutoff, [Record|Remaining], Accumulated, FilteredList) :-
+    group_year_start(Record, StartDate),
+    StartDate @< Cutoff,
+    filter_group_years(Cutoff, Remaining, Accumulated, FilteredList).

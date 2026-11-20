@@ -1,0 +1,56 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality: every registered subject yields at least one verdict.
+% Determinism: every registered subject yields exactly one verdict.
+% Run: python -m clausal.testing sg/companies/csp_registration/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(sg/companies/csp_registration/csp_registration, [
+    csp_registration_status/2,
+    csp_registration_status_values/1
+]).
+:- use_module(sg/companies/csp_registration/fixtures, [
+    csp_registration_subject/1,
+    csp_registration_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    csp_registration_subject(Subject),
+    csp_registration_profile_for(Subject, Profile),
+    csp_registration_status(Profile, _Status).
+
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    findall(Subject, csp_registration_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+subject_is_deterministic(Subject) :-
+    csp_registration_subject(Subject),
+    csp_registration_profile_for(Subject, Profile),
+    findall(Status, csp_registration_status(Profile, Status), Statuses),
+    length(Statuses, 1).
+
+test(determinism_every_subject_has_exactly_one_status) :-
+    findall(Subject, csp_registration_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_is_deterministic(Subject), DeterministicSubjects),
+    sort(DeterministicSubjects, SubjectSet).
+
+% Every status returned must be a valid status atom.
+subject_status_is_valid(Subject) :-
+    csp_registration_subject(Subject),
+    csp_registration_profile_for(Subject, Profile),
+    csp_registration_status(Profile, Status),
+    csp_registration_status_values(ValidStatuses),
+    member(Status, ValidStatuses).
+
+test(every_status_is_a_valid_atom) :-
+    findall(Subject, csp_registration_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_status_is_valid(Subject), ValidSubjects),
+    sort(ValidSubjects, SubjectSet).
+
+:- end_module(test_properties).

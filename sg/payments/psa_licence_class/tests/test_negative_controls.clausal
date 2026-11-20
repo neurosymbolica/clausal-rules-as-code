@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each major route: a POSITIVE case paired with a near-miss NEGATIVE
+% control (one required condition changed -> different verdict), proving
+% the route is LOAD-BEARING and a wrong answer is NOT produced.
+% Run: python -m clausal.testing sg/payments/psa_licence_class/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(sg/payments/psa_licence_class/psa_licence_class, [
+    psa_licence_class_status/2,
+    psa_licence_class_status_values/1
+]).
+:- use_module(sg/payments/psa_licence_class/fixtures, [psa_licence_class_profile_for/2]).
+
+% Route 1: no_licence_required
+% Positive: empty services -> no_licence_required
+test(no_services_is_no_licence_required) :-
+    psa_licence_class_profile_for(no_services, Profile),
+    psa_licence_class_status(Profile, no_licence_required).
+% Near-miss: one service -> NOT no_licence_required
+test(no_services_near_miss_is_not_no_licence_required, fail) :-
+    psa_licence_class_profile_for(no_services_near_miss, Profile),
+    psa_licence_class_status(Profile, no_licence_required).
+
+% Route 2: exempt_payment_service_provider
+% Positive: exempt=true -> exempt
+test(exempt_is_exempt) :-
+    psa_licence_class_profile_for(exempt_basic, Profile),
+    psa_licence_class_status(Profile, exempt_payment_service_provider).
+% Near-miss: exempt=false -> NOT exempt
+test(exempt_near_miss_is_not_exempt, fail) :-
+    psa_licence_class_profile_for(exempt_near_miss, Profile),
+    psa_licence_class_status(Profile, exempt_payment_service_provider).
+
+% Route 3: money_changing_licence
+% Positive: only money_changing -> money_changing_licence
+test(money_changing_only_is_money_changing_licence) :-
+    psa_licence_class_profile_for(money_changing_only, Profile),
+    psa_licence_class_status(Profile, money_changing_licence).
+% Near-miss: money_changing + another service -> NOT money_changing_licence
+test(money_changing_near_miss_is_not_money_changing_licence, fail) :-
+    psa_licence_class_profile_for(money_changing_near_miss, Profile),
+    psa_licence_class_status(Profile, money_changing_licence).
+
+% Route 4a: single_service_volume MPI
+% Positive: volume 300000001 > 300000000 -> MPI
+test(single_volume_mpi_is_major) :-
+    psa_licence_class_profile_for(single_volume_mpi, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+% Near-miss: volume exactly 300000000 -> NOT MPI (strict >)
+test(single_volume_at_threshold_is_not_major, fail) :-
+    psa_licence_class_profile_for(single_volume_at_threshold, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+
+% Route 4b: multi_service_volume MPI
+% Positive: sum 610000000 > 600000000 -> MPI
+test(multi_volume_mpi_is_major) :-
+    psa_licence_class_profile_for(multi_volume_mpi, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+% Near-miss: sum exactly 600000000 -> NOT MPI
+test(multi_volume_at_threshold_is_not_major, fail) :-
+    psa_licence_class_profile_for(multi_volume_at_threshold, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+
+% Route 4c: e_money_account_float MPI
+% Positive: float 500000001 > 500000000 -> MPI
+test(e_money_float_mpi_is_major) :-
+    psa_licence_class_profile_for(e_money_float_mpi, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+% Near-miss: float exactly 500000000 -> NOT MPI
+test(e_money_float_at_threshold_is_not_major, fail) :-
+    psa_licence_class_profile_for(e_money_float_at_threshold, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+
+% Route 4d: e_money_issued MPI
+% Positive: issued 500000001 > 500000000 -> MPI
+test(e_money_issued_mpi_is_major) :-
+    psa_licence_class_profile_for(e_money_issued_mpi, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+% Near-miss: issued exactly 500000000 -> NOT MPI
+test(e_money_issued_at_threshold_is_not_major, fail) :-
+    psa_licence_class_profile_for(e_money_issued_at_threshold, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+
+% Route 0: indeterminate
+% Positive: missing services key -> indeterminate
+test(missing_services_is_indeterminate) :-
+    psa_licence_class_profile_for(indeterminate_missing_services, Profile),
+    psa_licence_class_status(Profile, indeterminate).
+% Near-miss: services present -> NOT indeterminate
+test(no_services_is_not_indeterminate, fail) :-
+    psa_licence_class_profile_for(no_services, Profile),
+    psa_licence_class_status(Profile, indeterminate).
+
+% Verify the near-miss atoms are real verdict atoms
+test(near_miss_verdicts_are_real_atoms) :-
+    psa_licence_class_status_values(StatusValues),
+    member(standard_payment_institution_licence, StatusValues),
+    member(major_payment_institution_licence, StatusValues),
+    member(no_licence_required, StatusValues),
+    member(exempt_payment_service_provider, StatusValues),
+    member(money_changing_licence, StatusValues),
+    member(indeterminate, StatusValues).
+
+:- end_module(test_negative_controls).

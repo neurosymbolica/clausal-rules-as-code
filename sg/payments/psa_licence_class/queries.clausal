@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for sg/payments/psa_licence_class.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% psa_licence_class_what_if/4       (#6 threshold / what-if): override one key -> re-evaluate
+% psa_licence_class_profile_keys/1  top-level profile key schema
+% psa_licence_class_threshold/3     (#6 threshold): the flip-point per trigger
+% =====================================================================
+
+:- module(queries, [
+    psa_licence_class_profile_keys/1,
+    psa_licence_class_what_if/4,
+    psa_licence_class_threshold/3
+]).
+
+:- use_module(kit/query_combinators, [override_key/4]).
+:- use_module(sg/payments/psa_licence_class/psa_licence_class, [psa_licence_class_status/2]).
+
+% --- profile key schema -----------------------------------------------
+
+psa_licence_class_profile_keys(Keys) :-
+    Keys = [services, exempt_payment_service_provider, monthly_average_volumes,
+            resident_e_money_float_cents, singapore_issued_other_e_money_float_cents,
+            specified_e_money_issued_cents].
+
+% --- #6 threshold / what-if: re-evaluate with one key overridden ------
+
+psa_licence_class_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    psa_licence_class_status(Hypothesis, NewStatus).
+
+% --- #6 threshold: the flip-point (minimum value that triggers) -------
+% The statutory test is strict 'exceeds', so the flip-point is threshold+1.
+
+psa_licence_class_threshold(single_service_volume, 300000001, sg_psa_2019_s6_5_a_ii_a).
+psa_licence_class_threshold(multi_service_volume, 600000001, sg_psa_2019_s6_5_a_ii_b).
+psa_licence_class_threshold(e_money_account_float, 500000001, sg_psa_2019_s6_5_b).
+psa_licence_class_threshold(e_money_issued, 500000001, sg_psa_2019_s6_5_c).
+
+:- end_module(queries).

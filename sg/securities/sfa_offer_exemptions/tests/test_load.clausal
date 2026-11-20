@@ -1,0 +1,28 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the primary slice tabulates.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      sg/securities/sfa_offer_exemptions/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(sg/securities/sfa_offer_exemptions/citations, [citation/2]).
+
+test(the_result_term_builds_and_destructures) :-
+    Result = offer_exemption(exempt, [s274, s275_1], 500000000, 10, [sg_sfa_2001_s274, sg_sfa_2001_s275_1]),
+    Result = offer_exemption(Decision, CoveredBy, WindowAmountCents, WindowPersons, Citations),
+    Decision == exempt,
+    CoveredBy == [s274, s275_1],
+    WindowAmountCents == 500000000,
+    WindowPersons == 10,
+    Citations == [sg_sfa_2001_s274, sg_sfa_2001_s275_1].
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(exempt, prospectus_required),
+    dif(exempt, indeterminate),
+    dif(prospectus_required, indeterminate).
+
+test(the_real_citation_is_recorded) :-
+    citation(sg_sfa_2001_s274, _Record).
+
+:- end_module(test_load).

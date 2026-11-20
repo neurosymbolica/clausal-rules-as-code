@@ -1,0 +1,39 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing sg/companies/csp_registration/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(sg/companies/csp_registration/csp_registration, [csp_registration_status/2]).
+:- use_module(sg/companies/csp_registration/fixtures, [csp_registration_profile_for/2]).
+
+test(status_holds_with_no_corporate_service_bound) :-
+    csp_registration_profile_for(no_service, Profile),
+    csp_registration_status(Profile, no_corporate_service).
+
+test(status_holds_with_registered_bound) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    csp_registration_status(Profile, registered).
+
+test(status_holds_with_registration_required_bound) :-
+    csp_registration_profile_for(fully_registered_near_miss, Profile),
+    csp_registration_status(Profile, registration_required).
+
+test(status_holds_with_indeterminate_bound) :-
+    csp_registration_profile_for(missing_activities, Profile),
+    csp_registration_status(Profile, indeterminate).
+
+test(status_holds_with_not_carrying_bound) :-
+    csp_registration_profile_for(not_in_singapore, Profile),
+    csp_registration_status(Profile, not_carrying_on_business_in_singapore).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    csp_registration_profile_for(no_service, Profile),
+    csp_registration_status(Profile, registered).
+
+test(another_wrong_bound_status_is_rejected, fail) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    csp_registration_status(Profile, indeterminate).
+
+:- end_module(test_input_mode).

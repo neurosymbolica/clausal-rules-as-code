@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the primary slice tabulates.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      sg/companies/small_company_audit_exemption/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(sg/companies/small_company_audit_exemption/citations, [citation/2, implements/1]).
+
+% --- result term builds and destructures ---
+
+test(result_term_exempt) :-
+    Result = audit_exemption(exempt, true, n_a, []),
+    Result = audit_exemption(Decision, SmallCompany, SmallGroup, Reasons),
+    Decision == exempt,
+    SmallCompany == true,
+    SmallGroup == n_a,
+    Reasons == [].
+
+test(result_term_not_exempt) :-
+    Result = audit_exemption(not_exempt, false, false, [not_small_company, not_small_group]),
+    Result = audit_exemption(Decision, SmallCompany, SmallGroup, Reasons),
+    Decision == not_exempt,
+    SmallCompany == false,
+    SmallGroup == false,
+    Reasons == [not_small_company, not_small_group].
+
+test(result_term_indeterminate) :-
+    Result = audit_exemption(indeterminate, n_a, n_a, []),
+    Result = audit_exemption(Decision, SmallCompany, SmallGroup, Reasons),
+    Decision == indeterminate,
+    SmallCompany == n_a,
+    SmallGroup == n_a,
+    Reasons == [].
+
+% --- verdict atoms are distinct ---
+
+test(decision_atoms_are_distinct) :-
+    dif(exempt, not_exempt),
+    dif(exempt, indeterminate),
+    dif(not_exempt, indeterminate).
+
+test(small_company_status_atoms_are_distinct) :-
+    dif(true, false),
+    dif(true, n_a),
+    dif(false, n_a).
+
+test(reasons_atoms_are_distinct) :-
+    dif(financial_year_before_1_july_2015, not_small_company),
+    dif(financial_year_before_1_july_2015, not_small_group),
+    dif(financial_year_before_1_july_2015, audit_requisition_notice),
+    dif(not_small_company, not_small_group),
+    dif(not_small_company, audit_requisition_notice),
+    dif(not_small_group, audit_requisition_notice).
+
+% --- reasons list order is fixed ---
+
+test(reasons_list_full_order) :-
+    Result = audit_exemption(not_exempt, false, false, [financial_year_before_1_july_2015, not_small_company, not_small_group, audit_requisition_notice]),
+    Result = audit_exemption(_, _, _, Reasons),
+    Reasons == [financial_year_before_1_july_2015, not_small_company, not_small_group, audit_requisition_notice].
+
+% --- fy/6 data term builds and destructures ---
+
+test(fy_term_builds) :-
+    FinancialYearRecord = fy(date(2024, 1, 1), date(2024, 12, 31), true, 500000000, 800000000, 30),
+    FinancialYearRecord = fy(StartDate, EndDate, PrivateThroughout, RevenueCents, TotalAssetsCents, Employees),
+    StartDate == date(2024, 1, 1),
+    EndDate == date(2024, 12, 31),
+    PrivateThroughout == true,
+    RevenueCents == 500000000,
+    TotalAssetsCents == 800000000,
+    Employees == 30.
+
+% --- gfy/5 data term builds and destructures ---
+
+test(gfy_term_builds) :-
+    GroupFinancialYearRecord = gfy(date(2024, 1, 1), date(2024, 12, 31), 900000000, 950000000, 45),
+    GroupFinancialYearRecord = gfy(StartDate, EndDate, ConsolidatedRevenueCents, ConsolidatedTotalAssetsCents, AggregateEmployees),
+    StartDate == date(2024, 1, 1),
+    EndDate == date(2024, 12, 31),
+    ConsolidatedRevenueCents == 900000000,
+    ConsolidatedTotalAssetsCents == 950000000,
+    AggregateEmployees == 45.
+
+% --- one real citation record resolves ---
+
+test(real_citation_s205c_1_resolves) :-
+    citation(ca1967_s205c_1, _Record).
+
+test(real_citation_sc13_para_2_resolves) :-
+    citation(ca1967_sc13_para_2, _Record).
+
+test(real_citation_s205b_6_resolves) :-
+    citation(ca1967_s205b_6, _Record).
+
+% --- implements/1 succeeds for a recorded key ---
+
+test(implements_succeeds_for_s205c_1) :-
+    implements(ca1967_s205c_1).
+
+test(implements_succeeds_for_sc13_para_5) :-
+    implements(ca1967_sc13_para_5).
+
+:- end_module(test_load).

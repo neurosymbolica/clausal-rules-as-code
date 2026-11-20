@@ -1,0 +1,59 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing sg/companies/small_company_audit_exemption/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(sg/companies/small_company_audit_exemption/small_company_audit_exemption, [small_company_audit_exemption_status/2]).
+:- use_module(sg/companies/small_company_audit_exemption/fixtures, [small_company_audit_exemption_profile_for/2]).
+
+test(exempt_profile_with_exempt_bound) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(exempt_profile_with_not_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(not_exempt_profile_with_not_exempt_bound) :-
+    small_company_audit_exemption_profile_for(two_criteria_above, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(not_exempt_profile_with_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(two_criteria_above, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(fy_before_2015_with_not_exempt_bound) :-
+    small_company_audit_exemption_profile_for(fy_before_2015, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(fy_before_2015_with_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(fy_before_2015, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(audit_notice_in_window_with_not_exempt_bound) :-
+    small_company_audit_exemption_profile_for(audit_notice_in_window, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(audit_notice_in_window_with_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(audit_notice_in_window, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(parent_not_small_group_with_not_exempt_bound) :-
+    small_company_audit_exemption_profile_for(parent_not_small_group, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(parent_not_small_group_with_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(parent_not_small_group, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(parent_small_group_with_exempt_bound) :-
+    small_company_audit_exemption_profile_for(parent_small_group, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(parent_small_group_with_not_exempt_rejected, fail) :-
+    small_company_audit_exemption_profile_for(parent_small_group, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+:- end_module(test_input_mode).

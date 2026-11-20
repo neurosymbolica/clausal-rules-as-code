@@ -1,0 +1,64 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Run: python -m clausal.testing sg/tax/gst_registration/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(sg/tax/gst_registration/gst_registration, [
+    decide_gst_registration/2,
+    gst_registration_status/2
+]).
+:- use_module(sg/tax/gst_registration/fixtures, [
+    gst_registration_subject/1,
+    gst_registration_profile_for/2
+]).
+
+subject_status(Subject, Status) :-
+    gst_registration_subject(Subject),
+    gst_registration_profile_for(Subject, Profile),
+    gst_registration_status(Profile, Status).
+
+subject_has_one_status(Subject) :-
+    gst_registration_subject(Subject),
+    gst_registration_profile_for(Subject, Profile),
+    findall(Status, gst_registration_status(Profile, Status), Statuses),
+    length(Statuses, 1).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, gst_registration_subject(Subject), AllSubjects),
+    sort(AllSubjects, SubjectSet),
+    findall(Subject, subject_status(Subject, _Status), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+test(determinism_every_subject_has_one_status) :-
+    findall(Subject, gst_registration_subject(Subject), AllSubjects),
+    sort(AllSubjects, SubjectSet),
+    findall(Subject, subject_has_one_status(Subject), DeterministicSubjects),
+    sort(DeterministicSubjects, SubjectSet).
+
+test(retrospective_at_threshold_is_ineligible) :-
+    gst_registration_profile_for(retrospective_not_liable_at_threshold, Profile),
+    gst_registration_status(Profile, ineligible).
+
+test(retrospective_one_cent_above_is_eligible) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_registration_status(Profile, eligible).
+
+test(prospective_at_threshold_is_ineligible) :-
+    gst_registration_profile_for(prospective_not_liable_at_threshold_pre_cutover, Profile),
+    gst_registration_status(Profile, ineligible).
+
+test(prospective_one_cent_above_is_eligible) :-
+    gst_registration_profile_for(prospective_liable_pre_cutover_just_above_threshold, Profile),
+    gst_registration_status(Profile, eligible).
+
+test(liable_decide_has_citations) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    decide_gst_registration(Profile, gst_registration_verdict(eligible, Citations)),
+    Citations \= [].
+
+test(indeterminate_decide_has_no_citations) :-
+    gst_registration_profile_for(retrospective_indeterminate_missing_taxable_supplies, Profile),
+    decide_gst_registration(Profile, gst_registration_verdict(indeterminate, [])).
+
+:- end_module(test_properties).

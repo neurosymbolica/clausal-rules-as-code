@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__sg_data_protection_pdpa_data_breach_notification_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__sg_data_protection_pdpa_data_breach_notification_kernel, [pdpa_data_breach_notification_input_problems/2]).
+:- use_module(m__sg_data_protection_pdpa_data_breach_notification_citations, [citation/2, implements/1]).
+
+test(the_input_check_accepts_an_empty_profile) :-
+    pdpa_data_breach_notification_input_problems([], Problems),
+    Problems == [].
+test(the_input_check_gives_one_answer_for_a_well_formed_profile) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(breach_occurred_date, date(2026, 1, 1)), attribute(caller_role, organisation)], Problems), Answers),
+    Answers == [[]].
+test(the_input_check_refuses_an_unknown_key) :-
+    pdpa_data_breach_notification_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+test(the_input_check_refuses_an_unreal_date) :-
+    pdpa_data_breach_notification_input_problems([attribute(assessment_date, date(2026, 2, 30))], Problems),
+    Problems == [wrong_type(assessment_date)].
+test(the_input_check_accepts_a_leap_day) :-
+    pdpa_data_breach_notification_input_problems([attribute(assessment_date, date(2028, 2, 29))], Problems),
+    Problems == [].
+test(the_input_check_refuses_a_non_list_profile) :-
+    pdpa_data_breach_notification_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(the_harm_atoms_are_distinct) :-
+    dif(significant_harm, no_significant_harm).
+test(the_scale_atoms_are_distinct) :-
+    dif(significant_scale, no_significant_scale).
+test(the_notifiability_atoms_are_distinct) :-
+    dif(notifiable, not_notifiable),
+    dif(notifiable, not_applicable),
+    dif(not_notifiable, not_applicable).
+test(the_individual_notification_atoms_are_distinct) :-
+    Atoms = [required, not_required, prohibited, waived, not_applicable],
+    sort(Atoms, DistinctAtoms),
+    length(Atoms, Count),
+    length(DistinctAtoms, DistinctCount),
+    Count =:= DistinctCount.
+test(the_response_duty_atoms_are_distinct) :-
+    Atoms = [assessment_required, notify_organisation_without_undue_delay, notify_public_agency_without_undue_delay, no_duty_triggered, not_applicable],
+    sort(Atoms, DistinctAtoms),
+    length(Atoms, Count),
+    length(DistinctAtoms, DistinctCount),
+    Count =:= DistinctCount.
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = pdpa_data_breach_notification_verdict(notifiable, [cite(sg_pdpa_2012_s26b_1_a)]),
+    Verdict = pdpa_data_breach_notification_verdict(Status, Citations),
+    Status == notifiable,
+    Citations == [cite(sg_pdpa_2012_s26b_1_a)].
+test(the_combined_answer_destructures) :-
+    Result = pdpa_breach(notifiable, [significant_harm], date(2026, 1, 4), required, [cite(sg_pdpa_2012_s26d_1), cite(sg_pdpa_2012_s26d_2)]),
+    Result = pdpa_breach(Decision, Grounds, Deadline, Individuals, Citations),
+    Decision == notifiable,
+    Grounds == [significant_harm],
+    Deadline = date(Year, Month, Day),
+    Year =:= 2026,
+    Month =:= 1,
+    Day =:= 4,
+    Individuals == required,
+    length(Citations, 2).
+test(the_refused_combined_answer_destructures) :-
+    Result = pdpa_breach(input_problems([wrong_type(profile)]), [], n_a, n_a, []),
+    Result = pdpa_breach(input_problems(Problems), Grounds, Deadline, Individuals, Citations),
+    Problems == [wrong_type(profile)],
+    Grounds == [],
+    Deadline == n_a,
+    Individuals == n_a,
+    Citations == [].
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(open_textured(assessed_likely_significant_harm, cite(sg_pdpa_2012_s26b_1_a)), [inputs_relied_on([assessed_likely_significant_harm - unsure])]),
+    Status = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Input == assessed_likely_significant_harm,
+    Key == sg_pdpa_2012_s26b_1_a,
+    Pairs == [assessed_likely_significant_harm - unsure],
+    citation(Key, _Record).
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([breach_occurred_date]),
+    Status = indeterminate([MissingKey]),
+    MissingKey == breach_occurred_date.
+test(the_indeterminate_compound_is_not_the_bare_atom) :-
+    dif(indeterminate([breach_occurred_date]), indeterminate).
+test(the_content_items_destructure) :-
+    Item = content_item(potential_harm, cite(sg_pdpa_2012_s64_2021_reg_6_c)),
+    Item = content_item(Name, cite(Key)),
+    Name == potential_harm,
+    citation(Key, _Record),
+    Additional = additional_item(late_notification_reasons_and_evidence, notified_after_period, cite(sg_pdpa_2012_s64_2021_reg_5_2)),
+    Additional = additional_item(_, Condition, cite(AdditionalKey)),
+    Condition == notified_after_period,
+    citation(AdditionalKey, _AdditionalRecord).
+test(the_commission_period_citation_is_recorded) :-
+    citation(sg_pdpa_2012_s26d_1, Record),
+    member(label - _, Record),
+    member(ref - _, Record).
+test(the_scale_threshold_citation_is_recorded) :-
+    citation(sg_pdpa_2012_s64_2021_reg_4, _Record).
+test(the_commencement_citation_is_implemented) :-
+    implements(sg_pdpa_2012_s26c_1).
+
+test(a_shortened_citation_is_not_recorded, fail) :-
+    citation(s26d_1, _Record).
+
+cp_test_names([the_input_check_accepts_an_empty_profile, the_input_check_gives_one_answer_for_a_well_formed_profile, the_input_check_refuses_an_unknown_key, the_input_check_refuses_an_unreal_date, the_input_check_accepts_a_leap_day, the_input_check_refuses_a_non_list_profile, the_harm_atoms_are_distinct, the_scale_atoms_are_distinct, the_notifiability_atoms_are_distinct, the_individual_notification_atoms_are_distinct, the_response_duty_atoms_are_distinct, the_verdict_term_carries_status_and_citations, the_combined_answer_destructures, the_refused_combined_answer_destructures, the_referral_status_destructures, the_indeterminate_status_names_one_key, the_indeterminate_compound_is_not_the_bare_atom, the_content_items_destructure, the_commission_period_citation_is_recorded, the_scale_threshold_citation_is_recorded, the_commencement_citation_is_implemented]).
+cp_test_fail_names([a_shortened_citation_is_not_recorded]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

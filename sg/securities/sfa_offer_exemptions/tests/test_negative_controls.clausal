@@ -1,0 +1,86 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each major route: a POSITIVE case paired with a near-miss NEGATIVE
+% control (one required condition changed -> different verdict), proving
+% the route is LOAD-BEARING and a wrong answer is NOT produced.
+% Run: python -m clausal.testing sg/securities/sfa_offer_exemptions/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(sg/securities/sfa_offer_exemptions/sfa_offer_exemptions, [
+    sfa_offer_exemptions_status/2,
+    sfa_offer_exemptions_status_values/1
+]).
+:- use_module(sg/securities/sfa_offer_exemptions/fixtures, [sfa_offer_exemptions_profile_for/2]).
+
+% Route: s274 (institutional offeree)
+test(s274_positive_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(s274_near_miss_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(s274_near_miss_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+% Route: s275_1 (relevant person)
+test(s275_1_positive_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_positive, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(s275_1_near_miss_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(s275_1_near_miss_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+% Route: s275_1a (principal acquisition)
+test(s275_1a_at_minimum_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s275_1a_principal_at_minimum, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(s275_1a_below_minimum_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s275_1a_principal_below_minimum, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(s275_1a_below_minimum_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s275_1a_principal_below_minimum, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+% Route: s272a (small offer)
+test(s272a_at_amount_limit_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s272a_small_at_amount_limit, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(s272a_over_amount_limit_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s272a_small_over_amount_limit, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(s272a_over_amount_limit_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s272a_small_over_amount_limit, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+% Route: s272b (private placement)
+test(s272b_at_person_limit_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s272b_placement_at_person_limit, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(s272b_over_person_limit_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s272b_placement_over_person_limit, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(s272b_over_person_limit_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s272b_placement_over_person_limit, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+% Verify the status vocabulary is exactly the three expected atoms
+test(status_values_are_the_three_expected_atoms) :-
+    sfa_offer_exemptions_status_values(StatusValues),
+    StatusValues == [exempt, prospectus_required, indeterminate].
+
+:- end_module(test_negative_controls).

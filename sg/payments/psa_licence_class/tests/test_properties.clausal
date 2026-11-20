@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality: every registered subject yields at least one verdict.
+% Determinism: every registered subject yields exactly one verdict.
+% Run: python -m clausal.testing sg/payments/psa_licence_class/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(sg/payments/psa_licence_class/psa_licence_class, [
+    decide_psa_licence_class/2,
+    psa_licence_class_status/2
+]).
+:- use_module(sg/payments/psa_licence_class/fixtures, [
+    psa_licence_class_subject/1,
+    psa_licence_class_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    psa_licence_class_subject(Subject),
+    psa_licence_class_profile_for(Subject, Profile),
+    decide_psa_licence_class(Profile, _Result).
+
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    findall(Subject, psa_licence_class_subject(Subject), AllSubjects),
+    sort(AllSubjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+subject_deterministic(Subject) :-
+    psa_licence_class_subject(Subject),
+    psa_licence_class_profile_for(Subject, Profile),
+    findall(Status, psa_licence_class_status(Profile, Status), Statuses),
+    length(Statuses, 1).
+
+test(determinism_every_subject_has_exactly_one_status) :-
+    findall(Subject, psa_licence_class_subject(Subject), AllSubjects),
+    sort(AllSubjects, SubjectSet),
+    findall(Subject, subject_deterministic(Subject), DeterministicSubjects),
+    sort(DeterministicSubjects, SubjectSet).
+
+:- end_module(test_properties).

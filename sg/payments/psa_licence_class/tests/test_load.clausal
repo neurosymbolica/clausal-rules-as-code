@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the primary slice tabulates.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      sg/payments/psa_licence_class/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(sg/payments/psa_licence_class/citations, [citation/2, implements/1]).
+:- use_module(sg/payments/psa_licence_class, [volume/2]).
+
+% The result term builds and destructures.
+test(the_result_term_builds_and_destructures) :-
+    Result = psa_licence(no_licence_required, [], 0, []),
+    Result = psa_licence(Licence, Triggers, VolumeTotal, Citations),
+    Licence == no_licence_required,
+    Triggers == [],
+    VolumeTotal == 0,
+    Citations == [].
+
+% The licence verdict atoms are pairwise distinct.
+test(the_licence_atoms_are_distinct) :-
+    dif(no_licence_required, exempt_payment_service_provider),
+    dif(no_licence_required, money_changing_licence),
+    dif(no_licence_required, standard_payment_institution_licence),
+    dif(no_licence_required, major_payment_institution_licence),
+    dif(no_licence_required, indeterminate),
+    dif(exempt_payment_service_provider, money_changing_licence),
+    dif(exempt_payment_service_provider, standard_payment_institution_licence),
+    dif(exempt_payment_service_provider, major_payment_institution_licence),
+    dif(exempt_payment_service_provider, indeterminate),
+    dif(money_changing_licence, standard_payment_institution_licence),
+    dif(money_changing_licence, major_payment_institution_licence),
+    dif(money_changing_licence, indeterminate),
+    dif(standard_payment_institution_licence, major_payment_institution_licence),
+    dif(standard_payment_institution_licence, indeterminate),
+    dif(major_payment_institution_licence, indeterminate).
+
+% The MPI trigger atoms are pairwise distinct.
+test(the_mpi_trigger_atoms_are_distinct) :-
+    dif(single_service_volume, multi_service_volume),
+    dif(single_service_volume, e_money_account_float),
+    dif(single_service_volume, e_money_issued),
+    dif(multi_service_volume, e_money_account_float),
+    dif(multi_service_volume, e_money_issued),
+    dif(e_money_account_float, e_money_issued).
+
+% A real citation record resolves.
+test(a_real_citation_resolves) :-
+    citation(sg_psa_2019_s6_4, _Record).
+
+% The implements predicate succeeds for a recorded key.
+test(implements_succeeds_for_recorded_key) :-
+    implements(sg_psa_2019_s6_4).
+
+% --- volume/2 public predicate coverage -------------------------------
+
+test(volume_accepts_a_known_service_with_zero_cents) :-
+    volume(domestic_money_transfer, 0).
+
+test(volume_accepts_a_known_service_with_positive_cents) :-
+    volume(merchant_acquisition, 123).
+
+test(volume_rejects_an_unknown_service, fail) :-
+    volume(unknown_service, 0).
+
+test(volume_rejects_negative_cents, fail) :-
+    volume(domestic_money_transfer, -1).
+
+:- end_module(test_load).

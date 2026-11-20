@@ -1,0 +1,43 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out).
+% Run: python -m clausal.testing sg/securities/sfa_offer_exemptions/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(sg/securities/sfa_offer_exemptions/sfa_offer_exemptions, [sfa_offer_exemptions_status/2]).
+:- use_module(sg/securities/sfa_offer_exemptions/fixtures, [sfa_offer_exemptions_profile_for/2]).
+
+test(institutional_profile_status_is_exempt) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(institutional_profile_status_is_not_prospectus_required, fail) :-
+    sfa_offer_exemptions_profile_for(s274_institutional_positive, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(relevant_failure_status_is_prospectus_required) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+test(relevant_failure_status_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(s275_1_relevant_near_miss, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(indeterminate_profile_status_is_indeterminate) :-
+    sfa_offer_exemptions_profile_for(indeterminate_missing_prospectus_state, Profile),
+    sfa_offer_exemptions_status(Profile, indeterminate).
+
+test(indeterminate_profile_status_is_not_exempt, fail) :-
+    sfa_offer_exemptions_profile_for(indeterminate_missing_prospectus_state, Profile),
+    sfa_offer_exemptions_status(Profile, exempt).
+
+test(zero_offerees_status_is_indeterminate) :-
+    sfa_offer_exemptions_profile_for(indeterminate_zero_offerees, Profile),
+    sfa_offer_exemptions_status(Profile, indeterminate).
+
+test(zero_offerees_status_is_not_prospectus_required, fail) :-
+    sfa_offer_exemptions_profile_for(indeterminate_zero_offerees, Profile),
+    sfa_offer_exemptions_status(Profile, prospectus_required).
+
+:- end_module(test_input_mode).

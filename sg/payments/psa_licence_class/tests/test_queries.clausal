@@ -1,0 +1,51 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer.
+% One test per query-taxonomy predicate registered in manifest.yaml
+% query_interface.
+% Run: python -m clausal.testing sg/payments/psa_licence_class/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(sg/payments/psa_licence_class/queries, [
+    psa_licence_class_profile_keys/1,
+    psa_licence_class_what_if/4,
+    psa_licence_class_threshold/3
+]).
+:- use_module(sg/payments/psa_licence_class/fixtures, [psa_licence_class_profile_for/2]).
+
+% #3 status_determination: profile keys include the required fields
+test(profile_keys_include_services) :-
+    psa_licence_class_profile_keys(Keys),
+    member(services, Keys).
+
+test(profile_keys_include_exempt) :-
+    psa_licence_class_profile_keys(Keys),
+    member(exempt_payment_service_provider, Keys).
+
+test(profile_keys_include_volumes) :-
+    psa_licence_class_profile_keys(Keys),
+    member(monthly_average_volumes, Keys).
+
+% #6 threshold: what-if re-evaluation
+test(what_if_overriding_exempt_to_true_gives_exempt) :-
+    psa_licence_class_profile_for(no_services_near_miss, Profile),
+    psa_licence_class_what_if(Profile, exempt_payment_service_provider, true, exempt_payment_service_provider).
+
+test(what_if_overriding_exempt_to_false_gives_spi) :-
+    psa_licence_class_profile_for(exempt_basic, Profile),
+    psa_licence_class_what_if(Profile, exempt_payment_service_provider, false, standard_payment_institution_licence).
+
+% #6 threshold: flip-point values
+test(threshold_single_service_volume) :-
+    psa_licence_class_threshold(single_service_volume, 300000001, sg_psa_2019_s6_5_a_ii_a).
+
+test(threshold_multi_service_volume) :-
+    psa_licence_class_threshold(multi_service_volume, 600000001, sg_psa_2019_s6_5_a_ii_b).
+
+test(threshold_e_money_account_float) :-
+    psa_licence_class_threshold(e_money_account_float, 500000001, sg_psa_2019_s6_5_b).
+
+test(threshold_e_money_issued) :-
+    psa_licence_class_threshold(e_money_issued, 500000001, sg_psa_2019_s6_5_c).
+
+:- end_module(test_queries).

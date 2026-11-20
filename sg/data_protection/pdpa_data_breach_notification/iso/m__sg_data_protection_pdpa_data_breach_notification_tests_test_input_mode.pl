@@ -1,0 +1,67 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__sg_data_protection_pdpa_data_breach_notification_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__sg_data_protection_pdpa_data_breach_notification_pdpa_data_breach_notification, [pdpa_data_breach_notification_status/2, individual_notification/3, breach_response_duty/3, commission_notification_period_end/2]).
+:- use_module(m__sg_data_protection_pdpa_data_breach_notification_kernel, [pdpa_data_breach_notification_input_problems/2]).
+:- use_module(m__sg_data_protection_pdpa_data_breach_notification_fixtures, [pdpa_data_breach_notification_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+test(the_exclusion_holds_with_not_notifiable_bound) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_access_excluded, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+test(a_pre_commencement_breach_holds_with_not_applicable_bound) :-
+    pdpa_data_breach_notification_profile_for(pre_commencement_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, not_applicable).
+test(a_missing_date_holds_with_the_status_compound_bound) :-
+    pdpa_data_breach_notification_profile_for(missing_breach_date, Profile),
+    pdpa_data_breach_notification_status(Profile, indeterminate([breach_occurred_date])).
+test(individual_notice_holds_with_required_bound) :-
+    pdpa_data_breach_notification_profile_for(no_exception_applies, Profile),
+    individual_notification(Profile, required, [cite(sg_pdpa_2012_s26d_2)]).
+test(intermediary_duty_holds_with_the_duty_bound) :-
+    pdpa_data_breach_notification_profile_for(intermediary_for_organisation, Profile),
+    breach_response_duty(Profile, notify_organisation_without_undue_delay, [cite(sg_pdpa_2012_s26c_3), cite(sg_pdpa_2012_s26c_3_a)]).
+test(period_end_holds_with_the_end_bound) :-
+    commission_notification_period_end(date(2026, 1, 2), date(2026, 1, 5)).
+test(period_end_of_a_non_date_holds_with_the_problem_bound) :-
+    commission_notification_period_end(not_a_date, input_problems([wrong_type(assessed_date)])).
+test(period_end_of_a_thirteenth_month_holds_with_the_problem_bound) :-
+    commission_notification_period_end(date(2026, 13, 1), input_problems([wrong_type(assessed_date)])).
+test(the_input_check_holds_with_the_problems_bound) :-
+    pdpa_data_breach_notification_profile_for(duplicate_key_profile, Profile),
+    pdpa_data_breach_notification_input_problems(Profile, [duplicate_key(is_data_breach)]).
+test(a_profile_with_problems_holds_with_input_problems_bound) :-
+    pdpa_data_breach_notification_profile_for(numeric_key_profile, Profile),
+    pdpa_data_breach_notification_status(Profile, input_problems([unknown_key(42)])).
+
+test(the_wrong_bound_status_is_rejected, fail) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+test(a_pre_commencement_breach_is_not_not_notifiable, fail) :-
+    pdpa_data_breach_notification_profile_for(pre_commencement_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+test(individual_notice_is_not_not_required, fail) :-
+    pdpa_data_breach_notification_profile_for(no_exception_applies, Profile),
+    individual_notification(Profile, not_required, _).
+test(intermediary_duty_is_not_the_public_agency_duty, fail) :-
+    pdpa_data_breach_notification_profile_for(intermediary_for_organisation, Profile),
+    breach_response_duty(Profile, notify_public_agency_without_undue_delay, _).
+test(period_end_is_not_moved_for_the_weekend, fail) :-
+    commission_notification_period_end(date(2026, 1, 2), date(2026, 1, 6)).
+test(a_profile_with_problems_gets_no_decision, fail) :-
+    pdpa_data_breach_notification_profile_for(numeric_key_profile, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+
+cp_test_names([status_holds_with_the_verdict_bound, the_exclusion_holds_with_not_notifiable_bound, a_pre_commencement_breach_holds_with_not_applicable_bound, a_missing_date_holds_with_the_status_compound_bound, individual_notice_holds_with_required_bound, intermediary_duty_holds_with_the_duty_bound, period_end_holds_with_the_end_bound, period_end_of_a_non_date_holds_with_the_problem_bound, period_end_of_a_thirteenth_month_holds_with_the_problem_bound, the_input_check_holds_with_the_problems_bound, a_profile_with_problems_holds_with_input_problems_bound]).
+cp_test_fail_names([the_wrong_bound_status_is_rejected, a_pre_commencement_breach_is_not_not_notifiable, individual_notice_is_not_not_required, intermediary_duty_is_not_the_public_agency_duty, period_end_is_not_moved_for_the_weekend, a_profile_with_problems_gets_no_decision]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

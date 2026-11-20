@@ -1,0 +1,241 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for sg/companies/small_company_audit_exemption.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list.
+%
+% For every route: a positive case AND a one-unit near-miss control.
+% =====================================================================
+
+:- module(fixtures, [
+    small_company_audit_exemption_subject/1,
+    small_company_audit_exemption_profile_for/2,
+    small_company_audit_exemption_assess/2
+]).
+
+:- use_module(sg/companies/small_company_audit_exemption/small_company_audit_exemption, [
+    decide_small_company_audit_exemption/2
+]).
+
+% ---- Subject registry ------------------------------------------------
+
+small_company_audit_exemption_subject(small_company_exempt).
+small_company_audit_exemption_subject(revenue_at_boundary).
+small_company_audit_exemption_subject(revenue_just_above).
+small_company_audit_exemption_subject(two_criteria_above).
+small_company_audit_exemption_subject(assets_at_boundary).
+small_company_audit_exemption_subject(assets_just_above).
+small_company_audit_exemption_subject(employees_at_boundary).
+small_company_audit_exemption_subject(employees_just_above).
+small_company_audit_exemption_subject(not_private_year3).
+small_company_audit_exemption_subject(fy_before_2015).
+small_company_audit_exemption_subject(audit_notice_in_window).
+small_company_audit_exemption_subject(audit_notice_outside_window).
+small_company_audit_exemption_subject(parent_not_small_group).
+small_company_audit_exemption_subject(parent_small_group).
+
+% ---- Profiles --------------------------------------------------------
+
+% Positive: all criteria met, not in group, no notice.
+small_company_audit_exemption_profile_for(small_company_exempt, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% At-boundary: revenue exactly at 1000000000 (satisfied).
+small_company_audit_exemption_profile_for(revenue_at_boundary, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 1000000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 1000000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 1000000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Near-miss: revenue one cent above, but 2 other criteria still met.
+small_company_audit_exemption_profile_for(revenue_just_above, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 1000000001, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 1000000001, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 1000000001, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Near-miss for overall small status: revenue AND assets above, only 1 of 3 met.
+small_company_audit_exemption_profile_for(two_criteria_above, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 1000000001, 1000000001, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 1000000001, 1000000001, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 1000000001, 1000000001, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% At-boundary: assets exactly at 1000000000.
+small_company_audit_exemption_profile_for(assets_at_boundary, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 1000000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 1000000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 1000000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Near-miss: assets one cent above, but 2 other criteria still met.
+small_company_audit_exemption_profile_for(assets_just_above, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 1000000001, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 1000000001, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 1000000001, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% At-boundary: employees exactly at 50.
+small_company_audit_exemption_profile_for(employees_at_boundary, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 50),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 50),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 50)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Near-miss: employees one above, but 2 other criteria still met.
+small_company_audit_exemption_profile_for(employees_just_above, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 51),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 51),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 51)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Near-miss: not private in year 3 (ceasing applies at n>=3).
+small_company_audit_exemption_profile_for(not_private_year3, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), false, 500000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Temporal carve-out: assessed year starts before 1 July 2015.
+small_company_audit_exemption_profile_for(fy_before_2015, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2010, 1, 1),
+        financial_years-[
+            fy(date(2010, 1, 1), date(2010, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2011, 1, 1), date(2011, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2012, 1, 1), date(2012, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false
+    ]). 
+
+% Audit requisition notice within the statutory window.
+small_company_audit_exemption_profile_for(audit_notice_in_window, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false,
+        audit_requisition_notice_date-date(2022, 11, 15)
+    ]). 
+
+% Audit requisition notice outside the window (after one-month-before-end).
+small_company_audit_exemption_profile_for(audit_notice_outside_window, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-false,
+        is_subsidiary_company-false,
+        audit_requisition_notice_date-date(2022, 12, 15)
+    ]). 
+
+% Parent company, small company, but group NOT small.
+small_company_audit_exemption_profile_for(parent_not_small_group, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-true,
+        is_subsidiary_company-false,
+        group_formation_date-date(2020, 1, 1),
+        group_financial_years-[
+            gfy(date(2020, 1, 1), date(2020, 12, 31), 2000000000, 2000000000, 25),
+            gfy(date(2021, 1, 1), date(2021, 12, 31), 2000000000, 2000000000, 25),
+            gfy(date(2022, 1, 1), date(2022, 12, 31), 2000000000, 2000000000, 25)
+        ]
+    ]). 
+
+% Parent company, small company, and small group.
+small_company_audit_exemption_profile_for(parent_small_group, Profile) :-
+    dict_pairs(Profile, [
+        incorporation_date-date(2020, 1, 1),
+        financial_years-[
+            fy(date(2020, 1, 1), date(2020, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2021, 1, 1), date(2021, 12, 31), true, 500000000, 500000000, 25),
+            fy(date(2022, 1, 1), date(2022, 12, 31), true, 500000000, 500000000, 25)
+        ],
+        is_parent_company-true,
+        is_subsidiary_company-false,
+        group_formation_date-date(2020, 1, 1),
+        group_financial_years-[
+            gfy(date(2020, 1, 1), date(2020, 12, 31), 500000000, 500000000, 25),
+            gfy(date(2021, 1, 1), date(2021, 12, 31), 500000000, 500000000, 25),
+            gfy(date(2022, 1, 1), date(2022, 12, 31), 500000000, 500000000, 25)
+        ]
+    ]). 
+
+% ---- Convenience wrapper ---------------------------------------------
+
+small_company_audit_exemption_assess(Subject, Result) :-
+    small_company_audit_exemption_profile_for(Subject, Profile),
+    decide_small_company_audit_exemption(Profile, Result).
+
+:- end_module(fixtures).

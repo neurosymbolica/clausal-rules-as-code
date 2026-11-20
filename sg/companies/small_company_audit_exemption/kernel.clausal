@@ -1,0 +1,56 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for sg/companies/small_company_audit_exemption (eligibility family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL -- possibly none, which is why
+% the export list below starts empty.
+% eligibility family: STATUS is the eligibility verdict pair (cf. eu/procurement/thresholds above_threshold/below_threshold).
+%
+% Atoms and data terms need NO declaration and NO import: a slice writes
+% `eligible` or `widget_verdict(Status, Citations)` directly. So nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
+% defined in THAT file. Move a predicate here the moment a SECOND file
+% calls it, and only then; export it as `name/arity` and import it where
+% it is called:
+%   :- use_module(sg/companies/small_company_audit_exemption/kernel, [shared_predicate/2]).
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+%
+% Result terms -- one per determination slice. `status` is the slice's
+% verdict atom (its pinned vocabulary is the `<slice>_status_values/1`
+% table in the slice file), `citations` a list of cite(Key) terms:
+%   small_company_audit_exemption_verdict(status, citations)
+% Shared across the slices: the checklist row id `overall` and the
+% profile key `as_of_date` (atoms -- nothing to export).
+%
+% The sole determination slice in this package is
+% small_company_audit_exemption.clausal. It builds the result term:
+%
+%   audit_exemption(Decision, SmallCompany, SmallGroup, Reasons)
+%
+% where:
+%   Decision       -- exempt | not_exempt | indeterminate
+%   SmallCompany   -- true | false | n_a
+%   SmallGroup     -- true | false | n_a
+%   Reasons        -- ordered list drawn from
+%                     [financial_year_before_1_july_2015,
+%                      not_small_company,
+%                      not_small_group,
+%                      audit_requisition_notice]
+%                     (empty when exempt or indeterminate)
+%
+% No predicate is shared between slices (there is only one slice), so
+% this module exports nothing.
+%
+% Source: Companies Act 1967 (Singapore, 2020 Rev Ed) s 205C, s 205B,
+%         Thirteenth Schedule.
+% =====================================================================
+
+:- module(kernel, []).
+
+:- end_module(kernel).

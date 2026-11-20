@@ -1,0 +1,182 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Run: python -m clausal.testing sg/companies/small_company_audit_exemption/tests/test_public_interface.clausal
+% =====================================================================
+
+:- module(test_public_interface, []).
+
+:- use_module(sg/companies/small_company_audit_exemption, [
+    small_company_audit_exemption/2,
+    audit_exemption/4,
+    decide_small_company_audit_exemption/2,
+    small_company_audit_exemption_status/2,
+    small_company_audit_exemption_checklist/2,
+    small_company_audit_exemption_decision_resolvable/1,
+    small_company_audit_exemption_status_values/1,
+    small_company_audit_exemption_subject/1,
+    small_company_audit_exemption_profile_for/2,
+    small_company_audit_exemption_assess/2,
+    small_company_audit_exemption_what_if/4,
+    small_company_audit_exemption_threshold/2,
+    small_company_audit_exemption_reaches/3
+]).
+
+% test is wrong: the brittle fail-mode near-miss controls are replaced by exact-set assertions.
+
+% ---- Eligibility verdicts per fixture --------------------------------
+
+test(small_company_exempt_is_exempt) :-
+    small_company_audit_exemption_assess(small_company_exempt, audit_exemption(exempt, true, n_a, [])).
+
+test(revenue_at_boundary_is_exempt) :-
+    small_company_audit_exemption_assess(revenue_at_boundary, audit_exemption(exempt, true, n_a, [])).
+
+test(revenue_just_above_is_exempt) :-
+    small_company_audit_exemption_assess(revenue_just_above, audit_exemption(exempt, true, n_a, [])).
+
+test(two_criteria_above_is_not_exempt) :-
+    small_company_audit_exemption_assess(two_criteria_above, audit_exemption(not_exempt, false, n_a, [not_small_company])).
+
+test(assets_at_boundary_is_exempt) :-
+    small_company_audit_exemption_assess(assets_at_boundary, audit_exemption(exempt, true, n_a, [])).
+
+test(assets_just_above_is_exempt) :-
+    small_company_audit_exemption_assess(assets_just_above, audit_exemption(exempt, true, n_a, [])).
+
+test(employees_at_boundary_is_exempt) :-
+    small_company_audit_exemption_assess(employees_at_boundary, audit_exemption(exempt, true, n_a, [])).
+
+test(employees_just_above_is_exempt) :-
+    small_company_audit_exemption_assess(employees_just_above, audit_exemption(exempt, true, n_a, [])).
+
+test(not_private_year3_is_not_exempt) :-
+    small_company_audit_exemption_assess(not_private_year3, audit_exemption(not_exempt, false, n_a, [not_small_company])).
+
+test(fy_before_2015_is_not_exempt) :-
+    small_company_audit_exemption_assess(fy_before_2015, audit_exemption(not_exempt, _, _, Reasons)),
+    member(financial_year_before_1_july_2015, Reasons).
+
+test(audit_notice_in_window_is_not_exempt) :-
+    small_company_audit_exemption_assess(audit_notice_in_window, audit_exemption(not_exempt, true, n_a, [audit_requisition_notice])).
+
+test(audit_notice_outside_window_is_exempt) :-
+    small_company_audit_exemption_assess(audit_notice_outside_window, audit_exemption(exempt, true, n_a, [])).
+
+test(parent_not_small_group_is_not_exempt) :-
+    small_company_audit_exemption_assess(parent_not_small_group, audit_exemption(not_exempt, true, false, [not_small_group])).
+
+test(parent_small_group_is_exempt) :-
+    small_company_audit_exemption_assess(parent_small_group, audit_exemption(exempt, true, true, [])).
+
+% ---- Near-miss controls: exact opposite verdict set -------------------
+
+test(two_criteria_above_is_not_exempt_only) :- % test is wrong: exact-set near-miss controls replace brittle fail tests
+    findall(Decision, small_company_audit_exemption_assess(two_criteria_above, audit_exemption(Decision, _, _, _)), Decisions),
+    sort(Decisions, [not_exempt]).
+
+test(not_private_year3_is_not_exempt_only) :-
+    findall(Decision, small_company_audit_exemption_assess(not_private_year3, audit_exemption(Decision, _, _, _)), Decisions),
+    sort(Decisions, [not_exempt]).
+
+test(audit_notice_in_window_is_not_exempt_only) :-
+    findall(Decision, small_company_audit_exemption_assess(audit_notice_in_window, audit_exemption(Decision, _, _, _)), Decisions),
+    sort(Decisions, [not_exempt]).
+
+test(parent_not_small_group_is_not_exempt_only) :-
+    findall(Decision, small_company_audit_exemption_assess(parent_not_small_group, audit_exemption(Decision, _, _, _)), Decisions),
+    sort(Decisions, [not_exempt]).
+
+% ---- Status predicate ------------------------------------------------
+
+test(status_predicate_gives_exempt) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_status(Profile, exempt).
+
+test(status_predicate_gives_not_exempt) :-
+    small_company_audit_exemption_profile_for(two_criteria_above, Profile),
+    small_company_audit_exemption_status(Profile, not_exempt).
+
+test(status_values_are_correct) :-
+    small_company_audit_exemption_status_values([exempt, not_exempt, indeterminate]).
+
+% ---- Checklist non-empty ---------------------------------------------
+
+test(checklist_non_empty_on_exempt) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_checklist(Profile, [_FirstItem|_OtherItems]).
+
+test(checklist_non_empty_on_not_exempt) :-
+    small_company_audit_exemption_profile_for(two_criteria_above, Profile),
+    small_company_audit_exemption_checklist(Profile, [_FirstItem|_OtherItems]).
+
+% ---- Decision resolvable ---------------------------------------------
+
+test(decision_resolvable_on_all_fixtures) :-
+    small_company_audit_exemption_subject(Subject),
+    small_company_audit_exemption_profile_for(Subject, Profile),
+    small_company_audit_exemption_decision_resolvable(Profile).
+
+% ---- Threshold predicate ---------------------------------------------
+
+test(revenue_threshold_is_10_million_cents) :-
+    small_company_audit_exemption_threshold(revenue_cents, threshold(revenue_cents, 1000000000, _Cite)).
+
+test(assets_threshold_is_10_million_cents) :-
+    small_company_audit_exemption_threshold(total_assets_cents, threshold(total_assets_cents, 1000000000, _Cite)).
+
+test(employees_threshold_is_50) :-
+    small_company_audit_exemption_threshold(employees_count, threshold(employees_count, 50, _Cite)).
+
+% ---- Reaches predicate: at-boundary vs just-above --------------------
+
+test(revenue_at_boundary_is_satisfied) :-
+    small_company_audit_exemption_reaches(revenue_cents, 1000000000, satisfied).
+
+test(revenue_just_above_is_not_satisfied) :-
+    small_company_audit_exemption_reaches(revenue_cents, 1000000001, not_satisfied).
+
+test(revenue_just_above_is_not_satisfied_only) :- % test is wrong: exact-set reaches control
+    findall(Status, small_company_audit_exemption_reaches(revenue_cents, 1000000001, Status), Statuses),
+    sort(Statuses, [not_satisfied]).
+
+test(assets_at_boundary_is_satisfied) :-
+    small_company_audit_exemption_reaches(total_assets_cents, 1000000000, satisfied).
+
+test(assets_just_above_is_not_satisfied) :-
+    small_company_audit_exemption_reaches(total_assets_cents, 1000000001, not_satisfied).
+
+test(assets_just_above_is_not_satisfied_only) :-
+    findall(Status, small_company_audit_exemption_reaches(total_assets_cents, 1000000001, Status), Statuses),
+    sort(Statuses, [not_satisfied]).
+
+test(employees_at_boundary_is_satisfied) :-
+    small_company_audit_exemption_reaches(employees_count, 50, satisfied).
+
+test(employees_just_above_is_not_satisfied) :-
+    small_company_audit_exemption_reaches(employees_count, 51, not_satisfied).
+
+test(employees_just_above_is_not_satisfied_only) :-
+    findall(Status, small_company_audit_exemption_reaches(employees_count, 51, Status), Statuses),
+    sort(Statuses, [not_satisfied]).
+
+% ---- What-if predicate -----------------------------------------------
+
+test(what_if_revenue_above_still_exempt) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_what_if(Profile, financial_years, [
+        fy(date(2020, 1, 1), date(2020, 12, 31), true, 1000000001, 500000000, 25),
+        fy(date(2021, 1, 1), date(2021, 12, 31), true, 1000000001, 500000000, 25),
+        fy(date(2022, 1, 1), date(2022, 12, 31), true, 1000000001, 500000000, 25)
+    ], exempt).
+
+test(what_if_two_criteria_above_not_exempt) :-
+    small_company_audit_exemption_profile_for(small_company_exempt, Profile),
+    small_company_audit_exemption_what_if(Profile, financial_years, [
+        fy(date(2020, 1, 1), date(2020, 12, 31), true, 1000000001, 1000000001, 25),
+        fy(date(2021, 1, 1), date(2021, 12, 31), true, 1000000001, 1000000001, 25),
+        fy(date(2022, 1, 1), date(2022, 12, 31), true, 1000000001, 1000000001, 25)
+    ], not_exempt).
+
+:- end_module(test_public_interface).

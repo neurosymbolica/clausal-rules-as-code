@@ -1,0 +1,112 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests: the result argument is read
+% out, and every query yields exactly ONE solution. Boundary pairs: the
+% commencement day, the prescribed number 500, the month and year carries of
+% the Commission period.
+% Run: python -m clausal.testing sg/data_protection/pdpa_data_breach_notification/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/pdpa_data_breach_notification, [
+    decide_pdpa_data_breach_notification/2,
+    pdpa_data_breach_notification_status/2,
+    pdpa_data_breach_notification_checklist/2,
+    commission_notification_period_end/2,
+    notification_contents/2,
+    pdpa_breach_assessment/2
+]).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/fixtures, [pdpa_data_breach_notification_profile_for/2]).
+
+subject_statuses(Subject, Statuses) :-
+    pdpa_data_breach_notification_profile_for(Subject, Profile),
+    findall(Status, pdpa_data_breach_notification_status(Profile, Status), Statuses).
+
+test(the_account_pair_yields_exactly_one_status) :-
+    subject_statuses(account_pair_breach, Statuses),
+    Statuses == [notifiable].
+
+test(the_verdict_carries_a_citation) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    decide_pdpa_data_breach_notification(Profile, pdpa_data_breach_notification_verdict(_Status, [_FirstCitation|_OtherCitations])).
+
+test(five_hundred_affected_individuals_reads_out_notifiable) :-
+    subject_statuses(affected_count_at_prescribed_number, Statuses),
+    Statuses == [notifiable].
+
+test(four_hundred_ninety_nine_reads_out_not_notifiable) :-
+    subject_statuses(affected_count_below_prescribed_number, Statuses),
+    Statuses == [not_notifiable].
+
+test(the_commencement_day_reads_out_notifiable) :-
+    subject_statuses(commencement_day_breach, Statuses),
+    Statuses == [notifiable].
+
+test(the_day_before_commencement_reads_out_not_applicable) :-
+    subject_statuses(pre_commencement_breach, Statuses),
+    Statuses == [not_applicable].
+
+test(an_unsure_data_breach_judgement_reads_out_a_referral) :-
+    subject_statuses(unsure_data_breach_judgement, Statuses),
+    Statuses == [needs_legal_review(open_textured(is_data_breach, cite(sg_pdpa_2012_s26a_def_databreach)), [inputs_relied_on([is_data_breach-unsure])])].
+
+test(the_period_end_carries_into_the_next_month) :-
+    findall(PeriodEnd, commission_notification_period_end(date(2026, 2, 27), PeriodEnd), PeriodEnds),
+    length(PeriodEnds, 1),
+    PeriodEnds = [date(2026, 3, 2)].
+
+test(the_period_end_in_a_leap_year) :-
+    findall(PeriodEnd, commission_notification_period_end(date(2028, 2, 27), PeriodEnd), PeriodEnds),
+    length(PeriodEnds, 1),
+    PeriodEnds = [date(2028, 3, 1)].
+
+test(the_period_end_carries_into_the_next_year) :-
+    findall(PeriodEnd, commission_notification_period_end(date(2026, 12, 30), PeriodEnd), PeriodEnds),
+    length(PeriodEnds, 1),
+    PeriodEnds = [date(2027, 1, 2)].
+
+test(the_period_end_of_an_unreal_day_reads_out_the_problem) :-
+    findall(PeriodEnd, commission_notification_period_end(date(2026, 2, 30), PeriodEnd), PeriodEnds),
+    PeriodEnds == [input_problems([wrong_type(assessed_date)])].
+
+test(the_commission_contents_are_one_list) :-
+    findall(Items, notification_contents(commission, Items), Answers),
+    length(Answers, 1),
+    Answers = [[content_item(date_and_circumstances_of_first_awareness, cite(sg_pdpa_2012_s64_2021_reg_5_1_a))|_]].
+
+test(the_individual_contents_are_one_list) :-
+    findall(Items, notification_contents(affected_individual, Items), Answers),
+    length(Answers, 1),
+    Answers = [[content_item(circumstances_of_first_awareness, cite(sg_pdpa_2012_s64_2021_reg_6_a))|_]].
+
+test(the_additional_contents_are_one_list) :-
+    findall(Items, notification_contents(commission_additional, Items), Answers),
+    Answers == [[additional_item(late_notification_reasons_and_evidence, notified_after_period, cite(sg_pdpa_2012_s64_2021_reg_5_2)), additional_item(grounds_for_not_notifying_affected_individuals, affected_individuals_not_to_be_notified, cite(sg_pdpa_2012_s64_2021_reg_5_3))]].
+
+test(the_combined_assessment_reads_out_every_part) :-
+    pdpa_data_breach_notification_profile_for(full_notifiable_with_deadline, Profile),
+    findall(Result, pdpa_breach_assessment(Profile, Result), Results),
+    length(Results, 1),
+    Results = [pdpa_breach(notifiable, Grounds, Deadline, Individuals, Citations)],
+    Grounds == [significant_harm, significant_scale],
+    Deadline = date(2026, 1, 5),
+    Individuals == required,
+    member(cite(sg_pdpa_2012_s26d_1), Citations).
+
+test(a_not_notifiable_assessment_reads_out_n_a) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_access_excluded, Profile),
+    pdpa_breach_assessment(Profile, Result),
+    Result == pdpa_breach(not_notifiable, [], n_a, n_a, [cite(sg_pdpa_2012_s26b_4)]).
+
+test(a_notifiable_breach_without_an_assessment_date_names_it) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    pdpa_breach_assessment(Profile, pdpa_breach(notifiable, Grounds, Deadline, _, _)),
+    Grounds == [significant_harm],
+    Deadline == indeterminate([assessment_date]).
+
+test(the_checklist_reads_out_five_cited_items) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    findall(Checklist, pdpa_data_breach_notification_checklist(Profile, Checklist), Checklists),
+    length(Checklists, 1),
+    Checklists = [[item(significant_harm, significant_harm, [_|_]), _, item(data_breach_notifiability, notifiable, [_|_]), _, _]].
+
+:- end_module(test_output_mode).

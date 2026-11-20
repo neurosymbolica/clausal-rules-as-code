@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: sg/payments/psa_licence_class
+provision_tracking_note: "Provision tracking is informal: the deferred set below is a first scope map, and the units it does not defer are not accounted unit by unit. There is no provision-tracking ledger."
+deferred_set:
+- what: transition_period
+  units:
+  - sg-psa-2019#pr6-ps17-pdrelevantdate
+  - sg-psa-2019#pr6-ps17-pdrelevantdate-p1a
+  - sg-psa-2019#pr6-ps17-pdrelevantdate-p1b
+  - sg-psa-2019#pr6-ps17-pdrelevantdate-p1c
+  reason: 'Order deferred_set: s 6(6): a licensee crossing a s 6(5) threshold has a prescribed period
+    to apply to change its licence; this domain answers which licence the activity requires, not whether
+    the licensee is yet in breach. ''Relevant date'' in s 6(17) is used only by s 6(6).'
+  consequence: A licensee newly crossing a threshold must compute its prescribed grace period and application
+    deadline itself.
+- what: service_characterisation
+  units:
+  - sg-psa-2019#Sc1-S11_1-s11
+  - sg-psa-2019#Sc1-S11_1-s11-p1a
+  - sg-psa-2019#Sc1-S11_1-s11-p1b
+  - sg-psa-2019#Sc1-S11_1-s11-p1c
+  - sg-psa-2019#Sc1-S11_1-s11-p1d
+  - sg-psa-2019#Sc1-S11_1-s11-p1e
+  - sg-psa-2019#Sc1-S11_1-s11-p1f
+  - sg-psa-2019#Sc1-S11_1-s11-p1g
+  reason: 'Order deferred_set: whether an activity IS a given payment service (First Schedule Part 1, Part 2
+    exclusions, s 5(2), the s 2 DPT definitions) is supplied: services is asserted. First Schedule para 1 and
+    (a)-(g) only list the seven payment services; this domain reads which services are provided as input and
+    never decides it. (Mapped 2026-10-04; the entry existed in the order but not in this scope map. s 6(17)
+    "e-money account issuance service" stays IN scope: the attested mixed_account_issuer reading applies it.)'
+  consequence: The caller must characterise each activity as one of the seven payment services before asking
+    which licence it requires.
+scope_map_unsure:
+- 'sg-psa-2019#Sc1-S13_3-s13-pdmoneychangingservice (and the other Part 3 service definitions): deferred
+  as service_characterisation per the order, although the order''s service atoms name these very services.'
+- 'sg-psa-2019#pr6-ps5-p1a-p2ii-p3A / -p3B / pr6-ps5-p1b-p2ii / pr6-ps5-p1c-p2ii: kept in scope; their
+  ''(or its equivalent in a foreign currency)'' clause is the deferred foreign_currency_conversion but
+  has no unit of its own.'
+- 'sg-psa-2019#pr6-ps5-p1c-p2ii: kept in scope; ''specified e-money'' is deferred (specified_e_money_determination)
+  but the defined term lives in s 2, outside these sources.'
+- 'sg-psa-2019#pr5-ps1-p1b: kept in scope; who is exempt (s 13) is asserted by the flag.'
+operative_readings:
+- what: six_million_test_sums_every_service_provided
+  units:
+  - sg-psa-2019#pr6-ps5-p1a-p2ii-p3A
+  - sg-psa-2019#pr6-ps5-p1a-p2ii-p3B
+  question: 's 6(5)(a)(ii)(B): MPI licence where the monthly average exceeds $6 million ''[quotation omitted]
+    [quotation omitted]''. Is the test the SUM over every service provided, or does any PAIR of
+    services exceeding $6 million suffice?'
+  readings:
+  - id: sum_of_all_services
+    consequence: '2.5m + 2.5m + 1.5m = 6.5m: major payment institution licence (regulator case psa-05).'
+  - id: any_pair
+    consequence: 'No pair exceeds $6m (5.0m max): standard payment institution licence.'
+  chosen: sum_of_all_services
+  rationale: (B) omits the 'any' used in (A) and says 'or more'; MAS Guide to PSA s 3.3.2 ('$6 million
+    or less in a month for any two or more payment services'), read as an SPI limit, implies the sum.
+    An any-subset-of-2-or-more reading coincides with the sum for non-negative volumes; any-pair does
+    not.
+  authority: MAS Guide to the Payment Services Act s 3.3.2 (PDF p11); ruling 2026-10-02 (regulator
+    case psa-05)
+  attested:
+    by: owner
+    role: owner
+    date: '2026-10-02'
+- what: mixed_account_issuer_lists_both_services
+  units:
+  - sg-psa-2019#pr6-ps5-p1b-p2i
+  - sg-psa-2019#pr6-ps17
+  question: 'A person issues both ordinary payment accounts and e-money accounts. Is it an e-money account
+    issuer only (s 6(17) read literally: an account issuance service where EACH account stores e-money),
+    or does it provide both services, its ordinary-account volume tested under s 6(5)(a) and its e-money
+    float under s 6(5)(b)?'
+  readings:
+  - id: both_services
+    consequence: Ordinary-account volume is volume-tested AND the e-money float is float-tested; either
+      may trigger an MPI licence.
+  - id: literal_each_account
+    consequence: s 6(17) is not met (not EACH account stores e-money), so the e-money float test never
+      applies to a mixed issuer.
+  chosen: both_services
+  rationale: Regulator practice treats the two account types as two services; the literal reading would
+    exempt a mixed issuer's e-money float entirely.
+  authority: none
+  attested:
+    by: owner
+    role: owner
+    date: '2026-10-03'
+scope: "Which licence class a payment service provider needs under the Payment Services Act 2019 (ss 5 and 6): the payment services it provides and the monthly transaction-volume tests that separate a standard payment institution from a major payment institution. For ONE provider. Drafter's reading, not a lawyer's."

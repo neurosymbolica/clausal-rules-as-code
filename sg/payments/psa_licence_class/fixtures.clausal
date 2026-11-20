@@ -1,0 +1,173 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for sg/payments/psa_licence_class.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% For every route: a positive case AND a one-unit near-miss control
+% (at-boundary / just-below pairs for every threshold).
+% =====================================================================
+
+:- module(fixtures, [
+    psa_licence_class_subject/1,
+    psa_licence_class_profile_for/2,
+    psa_licence_class_assess/2
+]).
+
+:- use_module(sg/payments/psa_licence_class/psa_licence_class, [decide_psa_licence_class/2]).
+
+% ---- Subject registry ------------------------------------------------
+
+psa_licence_class_subject(no_services).
+psa_licence_class_subject(no_services_near_miss).
+psa_licence_class_subject(exempt_basic).
+psa_licence_class_subject(exempt_near_miss).
+psa_licence_class_subject(money_changing_only).
+psa_licence_class_subject(money_changing_near_miss).
+psa_licence_class_subject(single_volume_mpi).
+psa_licence_class_subject(single_volume_at_threshold).
+psa_licence_class_subject(multi_volume_mpi).
+psa_licence_class_subject(multi_volume_at_threshold).
+psa_licence_class_subject(e_money_float_mpi).
+psa_licence_class_subject(e_money_float_at_threshold).
+psa_licence_class_subject(e_money_issued_mpi).
+psa_licence_class_subject(e_money_issued_at_threshold).
+psa_licence_class_subject(indeterminate_missing_services).
+psa_licence_class_subject(indeterminate_missing_exempt).
+
+% ---- Profiles --------------------------------------------------------
+
+% Route 1: no services -> no_licence_required
+psa_licence_class_profile_for(no_services, Profile) :-
+    dict_pairs(Profile, [
+        services-[],
+        exempt_payment_service_provider-false
+    ]).
+
+% Route 1 near-miss: one service -> SPI
+psa_licence_class_profile_for(no_services_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer],
+        exempt_payment_service_provider-false
+    ]).
+
+% Route 2: exempt -> exempt_payment_service_provider
+psa_licence_class_profile_for(exempt_basic, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer],
+        exempt_payment_service_provider-true
+    ]).
+
+% Route 2 near-miss: not exempt, same services -> SPI
+psa_licence_class_profile_for(exempt_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer],
+        exempt_payment_service_provider-false
+    ]).
+
+% Route 3: money-changing only -> money_changing_licence
+psa_licence_class_profile_for(money_changing_only, Profile) :-
+    dict_pairs(Profile, [
+        services-[money_changing],
+        exempt_payment_service_provider-false
+    ]).
+
+% Route 3 near-miss: money-changing plus another service -> SPI
+psa_licence_class_profile_for(money_changing_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        services-[money_changing, domestic_money_transfer],
+        exempt_payment_service_provider-false
+    ]).
+
+% Route 4a: single-service volume exceeds S$3m -> MPI
+psa_licence_class_profile_for(single_volume_mpi, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer],
+        exempt_payment_service_provider-false,
+        monthly_average_volumes-[volume(domestic_money_transfer, 300000001)]
+    ]).
+
+% Route 4a near-miss: volume exactly at S$3m -> SPI (strict >)
+psa_licence_class_profile_for(single_volume_at_threshold, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer],
+        exempt_payment_service_provider-false,
+        monthly_average_volumes-[volume(domestic_money_transfer, 300000000)]
+    ]).
+
+% Route 4b: multi-service sum exceeds S$6m -> MPI
+% Three services, each below S$3m individually, sum = 610000000 > 600000000
+psa_licence_class_profile_for(multi_volume_mpi, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer, cross_border_money_transfer, merchant_acquisition],
+        exempt_payment_service_provider-false,
+        monthly_average_volumes-[
+            volume(domestic_money_transfer, 200000000),
+            volume(cross_border_money_transfer, 200000000),
+            volume(merchant_acquisition, 210000000)
+        ]
+    ]).
+
+% Route 4b near-miss: multi-service sum exactly S$6m -> SPI (strict >)
+psa_licence_class_profile_for(multi_volume_at_threshold, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer, cross_border_money_transfer, merchant_acquisition],
+        exempt_payment_service_provider-false,
+        monthly_average_volumes-[
+            volume(domestic_money_transfer, 200000000),
+            volume(cross_border_money_transfer, 200000000),
+            volume(merchant_acquisition, 200000000)
+        ]
+    ]).
+
+% Route 4c: e-money account float exceeds S$5m -> MPI
+psa_licence_class_profile_for(e_money_float_mpi, Profile) :-
+    dict_pairs(Profile, [
+        services-[e_money_account_issuance],
+        exempt_payment_service_provider-false,
+        resident_e_money_float_cents-500000001
+    ]).
+
+% Route 4c near-miss: e-money account float exactly S$5m -> SPI
+psa_licence_class_profile_for(e_money_float_at_threshold, Profile) :-
+    dict_pairs(Profile, [
+        services-[e_money_account_issuance],
+        exempt_payment_service_provider-false,
+        resident_e_money_float_cents-500000000
+    ]).
+
+% Route 4d: e-money issued exceeds S$5m -> MPI
+psa_licence_class_profile_for(e_money_issued_mpi, Profile) :-
+    dict_pairs(Profile, [
+        services-[e_money_issuance],
+        exempt_payment_service_provider-false,
+        specified_e_money_issued_cents-500000001
+    ]).
+
+% Route 4d near-miss: e-money issued exactly S$5m -> SPI
+psa_licence_class_profile_for(e_money_issued_at_threshold, Profile) :-
+    dict_pairs(Profile, [
+        services-[e_money_issuance],
+        exempt_payment_service_provider-false,
+        specified_e_money_issued_cents-500000000
+    ]).
+
+% Route 0: missing required key -> indeterminate
+psa_licence_class_profile_for(indeterminate_missing_services, Profile) :-
+    dict_pairs(Profile, [
+        exempt_payment_service_provider-false
+    ]).
+
+psa_licence_class_profile_for(indeterminate_missing_exempt, Profile) :-
+    dict_pairs(Profile, [
+        services-[domestic_money_transfer]
+    ]).
+
+% ---- Convenience wrapper ---------------------------------------------
+
+psa_licence_class_assess(Subject, Result) :-
+    psa_licence_class_profile_for(Subject, Profile),
+    decide_psa_licence_class(Profile, Result).
+
+:- end_module(fixtures).

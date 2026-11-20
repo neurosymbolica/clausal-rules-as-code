@@ -8,7 +8,7 @@ units of the pinned statute extract are formalized, deferred and unaccounted.
 Hidden-test results (reference implementation, mutation testing, adversarial review) are
 not listed yet; they will be added per domain in the next release.
 
-The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16 and 2026-11-18 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
+The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16, 2026-11-18 and 2026-11-20 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
 
 
 | Domain | Tests passed | Provision tracking | Citations | Parameters | Provenance |
@@ -100,6 +100,12 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `ind/dpdp_notice_consent` | 246/246 | none (no provision-tracking ledger) | pass | pass | pass |
 | `ind/dpdp_security_retention` | 278/278 | none (no provision-tracking ledger) | pass | pass | pass |
 | `ind/dpdp_transfer` | 215/215 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/companies/csp_registration` | 90/90 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/companies/small_company_audit_exemption` | 114/114 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/data_protection/pdpa_data_breach_notification` | 223/223 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/payments/psa_licence_class` | 99/99 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/securities/sfa_offer_exemptions` | 68/68 | none (no provision-tracking ledger) | pass | pass | pass |
+| `sg/tax/gst_registration` | 86/86 | none (no provision-tracking ledger) | pass | pass | pass |
 | `uk/uk_automated_decision_making` | 199/199 | none (no provision-tracking ledger) | pass | pass | pass |
 | `uk/uk_complaints_to_the_commissioner` | 206/206 | none (no provision-tracking ledger) | pass | pass | pass |
 | `uk/uk_pecr_cookie_exemptions_and_fines` | 215/215 | none (no provision-tracking ledger) | pass | pass | pass |

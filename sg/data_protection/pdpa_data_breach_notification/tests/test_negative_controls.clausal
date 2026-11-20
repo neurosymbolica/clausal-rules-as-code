@@ -1,0 +1,169 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one required condition changed -> different verdict), proving the route
+% is LOAD-BEARING. A negative states "no solution" as
+% `test(Name, fail) :- Goal.`, and every near-miss is paired with the verdict
+% the near-miss DOES get, so a misspelt atom shows up as a failing positive.
+% The harm and scale grounds are read through the checklist rows (the query
+% predicates of those names are internal to the slice).
+% Run: python -m clausal.testing sg/data_protection/pdpa_data_breach_notification/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/pdpa_data_breach_notification, [
+    pdpa_data_breach_notification_status/2,
+    pdpa_data_breach_notification_status_values/1,
+    pdpa_data_breach_notification_checklist/2,
+    individual_notification/3,
+    breach_response_duty/3
+]).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/fixtures, [pdpa_data_breach_notification_profile_for/2]).
+
+harm_result(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_checklist(Profile, [item(significant_harm, Result, Citations)|_]).
+
+scale_result(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_checklist(Profile, [_, item(significant_scale, Result, Citations)|_]).
+
+test(the_near_miss_verdicts_are_real_verdict_atoms) :-
+    pdpa_data_breach_notification_status_values(StatusValues),
+    member(notifiable, StatusValues),
+    member(not_notifiable, StatusValues),
+    member(not_applicable, StatusValues).
+
+% ---- s 26C(1): commencement on 1 February 2021 ----------------------------
+test(a_breach_on_the_commencement_day_is_notifiable) :-
+    pdpa_data_breach_notification_profile_for(commencement_day_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+test(a_breach_the_day_before_commencement_is_not_applicable) :-
+    pdpa_data_breach_notification_profile_for(pre_commencement_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, not_applicable).
+test(a_breach_the_day_before_commencement_is_not_notifiable, fail) :-
+    pdpa_data_breach_notification_profile_for(pre_commencement_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+
+% ---- reg 3(1)(b): the account identifier and credential pair ---------------
+test(account_identifier_with_credential_is_deemed_harm) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    harm_result(Profile, significant_harm, Citations),
+    Citations == [cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_b)].
+test(a_credential_alone_is_no_significant_harm) :-
+    pdpa_data_breach_notification_profile_for(credential_only_breach, Profile),
+    harm_result(Profile, no_significant_harm, _).
+test(a_credential_alone_is_not_deemed_harm, fail) :-
+    pdpa_data_breach_notification_profile_for(credential_only_breach, Profile),
+    harm_result(Profile, significant_harm, _).
+
+% ---- reg 3(2): a bank or finance company account number --------------------
+test(a_bank_account_number_with_credential_is_deemed_harm) :-
+    pdpa_data_breach_notification_profile_for(bank_account_number_breach, Profile),
+    harm_result(Profile, significant_harm, Citations),
+    member(cite(sg_pdpa_2012_s64_2021_reg_3_2), Citations).
+test(a_bank_account_number_without_credential_is_no_significant_harm) :-
+    harm_result([attribute(breached_data, [bank_or_finance_company_account_number]), attribute(assessed_likely_significant_harm, false)], no_significant_harm, _).
+test(a_bank_account_number_without_credential_is_not_deemed_harm, fail) :-
+    harm_result([attribute(breached_data, [bank_or_finance_company_account_number]), attribute(assessed_likely_significant_harm, false)], significant_harm, _).
+
+% ---- reg 3(1)(a) with Schedule Parts 1 and 2 -------------------------------
+test(identity_with_a_schedule_item_is_deemed_harm) :-
+    pdpa_data_breach_notification_profile_for(identity_with_schedule_data, Profile),
+    harm_result(Profile, significant_harm, Citations),
+    member(cite(sg_pdpa_2012_s64_2021_sched_1_item_3), Citations).
+test(a_publicly_available_schedule_item_is_no_significant_harm) :-
+    pdpa_data_breach_notification_profile_for(schedule_data_publicly_available, Profile),
+    harm_result(Profile, no_significant_harm, _).
+test(a_publicly_available_schedule_item_is_not_deemed_harm, fail) :-
+    pdpa_data_breach_notification_profile_for(schedule_data_publicly_available, Profile),
+    harm_result(Profile, significant_harm, _).
+
+% ---- reg 4: the prescribed number 500 ---------------------------------------
+test(five_hundred_is_significant_scale) :-
+    pdpa_data_breach_notification_profile_for(affected_count_at_prescribed_number, Profile),
+    scale_result(Profile, significant_scale, Citations),
+    Citations == [cite(sg_pdpa_2012_s26b_3_a), cite(sg_pdpa_2012_s64_2021_reg_4)].
+test(four_hundred_ninety_nine_is_no_significant_scale) :-
+    pdpa_data_breach_notification_profile_for(affected_count_below_prescribed_number, Profile),
+    scale_result(Profile, no_significant_scale, _).
+test(four_hundred_ninety_nine_is_not_significant_scale, fail) :-
+    pdpa_data_breach_notification_profile_for(affected_count_below_prescribed_number, Profile),
+    scale_result(Profile, significant_scale, _).
+
+% ---- s 26B(4): the within-organisation exclusion ---------------------------
+test(within_organisation_access_is_not_notifiable) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_access_excluded, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+test(within_organisation_access_is_not_notifiable_bound_wrongly, fail) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_access_excluded, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+test(within_organisation_with_disposal_is_notifiable) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_with_disposal, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+test(within_organisation_with_disposal_is_not_excluded, fail) :-
+    pdpa_data_breach_notification_profile_for(within_organisation_with_disposal, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+
+% ---- s 26A: the data breach judgement ---------------------------------------
+test(a_judged_data_breach_is_notifiable) :-
+    pdpa_data_breach_notification_profile_for(account_pair_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+test(an_incident_judged_no_data_breach_is_not_notifiable) :-
+    pdpa_data_breach_notification_profile_for(not_a_data_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, not_notifiable).
+test(an_incident_judged_no_data_breach_is_never_notifiable, fail) :-
+    pdpa_data_breach_notification_profile_for(not_a_data_breach, Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+
+% ---- s 26D(2), (5), (6), (7): the notice to affected individuals ----------
+test(no_exception_requires_notice) :-
+    pdpa_data_breach_notification_profile_for(no_exception_applies, Profile),
+    individual_notification(Profile, required, [cite(sg_pdpa_2012_s26d_2)]).
+test(no_exception_is_not_not_required, fail) :-
+    pdpa_data_breach_notification_profile_for(no_exception_applies, Profile),
+    individual_notification(Profile, not_required, _).
+test(a_law_enforcement_instruction_prohibits_notice) :-
+    pdpa_data_breach_notification_profile_for(law_enforcement_and_waiver, Profile),
+    individual_notification(Profile, prohibited, [cite(sg_pdpa_2012_s26d_6_a)]).
+test(a_law_enforcement_instruction_wins_over_a_waiver, fail) :-
+    pdpa_data_breach_notification_profile_for(law_enforcement_and_waiver, Profile),
+    individual_notification(Profile, waived, _).
+test(a_waiver_alone_waives_notice) :-
+    pdpa_data_breach_notification_profile_for(waiver_only, Profile),
+    individual_notification(Profile, waived, [cite(sg_pdpa_2012_s26d_7)]).
+test(remedial_action_makes_notice_not_required) :-
+    pdpa_data_breach_notification_profile_for(remedial_action_taken, Profile),
+    individual_notification(Profile, not_required, [cite(sg_pdpa_2012_s26d_5_a)]).
+test(remedial_action_is_not_required_notice, fail) :-
+    pdpa_data_breach_notification_profile_for(remedial_action_taken, Profile),
+    individual_notification(Profile, required, _).
+test(a_scale_only_breach_owes_no_notice) :-
+    pdpa_data_breach_notification_profile_for(affected_count_at_prescribed_number, Profile),
+    individual_notification(Profile, not_required, [cite(sg_pdpa_2012_s26d_2), cite(sg_pdpa_2012_s26b_1_a)]).
+test(a_scale_only_breach_does_not_require_notice, fail) :-
+    pdpa_data_breach_notification_profile_for(affected_count_at_prescribed_number, Profile),
+    individual_notification(Profile, required, _).
+
+% ---- s 26C(2), (3), s 26E: the response duty -------------------------------
+test(an_organisation_notified_by_an_intermediary_must_assess) :-
+    pdpa_data_breach_notification_profile_for(organisation_notified_by_intermediary, Profile),
+    breach_response_duty(Profile, assessment_required, [cite(sg_pdpa_2012_s26c_3_b)]).
+test(an_organisation_without_possession_has_no_duty) :-
+    pdpa_data_breach_notification_profile_for(organisation_without_possession, Profile),
+    breach_response_duty(Profile, no_duty_triggered, [cite(sg_pdpa_2012_s26c_2)]).
+test(an_organisation_without_possession_need_not_assess, fail) :-
+    pdpa_data_breach_notification_profile_for(organisation_without_possession, Profile),
+    breach_response_duty(Profile, assessment_required, _).
+test(a_public_agency_intermediary_must_notify_without_a_date) :-
+    pdpa_data_breach_notification_profile_for(public_agency_intermediary_without_date, Profile),
+    breach_response_duty(Profile, notify_public_agency_without_undue_delay, _).
+test(an_intermediary_after_commencement_must_notify) :-
+    pdpa_data_breach_notification_profile_for(intermediary_for_organisation, Profile),
+    breach_response_duty(Profile, notify_organisation_without_undue_delay, _).
+test(an_intermediary_before_commencement_is_not_applicable) :-
+    pdpa_data_breach_notification_profile_for(intermediary_before_commencement, Profile),
+    breach_response_duty(Profile, not_applicable, [cite(sg_pdpa_2012_s26c_1)]).
+test(an_intermediary_before_commencement_need_not_notify, fail) :-
+    pdpa_data_breach_notification_profile_for(intermediary_before_commencement, Profile),
+    breach_response_duty(Profile, notify_organisation_without_undue_delay, _).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,1020 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% pdpa_data_breach_notification.clausal -- the pdpa_data_breach_notification DETERMINATION for
+% sg/data_protection/pdpa_data_breach_notification, self-contained top to bottom: its
+% statutory VALUE facts, its derived arithmetic, its per-rule tests, its checklist and its
+% verdict assembly.
+%
+% Source: Personal Data Protection Act 2012 (Singapore) Part 6A, ss 26A to 26E, and the
+% Personal Data Protection (Notification of Data Breaches) Regulations 2021 (S 64/2021)
+% regs 3 to 6 and the Schedule, pinned SSO units read on 2026-11-12,
+% each stating Current version as at 13 Nov 2026.
+%
+% Shape: every PROFILE query runs the shared input check first (kernel), then reads each
+% key ONCE into a state term, not_given or given(Value), and walks its ladder of steps in
+% the order the order states. Each step yields exactly one outcome, fires(Result,
+% Citations) or passes, so the first step that fires decides and every query has exactly
+% one solution. No cut, no if-then-else, no negation as failure. Every step/3 clause of
+% every ladder is written in ONE block (THE STEPS, below the queries).
+%
+% Readings applied (the order, READINGS and OPEN QUESTIONS):
+%   - commencement 1 February 2021 dates the s 26C roles only (Q6, s 26E undated);
+%   - the s 26B(4) exclusion: within_organisation_only true and every breach kind one of
+%     the six kinds of s 26B(4); disposal and loss of a storage medium are never excluded;
+%   - deemed harm by reg 3(1)(a) with Schedule Part 2 as the caller's list (Q10), and by
+%     reg 3(1)(b) with reg 3(2);
+%   - deemed scale at 500 affected individuals (reg 4);
+%   - the Commission period: the assessment day plus 3 calendar days, every day counted,
+%     the end never moved (main reading, Q1);
+%   - the exceptions to the notice to individuals in the drafter's order prohibited,
+%     waived, not_required (Q2), the settled-answer citations rule (Q4).
+%
+% The harm and scale grounds (queries (A) and (B) of the order) are computed here by the
+% INTERNAL predicates harm_determination/3 and scale_determination/3. No predicate named
+% significant_harm or significant_scale is defined in this module: the package root serves
+% those two names as root-export ATOMS (data position), and a predicate of the same name
+% is refused there. Their results are exposed through
+% pdpa_data_breach_notification_checklist/2.
+% =====================================================================
+
+:- module(pdpa_data_breach_notification, [
+    data_breach_notifiability/3,
+    individual_notification/3,
+    breach_response_duty/3,
+    commission_notification_period_end/2,
+    notification_contents/2,
+    pdpa_breach_assessment/2,
+    decide_pdpa_data_breach_notification/2,
+    pdpa_data_breach_notification_status/2,
+    pdpa_data_breach_notification_checklist/2,
+    pdpa_data_breach_notification_decision_resolvable/1,
+    pdpa_data_breach_notification_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(library(datetime), [timedelta/3, date_add/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/kernel, [pdpa_data_breach_notification_input_problems/2]).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% reg 4: the prescribed number of affected individuals for s 26B(3)(a).
+:- constant_value(prescribed_affected_individuals_number, 500).
+% s 26D(1): [quotation omitted] of the assessment.
+:- constant_value(commission_notification_calendar_days, 3).
+
+% s 26C(1): the [quotation omitted] this date.
+commencement_date(date(2021, 2, 1), cite(sg_pdpa_2012_s26c_1)).
+
+% s 26B(4): the six kinds of breach the within-organisation exclusion names.
+within_organisation_kind(unauthorised_access, cite(sg_pdpa_2012_s26b_4)).
+within_organisation_kind(unauthorised_collection, cite(sg_pdpa_2012_s26b_4)).
+within_organisation_kind(unauthorised_use, cite(sg_pdpa_2012_s26b_4)).
+within_organisation_kind(unauthorised_disclosure, cite(sg_pdpa_2012_s26b_4)).
+within_organisation_kind(unauthorised_copying, cite(sg_pdpa_2012_s26b_4)).
+within_organisation_kind(unauthorised_modification, cite(sg_pdpa_2012_s26b_4)).
+
+% reg 3(1)(a): the identity anchors, full name or alias or identification number.
+identity_anchor(full_name_or_alias, cite(sg_pdpa_2012_s64_2021_reg_3_1_a)).
+identity_anchor(identification_number, cite(sg_pdpa_2012_s64_2021_reg_3_1_a)).
+
+% Schedule Part 1: the twenty-five prescribed data classes and the key of each item.
+schedule_item(remuneration, cite(sg_pdpa_2012_s64_2021_sched_1_item_1)).
+schedule_item(income_from_sale_of_goods_or_property, cite(sg_pdpa_2012_s64_2021_sched_1_item_2)).
+schedule_item(payment_card_number, cite(sg_pdpa_2012_s64_2021_sched_1_item_3)).
+schedule_item(bank_or_finance_company_account_number, cite(sg_pdpa_2012_s64_2021_sched_1_item_4)).
+schedule_item(child_or_young_person_information, cite(sg_pdpa_2012_s64_2021_sched_1_item_5)).
+schedule_item(vulnerable_adult_information, cite(sg_pdpa_2012_s64_2021_sched_1_item_6)).
+schedule_item(specified_offence_victim_identification, cite(sg_pdpa_2012_s64_2021_sched_1_item_6a)).
+schedule_item(place_of_safety_resident_identification, cite(sg_pdpa_2012_s64_2021_sched_1_item_6b)).
+schedule_item(private_key, cite(sg_pdpa_2012_s64_2021_sched_1_item_7)).
+schedule_item(net_worth, cite(sg_pdpa_2012_s64_2021_sched_1_item_8)).
+schedule_item(deposit_of_moneys, cite(sg_pdpa_2012_s64_2021_sched_1_item_9)).
+schedule_item(withdrawal_of_moneys, cite(sg_pdpa_2012_s64_2021_sched_1_item_10)).
+schedule_item(credit_facilities, cite(sg_pdpa_2012_s64_2021_sched_1_item_11)).
+schedule_item(other_liabilities_incurred, cite(sg_pdpa_2012_s64_2021_sched_1_item_12)).
+schedule_item(payments_or_property_received, cite(sg_pdpa_2012_s64_2021_sched_1_item_13)).
+schedule_item(creditworthiness, cite(sg_pdpa_2012_s64_2021_sched_1_item_14)).
+schedule_item(capital_markets_investment, cite(sg_pdpa_2012_s64_2021_sched_1_item_15)).
+schedule_item(debts, cite(sg_pdpa_2012_s64_2021_sched_1_item_16)).
+schedule_item(insurance_policy_information, cite(sg_pdpa_2012_s64_2021_sched_1_item_17)).
+schedule_item(specified_medical_condition_treatment, cite(sg_pdpa_2012_s64_2021_sched_1_item_18)).
+schedule_item(reproductive_or_contraceptive_treatment, cite(sg_pdpa_2012_s64_2021_sched_1_item_19)).
+schedule_item(organ_donation_or_transplant, cite(sg_pdpa_2012_s64_2021_sched_1_item_20)).
+schedule_item(suicide_or_attempted_suicide, cite(sg_pdpa_2012_s64_2021_sched_1_item_21)).
+schedule_item(domestic_child_or_sexual_abuse, cite(sg_pdpa_2012_s64_2021_sched_1_item_22)).
+schedule_item(adoption_information, cite(sg_pdpa_2012_s64_2021_sched_1_item_23)).
+
+% The verdict vocabulary of the facade as a ground table (used by the property tests).
+pdpa_data_breach_notification_status_values([notifiable, not_notifiable, not_applicable]).
+
+% ---- profile plumbing --------------------------------------------------
+% key_state(Profile, ProfileKey, State): State is not_given or given(Value).
+key_state(Profile, ProfileKey, not_given) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, given(Value)) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+state_absent_t(not_given, true).
+state_absent_t(given(_), false).
+
+state_is_t(not_given, _, false).
+state_is_t(given(Value), Wanted, Truth) :-
+    memberd_t(Value, [Wanted], Truth).
+
+state_holds_t(not_given, _, false).
+state_holds_t(given(Values), Wanted, Truth) :-
+    memberd_t(Wanted, Values, Truth).
+
+both_t(true, Truth, Truth).
+both_t(false, _, false).
+
+either_t(true, _, true).
+either_t(false, Truth, Truth).
+
+opposite_t(true, false).
+opposite_t(false, true).
+
+nonempty_t([], false).
+nonempty_t([_|_], true).
+
+% THE PAIRS RULE: the present judgement keys of the query's list, in that order.
+judgement_pairs(_, [], []).
+judgement_pairs(Profile, [ProfileKey|ProfileKeys], Pairs) :-
+    key_state(Profile, ProfileKey, State),
+    judgement_pairs(Profile, ProfileKeys, LaterPairs),
+    add_pair(State, ProfileKey, LaterPairs, Pairs).
+
+add_pair(not_given, _, Pairs, Pairs).
+add_pair(given(Value), ProfileKey, Pairs, [ProfileKey-Value|Pairs]).
+
+% The class of a query result, read by the ladders that use it.
+result_class(significant_harm, significant).
+result_class(significant_scale, significant).
+result_class(no_significant_harm, insignificant).
+result_class(no_significant_scale, insignificant).
+result_class(indeterminate(_), missing).
+result_class(needs_legal_review(_, _), referred).
+result_class(prohibited, final).
+result_class(waived, final).
+result_class(not_required, final).
+result_class(required, final).
+
+significant_citations(significant, Citations, Citations).
+significant_citations(insignificant, _, []).
+significant_citations(missing, _, []).
+significant_citations(referred, _, []).
+
+% ---- the ladder: the first step that fires decides ---------------------
+ladder([StepName|StepNames], Context, Result, Citations) :-
+    step(StepName, Context, Outcome),
+    ladder_outcome(Outcome, StepNames, Context, Result, Citations).
+
+ladder_outcome(fires(Result, Citations), _, _, Result, Citations).
+ladder_outcome(passes, StepNames, Context, Result, Citations) :-
+    ladder(StepNames, Context, Result, Citations).
+
+outcome_if(true, Fired, Fired).
+outcome_if(false, _, passes).
+
+fires_when_value(State, Wanted, Fired, Outcome) :-
+    state_is_t(State, Wanted, Truth),
+    outcome_if(Truth, Fired, Outcome).
+
+fires_when_missing(State, Fired, Outcome) :-
+    state_absent_t(State, Truth),
+    outcome_if(Truth, Fired, Outcome).
+
+% ---- derived tests ------------------------------------------------------
+% s 26C(1): a breach before 1 February 2021 is outside ss 26C and 26D.
+breach_before_commencement_t(date(YearNumber, MonthNumber, DayOfMonth), Truth) :-
+    implements(sg_pdpa_2012_s26c_1),
+    commencement_date(date(StartYear, StartMonth, StartDay), _),
+    BreachOrdinal #= YearNumber * 10000 + MonthNumber * 100 + DayOfMonth,
+    StartOrdinal #= StartYear * 10000 + StartMonth * 100 + StartDay,
+    integer_below_t(BreachOrdinal, StartOrdinal, Truth).
+
+integer_below_t(Lower, Upper, true) :-
+    Lower #< Upper.
+integer_below_t(Lower, Upper, false) :-
+    Lower #>= Upper.
+
+date_state_before_commencement_t(not_given, false).
+date_state_before_commencement_t(given(BreachDate), Truth) :-
+    implements(sg_pdpa_2012_s26c_1),
+    breach_before_commencement_t(BreachDate, Truth).
+
+% s 26B(4): the kinds of the breach are all of the six kinds it names.
+excludable_kind_t(BreachKind, Truth) :-
+    implements(sg_pdpa_2012_s26b_4),
+    findall(ExcludableKind, within_organisation_kind(ExcludableKind, _), ExcludableKinds),
+    memberd_t(BreachKind, ExcludableKinds, Truth).
+
+all_kinds_excludable_t([], true).
+all_kinds_excludable_t([BreachKind|BreachKinds], Truth) :-
+    excludable_kind_t(BreachKind, KindTruth),
+    all_kinds_excludable_t(BreachKinds, LaterTruth),
+    both_t(KindTruth, LaterTruth, Truth).
+
+% kinds_excludable_t(KindsState, WhenAbsent, Truth): WhenAbsent is the answer for no kinds.
+kinds_excludable_t(not_given, WhenAbsent, WhenAbsent).
+kinds_excludable_t(given(BreachKinds), _, Truth) :-
+    implements(sg_pdpa_2012_s26b_4),
+    all_kinds_excludable_t(BreachKinds, Truth).
+
+exclusion_applies_t(WithinState, KindsState, Truth) :-
+    implements(sg_pdpa_2012_s26b_4),
+    state_is_t(WithinState, true, WithinOnly),
+    kinds_excludable_t(KindsState, false, KindsExcludable),
+    both_t(WithinOnly, KindsExcludable, Truth).
+
+% reg 3(1)(a): the breached data holds an identity anchor.
+identity_anchor_t(Breached, Truth) :-
+    implements(sg_pdpa_2012_s64_2021_reg_3_1_a),
+    findall(Anchor, identity_anchor(Anchor, _), Anchors),
+    shared_member_t(Anchors, Breached, Truth).
+
+shared_member_t([], _, false).
+shared_member_t([Candidate|Candidates], Breached, Truth) :-
+    memberd_t(Candidate, Breached, FirstTruth),
+    shared_member_t(Candidates, Breached, LaterTruth),
+    either_t(FirstTruth, LaterTruth, Truth).
+
+% Schedule Part 1 subject to Part 2 paragraphs 1 and 2: the item keys of the breached
+% Schedule data classes the caller has not listed as publicly available or lawfully
+% disclosed.
+unexcluded_schedule_citations(Breached, Excluded, Citations) :-
+    implements(sg_pdpa_2012_s64_2021_sched_2_item_1),
+    findall(ItemCitation,
+            unexcluded_schedule_item(Breached, Excluded, ItemCitation),
+            Found),
+    sort(Found, Citations).
+
+unexcluded_schedule_item(Breached, Excluded, ItemCitation) :-
+    schedule_item(DataClass, ItemCitation),
+    memberd_t(DataClass, Breached, true),
+    memberd_t(DataClass, Excluded, false).
+
+% reg 4: [quotation omitted].
+count_reaches_prescribed_number_t(not_given, false).
+count_reaches_prescribed_number_t(given(Count), true) :-
+    implements(sg_pdpa_2012_s64_2021_reg_4),
+    Count #>= constant(prescribed_affected_individuals_number).
+count_reaches_prescribed_number_t(given(Count), false) :-
+    implements(sg_pdpa_2012_s64_2021_reg_4),
+    Count #< constant(prescribed_affected_individuals_number).
+
+% ---- context accessors --------------------------------------------------
+context_date_state(notify(DateState, _, _, _, _, _, _), DateState).
+context_date_state(individual(DateState, _, _, _, _, _, _), DateState).
+context_date_state(duty(_, _, _, _, DateState, _), DateState).
+
+context_parts(notify(DateState, WithinState, KindsState, JudgementState, _, _, Pairs), DateState, WithinState, KindsState, JudgementState, Pairs).
+context_parts(individual(DateState, WithinState, KindsState, JudgementState, _, _, Pairs), DateState, WithinState, KindsState, JudgementState, Pairs).
+
+context_role(duty(given(CallerRole), _, _, _, _, _), CallerRole).
+
+% ---- (A) significant harm: harm_determination/3 -------------------------
+harm_determination(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    significant_harm_answer(Problems, Profile, Result, Citations).
+
+significant_harm_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+significant_harm_answer([], Profile, Result, Citations) :-
+    key_state(Profile, breached_data, BreachedState),
+    key_state(Profile, publicly_available_or_lawfully_disclosed, ExcludedState),
+    key_state(Profile, assessed_likely_significant_harm, JudgementState),
+    judgement_pairs(Profile, [assessed_likely_significant_harm], Pairs),
+    ladder([harm_account_identifier,
+            harm_bank_account_number,
+            harm_identity_with_schedule_data,
+            harm_assessed_true,
+            harm_breached_data_missing,
+            harm_exclusions_missing,
+            harm_assessment_missing,
+            harm_assessment_unsure,
+            harm_assessment_false],
+           harm(BreachedState, ExcludedState, JudgementState, Pairs),
+           Result,
+           Citations).
+
+% ---- (B) significant scale: scale_determination/3 -----------------------
+scale_determination(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    significant_scale_answer(Problems, Profile, Result, Citations).
+
+significant_scale_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+significant_scale_answer([], Profile, Result, Citations) :-
+    key_state(Profile, affected_individuals_count, CountState),
+    key_state(Profile, assessed_likely_significant_scale, JudgementState),
+    judgement_pairs(Profile, [assessed_likely_significant_scale], Pairs),
+    ladder([scale_prescribed_number,
+            scale_assessed_true,
+            scale_count_missing,
+            scale_assessment_missing,
+            scale_assessment_unsure,
+            scale_assessment_false],
+           scale(CountState, JudgementState, Pairs),
+           Result,
+           Citations).
+
+% ---- (C) data_breach_notifiability ---------------------------------------
+data_breach_notifiability(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    notifiability_answer(Problems, Profile, Result, Citations).
+
+notifiability_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+notifiability_answer([], Profile, Result, Citations) :-
+    key_state(Profile, breach_occurred_date, DateState),
+    key_state(Profile, within_organisation_only, WithinState),
+    key_state(Profile, breach_kinds, KindsState),
+    key_state(Profile, is_data_breach, JudgementState),
+    harm_determination(Profile, Harm, HarmCitations),
+    result_class(Harm, HarmClass),
+    scale_determination(Profile, Scale, ScaleCitations),
+    result_class(Scale, ScaleClass),
+    judgement_pairs(Profile, [is_data_breach, assessed_likely_significant_harm, assessed_likely_significant_scale], Pairs),
+    ladder([date_missing,
+            before_commencement,
+            notify_not_a_data_breach,
+            notify_exclusion,
+            notify_neither_ground,
+            notify_harm_missing,
+            notify_scale_missing,
+            within_organisation_missing,
+            breach_kinds_missing,
+            breach_judgement_missing,
+            breach_judgement_unsure,
+            notify_notifiable,
+            notify_referred],
+           notify(DateState, WithinState, KindsState, JudgementState, assessed(HarmClass, Harm, HarmCitations), assessed(ScaleClass, Scale, ScaleCitations), Pairs),
+           Result,
+           Citations).
+
+% ---- (D) individual_notification -----------------------------------------
+individual_notification(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    individual_answer(Problems, Profile, Result, Citations).
+
+individual_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+individual_answer([], Profile, Result, Citations) :-
+    key_state(Profile, breach_occurred_date, DateState),
+    key_state(Profile, within_organisation_only, WithinState),
+    key_state(Profile, breach_kinds, KindsState),
+    key_state(Profile, is_data_breach, JudgementState),
+    harm_determination(Profile, Harm, HarmCitations),
+    result_class(Harm, HarmClass),
+    judgement_pairs(Profile, [is_data_breach, assessed_likely_significant_harm, remedial_action_renders_harm_unlikely, prior_technological_measure_renders_harm_unlikely], Pairs),
+    exception_answer(Profile, Pairs, ExceptionResult, ExceptionCitations),
+    ladder([date_missing,
+            before_commencement,
+            individual_not_a_data_breach,
+            individual_exclusion,
+            individual_no_significant_harm,
+            individual_exception_not_required,
+            individual_harm_missing,
+            within_organisation_missing,
+            breach_kinds_missing,
+            breach_judgement_missing,
+            individual_exception_answer,
+            individual_exception_missing,
+            breach_judgement_unsure,
+            individual_harm_referred],
+           individual(DateState, WithinState, KindsState, JudgementState, assessed(HarmClass, Harm, HarmCitations), exception(ExceptionResult, ExceptionCitations), Pairs),
+           Result,
+           Citations).
+
+% THE EXCEPTION ANSWER E: s 26D(6), (7), (5) in the drafter's order (Q2).
+exception_answer(Profile, Pairs, Result, Citations) :-
+    key_state(Profile, prohibited_by_law_enforcement_agency, LawEnforcementState),
+    key_state(Profile, prohibited_by_commission_direction, DirectionState),
+    key_state(Profile, commission_waiver_granted, WaiverState),
+    key_state(Profile, remedial_action_renders_harm_unlikely, RemedialState),
+    key_state(Profile, prior_technological_measure_renders_harm_unlikely, MeasureState),
+    ladder([exception_law_enforcement,
+            exception_commission_direction,
+            exception_law_enforcement_missing,
+            exception_commission_direction_missing,
+            exception_waiver,
+            exception_waiver_missing,
+            exception_remedial_action,
+            exception_technological_measure,
+            exception_remedial_action_missing,
+            exception_technological_measure_missing,
+            exception_remedial_action_unsure,
+            exception_technological_measure_unsure,
+            exception_none],
+           exception_context(LawEnforcementState, DirectionState, WaiverState, RemedialState, MeasureState, Pairs),
+           Result,
+           Citations).
+
+% ---- (E) breach_response_duty --------------------------------------------
+breach_response_duty(Profile, Result, Citations) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    duty_answer(Problems, Profile, Result, Citations).
+
+duty_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+duty_answer([], Profile, Result, Citations) :-
+    key_state(Profile, caller_role, RoleState),
+    key_state(Profile, reason_to_believe_breach_occurred, ReasonState),
+    key_state(Profile, personal_data_in_possession_or_control, PossessionState),
+    key_state(Profile, notified_by_data_intermediary, NotifiedState),
+    key_state(Profile, breach_occurred_date, DateState),
+    judgement_pairs(Profile, [reason_to_believe_breach_occurred], Pairs),
+    ladder([duty_role_missing,
+            duty_public_agency,
+            date_missing,
+            before_commencement,
+            duty_organisation_intermediary,
+            duty_organisation],
+           duty(RoleState, ReasonState, PossessionState, NotifiedState, DateState, Pairs),
+           Result,
+           Citations).
+
+% s 26E: the data intermediary of a public agency (not dated by s 26C(1), Q6).
+public_agency_outcome(false, _, _, passes).
+public_agency_outcome(true, given(true), _, fires(notify_public_agency_without_undue_delay, [cite(sg_pdpa_2012_s26e_a), cite(sg_pdpa_2012_s26e_b)])) :-
+    implements(sg_pdpa_2012_s26e_a).
+public_agency_outcome(true, given(false), _, fires(no_duty_triggered, [cite(sg_pdpa_2012_s26e_b)])) :-
+    implements(sg_pdpa_2012_s26e_b).
+public_agency_outcome(true, not_given, _, fires(indeterminate([reason_to_believe_breach_occurred]), [])).
+public_agency_outcome(true, given(unsure), Pairs, fires(needs_legal_review(open_textured(reason_to_believe_breach_occurred, cite(sg_pdpa_2012_s26e_b)), [inputs_relied_on(Pairs)]), [])) :-
+    implements(sg_pdpa_2012_s26e_b).
+
+% s 26C(3)(a): the data intermediary of another organisation.
+organisation_intermediary_outcome(false, _, _, passes).
+organisation_intermediary_outcome(true, given(true), _, fires(notify_organisation_without_undue_delay, [cite(sg_pdpa_2012_s26c_3), cite(sg_pdpa_2012_s26c_3_a)])) :-
+    implements(sg_pdpa_2012_s26c_3_a).
+organisation_intermediary_outcome(true, given(false), _, fires(no_duty_triggered, [cite(sg_pdpa_2012_s26c_3)])) :-
+    implements(sg_pdpa_2012_s26c_3).
+organisation_intermediary_outcome(true, not_given, _, fires(indeterminate([reason_to_believe_breach_occurred]), [])).
+organisation_intermediary_outcome(true, given(unsure), Pairs, fires(needs_legal_review(open_textured(reason_to_believe_breach_occurred, cite(sg_pdpa_2012_s26c_3)), [inputs_relied_on(Pairs)]), [])) :-
+    implements(sg_pdpa_2012_s26c_3).
+
+% ---- (F) commission_notification_period_end ------------------------------
+% The assessed date is checked through the shared input check, as the value of the date
+% key assessment_date: it never fails and never raises, for every term.
+commission_notification_period_end(Assessed, End) :-
+    pdpa_data_breach_notification_input_problems([attribute(assessment_date, Assessed)], Problems),
+    period_end_answer(Problems, Assessed, End).
+
+period_end_answer([_|_], _, input_problems([wrong_type(assessed_date)])).
+period_end_answer([], Assessed, End) :-
+    implements(sg_pdpa_2012_s26d_1),
+    PeriodDays #= constant(commission_notification_calendar_days),
+    timedelta(PeriodDays, 0, NotificationPeriod),
+    date_add(Assessed, NotificationPeriod, End).
+
+% ---- (G) notification_contents --------------------------------------------
+notification_contents(commission, [
+    content_item(date_and_circumstances_of_first_awareness, cite(sg_pdpa_2012_s64_2021_reg_5_1_a)),
+    content_item(chronology_of_steps_including_assessment, cite(sg_pdpa_2012_s64_2021_reg_5_1_b)),
+    content_item(how_breach_occurred, cite(sg_pdpa_2012_s64_2021_reg_5_1_c)),
+    content_item(number_of_affected_individuals, cite(sg_pdpa_2012_s64_2021_reg_5_1_d)),
+    content_item(personal_data_affected, cite(sg_pdpa_2012_s64_2021_reg_5_1_e)),
+    content_item(potential_harm, cite(sg_pdpa_2012_s64_2021_reg_5_1_f)),
+    content_item(actions_to_mitigate_harm_and_remedy_failures, cite(sg_pdpa_2012_s64_2021_reg_5_1_g)),
+    content_item(plan_to_inform_individuals_or_public, cite(sg_pdpa_2012_s64_2021_reg_5_1_h)),
+    content_item(authorised_representative_contact, cite(sg_pdpa_2012_s64_2021_reg_5_1_i))
+]) :-
+    implements(sg_pdpa_2012_s64_2021_reg_5_1_a).
+notification_contents(affected_individual, [
+    content_item(circumstances_of_first_awareness, cite(sg_pdpa_2012_s64_2021_reg_6_a)),
+    content_item(personal_data_affected, cite(sg_pdpa_2012_s64_2021_reg_6_b)),
+    content_item(potential_harm, cite(sg_pdpa_2012_s64_2021_reg_6_c)),
+    content_item(actions_to_mitigate_harm_and_remedy_failures, cite(sg_pdpa_2012_s64_2021_reg_6_d)),
+    content_item(steps_individual_may_take, cite(sg_pdpa_2012_s64_2021_reg_6_e)),
+    content_item(authorised_representative_contact, cite(sg_pdpa_2012_s64_2021_reg_6_f))
+]) :-
+    implements(sg_pdpa_2012_s64_2021_reg_6_a).
+notification_contents(commission_additional, [
+    additional_item(late_notification_reasons_and_evidence, notified_after_period, cite(sg_pdpa_2012_s64_2021_reg_5_2)),
+    additional_item(grounds_for_not_notifying_affected_individuals, affected_individuals_not_to_be_notified, cite(sg_pdpa_2012_s64_2021_reg_5_3))
+]) :-
+    implements(sg_pdpa_2012_s64_2021_reg_5_2).
+
+% ---- (H) pdpa_breach_assessment ---------------------------------------------
+pdpa_breach_assessment(Profile, Result) :-
+    pdpa_data_breach_notification_input_problems(Profile, Problems),
+    assessment_answer(Problems, Profile, Result).
+
+assessment_answer([Problem|Problems], _, pdpa_breach(input_problems([Problem|Problems]), [], n_a, n_a, [])).
+assessment_answer([], Profile, Result) :-
+    data_breach_notifiability(Profile, Decision, DecisionCitations),
+    assemble_assessment(Decision, DecisionCitations, Profile, Result).
+
+assemble_assessment(notifiable, DecisionCitations, Profile, pdpa_breach(notifiable, Grounds, Deadline, Individuals, Citations)) :-
+    implements(sg_pdpa_2012_s26d_1),
+    assessment_grounds(Profile, Grounds),
+    key_state(Profile, assessment_date, AssessedState),
+    assessment_deadline(AssessedState, Deadline, DeadlineCitations),
+    individual_notification(Profile, Individuals, IndividualCitations),
+    append(DecisionCitations, DeadlineCitations, FirstJoined),
+    append(FirstJoined, IndividualCitations, Joined),
+    sort(Joined, Citations).
+assemble_assessment(Decision, DecisionCitations, _, pdpa_breach(Decision, [], n_a, n_a, DecisionCitations)) :-
+    dif(Decision, notifiable).
+
+assessment_grounds(Profile, Grounds) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    harm_determination(Profile, Harm, _),
+    scale_determination(Profile, Scale, _),
+    memberd_t(Harm, [significant_harm], HarmTruth),
+    memberd_t(Scale, [significant_scale], ScaleTruth),
+    ground_listed(HarmTruth, significant_harm, HarmGrounds),
+    ground_listed(ScaleTruth, significant_scale, ScaleGrounds),
+    append(HarmGrounds, ScaleGrounds, Grounds).
+
+ground_listed(true, Ground, [Ground]).
+ground_listed(false, _, []).
+
+assessment_deadline(given(AssessedDate), EndDate, [cite(sg_pdpa_2012_s26d_1)]) :-
+    implements(sg_pdpa_2012_s26d_1),
+    commission_notification_period_end(AssessedDate, EndDate).
+assessment_deadline(not_given, indeterminate([assessment_date]), []).
+
+% ---- facade: verdict, status projection, checklist ----------------------
+decide_pdpa_data_breach_notification(Profile, pdpa_data_breach_notification_verdict(Decision, Citations)) :-
+    pdpa_breach_assessment(Profile, pdpa_breach(Decision, _, _, _, Citations)).
+
+pdpa_data_breach_notification_status(Profile, Status) :-
+    decide_pdpa_data_breach_notification(Profile, pdpa_data_breach_notification_verdict(Status, _Citations)).
+
+% One row per ground or duty; each row carries the cite(...) list of its query.
+pdpa_data_breach_notification_checklist(Profile, [
+    item(significant_harm, HarmResult, HarmCitations),
+    item(significant_scale, ScaleResult, ScaleCitations),
+    item(data_breach_notifiability, DecisionResult, DecisionCitations),
+    item(individual_notification, IndividualResult, IndividualCitations),
+    item(breach_response_duty, DutyResult, DutyCitations)
+]) :-
+    harm_determination(Profile, HarmResult, HarmCitations),
+    scale_determination(Profile, ScaleResult, ScaleCitations),
+    data_breach_notifiability(Profile, DecisionResult, DecisionCitations),
+    individual_notification(Profile, IndividualResult, IndividualCitations),
+    breach_response_duty(Profile, DutyResult, DutyCitations).
+
+pdpa_data_breach_notification_decision_resolvable(Profile) :-
+    decide_pdpa_data_breach_notification(Profile, _Verdict).
+
+% =====================================================================
+% THE STEPS: every step/3 clause of every ladder, in one block.
+% =====================================================================
+
+% ---- shared steps --------------------------------------------------------
+step(date_missing, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26c_1),
+    context_date_state(Context, DateState),
+    fires_when_missing(DateState, fires(indeterminate([breach_occurred_date]), []), Outcome).
+step(before_commencement, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26c_1),
+    context_date_state(Context, DateState),
+    date_state_before_commencement_t(DateState, Truth),
+    outcome_if(Truth, fires(not_applicable, [cite(sg_pdpa_2012_s26c_1)]), Outcome).
+step(within_organisation_missing, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26b_4),
+    context_parts(Context, _, WithinState, KindsState, _, _),
+    state_absent_t(WithinState, WithinMissing),
+    kinds_excludable_t(KindsState, true, KindsExcludable),
+    both_t(WithinMissing, KindsExcludable, Truth),
+    outcome_if(Truth, fires(indeterminate([within_organisation_only]), []), Outcome).
+step(breach_kinds_missing, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26b_4),
+    context_parts(Context, _, WithinState, KindsState, _, _),
+    state_is_t(WithinState, true, WithinOnly),
+    state_absent_t(KindsState, KindsMissing),
+    both_t(WithinOnly, KindsMissing, Truth),
+    outcome_if(Truth, fires(indeterminate([breach_kinds]), []), Outcome).
+step(breach_judgement_missing, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26a_def_databreach),
+    context_parts(Context, _, _, _, JudgementState, _),
+    fires_when_missing(JudgementState, fires(indeterminate([is_data_breach]), []), Outcome).
+step(breach_judgement_unsure, Context, Outcome) :-
+    implements(sg_pdpa_2012_s26a_def_databreach),
+    context_parts(Context, _, _, _, JudgementState, Pairs),
+    fires_when_value(JudgementState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(is_data_breach, cite(sg_pdpa_2012_s26a_def_databreach)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+
+% ---- (A) the harm steps --------------------------------------------------
+step(harm_account_identifier, harm(BreachedState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s64_2021_reg_3_1_b),
+    state_holds_t(BreachedState, account_access_credential, HasCredential),
+    state_holds_t(BreachedState, account_identifier, HasIdentifier),
+    both_t(HasCredential, HasIdentifier, Truth),
+    outcome_if(Truth,
+               fires(significant_harm, [cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_b)]),
+               Outcome).
+step(harm_bank_account_number, harm(BreachedState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s64_2021_reg_3_2),
+    state_holds_t(BreachedState, account_access_credential, HasCredential),
+    state_holds_t(BreachedState, bank_or_finance_company_account_number, HasBankNumber),
+    state_holds_t(BreachedState, account_identifier, HasIdentifier),
+    opposite_t(HasIdentifier, LacksIdentifier),
+    both_t(HasCredential, HasBankNumber, HasAccountPair),
+    both_t(HasAccountPair, LacksIdentifier, Truth),
+    outcome_if(Truth,
+               fires(significant_harm, [cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_b), cite(sg_pdpa_2012_s64_2021_reg_3_2)]),
+               Outcome).
+step(harm_identity_with_schedule_data, harm(given(Breached), given(Excluded), _, _), Outcome) :-
+    implements(sg_pdpa_2012_s64_2021_reg_3_1_a),
+    identity_anchor_t(Breached, HasAnchor),
+    unexcluded_schedule_citations(Breached, Excluded, ItemCitations),
+    nonempty_t(ItemCitations, HasScheduleData),
+    both_t(HasAnchor, HasScheduleData, Truth),
+    append([cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_a), cite(sg_pdpa_2012_s64_2021_sched_2_item_1), cite(sg_pdpa_2012_s64_2021_sched_2_item_2)],
+           ItemCitations,
+           Joined),
+    sort(Joined, Citations),
+    outcome_if(Truth, fires(significant_harm, Citations), Outcome).
+step(harm_identity_with_schedule_data, harm(not_given, _, _, _), passes).
+step(harm_identity_with_schedule_data, harm(given(_), not_given, _, _), passes).
+step(harm_assessed_true, harm(_, _, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    fires_when_value(JudgementState, true, fires(significant_harm, [cite(sg_pdpa_2012_s26b_1_a)]), Outcome).
+step(harm_breached_data_missing, harm(BreachedState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_2_a),
+    fires_when_missing(BreachedState, fires(indeterminate([breached_data]), []), Outcome).
+step(harm_exclusions_missing, harm(given(Breached), ExcludedState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s64_2021_sched_2_item_1),
+    identity_anchor_t(Breached, HasAnchor),
+    unexcluded_schedule_citations(Breached, [], ItemCitations),
+    nonempty_t(ItemCitations, HasScheduleData),
+    state_absent_t(ExcludedState, ExclusionsMissing),
+    both_t(HasAnchor, HasScheduleData, RouteOpen),
+    both_t(RouteOpen, ExclusionsMissing, Truth),
+    outcome_if(Truth, fires(indeterminate([publicly_available_or_lawfully_disclosed]), []), Outcome).
+step(harm_exclusions_missing, harm(not_given, _, _, _), passes).
+step(harm_assessment_missing, harm(_, _, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    fires_when_missing(JudgementState, fires(indeterminate([assessed_likely_significant_harm]), []), Outcome).
+step(harm_assessment_unsure, harm(_, _, JudgementState, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    fires_when_value(JudgementState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(assessed_likely_significant_harm, cite(sg_pdpa_2012_s26b_1_a)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+step(harm_assessment_false, harm(_, _, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    fires_when_value(JudgementState,
+                     false,
+                     fires(no_significant_harm, [cite(sg_pdpa_2012_s26b_1_a), cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_b)]),
+                     Outcome).
+
+% ---- (B) the scale steps -------------------------------------------------
+step(scale_prescribed_number, scale(CountState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_3_a),
+    count_reaches_prescribed_number_t(CountState, Truth),
+    outcome_if(Truth,
+               fires(significant_scale, [cite(sg_pdpa_2012_s26b_3_a), cite(sg_pdpa_2012_s64_2021_reg_4)]),
+               Outcome).
+step(scale_assessed_true, scale(_, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    fires_when_value(JudgementState, true, fires(significant_scale, [cite(sg_pdpa_2012_s26b_1_b)]), Outcome).
+step(scale_count_missing, scale(CountState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_3_a),
+    fires_when_missing(CountState, fires(indeterminate([affected_individuals_count]), []), Outcome).
+step(scale_assessment_missing, scale(_, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    fires_when_missing(JudgementState, fires(indeterminate([assessed_likely_significant_scale]), []), Outcome).
+step(scale_assessment_unsure, scale(_, JudgementState, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    fires_when_value(JudgementState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(assessed_likely_significant_scale, cite(sg_pdpa_2012_s26b_1_b)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+step(scale_assessment_false, scale(_, JudgementState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    fires_when_value(JudgementState,
+                     false,
+                     fires(no_significant_scale, [cite(sg_pdpa_2012_s26b_1_b), cite(sg_pdpa_2012_s26b_3_a), cite(sg_pdpa_2012_s64_2021_reg_4)]),
+                     Outcome).
+
+% ---- (C) the notifiability steps -----------------------------------------
+step(notify_not_a_data_breach, notify(_, _, _, JudgementState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26a_def_databreach),
+    fires_when_value(JudgementState, false, fires(not_notifiable, [cite(sg_pdpa_2012_s26a_def_databreach)]), Outcome).
+step(notify_exclusion, notify(_, WithinState, KindsState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_4),
+    exclusion_applies_t(WithinState, KindsState, Truth),
+    outcome_if(Truth, fires(not_notifiable, [cite(sg_pdpa_2012_s26b_4)]), Outcome).
+step(notify_neither_ground, notify(_, _, _, _, assessed(HarmClass, _, HarmCitations), assessed(ScaleClass, _, ScaleCitations), _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    memberd_t(HarmClass, [insignificant], HarmInsignificant),
+    memberd_t(ScaleClass, [insignificant], ScaleInsignificant),
+    both_t(HarmInsignificant, ScaleInsignificant, Truth),
+    append(HarmCitations, ScaleCitations, Joined),
+    sort(Joined, Citations),
+    outcome_if(Truth, fires(not_notifiable, Citations), Outcome).
+step(notify_harm_missing, notify(_, _, _, _, assessed(HarmClass, Harm, _), assessed(ScaleClass, _, _), _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    memberd_t(HarmClass, [missing], HarmMissing),
+    memberd_t(ScaleClass, [significant], ScaleSignificant),
+    opposite_t(ScaleSignificant, ScaleOpen),
+    both_t(HarmMissing, ScaleOpen, Truth),
+    outcome_if(Truth, fires(Harm, []), Outcome).
+step(notify_scale_missing, notify(_, _, _, _, assessed(HarmClass, _, _), assessed(ScaleClass, Scale, _), _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    memberd_t(ScaleClass, [missing], ScaleMissing),
+    memberd_t(HarmClass, [significant], HarmSignificant),
+    opposite_t(HarmSignificant, HarmOpen),
+    both_t(ScaleMissing, HarmOpen, Truth),
+    outcome_if(Truth, fires(Scale, []), Outcome).
+step(notify_notifiable, notify(_, _, _, _, assessed(HarmClass, _, HarmCitations), assessed(ScaleClass, _, ScaleCitations), _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_1_a),
+    memberd_t(HarmClass, [significant], HarmSignificant),
+    memberd_t(ScaleClass, [significant], ScaleSignificant),
+    either_t(HarmSignificant, ScaleSignificant, Truth),
+    significant_citations(HarmClass, HarmCitations, HarmGroundCitations),
+    significant_citations(ScaleClass, ScaleCitations, ScaleGroundCitations),
+    append(HarmGroundCitations, ScaleGroundCitations, Joined),
+    sort(Joined, Citations),
+    outcome_if(Truth, fires(notifiable, Citations), Outcome).
+step(notify_referred, notify(_, _, _, _, assessed(referred, needs_legal_review(Reason, _), _), _, Pairs), fires(needs_legal_review(Reason, [inputs_relied_on(Pairs)]), [])) :-
+    implements(sg_pdpa_2012_s26b_1_a).
+step(notify_referred, notify(_, _, _, _, assessed(HarmClass, _, _), assessed(referred, needs_legal_review(Reason, _), _), Pairs), fires(needs_legal_review(Reason, [inputs_relied_on(Pairs)]), [])) :-
+    implements(sg_pdpa_2012_s26b_1_b),
+    memberd_t(HarmClass, [referred], false).
+
+% ---- (D) the individual notification steps -------------------------------
+step(individual_not_a_data_breach, individual(_, _, _, JudgementState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26a_def_databreach),
+    fires_when_value(JudgementState, false, fires(not_required, [cite(sg_pdpa_2012_s26d_2), cite(sg_pdpa_2012_s26a_def_databreach)]), Outcome).
+step(individual_exclusion, individual(_, WithinState, KindsState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26b_4),
+    exclusion_applies_t(WithinState, KindsState, Truth),
+    outcome_if(Truth, fires(not_required, [cite(sg_pdpa_2012_s26d_2), cite(sg_pdpa_2012_s26b_4)]), Outcome).
+step(individual_no_significant_harm, individual(_, _, _, _, assessed(HarmClass, _, _), _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_2),
+    memberd_t(HarmClass, [insignificant], Truth),
+    outcome_if(Truth, fires(not_required, [cite(sg_pdpa_2012_s26d_2), cite(sg_pdpa_2012_s26b_1_a)]), Outcome).
+step(individual_exception_not_required, individual(_, _, _, _, _, exception(ExceptionResult, ExceptionCitations), _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_a),
+    memberd_t(ExceptionResult, [not_required], Truth),
+    outcome_if(Truth, fires(not_required, ExceptionCitations), Outcome).
+step(individual_harm_missing, individual(_, _, _, _, assessed(HarmClass, Harm, _), _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_2),
+    memberd_t(HarmClass, [missing], Truth),
+    outcome_if(Truth, fires(Harm, []), Outcome).
+step(individual_exception_answer, individual(_, _, _, JudgementState, assessed(HarmClass, _, _), exception(ExceptionResult, ExceptionCitations), _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_2),
+    state_is_t(JudgementState, true, IsDataBreach),
+    memberd_t(HarmClass, [significant], HarmSignificant),
+    both_t(IsDataBreach, HarmSignificant, Truth),
+    outcome_if(Truth, fires(ExceptionResult, ExceptionCitations), Outcome).
+step(individual_exception_missing, individual(_, _, _, _, _, exception(ExceptionResult, _), _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_2),
+    result_class(ExceptionResult, ExceptionClass),
+    memberd_t(ExceptionClass, [missing], Truth),
+    outcome_if(Truth, fires(ExceptionResult, []), Outcome).
+step(individual_harm_referred, individual(_, _, _, _, assessed(referred, needs_legal_review(Reason, _), _), _, Pairs), fires(needs_legal_review(Reason, [inputs_relied_on(Pairs)]), [])) :-
+    implements(sg_pdpa_2012_s26b_1_a).
+
+% ---- (D) the exception steps (E) -----------------------------------------
+step(exception_law_enforcement, exception_context(LawEnforcementState, _, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_6_a),
+    fires_when_value(LawEnforcementState, true, fires(prohibited, [cite(sg_pdpa_2012_s26d_6_a)]), Outcome).
+step(exception_commission_direction, exception_context(_, DirectionState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_6_b),
+    fires_when_value(DirectionState, true, fires(prohibited, [cite(sg_pdpa_2012_s26d_6_b)]), Outcome).
+step(exception_law_enforcement_missing, exception_context(LawEnforcementState, _, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_6_a),
+    fires_when_missing(LawEnforcementState, fires(indeterminate([prohibited_by_law_enforcement_agency]), []), Outcome).
+step(exception_commission_direction_missing, exception_context(_, DirectionState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_6_b),
+    fires_when_missing(DirectionState, fires(indeterminate([prohibited_by_commission_direction]), []), Outcome).
+step(exception_waiver, exception_context(_, _, WaiverState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_7),
+    fires_when_value(WaiverState, true, fires(waived, [cite(sg_pdpa_2012_s26d_7)]), Outcome).
+step(exception_waiver_missing, exception_context(_, _, WaiverState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_7),
+    fires_when_missing(WaiverState, fires(indeterminate([commission_waiver_granted]), []), Outcome).
+step(exception_remedial_action, exception_context(_, _, _, RemedialState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_a),
+    fires_when_value(RemedialState, true, fires(not_required, [cite(sg_pdpa_2012_s26d_5_a)]), Outcome).
+step(exception_technological_measure, exception_context(_, _, _, _, MeasureState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_b),
+    fires_when_value(MeasureState, true, fires(not_required, [cite(sg_pdpa_2012_s26d_5_b)]), Outcome).
+step(exception_remedial_action_missing, exception_context(_, _, _, RemedialState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_a),
+    fires_when_missing(RemedialState, fires(indeterminate([remedial_action_renders_harm_unlikely]), []), Outcome).
+step(exception_technological_measure_missing, exception_context(_, _, _, _, MeasureState, _), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_b),
+    fires_when_missing(MeasureState, fires(indeterminate([prior_technological_measure_renders_harm_unlikely]), []), Outcome).
+step(exception_remedial_action_unsure, exception_context(_, _, _, RemedialState, _, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_a),
+    fires_when_value(RemedialState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(remedial_action_renders_harm_unlikely, cite(sg_pdpa_2012_s26d_5_a)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+step(exception_technological_measure_unsure, exception_context(_, _, _, _, MeasureState, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26d_5_b),
+    fires_when_value(MeasureState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(prior_technological_measure_renders_harm_unlikely, cite(sg_pdpa_2012_s26d_5_b)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+step(exception_none, exception_context(_, _, _, _, _, _), fires(required, [cite(sg_pdpa_2012_s26d_2)])) :-
+    implements(sg_pdpa_2012_s26d_2).
+
+% ---- (E) the response duty steps -----------------------------------------
+step(duty_role_missing, duty(RoleState, _, _, _, _, _), Outcome) :-
+    fires_when_missing(RoleState, fires(indeterminate([caller_role]), []), Outcome).
+step(duty_public_agency, duty(not_given, _, _, _, _, _), passes).
+step(duty_public_agency, duty(given(CallerRole), ReasonState, _, _, _, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26e_a),
+    memberd_t(CallerRole, [data_intermediary_for_public_agency], Truth),
+    public_agency_outcome(Truth, ReasonState, Pairs, Outcome).
+step(duty_organisation_intermediary, duty(not_given, _, _, _, _, _), passes).
+step(duty_organisation_intermediary, duty(given(CallerRole), ReasonState, _, _, _, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26c_3),
+    memberd_t(CallerRole, [data_intermediary_for_organisation], Truth),
+    organisation_intermediary_outcome(Truth, ReasonState, Pairs, Outcome).
+step(duty_organisation, Context, fires(Result, Citations)) :-
+    implements(sg_pdpa_2012_s26c_2),
+    context_role(Context, organisation),
+    ladder([organisation_notified,
+            organisation_reason_and_possession,
+            organisation_notified_missing,
+            organisation_no_possession,
+            organisation_no_reason,
+            organisation_possession_missing,
+            organisation_reason_missing,
+            organisation_reason_unsure],
+           Context,
+           Result,
+           Citations).
+
+% s 26C(2) and (3)(b): the organisation's assessment duty, steps 6(a) to 6(h).
+step(organisation_notified, duty(_, _, _, NotifiedState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_3_b),
+    fires_when_value(NotifiedState, true, fires(assessment_required, [cite(sg_pdpa_2012_s26c_3_b)]), Outcome).
+step(organisation_reason_and_possession, duty(_, ReasonState, PossessionState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    state_is_t(ReasonState, true, HasReason),
+    state_is_t(PossessionState, true, HasPossession),
+    both_t(HasReason, HasPossession, Truth),
+    outcome_if(Truth, fires(assessment_required, [cite(sg_pdpa_2012_s26c_2)]), Outcome).
+step(organisation_notified_missing, duty(_, _, _, NotifiedState, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_3_b),
+    fires_when_missing(NotifiedState, fires(indeterminate([notified_by_data_intermediary]), []), Outcome).
+step(organisation_no_possession, duty(_, _, PossessionState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    fires_when_value(PossessionState, false, fires(no_duty_triggered, [cite(sg_pdpa_2012_s26c_2)]), Outcome).
+step(organisation_no_reason, duty(_, ReasonState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    fires_when_value(ReasonState, false, fires(no_duty_triggered, [cite(sg_pdpa_2012_s26c_2)]), Outcome).
+step(organisation_possession_missing, duty(_, _, PossessionState, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    fires_when_missing(PossessionState, fires(indeterminate([personal_data_in_possession_or_control]), []), Outcome).
+step(organisation_reason_missing, duty(_, ReasonState, _, _, _, _), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    fires_when_missing(ReasonState, fires(indeterminate([reason_to_believe_breach_occurred]), []), Outcome).
+step(organisation_reason_unsure, duty(_, ReasonState, _, _, _, Pairs), Outcome) :-
+    implements(sg_pdpa_2012_s26c_2),
+    fires_when_value(ReasonState,
+                     unsure,
+                     fires(needs_legal_review(open_textured(reason_to_believe_breach_occurred, cite(sg_pdpa_2012_s26c_2)), [inputs_relied_on(Pairs)]), []),
+                     Outcome).
+
+% ---- test fixtures (internal) ----------------------------------------------
+base_breach_profile([
+    attribute(breach_occurred_date, date(2025, 3, 10)),
+    attribute(within_organisation_only, false),
+    attribute(breach_kinds, [unauthorised_disclosure]),
+    attribute(is_data_breach, true),
+    attribute(breached_data, [full_name_or_alias, payment_card_number]),
+    attribute(publicly_available_or_lawfully_disclosed, []),
+    attribute(affected_individuals_count, 1200)
+]).
+
+no_exception_keys([
+    attribute(prohibited_by_law_enforcement_agency, false),
+    attribute(prohibited_by_commission_direction, false),
+    attribute(commission_waiver_granted, false),
+    attribute(remedial_action_renders_harm_unlikely, false),
+    attribute(prior_technological_measure_renders_harm_unlikely, false)
+]).
+
+notifiable_profile(Profile) :-
+    base_breach_profile(Base),
+    no_exception_keys(Exceptions),
+    append(Base, Exceptions, Joined),
+    append(Joined, [attribute(assessment_date, date(2026, 1, 2))], Profile).
+
+% ---- tests -------------------------------------------------------------------
+test(account_identifier_and_credential_is_deemed_harm) :-
+    harm_determination([attribute(breached_data, [account_identifier, account_access_credential])], Result, Citations),
+    Result == significant_harm,
+    Citations == [cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_b)].
+test(bank_account_number_counts_as_account_identifier) :-
+    harm_determination([attribute(breached_data, [bank_or_finance_company_account_number, account_access_credential])], significant_harm, Citations),
+    member(cite(sg_pdpa_2012_s64_2021_reg_3_2), Citations).
+test(identity_with_unexcluded_schedule_item_is_deemed_harm) :-
+    harm_determination([attribute(breached_data, [full_name_or_alias, remuneration, debts]), attribute(publicly_available_or_lawfully_disclosed, [debts])], significant_harm, Citations),
+    sort([cite(sg_pdpa_2012_s26b_2_a), cite(sg_pdpa_2012_s64_2021_reg_3_1_a), cite(sg_pdpa_2012_s64_2021_sched_2_item_1), cite(sg_pdpa_2012_s64_2021_sched_2_item_2), cite(sg_pdpa_2012_s64_2021_sched_1_item_1)], Expected),
+    Citations == Expected.
+test(identity_with_schedule_item_needs_the_exclusion_list) :-
+    harm_determination([attribute(breached_data, [identification_number, net_worth])], Result, Citations),
+    Result == indeterminate([publicly_available_or_lawfully_disclosed]),
+    Citations == [].
+test(unsure_harm_judgement_is_referred) :-
+    harm_determination([attribute(breached_data, [other_personal_data]), attribute(assessed_likely_significant_harm, unsure)], Result, []),
+    Result == needs_legal_review(open_textured(assessed_likely_significant_harm, cite(sg_pdpa_2012_s26b_1_a)), [inputs_relied_on([assessed_likely_significant_harm-unsure])]).
+test(five_hundred_individuals_is_significant_scale) :-
+    scale_determination([attribute(affected_individuals_count, 500)], significant_scale, Citations),
+    Citations == [cite(sg_pdpa_2012_s26b_3_a), cite(sg_pdpa_2012_s64_2021_reg_4)].
+test(four_hundred_ninety_nine_with_false_judgement_is_not_significant_scale) :-
+    scale_determination([attribute(affected_individuals_count, 499), attribute(assessed_likely_significant_scale, false)], no_significant_scale, _).
+test(four_hundred_ninety_nine_is_not_significant_scale, fail) :-
+    scale_determination([attribute(affected_individuals_count, 499), attribute(assessed_likely_significant_scale, false)], significant_scale, _).
+test(breach_before_commencement_is_not_applicable) :-
+    data_breach_notifiability([attribute(breach_occurred_date, date(2021, 1, 31)), attribute(is_data_breach, true)], not_applicable, Citations),
+    Citations == [cite(sg_pdpa_2012_s26c_1)].
+test(breach_on_commencement_day_names_the_next_key) :-
+    data_breach_notifiability([attribute(breach_occurred_date, date(2021, 2, 1)), attribute(is_data_breach, true)], Result, []),
+    Result == indeterminate([breached_data]).
+test(breach_on_commencement_day_is_not_not_applicable, fail) :-
+    data_breach_notifiability([attribute(breach_occurred_date, date(2021, 2, 1)), attribute(is_data_breach, true)], not_applicable, _).
+test(missing_date_is_named_first) :-
+    data_breach_notifiability([attribute(is_data_breach, false)], indeterminate([breach_occurred_date]), []).
+test(within_organisation_access_is_excluded_even_when_unsure) :-
+    data_breach_notifiability([attribute(breach_occurred_date, date(2025, 5, 1)), attribute(within_organisation_only, true), attribute(breach_kinds, [unauthorised_access, unauthorised_access]), attribute(is_data_breach, unsure)], not_notifiable, Citations),
+    Citations == [cite(sg_pdpa_2012_s26b_4)].
+test(within_organisation_disposal_is_not_excluded) :-
+    data_breach_notifiability([attribute(breach_occurred_date, date(2025, 5, 1)), attribute(within_organisation_only, true), attribute(breach_kinds, [unauthorised_disposal]), attribute(is_data_breach, true), attribute(breached_data, [account_identifier, account_access_credential])], notifiable, _).
+test(full_profile_is_notifiable_on_both_grounds) :-
+    notifiable_profile(Profile),
+    data_breach_notifiability(Profile, notifiable, Citations),
+    member(cite(sg_pdpa_2012_s64_2021_sched_1_item_3), Citations),
+    member(cite(sg_pdpa_2012_s64_2021_reg_4), Citations).
+test(full_profile_is_not_not_notifiable, fail) :-
+    notifiable_profile(Profile),
+    data_breach_notifiability(Profile, not_notifiable, _).
+test(notifiability_has_exactly_one_solution) :-
+    notifiable_profile(Profile),
+    findall(Result-Citations, data_breach_notifiability(Profile, Result, Citations), Answers),
+    length(Answers, 1).
+test(full_profile_requires_notice_to_individuals) :-
+    notifiable_profile(Profile),
+    individual_notification(Profile, required, Citations),
+    Citations == [cite(sg_pdpa_2012_s26d_2)].
+test(law_enforcement_prohibition_wins_over_waiver) :-
+    base_breach_profile(Base),
+    append(Base, [attribute(prohibited_by_law_enforcement_agency, true), attribute(commission_waiver_granted, true)], Profile),
+    individual_notification(Profile, prohibited, Citations),
+    Citations == [cite(sg_pdpa_2012_s26d_6_a)].
+test(scale_only_breach_owes_no_notice_to_individuals) :-
+    individual_notification([attribute(breach_occurred_date, date(2025, 3, 10)), attribute(within_organisation_only, false), attribute(breach_kinds, [unauthorised_access]), attribute(is_data_breach, true), attribute(breached_data, [other_personal_data]), attribute(assessed_likely_significant_harm, false), attribute(affected_individuals_count, 600)], not_required, Citations),
+    Citations == [cite(sg_pdpa_2012_s26d_2), cite(sg_pdpa_2012_s26b_1_a)].
+test(settled_exception_answers_beside_unsure_judgements) :-
+    individual_notification([attribute(breach_occurred_date, date(2025, 6, 1)), attribute(is_data_breach, unsure), attribute(assessed_likely_significant_harm, unsure), attribute(prohibited_by_law_enforcement_agency, false), attribute(prohibited_by_commission_direction, false), attribute(commission_waiver_granted, false), attribute(remedial_action_renders_harm_unlikely, true)], not_required, Citations),
+    Citations == [cite(sg_pdpa_2012_s26d_5_a)].
+test(public_agency_intermediary_needs_no_date) :-
+    breach_response_duty([attribute(caller_role, data_intermediary_for_public_agency), attribute(reason_to_believe_breach_occurred, true)], notify_public_agency_without_undue_delay, Citations),
+    Citations == [cite(sg_pdpa_2012_s26e_a), cite(sg_pdpa_2012_s26e_b)].
+test(organisation_notified_by_intermediary_must_assess) :-
+    breach_response_duty([attribute(caller_role, organisation), attribute(breach_occurred_date, date(2024, 4, 4)), attribute(notified_by_data_intermediary, true)], assessment_required, [cite(sg_pdpa_2012_s26c_3_b)]).
+test(organisation_with_unsure_reason_is_referred) :-
+    breach_response_duty([attribute(caller_role, organisation), attribute(breach_occurred_date, date(2024, 4, 4)), attribute(notified_by_data_intermediary, false), attribute(personal_data_in_possession_or_control, true), attribute(reason_to_believe_breach_occurred, unsure)], Result, []),
+    Result == needs_legal_review(open_textured(reason_to_believe_breach_occurred, cite(sg_pdpa_2012_s26c_2)), [inputs_relied_on([reason_to_believe_breach_occurred-unsure])]).
+test(period_end_adds_three_days) :-
+    commission_notification_period_end(date(2026, 1, 1), date(2026, 1, 4)).
+test(period_end_carries_into_march) :-
+    commission_notification_period_end(date(2026, 2, 27), date(2026, 3, 2)).
+test(period_end_in_a_leap_year) :-
+    commission_notification_period_end(date(2028, 2, 27), date(2028, 3, 1)).
+test(period_end_refuses_an_unreal_day) :-
+    commission_notification_period_end(date(2026, 2, 30), End),
+    End == input_problems([wrong_type(assessed_date)]).
+test(commission_contents_has_nine_items) :-
+    notification_contents(commission, Items),
+    length(Items, 9).
+test(individual_contents_has_six_items) :-
+    notification_contents(affected_individual, Items),
+    length(Items, 6).
+test(additional_contents_has_two_items) :-
+    notification_contents(commission_additional, Items),
+    length(Items, 2).
+test(combined_assessment_of_a_notifiable_breach) :-
+    notifiable_profile(Profile),
+    pdpa_breach_assessment(Profile, pdpa_breach(notifiable, Grounds, Deadline, Individuals, Citations)),
+    Grounds == [significant_harm, significant_scale],
+    Deadline = date(2026, 1, 5),
+    Individuals == required,
+    member(cite(sg_pdpa_2012_s26d_1), Citations),
+    member(cite(sg_pdpa_2012_s26d_2), Citations).
+test(input_problems_come_first) :-
+    harm_determination([attribute(colour, red)], Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+test(assessment_with_input_problems) :-
+    pdpa_breach_assessment([attribute(is_data_breach, maybe)], Result),
+    Result == pdpa_breach(input_problems([wrong_type(is_data_breach)]), [], n_a, n_a, []).
+test(facade_status_projects_the_decision) :-
+    notifiable_profile(Profile),
+    pdpa_data_breach_notification_status(Profile, notifiable).
+
+:- end_module(pdpa_data_breach_notification).

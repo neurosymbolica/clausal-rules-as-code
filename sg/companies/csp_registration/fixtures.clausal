@@ -1,0 +1,176 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for sg/companies/csp_registration.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is a dict built from Key-Value pairs with dict_pairs/2.
+% =====================================================================
+
+:- module(fixtures, [
+    csp_registration_subject/1,
+    csp_registration_profile_for/2,
+    csp_registration_assess/2
+]).
+
+:- use_module(sg/companies/csp_registration/csp_registration, [csp_assessment/2]).
+
+% ---- Subject registry ------------------------------------------------
+
+csp_registration_subject(no_service).
+csp_registration_subject(no_service_near_miss).
+csp_registration_subject(not_in_singapore).
+csp_registration_subject(not_in_singapore_near_miss).
+csp_registration_subject(fully_registered).
+csp_registration_subject(fully_registered_near_miss).
+csp_registration_subject(deemed_accounting).
+csp_registration_subject(deemed_accounting_near_miss).
+csp_registration_subject(nominee_complied).
+csp_registration_subject(nominee_breached).
+csp_registration_subject(nominee_not_applicable).
+csp_registration_subject(missing_activities).
+csp_registration_subject(missing_carries).
+csp_registration_subject(listed_shareholder).
+csp_registration_subject(unlisted_shareholder).
+
+% ---- Profiles --------------------------------------------------------
+
+% Rule 1: no engaged type -> no_corporate_service
+csp_registration_profile_for(no_service, Profile) :-
+    dict_pairs(Profile, [
+        activities-[],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% Near-miss: one activity present but unregistered -> registration_required
+csp_registration_profile_for(no_service_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        activities-[forms_legal_person_for_another],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% Rule 2: carries_on_business_in_singapore false -> not_carrying_on_business_in_singapore
+csp_registration_profile_for(not_in_singapore, Profile) :-
+    dict_pairs(Profile, [
+        activities-[forms_legal_person_for_another],
+        carries_on_business_in_singapore-false,
+        registered_service_types-[]
+    ]).
+
+% Near-miss: same activities but carries=true, unregistered -> registration_required
+csp_registration_profile_for(not_in_singapore_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        activities-[forms_legal_person_for_another],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% Rule 3/5: all engaged types covered by actual registration -> registered
+csp_registration_profile_for(fully_registered, Profile) :-
+    dict_pairs(Profile, [
+        activities-[forms_legal_person_for_another, provides_registered_office_or_address],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[formation, address]
+    ]).
+
+% Near-miss: one engaged type missing from registration -> registration_required
+csp_registration_profile_for(fully_registered_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        activities-[forms_legal_person_for_another, provides_registered_office_or_address],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[formation]
+    ]).
+
+% Rule 3 (s 7(2)): accounting entity with own service -> deemed registered
+csp_registration_profile_for(deemed_accounting, Profile) :-
+    dict_pairs(Profile, [
+        activities-[designated_activity_with_accounting_service],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[],
+        is_accounting_entity-true,
+        accounting_service_is_own-true
+    ]).
+
+% Near-miss: accounting entity but service is NOT own -> registration_required
+csp_registration_profile_for(deemed_accounting_near_miss, Profile) :-
+    dict_pairs(Profile, [
+        activities-[designated_activity_with_accounting_service],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[],
+        is_accounting_entity-true,
+        accounting_service_is_own-false
+    ]).
+
+% Rule 4: registered CSP arranges nominee director, all three s 16 booleans true -> complied
+csp_registration_profile_for(nominee_complied, Profile) :-
+    dict_pairs(Profile, [
+        activities-[],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[director_secretary],
+        arranges_nominee_director-true,
+        satisfied_nominee_fit_and_proper-true,
+        took_reasonable_steps_on_disqualification-true,
+        considered_prescribed_factors-true
+    ]).
+
+% Near-miss: same but satisfied_nominee_fit_and_proper false -> breached
+csp_registration_profile_for(nominee_breached, Profile) :-
+    dict_pairs(Profile, [
+        activities-[],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[director_secretary],
+        arranges_nominee_director-true,
+        satisfied_nominee_fit_and_proper-false,
+        took_reasonable_steps_on_disqualification-true,
+        considered_prescribed_factors-true
+    ]).
+
+% Rule 4: arranges nominee director but director_secretary NOT registered -> not_applicable
+csp_registration_profile_for(nominee_not_applicable, Profile) :-
+    dict_pairs(Profile, [
+        activities-[],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[],
+        arranges_nominee_director-true
+    ]).
+
+% Rule 0: missing required key (activities) -> indeterminate
+csp_registration_profile_for(missing_activities, Profile) :-
+    dict_pairs(Profile, [
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% Rule 0: missing required key (carries_on_business_in_singapore) -> indeterminate
+csp_registration_profile_for(missing_carries, Profile) :-
+    dict_pairs(Profile, [
+        activities-[],
+        registered_service_types-[]
+    ]).
+
+% s 2(1)(d): listed corporation -> NOT a corporate service
+csp_registration_profile_for(listed_shareholder, Profile) :-
+    dict_pairs(Profile, [
+        activities-[nominee_shareholder_for_listed_corporation],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% s 2(1)(d): unlisted corporation -> IS a corporate service (nominee_shareholder)
+csp_registration_profile_for(unlisted_shareholder, Profile) :-
+    dict_pairs(Profile, [
+        activities-[nominee_shareholder_for_unlisted_corporation],
+        carries_on_business_in_singapore-true,
+        registered_service_types-[]
+    ]).
+
+% ---- Convenience wrapper ---------------------------------------------
+
+csp_registration_assess(Subject, Result) :-
+    csp_registration_profile_for(Subject, Profile),
+    csp_assessment(Profile, Result).
+
+:- end_module(fixtures).

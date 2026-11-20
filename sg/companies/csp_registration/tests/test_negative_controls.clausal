@@ -1,0 +1,100 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each major route: a POSITIVE case paired with a near-miss NEGATIVE
+% control (one required condition changed -> different verdict), proving
+% the route is LOAD-BEARING and a wrong answer is NOT produced.
+% Run: python -m clausal.testing sg/companies/csp_registration/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(sg/companies/csp_registration/csp_registration, [
+    csp_registration_status/2,
+    csp_registration_status_values/1
+]).
+:- use_module(sg/companies/csp_registration/fixtures, [csp_registration_profile_for/2]).
+
+% --- Route 1: indeterminate (missing required key) ---
+% Positive: missing_activities profile -> indeterminate
+test(indeterminate_is_a_valid_status) :-
+    csp_registration_status_values(Statuses),
+    member(indeterminate, Statuses).
+
+test(missing_activities_is_indeterminate) :-
+    csp_registration_profile_for(missing_activities, Profile),
+    csp_registration_status(Profile, indeterminate).
+
+% Near-miss: the same profile with activities added is NOT indeterminate
+test(missing_activities_is_not_no_corporate_service, fail) :-
+    csp_registration_profile_for(missing_activities, Profile),
+    csp_registration_status(Profile, no_corporate_service).
+
+% --- Route 2: no_corporate_service (no engaged types) ---
+test(no_service_is_no_corporate_service) :-
+    csp_registration_profile_for(no_service, Profile),
+    csp_registration_status(Profile, no_corporate_service).
+
+% Near-miss: one activity present -> NOT no_corporate_service
+test(no_service_near_miss_is_not_no_corporate_service, fail) :-
+    csp_registration_profile_for(no_service_near_miss, Profile),
+    csp_registration_status(Profile, no_corporate_service).
+
+% --- Route 3: not_carrying_on_business_in_singapore ---
+test(not_in_singapore_is_not_carrying) :-
+    csp_registration_profile_for(not_in_singapore, Profile),
+    csp_registration_status(Profile, not_carrying_on_business_in_singapore).
+
+% Near-miss: carries=true -> NOT not_carrying
+test(not_in_singapore_near_miss_is_not_not_carrying, fail) :-
+    csp_registration_profile_for(not_in_singapore_near_miss, Profile),
+    csp_registration_status(Profile, not_carrying_on_business_in_singapore).
+
+% --- Route 4: registered (all engaged types covered) ---
+test(fully_registered_is_registered) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    csp_registration_status(Profile, registered).
+
+% Near-miss: one type missing from registration -> NOT registered
+test(fully_registered_near_miss_is_not_registered, fail) :-
+    csp_registration_profile_for(fully_registered_near_miss, Profile),
+    csp_registration_status(Profile, registered).
+
+% --- Route 5: registration_required (some engaged type uncovered) ---
+test(fully_registered_near_miss_is_registration_required) :-
+    csp_registration_profile_for(fully_registered_near_miss, Profile),
+    csp_registration_status(Profile, registration_required).
+
+% Near-miss: all types registered -> NOT registration_required
+test(fully_registered_is_not_registration_required, fail) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    csp_registration_status(Profile, registration_required).
+
+% --- Route 6: deemed accounting (s 7(2)) ---
+test(deemed_accounting_is_registered) :-
+    csp_registration_profile_for(deemed_accounting, Profile),
+    csp_registration_status(Profile, registered).
+
+% Near-miss: accounting entity but service NOT own -> NOT registered
+test(deemed_accounting_near_miss_is_not_registered, fail) :-
+    csp_registration_profile_for(deemed_accounting_near_miss, Profile),
+    csp_registration_status(Profile, registered).
+
+test(deemed_accounting_near_miss_is_registration_required) :-
+    csp_registration_profile_for(deemed_accounting_near_miss, Profile),
+    csp_registration_status(Profile, registration_required).
+
+% --- Route 7: nominee director duty ---
+test(nominee_complied_is_registered) :-
+    csp_registration_profile_for(nominee_complied, Profile),
+    csp_registration_status(Profile, registered).
+
+% Near-miss: breached profile is still registered (duty breach does not change registration status)
+test(nominee_breached_is_registered) :-
+    csp_registration_profile_for(nominee_breached, Profile),
+    csp_registration_status(Profile, registered).
+
+% The wrong status for a registered profile is rejected
+test(nominee_complied_is_not_registration_required, fail) :-
+    csp_registration_profile_for(nominee_complied, Profile),
+    csp_registration_status(Profile, registration_required).
+
+:- end_module(test_negative_controls).

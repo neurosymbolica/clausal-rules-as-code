@@ -6,7 +6,7 @@ Each domain answers one legal question. Its page shows the scope, the pinned sou
 !!! warning "Disclaimer"
     These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-The eight domains of the first release have a provision-tracking ledger and a side-by-side report. The domains added on 2026-11-16 and 2026-11-18 do not yet have a ledger, so they have no side-by-side report.
+The eight domains of the first release have a provision-tracking ledger and a side-by-side report. The domains added on 2026-11-16, 2026-11-18 and 2026-11-20 do not yet have a ledger, so they have no side-by-side report.
 
 | Domain | Question |
 |---|---|
@@ -97,6 +97,12 @@ The eight domains of the first release have a provision-tracking ledger and a si
 | [`ind/dpdp_notice_consent`](ind-dpdp_notice_consent.md) | Digital Personal Data Protection Act, 2023 ss 2(g), 2(i), 4, 5, 6 and 7, with the Digital Personal Data Protection Rules, 2025 rules 1(4), 3, 4 and 5 and the First and ... |
 | [`ind/dpdp_security_retention`](ind-dpdp_security_retention.md) | The Data Fiduciary's duties under section 8 of the Digital Personal Data Protection Act, 2023 other than breach intimation, read with rules 1(4), 6 and 8 and the Third ... |
 | [`ind/dpdp_transfer`](ind-dpdp_transfer.md) | Restrictions on the transfer of personal data outside India under the Digital Personal Data Protection Act 2023 s 16 (s 16(1) the notified restriction, s 16(2) other ... |
+| [`sg/companies/csp_registration`](sg-companies-csp_registration.md) | Whether a person or entity must be registered as a corporate service provider under the Corporate Service Providers Act 2024 (ss 2, 7 and 16): which corporate services ... |
+| [`sg/companies/small_company_audit_exemption`](sg-companies-small_company_audit_exemption.md) | Whether a Singapore company is exempt from audit under the Companies Act 1967 (ss 205B and 205C and the Thirteenth Schedule): whether it is a small company or a small ... |
+| [`sg/data_protection/pdpa_data_breach_notification`](sg-data_protection-pdpa_data_breach_notification.md) | Singapore PDPA 2012 Part 6A (ss 26A to 26E) with the Personal Data Protection (Notification of Data Breaches) Regulations 2021 (S 64/2021) regs 3 to 6 and the Schedule: ... |
+| [`sg/payments/psa_licence_class`](sg-payments-psa_licence_class.md) | Which licence class a payment service provider needs under the Payment Services Act 2019 (ss 5 and 6): the payment services it provides and the monthly ... |
+| [`sg/securities/sfa_offer_exemptions`](sg-securities-sfa_offer_exemptions.md) | Whether an offer of securities in Singapore is exempt from the prospectus requirement under the Securities and Futures Act 2001 (ss 272A, 272B, 274 and 275), on the size ... |
+| [`sg/tax/gst_registration`](sg-tax-gst_registration.md) | Singapore goods and services tax: whether a business is liable to register for GST under the First Schedule of the Goods and Services Tax Act 1993, on the retrospective ... |
 | [`uk/uk_automated_decision_making`](uk-uk_automated_decision_making.md) | UK GDPR Chapter III Section 4A (automated individual decision-making), as substituted for the old Art 22 by section 80(1) of the Data (Use and Access) Act 2025, for a ... |
 | [`uk/uk_complaints_to_the_commissioner`](uk-uk_complaints_to_the_commissioner.md) | UK law in force (drafter's reading, not a lawyer's): the Data Protection Act 2018 as amended by the Data (Use and Access) Act 2025 s.103, in force from 19 June 2026 ... |
 | [`uk/uk_pecr_cookie_exemptions_and_fines`](uk-uk_pecr_cookie_exemptions_and_fines.md) | UK law in force (the drafter's reading, not a lawyer's), under the 'Latest available (Revised)' texts of legislation.gov.uk fetched 2026-11-15. Three rules of the ... |

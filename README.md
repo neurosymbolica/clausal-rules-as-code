@@ -1,7 +1,7 @@
 # clausal-rules-as-code
 
 Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`,
-`uk/`, `cn/`, `ind/`, `us/`) is one **domain**: one narrowly scoped legal question, drawn from
+`uk/`, `cn/`, `ind/`, `sg/`, `us/`) is one **domain**: one narrowly scoped legal question, drawn from
 one or a few articles (for example, *is this person a beneficial owner under AMLR Art 52?*, or
 *does this aid stay under the de minimis ceiling?*). No domain is a complete formalization of a
 statute. For each domain you get:
@@ -10,7 +10,8 @@ statute. For each domain you get:
   implements, and under `iso/` the same rules and tests as plain ISO Prolog (`*.pl`),
   generated from it;
 - the **tests** (`tests/`);
-- the **statute text it was written against** (`sources/`), pinned by URL and SHA-256;
+- the **statute text it was written against** (`sources/`), pinned by URL and SHA-256 (the Singapore
+  domains carry no statute text: they link to Singapore Statutes Online instead, see `NOTICE`);
 - a **manifest** (`manifest.yaml`) stating the domain's scope, its public interface, and
   every provision it deliberately does not implement, with the reason and the consequence;
 - a **provision-tracking ledger** (`provisions.yaml`), for the eight domains listed below
@@ -31,7 +32,7 @@ Every domain folder added on 2026-11-16 or 2026-11-18 repeats this in its own `R
 
 ## What is in it
 
-93 domains and 18,765 tests (18,734 in the domains, 31 in the shared procurement vocabulary),
+99 domains and 19,445 tests (19,414 in the domains, 31 in the shared procurement vocabulary),
 all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
 
 | Area | Domains |
@@ -50,6 +51,7 @@ all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in 
 | United Kingdom: UK GDPR, Data Protection Act 2018, Data (Use and Access) Act 2025, PECR | 5 |
 | China: Personal Information Protection Law | 2 |
 | India: Digital Personal Data Protection Act 2023 and Rules 2025 | 4 |
+| Singapore: GST registration, PDPA data breach notification, corporate service providers, small-company audit exemption, payment services licensing, securities offer exemptions | 6 |
 | United States: Virginia Consumer Data Protection Act | 1 |
 
 `_index/STATUS.md` lists every domain with its test count and the result of each check.
@@ -81,6 +83,8 @@ harness, and its answers were scored against an independently written, sealed te
 is not published (the verdicts were recorded after the runs and are not authenticated); its
 tests here pass on all three engines. They have no provision-tracking ledger, so no check
 accounts for how much of the statute each one covers, and no side-by-side report.
+
+On 2026-11-20 6 Singapore domains were added. They quote no Singapore legislation: each citation record carries a label and a link to [Singapore Statutes Online](https://sso.agc.gov.sg), where the text can be read, and no statute text is pinned in the domain folder.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.

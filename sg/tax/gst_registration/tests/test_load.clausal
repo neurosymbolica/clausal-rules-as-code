@@ -1,0 +1,99 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the primary slice tabulates.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      sg/tax/gst_registration/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(sg/tax/gst_registration/citations, [citation/2, implements/1]).
+
+% --- Result term builds and destructures ---
+
+test(retrospective_result_term_builds) :-
+    Result = gst_retrospective(liable, 150000000, date(2020, 1, 30), date(2020, 3, 1), [sg_gsta_1993_sch1_para_1_1_a_ii, sg_gsta_1993_sch1_para_4_1a, sg_gsta_1993_sch1_para_4_2_a]),
+    Result = gst_retrospective(Decision, ValueCents, NotifyBy, RegisteredFrom, Citations),
+    Decision == liable,
+    ValueCents == 150000000,
+    NotifyBy == date(2020, 1, 30),
+    RegisteredFrom == date(2020, 3, 1),
+    Citations == [sg_gsta_1993_sch1_para_1_1_a_ii, sg_gsta_1993_sch1_para_4_1a, sg_gsta_1993_sch1_para_4_2_a].
+
+test(prospective_result_term_builds) :-
+    Result = gst_prospective(liable, 120000000, date(2022, 2, 14), date(2022, 2, 15), [sg_gsta_1993_sch1_para_1_1_b, sg_gsta_1993_sch1_para_5_1, sg_gsta_1993_sch1_para_5_2_a_i]),
+    Result = gst_prospective(Decision, ValueCents, NotifyBy, RegisteredFrom, Citations),
+    Decision == liable,
+    ValueCents == 120000000,
+    NotifyBy == date(2022, 2, 14),
+    RegisteredFrom == date(2022, 2, 15),
+    Citations == [sg_gsta_1993_sch1_para_1_1_b, sg_gsta_1993_sch1_para_5_1, sg_gsta_1993_sch1_para_5_2_a_i].
+
+test(retrospective_indeterminate_result_term) :-
+    Result = gst_retrospective(indeterminate, n_a, n_a, n_a, []),
+    Result = gst_retrospective(Decision, ValueCents, NotifyBy, RegisteredFrom, Citations),
+    Decision == indeterminate,
+    ValueCents == n_a,
+    NotifyBy == n_a,
+    RegisteredFrom == n_a,
+    Citations == [].
+
+test(prospective_indeterminate_result_term) :-
+    Result = gst_prospective(indeterminate, n_a, n_a, n_a, []),
+    Result = gst_prospective(Decision, ValueCents, NotifyBy, RegisteredFrom, Citations),
+    Decision == indeterminate,
+    ValueCents == n_a,
+    NotifyBy == n_a,
+    RegisteredFrom == n_a,
+    Citations == [].
+
+% --- Verdict atoms are pairwise distinct ---
+
+test(retrospective_verdict_atoms_are_distinct) :-
+    dif(liable, not_liable),
+    dif(liable, not_liable_comptroller_satisfied),
+    dif(liable, exempted_zero_rated),
+    dif(liable, already_registered),
+    dif(liable, indeterminate),
+    dif(not_liable, not_liable_comptroller_satisfied),
+    dif(not_liable, exempted_zero_rated),
+    dif(not_liable, already_registered),
+    dif(not_liable, indeterminate),
+    dif(not_liable_comptroller_satisfied, exempted_zero_rated),
+    dif(not_liable_comptroller_satisfied, already_registered),
+    dif(not_liable_comptroller_satisfied, indeterminate),
+    dif(exempted_zero_rated, already_registered),
+    dif(exempted_zero_rated, indeterminate),
+    dif(already_registered, indeterminate).
+
+test(prospective_verdict_atoms_are_distinct) :-
+    dif(liable, not_liable),
+    dif(liable, exempted_zero_rated),
+    dif(liable, already_registered),
+    dif(liable, indeterminate),
+    dif(not_liable, exempted_zero_rated),
+    dif(not_liable, already_registered),
+    dif(not_liable, indeterminate),
+    dif(exempted_zero_rated, already_registered),
+    dif(exempted_zero_rated, indeterminate),
+    dif(already_registered, indeterminate).
+
+% --- A real citation record resolves ---
+
+test(a_real_citation_resolves) :-
+    citation(sg_gsta_1993_sch1_para_1_1_a_ii, _Record).
+
+test(implements_succeeds_for_recorded_key) :-
+    implements(sg_gsta_1993_sch1_para_1_1_a_ii).
+
+test(implements_succeeds_for_prospective_key) :-
+    implements(sg_gsta_1993_sch1_para_5_2_a_ii).
+
+% --- n_a sentinel is an atom, date is a compound ---
+
+test(n_a_is_an_atom) :-
+    atom(n_a).
+
+test(date_term_is_compound) :-
+    compound(date(2020, 1, 30)).
+
+:- end_module(test_load).

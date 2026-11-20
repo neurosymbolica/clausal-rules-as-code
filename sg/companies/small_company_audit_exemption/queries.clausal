@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for sg/companies/small_company_audit_exemption.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types served:
+%   #2 eligibility  -- small_company_audit_exemption_status/2 (imported)
+%                      small_company_audit_exemption_checklist/2 (imported)
+%   #6 threshold    -- small_company_audit_exemption_threshold/2
+%                      small_company_audit_exemption_reaches/3
+%   #16 what-if     -- small_company_audit_exemption_what_if/4
+% =====================================================================
+
+:- module(queries, [
+    small_company_audit_exemption_profile_keys/1,
+    small_company_audit_exemption_what_if/4,
+    small_company_audit_exemption_threshold/2,
+    small_company_audit_exemption_reaches/3
+]).
+
+:- use_module(library(clpz)).
+:- use_module(kit/query_combinators, [override_key/4]).
+:- use_module(sg/companies/small_company_audit_exemption/small_company_audit_exemption, [
+    small_company_audit_exemption_status/2
+]).
+
+:- constant_value(company_revenue_threshold_cents, 1000000000).
+:- constant_value(company_assets_threshold_cents, 1000000000).
+:- constant_value(company_employees_threshold, 50).
+
+% ---- Profile key schema -------------------------------------------
+
+small_company_audit_exemption_profile_keys([
+    incorporation_date,
+    financial_years,
+    is_parent_company,
+    is_subsidiary_company,
+    group_formation_date,
+    group_financial_years,
+    audit_requisition_notice_date
+]).
+
+% ---- #16 what-if: override one key, re-decide ----------------------
+
+small_company_audit_exemption_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    small_company_audit_exemption_status(Hypothesis, NewStatus).
+
+% ---- #6 threshold: expose the boundary at which the outcome changes --
+
+small_company_audit_exemption_threshold(revenue_cents, threshold(revenue_cents, 1000000000, cite(ca1967_sc13_para_2))).
+small_company_audit_exemption_threshold(total_assets_cents, threshold(total_assets_cents, 1000000000, cite(ca1967_sc13_para_2))).
+small_company_audit_exemption_threshold(employees_count, threshold(employees_count, 50, cite(ca1967_sc13_para_2))).
+
+% Reaches: is a value at-or-below (satisfied) or above (not_satisfied)?
+small_company_audit_exemption_reaches(revenue_cents, Value, satisfied) :-
+    Value #=< constant(company_revenue_threshold_cents).
+small_company_audit_exemption_reaches(revenue_cents, Value, not_satisfied) :-
+    Value #> constant(company_revenue_threshold_cents).
+small_company_audit_exemption_reaches(total_assets_cents, Value, satisfied) :-
+    Value #=< constant(company_assets_threshold_cents).
+small_company_audit_exemption_reaches(total_assets_cents, Value, not_satisfied) :-
+    Value #> constant(company_assets_threshold_cents).
+small_company_audit_exemption_reaches(employees_count, Value, satisfied) :-
+    Value #=< constant(company_employees_threshold).
+small_company_audit_exemption_reaches(employees_count, Value, not_satisfied) :-
+    Value #> constant(company_employees_threshold).
+
+:- end_module(queries).

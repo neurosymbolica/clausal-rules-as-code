@@ -1,0 +1,69 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the package modules load, and the verdict
+% vocabulary the order pins is the one the primary slice tabulates.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      sg/companies/csp_registration/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(sg/companies/csp_registration/citations, [citation/2]).
+
+test(the_result_term_builds_and_destructures) :-
+    Result = csp(no_corporate_service, [], [], not_applicable, [sg_cspa_2024_s2_1_corporate_service]),
+    Result = csp(Decision, ServiceTypes, Missing, NomineeDuty, Citations),
+    Decision == no_corporate_service,
+    ServiceTypes == [],
+    Missing == [],
+    NomineeDuty == not_applicable,
+    Citations == [sg_cspa_2024_s2_1_corporate_service].
+
+test(the_result_term_carries_all_five_fields) :-
+    Result = csp(registered, [formation, director_secretary], [], not_applicable, [sg_cspa_2024_s7_1]),
+    Result = csp(Decision, ServiceTypes, Missing, NomineeDuty, Citations),
+    Decision == registered,
+    ServiceTypes == [formation, director_secretary],
+    Missing == [],
+    NomineeDuty == not_applicable,
+    Citations == [sg_cspa_2024_s7_1].
+
+test(the_decision_atoms_are_distinct) :-
+    dif(no_corporate_service, not_carrying_on_business_in_singapore),
+    dif(no_corporate_service, registered),
+    dif(no_corporate_service, registration_required),
+    dif(no_corporate_service, indeterminate),
+    dif(not_carrying_on_business_in_singapore, registered),
+    dif(not_carrying_on_business_in_singapore, registration_required),
+    dif(not_carrying_on_business_in_singapore, indeterminate),
+    dif(registered, registration_required),
+    dif(registered, indeterminate),
+    dif(registration_required, indeterminate).
+
+test(the_nominee_duty_atoms_are_distinct) :-
+    dif(complied, breached),
+    dif(complied, not_applicable),
+    dif(complied, n_a),
+    dif(breached, not_applicable),
+    dif(breached, n_a),
+    dif(not_applicable, n_a).
+
+test(the_service_type_atoms_are_distinct) :-
+    dif(formation, director_secretary),
+    dif(formation, address),
+    dif(formation, nominee_shareholder),
+    dif(formation, designated_accounting),
+    dif(formation, acra_transaction),
+    dif(director_secretary, address),
+    dif(director_secretary, nominee_shareholder),
+    dif(director_secretary, designated_accounting),
+    dif(director_secretary, acra_transaction),
+    dif(address, nominee_shareholder),
+    dif(address, designated_accounting),
+    dif(address, acra_transaction),
+    dif(nominee_shareholder, designated_accounting),
+    dif(nominee_shareholder, acra_transaction),
+    dif(designated_accounting, acra_transaction).
+
+test(the_real_citation_resolves) :-
+    citation(sg_cspa_2024_s7_1, _Record).
+
+:- end_module(test_load).

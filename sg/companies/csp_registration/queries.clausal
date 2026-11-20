@@ -1,0 +1,38 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for sg/companies/csp_registration.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% csp_registration_what_if/4:      override one key -> re-evaluate status
+% csp_registration_profile_keys/1: top-level profile key schema
+% =====================================================================
+
+:- module(queries, [
+    csp_registration_profile_keys/1,
+    csp_registration_what_if/4
+]).
+
+:- use_module(kit/query_combinators, [override_key/4]).
+:- use_module(sg/companies/csp_registration/csp_registration, [csp_registration_status/2]).
+
+% schema of top-level profile keys
+csp_registration_profile_keys([
+    activities,
+    carries_on_business_in_singapore,
+    registered_service_types,
+    is_accounting_entity,
+    accounting_service_is_own,
+    deemed_registration_suspended_or_cancelled,
+    arranges_nominee_director,
+    satisfied_nominee_fit_and_proper,
+    took_reasonable_steps_on_disqualification,
+    considered_prescribed_factors
+]).
+
+% what-if: re-evaluate with one key hypothetically overridden
+csp_registration_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    csp_registration_status(Hypothesis, NewStatus).
+
+:- end_module(queries).

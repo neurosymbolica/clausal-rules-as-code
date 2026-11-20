@@ -1,0 +1,41 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: result argument UNBOUND, enumerate
+% all solutions and verify determinism and correct values.
+% Run: python -m clausal.testing sg/companies/csp_registration/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(sg/companies/csp_registration/csp_registration, [
+    decide_csp_registration/2,
+    csp_registration_status/2
+]).
+:- use_module(sg/companies/csp_registration/fixtures, [csp_registration_profile_for/2]).
+
+test(no_service_profile_yields_exactly_one_status) :-
+    csp_registration_profile_for(no_service, Profile),
+    findall(Status, csp_registration_status(Profile, Status), Statuses),
+    Statuses == [no_corporate_service].
+
+test(fully_registered_profile_yields_exactly_one_status) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    findall(Status, csp_registration_status(Profile, Status), Statuses),
+    Statuses == [registered].
+
+test(deemed_accounting_profile_yields_registered) :-
+    csp_registration_profile_for(deemed_accounting, Profile),
+    findall(Status, csp_registration_status(Profile, Status), Statuses),
+    Statuses == [registered].
+
+test(decide_csp_carries_a_citation) :-
+    csp_registration_profile_for(no_service, Profile),
+    decide_csp_registration(Profile, csp_registration_verdict(no_corporate_service, [sg_cspa_2024_s2_1_corporate_service])).
+
+test(decide_csp_registered_carries_s7_citation) :-
+    csp_registration_profile_for(fully_registered, Profile),
+    decide_csp_registration(Profile, csp_registration_verdict(registered, [sg_cspa_2024_s7_1])).
+
+test(decide_csp_deemed_carries_s7_2_citation) :-
+    csp_registration_profile_for(deemed_accounting, Profile),
+    decide_csp_registration(Profile, csp_registration_verdict(registered, [sg_cspa_2024_s7_1, sg_cspa_2024_s7_2])).
+
+:- end_module(test_output_mode).

@@ -1,0 +1,333 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: sg/data_protection/pdpa_data_breach_notification
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "pdpa_data_breach_notification"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+# significant_harm and significant_scale are served by queries.clausal both as /0
+# result atoms and as the order's /3 queries (A) and (B), read from the slice's
+# checklist rows; the slice computes the two grounds with the internal
+# predicates harm_determination/3 and scale_determination/3.
+public_interface:
+  # -- kernel.clausal --
+  # (the input check is re-exported by queries.clausal, listed there)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- pdpa_data_breach_notification.clausal --
+  - "data_breach_notifiability/3"
+  - "individual_notification/3"
+  - "breach_response_duty/3"
+  - "commission_notification_period_end/2"
+  - "notification_contents/2"
+  - "pdpa_breach_assessment/2"
+  - "decide_pdpa_data_breach_notification/2"
+  - "pdpa_data_breach_notification_status/2"
+  - "pdpa_data_breach_notification_checklist/2"
+  - "pdpa_data_breach_notification_decision_resolvable/1"
+  - "pdpa_data_breach_notification_status_values/1"
+  # -- queries.clausal --
+  - "pdpa_data_breach_notification_profile_keys/1"
+  - "pdpa_data_breach_notification_input_problems/2"
+  - "pdpa_data_breach_notification_what_if/4"
+  - "significant_harm/3"
+  - "significant_scale/3"
+  - "significant_harm/0"
+  - "significant_scale/0"
+  - "no_significant_harm/0"
+  - "no_significant_scale/0"
+  - "notifiable/0"
+  - "not_notifiable/0"
+  - "not_applicable/0"
+  - "required/0"
+  - "not_required/0"
+  - "prohibited/0"
+  - "waived/0"
+  - "assessment_required/0"
+  - "notify_organisation_without_undue_delay/0"
+  - "notify_public_agency_without_undue_delay/0"
+  - "no_duty_triggered/0"
+  - "n_a/0"
+  - "pdpa_breach/5"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "content_item/2"
+  - "additional_item/3"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "pdpa_data_breach_notification_subject/1"
+  - "pdpa_data_breach_notification_profile_for/2"
+  - "pdpa_data_breach_notification_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib) and
+# library(datetime), library(reif), library(clpz); no shared backbone package.
+uses: []
+
+scope: "Singapore PDPA 2012 Part 6A (ss 26A to 26E) with the Personal Data Protection
+  (Notification of Data Breaches) Regulations 2021 (S 64/2021) regs 3 to 6 and the
+  Schedule: for a caller-described data breach, whether it is a notifiable data breach
+  (deemed significant harm under reg 3(1)(a) with Schedule Parts 1 and 2 and reg 3(1)(b)
+  with reg 3(2); deemed significant scale at 500 affected individuals under reg 4; the
+  judgements of likely significant harm or scale; the s 26B(4) within-organisation
+  exclusion; the s 26C(1) commencement of 1 February 2021), whether notice to affected
+  individuals is required, prohibited, waived or not required (s 26D(2), (5), (6), (7),
+  in the drafter's priority, Q2), the assessment or notice duty of an organisation or
+  data intermediary (s 26C(2), (3), s 26E), the end of the 3-calendar-day period to
+  notify the Commission (s 26D(1), main reading Q1: every day counts) and the fixed
+  content lists of regs 5 and 6. Out of scope and handed to the caller or a lawyer:
+  whether an incident is a data breach, 'likely' significant harm or scale, 'reason to
+  believe', 'renders it unlikely' (judgements), the classification of data into the
+  data class atoms, Schedule Part 2 public availability, 'as soon as is practicable',
+  the form and manner of notice, sector rules (MAS notices, Cybersecurity Act) and
+  penalties."
+
+sources:
+  - "Personal Data Protection Act 2012 (Singapore), Part 6A, ss 26A, 26B, 26C, 26D and 26E; SSO, https://sso.agc.gov.sg/Act/PDPA2012?ProvIds=P16A-, current version as at 13 Nov 2026 (saved 2026-11-12)"
+  - "Personal Data Protection (Notification of Data Breaches) Regulations 2021, S 64/2021, regs 1 to 6 and the Schedule Parts 1 and 2; SSO, https://sso.agc.gov.sg/SL/S64-2021, current version as at 13 Nov 2026 (saved 2026-11-12)"
+  - "Interpretation Act 1965 (Singapore), s 50 (computation of time), quoted for open question Q1 only; SSO, https://sso.agc.gov.sg/Act/IA1965?ProvIds=pr50-, current version as at 13 Nov 2026 (saved 2026-11-12)"
+
+query_interface:
+  2: "pdpa_data_breach_notification_status/2"      # eligibility: notifiable / not_notifiable / not_applicable / status compound
+  7: "pdpa_data_breach_notification_checklist/2"   # justification: every checklist item carries its cite(...) list
+  16: "pdpa_data_breach_notification_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: section_and_paragraph_lead_texts
+  units:
+  - sg-pdpa-2012#pr26A
+  - sg-pdpa-2012#pr26B
+  - sg-pdpa-2012#pr26B-ps1
+  - sg-pdpa-2012#pr26B-ps2
+  - sg-pdpa-2012#pr26B-ps3
+  - sg-pdpa-2012#pr26C
+  - sg-pdpa-2012#pr26D
+  - sg-pdpa-2012#pr26D-ps5
+  - sg-pdpa-2012#pr26D-ps6
+  - sg-pdpa-2012#pr26E
+  - sg-s64-2021#Sc
+  - sg-s64-2021#Sc-S11_1
+  - sg-s64-2021#Sc-S12_1
+  - sg-s64-2021#pr2
+  - sg-s64-2021#pr3
+  - sg-s64-2021#pr3-ps1
+  - sg-s64-2021#pr5
+  - sg-s64-2021#pr5-ps1
+  - sg-s64-2021#pr6
+  reason: The section, subsection and Schedule-part units hold headings and the lead-in
+    words of their paragraphs; every limb cites the paragraph or item it reads (s
+    26B(1)(a) and (b), reg 3(1)(a) and (b), the Schedule items), so the lead units
+    carry no separate limb. Document structure.
+  consequence: 'None for a caller: the paragraphs and items they introduce are cited.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: data_breach_definition_limbs_and_account_pair_parts
+  units:
+  - sg-pdpa-2012#pr26A-pdaffectedindividual
+  - sg-pdpa-2012#pr26A-pddatabreach-p1a
+  - sg-pdpa-2012#pr26A-pddatabreach-p1b
+  - sg-s64-2021#pr3-ps1-p1b-p2i
+  - sg-s64-2021#pr3-ps1-p1b-p2ii
+  reason: The definition of affected individual and the two limbs of the data breach
+    definition (s 26A) are read inside the judgement is_data_breach and the breach
+    kinds (readings (3), (4)); the two parts of reg 3(1)(b) are the atoms account_identifier
+    and account_access_credential, cited through reg 3(1)(b).
+  consequence: The answers never say whether an incident is a data breach; the caller's
+    judgement does.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'open-textured by design: ''unauthorised'' and ''likely to occur'' stay a
+    judgement.'
+- what: other_prescribed_circumstances
+  units:
+  - sg-pdpa-2012#pr26B-ps2-p1b
+  - sg-pdpa-2012#pr26B-ps3-p1b
+  reason: s 26B(2)(b) and (3)(b) allow 'other prescribed circumstances'; the pinned
+    Regulations prescribe none beyond regs 3 and 4 (reading (5), (7); Q11).
+  consequence: A circumstance prescribed later would add a deemed ground the order
+    does not know.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q11: a later order adds a limb if a circumstance is prescribed.'
+- what: prescribed_assessment_requirements
+  units:
+  - sg-pdpa-2012#pr26C-ps4
+  reason: s 26C(4) requires the assessment to follow 'any prescribed requirements';
+    none found in the pinned Regulations (reading (8); Q11).
+  consequence: The answers never say whether an assessment was carried out correctly.
+  declaration: answered_with_caveat
+  debt: true
+  open: Q11.
+- what: notice_knowledge_standard_form_and_sub_items
+  units:
+  - sg-pdpa-2012#pr26D-ps3
+  - sg-pdpa-2012#pr26D-ps4
+  - sg-s64-2021#pr5-ps1-p1g-p2i
+  - sg-s64-2021#pr5-ps1-p1g-p2ii
+  - sg-s64-2021#pr5-ps4
+  - sg-s64-2021#pr6-p1d-p2i
+  - sg-s64-2021#pr6-p1d-p2ii
+  reason: s 26D(3) is read only through the fixed content lists of regs 5 and 6 ('[quotation omitted]
+    [quotation omitted]' is not checked); s 26D(4) and reg 5(4) leave
+    the form and manner to the Commission's website, outside the pinned text; the
+    sub-items (i) and (ii) of reg 5(1)(g) and reg 6(d) are read as part of their item.
+  consequence: The answers list what a notice must contain; they never check a notice,
+    its form or the knowledge behind it.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable only with the Commission's form, which is not pinned.
+- what: secrecy_protection_and_concurrent_duties
+  units:
+  - sg-pdpa-2012#pr26D-ps8
+  - sg-pdpa-2012#pr26D-ps8-p1a
+  - sg-pdpa-2012#pr26D-ps8-p1b
+  - sg-pdpa-2012#pr26D-ps9
+  reason: s 26D(8) says notifying is not by itself a breach of a secrecy duty or professional
+    rule; s 26D(9) says the duties apply alongside notice duties under other written
+    law. Neither has a decision output in this order.
+  consequence: The answers never say whether another law requires another notice.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: commencement_of_the_regulations
+  units:
+  - sg-s64-2021#pr1
+  reason: Reg 1 brings the Regulations into operation on 1 February 2021, the date
+    s 26C(1) already gives; the order reads the date from s 26C(1).
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: definitions_read_by_the_caller
+  units:
+  - sg-s64-2021#Sc-S12_1-s13
+  - sg-s64-2021#Sc-S12_1-s13-pdabuse
+  - sg-s64-2021#Sc-S12_1-s13-pdaccidentandhealthpolicy
+  - sg-s64-2021#Sc-S12_1-s13-pdcapitalmarketsproducts
+  - sg-s64-2021#Sc-S12_1-s13-pdchildoryoungperson
+  - sg-s64-2021#Sc-S12_1-s13-pdcreditcard
+  - sg-s64-2021#Sc-S12_1-s13-pdcypa
+  - sg-s64-2021#Sc-S12_1-s13-pdelectronicrecord
+  - sg-s64-2021#Sc-S12_1-s13-pdhealthprofessional
+  - sg-s64-2021#Sc-S12_1-s13-pdhealthprofessional-p1a
+  - sg-s64-2021#Sc-S12_1-s13-pdhealthprofessional-p1b
+  - sg-s64-2021#Sc-S12_1-s13-pdinvestmentinanycapitalmarketsproduct
+  - sg-s64-2021#Sc-S12_1-s13-pdinvestmentinanycapitalmarketsproduct-p1a
+  - sg-s64-2021#Sc-S12_1-s13-pdinvestmentinanycapitalmarketsproduct-p1b
+  - sg-s64-2021#Sc-S12_1-s13-pdnetworth
+  - sg-s64-2021#Sc-S12_1-s13-pdnetworth-p1a
+  - sg-s64-2021#Sc-S12_1-s13-pdnetworth-p1b
+  - sg-s64-2021#Sc-S12_1-s13-pdprivatekey
+  - sg-s64-2021#Sc-S12_1-s13-pdproperty
+  - sg-s64-2021#Sc-S12_1-s13-pdprotector
+  - sg-s64-2021#Sc-S12_1-s13-pdspecifiedorgan
+  - sg-s64-2021#Sc-S12_1-s13-pdvaa
+  - sg-s64-2021#Sc-S12_1-s13-pdwc
+  - sg-s64-2021#pr2-pdbank
+  - sg-s64-2021#pr2-pdfinancecompany
+  - sg-s64-2021#pr2-pdidentificationnumber
+  reason: The definitions of reg 2 (bank, finance company, identification number)
+    and of Schedule Part 2 paragraph 3 tell the caller which data class atom a piece
+    of data is (reading (5)); no limb decides them.
+  consequence: The answers rely on the caller's classification of the breached data.
+  declaration: answered_with_caveat
+  debt: true
+  open: a later order could add a classification query.
+- what: schedule_part_1_sub_items
+  units:
+  - sg-s64-2021#Sc-S11_1-s15-p1a
+  - sg-s64-2021#Sc-S11_1-s15-p1b
+  - sg-s64-2021#Sc-S11_1-s15-p1c
+  - sg-s64-2021#Sc-S11_1-s15-p1d
+  - sg-s64-2021#Sc-S11_1-s15-p1e
+  - sg-s64-2021#Sc-S11_1-s15-p1f
+  - sg-s64-2021#Sc-S11_1-s16-p1a
+  - sg-s64-2021#Sc-S11_1-s16-p1b
+  - sg-s64-2021#Sc-S11_1-s16-p1c
+  - sg-s64-2021#Sc-S11_1-s16-p1d
+  - sg-s64-2021#Sc-S11_1-s16-p1e
+  - sg-s64-2021#Sc-S11_1-s16A-s21
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1a
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1b
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1c
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1d
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1e
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1e-p2i
+  - sg-s64-2021#Sc-S11_1-s16A-s21-p1e-p2ii
+  - sg-s64-2021#Sc-S11_1-s16A-s22
+  - sg-s64-2021#Sc-S11_1-s16A-s22-p1a
+  - sg-s64-2021#Sc-S11_1-s16A-s22-p1b
+  - sg-s64-2021#Sc-S11_1-s16B-p1a
+  - sg-s64-2021#Sc-S11_1-s16B-p1b
+  - sg-s64-2021#Sc-S11_1-s17-p1a
+  - sg-s64-2021#Sc-S11_1-s17-p1b
+  - sg-s64-2021#Sc-S11_1-s17-p1c
+  - sg-s64-2021#Sc-S11_1-s116-p1a
+  - sg-s64-2021#Sc-S11_1-s116-p1b
+  - sg-s64-2021#Sc-S11_1-s117-p1a
+  - sg-s64-2021#Sc-S11_1-s117-p1b
+  - sg-s64-2021#Sc-S11_1-s117-p1c
+  - sg-s64-2021#Sc-S11_1-s117-p1d
+  - sg-s64-2021#Sc-S11_1-s117-p1e
+  - sg-s64-2021#Sc-S11_1-s118-p1a
+  - sg-s64-2021#Sc-S11_1-s118-p1b
+  - sg-s64-2021#Sc-S11_1-s118-p1c
+  - sg-s64-2021#Sc-S11_1-s118-p1d
+  - sg-s64-2021#Sc-S11_1-s119-p1a
+  - sg-s64-2021#Sc-S11_1-s119-p1b
+  - sg-s64-2021#Sc-S11_1-s120-p1a
+  - sg-s64-2021#Sc-S11_1-s120-p1b
+  - sg-s64-2021#Sc-S11_1-s120-p1c
+  - sg-s64-2021#Sc-S11_1-s123-p1a
+  - sg-s64-2021#Sc-S11_1-s123-p1b
+  - sg-s64-2021#Sc-S11_1-s123-p1c
+  - sg-s64-2021#Sc-S11_1-s123-p1d
+  - sg-s64-2021#Sc-S11_1-s123-p1e
+  - sg-s64-2021#Sc-S11_1-s123-p1f
+  - sg-s64-2021#Sc-S12_1-s11-p1a
+  - sg-s64-2021#Sc-S12_1-s11-p1b
+  reason: 'The sub-items of Schedule Part 1 items 5, 6, 6A, 6B, 7, 16, 17, 18, 19,
+    20 and 23 are read as part of their item: the caller states the item atom, and
+    the limbs cite the item. The limbs (a) and (b) of Schedule Part 2 paragraph 1
+    are read through the key publicly_available_or_lawfully_disclosed, and the limbs
+    cite paragraph 1.'
+  consequence: The answers never say which sub-item a piece of data falls under.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable by finer atoms if the product needs them.
+- what: interpretation_act_computation_of_time
+  units:
+  - sg-interpretation-act-1965#pr50
+  - sg-interpretation-act-1965#pr50-p1a
+  - sg-interpretation-act-1965#pr50-p1b
+  - sg-interpretation-act-1965#pr50-p1c
+  - sg-interpretation-act-1965#pr50-p1d
+  reason: Interpretation Act 1965 s 50 is quoted for OPEN QUESTION Q1 only; under
+    the main reading (every day of the three counts, reading (9)) no limb reads it.
+    Whether 'calendar days' in s 26D(1) displaces s 50(b) or (d) is put to a lawyer.
+  consequence: The period end is never moved for a Sunday or public holiday; if a
+    lawyer says s 50 applies, the period end changes for those cases.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'Q1: a ruling would make s 50(b) and (d) limbs of commission_notification_period_end.'

@@ -1,0 +1,41 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality: every registered subject yields at least one verdict.
+% Determinism: every registered subject yields exactly one status.
+% Run: python -m clausal.testing sg/securities/sfa_offer_exemptions/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(sg/securities/sfa_offer_exemptions/sfa_offer_exemptions, [
+    decide_sfa_offer_exemptions/2,
+    sfa_offer_exemptions_status/2
+]).
+:- use_module(sg/securities/sfa_offer_exemptions/fixtures, [
+    sfa_offer_exemptions_subject/1,
+    sfa_offer_exemptions_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    sfa_offer_exemptions_subject(Subject),
+    sfa_offer_exemptions_profile_for(Subject, Profile),
+    decide_sfa_offer_exemptions(Profile, _Verdict).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, sfa_offer_exemptions_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+subject_has_exactly_one_status(Subject) :-
+    sfa_offer_exemptions_subject(Subject),
+    sfa_offer_exemptions_profile_for(Subject, Profile),
+    findall(Status, sfa_offer_exemptions_status(Profile, Status), Statuses),
+    length(Statuses, 1).
+
+test(determinism_every_subject_has_exactly_one_status) :-
+    findall(Subject, sfa_offer_exemptions_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_has_exactly_one_status(Subject), OneStatusSubjects),
+    sort(OneStatusSubjects, SubjectSet).
+
+:- end_module(test_properties).

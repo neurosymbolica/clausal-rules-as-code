@@ -1,0 +1,57 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_robustness.clausal -- ROBUSTNESS of the input check pdpa_data_breach_notification_input_problems/2 for a
+% PROFILE that is an attribute list [attribute(Key, Value), ...]: an empty list, a
+% value that is not a list, an unknown key and a value outside its type each get exactly
+% one answer. Written by the scaffold from the order's typed input contract
+% (input_contract.types.profile: attribute_list), not by the producer;
+% do not edit or delete.
+% Run: python -m clausal.testing sg/data_protection/pdpa_data_breach_notification/tests/test_robustness.clausal
+% =====================================================================
+:- module(test_robustness, []).
+:- use_module(sg/data_protection/pdpa_data_breach_notification/queries, [pdpa_data_breach_notification_input_problems/2]).
+
+test(an_empty_attribute_list_gets_exactly_one_answer) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_profile_that_is_not_a_list_gets_one_non_empty_answer) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems(not_a_profile, Problems), Answers),
+    Answers = [[_|_]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(not_a_key_of_the_contract, true)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(unknown_key(not_a_key_of_the_contract), Problems).
+
+test(a_value_outside_the_type_of_breach_occurred_date_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(breach_occurred_date, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(breach_occurred_date), Problems).
+
+test(a_value_outside_the_type_of_within_organisation_only_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(within_organisation_only, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(within_organisation_only), Problems).
+
+test(a_value_outside_the_type_of_breach_kinds_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(breach_kinds, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(breach_kinds), Problems).
+
+test(a_value_outside_the_type_of_is_data_breach_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(is_data_breach, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(is_data_breach), Problems).
+
+test(a_value_outside_the_type_of_affected_individuals_count_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(affected_individuals_count, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(affected_individuals_count), Problems).
+
+test(a_value_outside_the_type_of_caller_role_is_named) :-
+    findall(Problems, pdpa_data_breach_notification_input_problems([attribute(caller_role, outside_the_type)], Problems), Answers),
+    Answers = [Problems],
+    memberchk(wrong_type(caller_role), Problems).
+
+:- end_module(test_robustness).

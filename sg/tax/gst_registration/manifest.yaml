@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: sg/tax/gst_registration
+provision_tracking_note: "Provision tracking is informal: the deferred set below is a first scope map, and the units it does not defer are not accounted unit by unit. There is no provision-tracking ledger."
+deferred_set:
+- what: quarter_basis_before_2019
+  units:
+  - sg-gsta-1993#Sc1-S1_1-s11-s21-p1a-p2i
+  - sg-gsta-1993#Sc1-S1_1-s11-s23-p1a
+  reason: 'Order deferred_set: paragraph 1(1)(a)(i) and 4(1) (the pre-2019 rolling-four-quarters test)
+    are out of scope; calendar_year is >= 2019. Para 1(3)(a) is the quarter-basis twin of the in-scope
+    1(3)(b) relief.'
+  consequence: A caller assessing a quarter ending before 1 January 2019 must apply the quarterly test,
+    its relief and its notification rule itself.
+- what: comptroller_directions_and_discretions
+  units:
+  - sg-gsta-1993#Sc1-S1_4-s14-s22-p1b
+  - sg-gsta-1993#Sc1-S1_4-s15-s22-p1b
+  reason: 'Order deferred_set: para 2 anti-splitting directions, the protection-of-revenue refusals (4(3),
+    5(2A)) and their follow-on registrations (4(4)-(5), 5(2B)-(2C)), the earlier agreed effective dates
+    (4(2)(b), 5(2)(b)) and the discretionary early registration from day X (5(3), 5(4)) are Comptroller
+    discretions.'
+  consequence: Where the Comptroller has given a direction, refused registration, agreed an earlier date
+    or registered from day X, the caller must substitute that outcome for this domain's computed date.
+- what: excluded_day_extension
+  units:
+  - sg-ia-1965#pr50-p1b
+  - sg-ia-1965#pr50-p1c
+  reason: 'Order deferred_set: Interpretation Act 1965 s 50(b)/(c): a period whose last day is a Sunday
+    or public holiday runs to the next non-excluded day; NOTIFY_BY is the nominal day (needs a public-holiday
+    calendar).'
+  consequence: If NOTIFY_BY falls on a Sunday or public holiday the caller must extend it to the next
+    non-excluded day.
+- what: short_period_excluded_days
+  units:
+  - sg-ia-1965#pr50-p1d
+  reason: s 50(d) applies only to periods not exceeding 6 days; every period in this domain is 30 days,
+    so it never applies.
+  consequence: None (inapplicable to the 30-day periods computed here).
+scope_map_unsure:
+- 'sg-gsta-1993#Sc1-S1_3-s13C: para 3C (capital-asset disregard for paras 3/3A) is grouped with deregistration;
+  it mirrors the in-scope 1C(2) but serves para 3 only.'
+- 'sg-gsta-1993#Sc1-S1_16-s116: para 16 (value tax-exclusive) is arguably relied on implicitly by any
+  value comparison; deferred because the order takes values as supplied.'
+- 'sg-gsta-1993#Sc1-S1_4-s15-s21: kept in scope although ''Subject to section 91'' (deferred section_91_override)
+  sits inside the same unit; no separate unit exists for s 91.'
+- 'sg-gsta-1993#Sc1-S1_15-s115-s21: kept in scope; the Comptroller''s discretion to grant is asserted
+  (reasonable_grounds_and_comptroller_satisfaction) but the provision itself is cited by the order.'
+- 'sg-gsta-1993#Sc1-S1_1-s11-s21-p1a: ''(a) either —'' is a numbering chapeau kept in scope because its
+  (ii) limb is in scope.'
+operative_readings:
+- what: within_30_days_counts_from_the_day_after
+  units:
+  - sg-gsta-1993#Sc1-S1_4-s14-s21A
+  - sg-gsta-1993#Sc1-S1_4-s15-s21
+  - sg-ia-1965#pr50-p1a
+  question: First Schedule paras 4(1A) and 5(1) require notification 'within 30 days after' the end of
+    the calendar year / day X. Is day D itself excluded, so the last day to notify is D + 30, or counted,
+    so it is D + 29?
+  readings:
+  - id: exclusive_of_the_event_day
+    consequence: 'NOTIFY_BY = D + 30: 30 January after a calendar year; day X + 30 prospectively.'
+  - id: inclusive_of_the_event_day
+    consequence: 'NOTIFY_BY = D + 29: 29 January; day X + 29. Every deadline one day earlier.'
+    conservative: true
+  chosen: exclusive_of_the_event_day
+  rationale: 'Interpretation Act 1965 s 50(a): a period of days from an event is exclusive of the day
+    of the event, and nothing in the First Schedule shows a contrary intention. IRAS''s own examples (15
+    Jan forecast -> 15 Feb registration) are consistent with it.'
+  authority: Interpretation Act 1965 s 50(a)
+  attested:
+    by: owner
+    role: owner
+    date: '2026-10-03'
+- what: effective_date_is_the_day_after_the_30_days
+  units:
+  - sg-gsta-1993#Sc1-S1_4-s15-s22
+  - sg-ia-1965#pr50-p1a
+  question: Para 5(2)(a)(i) registers a person from '[quotation omitted]'.
+    Does a day-X forecast register from day X + 31, or from day X + 30 as the IRAS overseas-vendor e-Tax
+    Guide p.20 prints (15 Jan 2023 -> 14 Feb 2023)?
+  readings:
+  - id: day_x_plus_31
+    consequence: 15 Jan 2023 forecast -> registered from 15 Feb 2023, matching IRAS's main registration
+      page and its reverse-charge guide.
+  - id: day_x_plus_30_per_ovr_guide
+    consequence: 15 Jan 2023 -> 14 Feb 2023; contradicts the guide's own words ('the 31st day') and IRAS's
+      other publications.
+  chosen: day_x_plus_31
+  rationale: The 30 days end on day X + 30 under s 50(a); the day immediately after is X + 31. The OVR
+    guide's date is a typo (it is the 30th day although the guide says '31st').
+  authority: Interpretation Act 1965 s 50(a); IRAS 'Do I need to register' page; ruling 2026-10-02
+    (regulator case gst-14)
+  attested:
+    by: owner
+    role: owner
+    date: '2026-10-02'
+scope: "Singapore goods and services tax: whether a business is liable to register for GST under the First Schedule of the Goods and Services Tax Act 1993, on the retrospective and the prospective tests of its taxable turnover, with the date by which it must notify the Comptroller and the date its registration takes effect. For ONE business on ONE reference date. Drafter's reading, not a lawyer's."

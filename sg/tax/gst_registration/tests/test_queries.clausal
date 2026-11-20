@@ -1,0 +1,51 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer.
+% Run: python -m clausal.testing sg/tax/gst_registration/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(sg/tax/gst_registration/queries, [
+    gst_registration_profile_keys/1,
+    gst_registration_eligibility/2,
+    gst_registration_deadline/3,
+    gst_registration_threshold/2
+]).
+:- use_module(sg/tax/gst_registration/fixtures, [gst_registration_profile_for/2]).
+
+test(profile_keys_include_required_keys) :-
+    gst_registration_profile_keys(ProfileKeys),
+    member(is_registered, ProfileKeys),
+    member(calendar_year, ProfileKeys),
+    member(forecast_start_date, ProfileKeys).
+
+test(eligibility_liable_profile_is_eligible) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_registration_eligibility(Profile, eligibility(eligible, _Checklist)).
+
+test(eligibility_at_threshold_profile_is_ineligible) :-
+    gst_registration_profile_for(retrospective_not_liable_at_threshold, Profile),
+    gst_registration_eligibility(Profile, eligibility(ineligible, _Checklist)).
+
+test(eligibility_missing_inputs_is_indeterminate) :-
+    gst_registration_profile_for(retrospective_indeterminate_missing_taxable_supplies, Profile),
+    gst_registration_eligibility(Profile, eligibility(indeterminate, _Checklist)).
+
+test(deadline_retrospective_liable_has_dates) :-
+    gst_registration_profile_for(retrospective_liable_just_above_threshold, Profile),
+    gst_registration_deadline(Profile, deadline(date(2023, 1, 30), date(2023, 3, 1)), registration_required).
+
+test(deadline_retrospective_not_liable_has_no_dates) :-
+    gst_registration_profile_for(retrospective_not_liable_at_threshold, Profile),
+    gst_registration_deadline(Profile, deadline(n_a, n_a), no_consequence).
+
+test(deadline_missing_inputs_is_indeterminate) :-
+    gst_registration_profile_for(retrospective_indeterminate_missing_taxable_supplies, Profile),
+    gst_registration_deadline(Profile, deadline(n_a, n_a), indeterminate).
+
+test(threshold_retrospective_is_one_million_cents) :-
+    gst_registration_threshold(retrospective, threshold(100000000, _Citations)).
+
+test(threshold_prospective_is_one_million_cents) :-
+    gst_registration_threshold(prospective, threshold(100000000, _Citations)).
+
+:- end_module(test_queries).

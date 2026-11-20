@@ -1,0 +1,64 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests for decide_psa_licence_class/2.
+% Cover every route boundary (at-threshold / one-off-below pairs).
+% Run: python -m clausal.testing sg/payments/psa_licence_class/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(sg/payments/psa_licence_class/psa_licence_class, [
+    decide_psa_licence_class/2,
+    psa_licence_class_status/2
+]).
+:- use_module(sg/payments/psa_licence_class/fixtures, [psa_licence_class_profile_for/2]).
+
+% Route 1: no services
+test(no_services_yields_no_licence_required) :-
+    psa_licence_class_profile_for(no_services, Profile),
+    psa_licence_class_status(Profile, no_licence_required).
+
+% Route 2: exempt
+test(exempt_yields_exempt) :-
+    psa_licence_class_profile_for(exempt_basic, Profile),
+    psa_licence_class_status(Profile, exempt_payment_service_provider).
+
+% Route 3: money changing only
+test(money_changing_yields_licence) :-
+    psa_licence_class_profile_for(money_changing_only, Profile),
+    psa_licence_class_status(Profile, money_changing_licence).
+
+% Route 4: SPI (one service, no triggers)
+test(spi_yields_standard) :-
+    psa_licence_class_profile_for(no_services_near_miss, Profile),
+    psa_licence_class_status(Profile, standard_payment_institution_licence).
+
+% Route 5: MPI (single service volume exceeds threshold)
+test(mpi_yields_major) :-
+    psa_licence_class_profile_for(single_volume_mpi, Profile),
+    psa_licence_class_status(Profile, major_payment_institution_licence).
+
+% Route 6: indeterminate
+test(indeterminate_yields_indeterminate) :-
+    psa_licence_class_profile_for(indeterminate_missing_services, Profile),
+    psa_licence_class_status(Profile, indeterminate).
+
+% Result term carries correct citations for SPI
+test(spi_result_carries_citation) :-
+    psa_licence_class_profile_for(no_services_near_miss, Profile),
+    decide_psa_licence_class(Profile, psa_licence(standard_payment_institution_licence, [], _Volume, [sg_psa_2019_s6_4])).
+
+% Result term carries correct citations and triggers for MPI
+test(mpi_result_carries_citations_and_triggers) :-
+    psa_licence_class_profile_for(single_volume_mpi, Profile),
+    decide_psa_licence_class(Profile, psa_licence(major_payment_institution_licence, [single_service_volume], _Volume, [sg_psa_2019_s6_4, sg_psa_2019_s6_5_a_ii_a])).
+
+% Result term for money changing
+test(money_changing_result_carries_citation) :-
+    psa_licence_class_profile_for(money_changing_only, Profile),
+    decide_psa_licence_class(Profile, psa_licence(money_changing_licence, [], 0, [sg_psa_2019_s6_3])).
+
+% Result term for exempt
+test(exempt_result_carries_citation) :-
+    psa_licence_class_profile_for(exempt_basic, Profile),
+    decide_psa_licence_class(Profile, psa_licence(exempt_payment_service_provider, [], _Volume, [sg_psa_2019_s5_1_b])).
+
+:- end_module(test_output_mode).
