@@ -2,12 +2,11 @@
 
 ## Public query surface
 
-The package exposes five public predicates (the scaffold facade names) plus two determination predicates:
+The package exposes four public predicates (the scaffold facade names) plus two determination predicates:
 
 - `decide_gst_registration(PROFILE, RESULT)` — dispatches to the appropriate determination (retrospective or prospective) based on which keys are present in PROFILE; RESULT is the corresponding record term.
 - `gst_registration_status(PROFILE, STATUS)` — query type #2 (eligibility): returns `eligible`, `ineligible`, or `indeterminate` with a cited checklist.
 - `gst_registration_checklist(PROFILE, CHECKLIST)` — the full cited checklist for the applicable determination.
-- `gst_registration_what_if(PROFILE, KEY, VALUE, RESULT)` — query type #6 (threshold): override one profile key and re-evaluate; used to expose the S$1 million boundary.
 - `fixtures` — test fixture generator.
 
 Determination predicates (internal, called by the facade):
@@ -78,7 +77,6 @@ Eligibility STATUS (query type #2):
 decide_gst_registration(PROFILE, RESULT): dispatch to retrospective or prospective determination; RESULT is the record term. [sg_gsta_1993_sch1_para_1_1]
 gst_registration_status(PROFILE, STATUS): eligibility verdict (eligible/ineligible/indeterminate) with cited checklist. [sg_gsta_1993_sch1_para_1_1_a_ii, sg_gsta_1993_sch1_para_1_1_b]
 gst_registration_checklist(PROFILE, CHECKLIST): full cited checklist for the applicable determination. [all citations above]
-gst_registration_what_if(PROFILE, KEY, VALUE, RESULT): override one profile key and re-evaluate; exposes the S$1M threshold boundary. [sg_gsta_1993_sch1_para_1_1_a_ii, sg_gsta_1993_sch1_para_1_1_b]
 fixtures: test fixture generator for the domain.
 ```
 
